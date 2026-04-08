@@ -8,3 +8,5 @@ export { applyFilters, getCategories, getResources } from './filters/filterEngin
 export { exportToExcel } from './export/excelExport.js';
 export { useCalendar } from './hooks/useCalendar.js';
 export { useOwnerConfig } from './hooks/useOwnerConfig.js';
+export { useProfiles } from './hooks/useProfiles.js';
+export { loadProfiles, saveProfiles, createProfile, serializeFilters, deserializeFilters, PROFILE_COLORS } from './core/profileStore.js';

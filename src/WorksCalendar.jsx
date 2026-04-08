@@ -2,14 +2,14 @@
  * WorksCalendar — main component.
  */
 import { useState, useCallback } from 'react';
-import { format, startOfMonth } from 'date-fns';
-import {
-  ChevronLeft, ChevronRight, Download, Plus,
-} from 'lucide-react';
+import { format } from 'date-fns';
+import { ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
 
 import { useCalendar }    from './hooks/useCalendar.js';
 import { useOwnerConfig } from './hooks/useOwnerConfig.js';
+import { useProfiles }    from './hooks/useProfiles.js';
 import FilterBar          from './ui/FilterBar.jsx';
+import ProfileBar         from './ui/ProfileBar.jsx';
 import HoverCard          from './ui/HoverCard.jsx';
 import OwnerLock          from './ui/OwnerLock.jsx';
 import ConfigPanel        from './ui/ConfigPanel.jsx';
@@ -48,11 +48,17 @@ export function WorksCalendar({
   const cal = useCalendar(rawEvents);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave });
 
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [formEvent,     setFormEvent]     = useState(null); // null = closed; {} = new; event = edit
+  const profiles = useProfiles({
+    calendarId,
+    filters:    cal.filters,
+    view:       cal.view,
+    setFilters: cal.replaceFilters,
+    setView:    cal.setView,
+  });
 
-  // Sync default view from config
-  const defaultView = ownerCfg.config?.display?.defaultView ?? 'month';
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [formEvent,     setFormEvent]     = useState(null);
+
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
 
   const handleEventClick = useCallback((ev) => {
@@ -70,11 +76,8 @@ export function WorksCalendar({
     setFormEvent(null);
   }, [onEventDelete]);
 
-  const viewLabelMap = { month: 'Month', week: 'Week', day: 'Day', agenda: 'Agenda', schedule: 'Schedule' };
-
-  // Header date label
   function getDateLabel() {
-    if (cal.view === 'day') return format(cal.currentDate, 'EEEE, MMMM d, yyyy');
+    if (cal.view === 'day')  return format(cal.currentDate, 'EEEE, MMMM d, yyyy');
     if (cal.view === 'week') return format(cal.currentDate, "MMM d, yyyy 'week'");
     return format(cal.currentDate, 'MMMM yyyy');
   }
@@ -82,14 +85,10 @@ export function WorksCalendar({
   const hasAddButton = showAddButton || ownerCfg.isOwner;
 
   return (
-    <div
-      className={styles.root}
-      data-wc-theme={theme}
-      data-testid="works-calendar"
-    >
-      {/* Toolbar */}
+    <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar">
+
+      {/* ── Toolbar ── */}
       <div className={styles.toolbar}>
-        {/* Nav */}
         <div className={styles.navGroup}>
           <button className={styles.navBtn} onClick={() => cal.navigate(-1)} aria-label="Previous">
             <ChevronLeft size={18} />
@@ -101,7 +100,6 @@ export function WorksCalendar({
           <span className={styles.dateLabel}>{getDateLabel()}</span>
         </div>
 
-        {/* View switcher */}
         <div className={styles.viewGroup}>
           {VIEWS.map(v => (
             <button
@@ -114,7 +112,6 @@ export function WorksCalendar({
           ))}
         </div>
 
-        {/* Actions */}
         <div className={styles.actions}>
           {hasAddButton && (
             <button className={styles.addBtn} onClick={() => setFormEvent({})}>
@@ -136,7 +133,22 @@ export function WorksCalendar({
         </div>
       </div>
 
-      {/* Filter bar */}
+      {/* ── Profile Bar ── */}
+      <ProfileBar
+        profiles={profiles.profiles}
+        activeProfile={profiles.activeProfile}
+        activeId={profiles.activeId}
+        isDirty={profiles.isDirty}
+        categories={cal.categories}
+        resources={cal.resources}
+        onApply={profiles.applyProfile}
+        onAdd={profiles.addProfile}
+        onResave={profiles.resaveProfile}
+        onUpdate={profiles.updateProfile}
+        onDelete={profiles.deleteProfile}
+      />
+
+      {/* ── Filter Bar ── */}
       <FilterBar
         categories={cal.categories}
         resources={cal.resources}
@@ -147,7 +159,7 @@ export function WorksCalendar({
         onClear={cal.clearFilters}
       />
 
-      {/* View */}
+      {/* ── View ── */}
       <div className={styles.viewArea}>
         {cal.view === 'month' && (
           <MonthView
@@ -193,7 +205,7 @@ export function WorksCalendar({
         )}
       </div>
 
-      {/* Hover card (event detail) */}
+      {/* ── Hover card ── */}
       {selectedEvent && (
         <HoverCard
           event={selectedEvent}
@@ -205,7 +217,7 @@ export function WorksCalendar({
         />
       )}
 
-      {/* Event add/edit form */}
+      {/* ── Event form ── */}
       {formEvent !== null && (
         <EventForm
           event={formEvent.id ? formEvent : null}
@@ -217,7 +229,7 @@ export function WorksCalendar({
         />
       )}
 
-      {/* Owner config panel */}
+      {/* ── Owner config panel ── */}
       {ownerCfg.configOpen && (
         <ConfigPanel
           config={ownerCfg.config}

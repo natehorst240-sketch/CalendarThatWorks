@@ -69,6 +69,11 @@ export function useCalendar(rawEvents, initialView = 'month') {
     setFilters({ categories: new Set(), resources: new Set(), dateRange: null, search: '' });
   }, []);
 
+  /** Replace the entire filter state at once (used by profile apply). */
+  const replaceFilters = useCallback((newFilters) => {
+    setFilters(newFilters);
+  }, []);
+
   return {
     view, setView,
     currentDate, setCurrentDate,
@@ -79,5 +84,6 @@ export function useCalendar(rawEvents, initialView = 'month') {
     toggleCategory, toggleResource,
     setSearch, setDateRange,
     clearFilters,
+    replaceFilters,
   };
 }

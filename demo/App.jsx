@@ -1,6 +1,53 @@
-import { StrictMode, useState, useCallback } from 'react';
+import { StrictMode, useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { WorksCalendar } from '../src/index.js';
+import { saveProfiles } from '../src/core/profileStore.js';
+
+/* Seed demo profiles into localStorage so they show up on first load */
+const DEMO_CALENDAR_ID = 'ihc-fleet-demo';
+const DEMO_PROFILES = [
+  {
+    id: 'demo-p1',
+    name: 'All AOG Aircraft',
+    color: '#ef4444',
+    filters: { categories: ['AOG'], resources: [], search: '' },
+    view: 'agenda',
+  },
+  {
+    id: 'demo-p2',
+    name: 'Inspections Due',
+    color: '#f59e0b',
+    filters: { categories: ['Inspection'], resources: [], search: '' },
+    view: 'month',
+  },
+  {
+    id: 'demo-p3',
+    name: 'N251HC Schedule',
+    color: '#3b82f6',
+    filters: { categories: [], resources: ['N251HC'], search: '' },
+    view: 'schedule',
+  },
+  {
+    id: 'demo-p4',
+    name: 'Maintenance + AOG',
+    color: '#8b5cf6',
+    filters: { categories: ['Maintenance', 'AOG'], resources: [], search: '' },
+    view: null,
+  },
+  {
+    id: 'demo-p5',
+    name: 'Flight Ops',
+    color: '#06b6d4',
+    filters: { categories: ['Utilization'], resources: [], search: '' },
+    view: 'week',
+  },
+];
+
+// Only seed if the user hasn't saved their own profiles yet
+const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
+if (!stored || stored === '[]') {
+  saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
+}
 
 /* ─── Sample events: IHC Fleet ─────────────────────────────────── */
 const today = new Date();
