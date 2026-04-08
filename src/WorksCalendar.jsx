@@ -19,6 +19,7 @@ import WeekView           from './views/WeekView.jsx';
 import DayView            from './views/DayView.jsx';
 import AgendaView         from './views/AgendaView.jsx';
 import ScheduleView       from './views/ScheduleView.jsx';
+import TimelineView       from './views/TimelineView.jsx';
 import { exportToExcel }  from './export/excelExport.js';
 
 import styles from './WorksCalendar.module.css';
@@ -29,6 +30,7 @@ const VIEWS = [
   { id: 'day',      label: 'Day' },
   { id: 'agenda',   label: 'Agenda' },
   { id: 'schedule', label: 'Schedule' },
+  { id: 'timeline', label: 'Timeline' },
 ];
 
 export function WorksCalendar({
@@ -201,6 +203,13 @@ export function WorksCalendar({
             events={cal.visibleEvents}
             onEventClick={handleEventClick}
             weekStartDay={weekStartDay}
+          />
+        )}
+        {cal.view === 'timeline' && (
+          <TimelineView
+            currentDate={cal.currentDate}
+            events={cal.visibleEvents}
+            onEventClick={handleEventClick}
           />
         )}
       </div>

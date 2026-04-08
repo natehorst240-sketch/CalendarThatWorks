@@ -41,6 +41,13 @@ const DEMO_PROFILES = [
     filters: { categories: ['Utilization'], resources: [], search: '' },
     view: 'week',
   },
+  {
+    id: 'demo-p6',
+    name: 'Full Fleet Timeline',
+    color: '#10b981',
+    filters: { categories: [], resources: [], search: '' },
+    view: 'timeline',
+  },
 ];
 
 // Only seed if the user hasn't saved their own profiles yet

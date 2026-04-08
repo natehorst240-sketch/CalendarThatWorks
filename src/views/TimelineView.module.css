@@ -1,0 +1,245 @@
+/* ── Outer wrapper ─────────────────────────────────────────────── */
+.wrap {
+  height: 100%;
+  overflow: auto;
+  position: relative;
+}
+
+/* Inner container stretches to fit all columns */
+.inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* ── Header row ────────────────────────────────────────────────── */
+.headerRow {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--wc-bg);
+  border-bottom: 2px solid var(--wc-border-dark);
+  flex-shrink: 0;
+}
+
+.cornerCell {
+  position: sticky;
+  left: 0;
+  z-index: 31;
+  background: var(--wc-surface);
+  border-right: 2px solid var(--wc-border-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.dayHeads {
+  display: flex;
+  flex: 1;
+}
+
+.dayHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  border-right: 1px solid var(--wc-border);
+  flex-shrink: 0;
+  gap: 2px;
+}
+.dayHead:last-child { border-right: none; }
+
+.weekendHead {
+  background: var(--wc-surface);
+}
+
+.todayHead {
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent);
+}
+.todayHead .dayNum {
+  background: var(--wc-accent);
+  color: #fff;
+}
+
+.dayNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.dayAbbr {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-faint);
+}
+
+/* ── Body ───────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+}
+
+/* ── Resource row ───────────────────────────────────────────────── */
+.row {
+  display: flex;
+  border-bottom: 1px solid var(--wc-border);
+}
+.row:last-child { border-bottom: none; }
+.row:hover { background: color-mix(in srgb, var(--wc-text) 1.5%, transparent); }
+
+/* Sticky name cell */
+.nameCell {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--wc-bg);
+  border-right: 2px solid var(--wc-border-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+.row:hover .nameCell {
+  background: var(--wc-surface);
+}
+
+.resourceName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Event zone (holds day bg lines + event bars) ──────────────── */
+.eventZone {
+  flex-shrink: 0;
+}
+
+/* Day column background bands */
+.dayCol {
+  position: absolute;
+  top: 0;
+  border-right: 1px solid var(--wc-border);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.weekendCol {
+  background: color-mix(in srgb, var(--wc-text) 2%, transparent);
+}
+
+.todayCol {
+  background: color-mix(in srgb, var(--wc-accent) 6%, transparent);
+}
+
+/* ── Event bars ─────────────────────────────────────────────────── */
+.event {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: var(--ev-color, var(--wc-accent));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  z-index: 5;
+  transition: filter 0.1s, box-shadow 0.1s;
+  box-sizing: border-box;
+}
+.event:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  z-index: 6;
+}
+
+.evDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.6);
+  flex-shrink: 0;
+}
+
+.evTitle {
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.evCat {
+  font-size: 10px;
+  opacity: 0.75;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+/* ── Empty state ────────────────────────────────────────────────── */
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--wc-text-muted);
+  font-size: 14px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+
+/* Tablet: narrower name column and day columns */
+@media (max-width: 768px) {
+  .cornerCell {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  .resourceName {
+    font-size: 12px;
+  }
+}
+
+/* Mobile: very compact — name column narrows, still fully scrollable */
+@media (max-width: 480px) {
+  .cornerCell {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .resourceName {
+    font-size: 11px;
+    max-width: 80px;
+  }
+  .dayNum {
+    font-size: 11px;
+    width: 20px;
+    height: 20px;
+  }
+  .dayAbbr {
+    display: none;
+  }
+}

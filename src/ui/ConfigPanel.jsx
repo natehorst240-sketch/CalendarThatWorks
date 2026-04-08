@@ -166,7 +166,7 @@ function DisplayTab({ config, onUpdate }) {
       <label className={styles.formRow}>
         <span>Default view</span>
         <select className={styles.select} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
-          {['month','week','day','agenda','schedule'].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+          {['month','week','day','agenda','schedule','timeline'].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
         </select>
       </label>
       <label className={styles.formRow}>
