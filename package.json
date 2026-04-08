@@ -10,7 +10,14 @@
       "import": "./dist/works-calendar.es.js",
       "require": "./dist/works-calendar.umd.js"
     },
-    "./styles": "./dist/style.css"
+    "./styles":           "./dist/style.css",
+    "./styles/aviation":  "./dist/themes/aviation.css",
+    "./styles/soft":      "./dist/themes/soft.css",
+    "./styles/minimal":   "./dist/themes/minimal.css",
+    "./styles/corporate": "./dist/themes/corporate.css",
+    "./styles/forest":    "./dist/themes/forest.css",
+    "./styles/ocean":     "./dist/themes/ocean.css",
+    "./themes":           "./dist/works-calendar.es.js"
   },
   "files": ["dist"],
   "scripts": {

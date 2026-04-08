@@ -11,3 +11,4 @@ export { useCalendar } from './hooks/useCalendar.js';
 export { useOwnerConfig } from './hooks/useOwnerConfig.js';
 export { useProfiles } from './hooks/useProfiles.js';
 export { loadProfiles, saveProfiles, createProfile, serializeFilters, deserializeFilters, PROFILE_COLORS } from './core/profileStore.js';
+export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';

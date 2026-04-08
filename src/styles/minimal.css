@@ -1,0 +1,56 @@
+/**
+ * WorksCalendar — Minimal Theme
+ *
+ * Pure white, near-invisible borders, indigo accent.
+ * Let the content breathe. Typography-first.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/minimal';
+ *   <WorksCalendar theme="minimal" />
+ */
+
+[data-wc-theme="minimal"] {
+  /* Typography — clean system font */
+  --wc-font: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Accent — indigo */
+  --wc-accent:     #6366f1;
+  --wc-accent-dim: #eef2ff;
+
+  /* Backgrounds — pure white, no surface distinction */
+  --wc-bg:        #ffffff;
+  --wc-surface:   #ffffff;
+  --wc-surface-2: #f9fafb;
+
+  /* Borders — barely there */
+  --wc-border:      #f0f0f0;
+  --wc-border-dark: #e5e5e5;
+
+  /* Text */
+  --wc-text:       #111827;
+  --wc-text-muted: #6b7280;
+  --wc-text-faint: #d1d5db;
+
+  /* Shape */
+  --wc-radius:    8px;
+  --wc-radius-sm: 4px;
+
+  /* Shadows — minimal, barely visible */
+  --wc-shadow:    0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --wc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* Semantic */
+  --wc-danger:  #dc2626;
+  --wc-success: #059669;
+  --wc-warning: #d97706;
+
+  /* Category palette — clean, slightly muted */
+  --wc-cat-0: #6366f1;   /* indigo  */
+  --wc-cat-1: #d97706;   /* amber   */
+  --wc-cat-2: #dc2626;   /* red     */
+  --wc-cat-3: #059669;   /* green   */
+  --wc-cat-4: #7c3aed;   /* violet  */
+  --wc-cat-5: #be185d;   /* pink    */
+  --wc-cat-6: #0e7490;   /* teal    */
+  --wc-cat-7: #c2410c;   /* orange  */
+}

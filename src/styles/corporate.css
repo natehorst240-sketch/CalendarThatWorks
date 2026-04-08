@@ -1,0 +1,56 @@
+/**
+ * WorksCalendar — Corporate Theme
+ *
+ * Professional navy blue, light blue-gray surfaces, strong cobalt accent.
+ * Appropriate for enterprise dashboards, HR tools, and ops software.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/corporate';
+ *   <WorksCalendar theme="corporate" />
+ */
+
+[data-wc-theme="corporate"] {
+  /* Typography */
+  --wc-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+
+  /* Accent — strong corporate blue */
+  --wc-accent:     #1d4ed8;
+  --wc-accent-dim: #eff6ff;
+
+  /* Backgrounds — cool blue-gray */
+  --wc-bg:        #ffffff;
+  --wc-surface:   #f0f4f8;
+  --wc-surface-2: #e2eaf2;
+
+  /* Borders */
+  --wc-border:      #c9d4e0;
+  --wc-border-dark: #9fb3c8;
+
+  /* Text — dark navy */
+  --wc-text:       #0f2040;
+  --wc-text-muted: #4a6080;
+  --wc-text-faint: #8aa0b8;
+
+  /* Shape — slightly square */
+  --wc-radius:    6px;
+  --wc-radius-sm: 3px;
+
+  /* Shadows */
+  --wc-shadow:    0 2px 8px  rgba(15, 32, 64, 0.12);
+  --wc-shadow-sm: 0 1px 3px  rgba(15, 32, 64, 0.08);
+
+  /* Semantic */
+  --wc-danger:  #dc2626;
+  --wc-success: #16a34a;
+  --wc-warning: #ca8a04;
+
+  /* Category palette — clean business colors */
+  --wc-cat-0: #1d4ed8;   /* navy blue  */
+  --wc-cat-1: #ca8a04;   /* gold       */
+  --wc-cat-2: #dc2626;   /* red        */
+  --wc-cat-3: #16a34a;   /* green      */
+  --wc-cat-4: #7c3aed;   /* purple     */
+  --wc-cat-5: #0369a1;   /* steel blue */
+  --wc-cat-6: #0d9488;   /* teal       */
+  --wc-cat-7: #ea580c;   /* burnt orange */
+}

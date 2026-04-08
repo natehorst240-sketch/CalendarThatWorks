@@ -1,0 +1,60 @@
+/**
+ * WorksCalendar — Aviation Theme
+ *
+ * Cockpit instrument-panel aesthetic.
+ * Dark navy background, cyan accent, monospace font, sharp corners.
+ * Designed for operational dashboards where readability under low-light matters.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/aviation';
+ *   <WorksCalendar theme="aviation" />
+ *
+ * Or drop into your own CSS:
+ *   @import 'works-calendar/styles/aviation';
+ */
+
+[data-wc-theme="aviation"] {
+  /* Typography */
+  --wc-font: 'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+
+  /* Accent */
+  --wc-accent:     #00d4ff;   /* cyan instrument lighting */
+  --wc-accent-dim: #001a22;
+
+  /* Backgrounds */
+  --wc-bg:        #080c16;   /* near-black navy */
+  --wc-surface:   #0d1525;
+  --wc-surface-2: #132030;
+
+  /* Borders */
+  --wc-border:      #1a3a4a;
+  --wc-border-dark: #1f4d63;
+
+  /* Text */
+  --wc-text:       #c8e8f0;   /* slightly blue-tinted white */
+  --wc-text-muted: #4a7a8a;
+  --wc-text-faint: #2a4a5a;
+
+  /* Shape — sharp/industrial */
+  --wc-radius:    4px;
+  --wc-radius-sm: 2px;
+
+  /* Shadows */
+  --wc-shadow:    0 4px 24px rgba(0, 200, 255, 0.10);
+  --wc-shadow-sm: 0 1px 6px  rgba(0, 200, 255, 0.05);
+
+  /* Semantic */
+  --wc-danger:  #ff4040;
+  --wc-success: #00ff88;
+  --wc-warning: #ffaa00;
+
+  /* Category palette — high-visibility neon */
+  --wc-cat-0: #00d4ff;   /* cyan     */
+  --wc-cat-1: #ffaa00;   /* amber    */
+  --wc-cat-2: #ff4040;   /* red      */
+  --wc-cat-3: #00e87a;   /* green    */
+  --wc-cat-4: #aa55ff;   /* purple   */
+  --wc-cat-5: #ff8000;   /* orange   */
+  --wc-cat-6: #55aaff;   /* blue     */
+  --wc-cat-7: #ff55cc;   /* magenta  */
+}

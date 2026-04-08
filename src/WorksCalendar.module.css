@@ -46,6 +46,162 @@
   --wc-shadow-sm:   0 1px 6px rgba(0,0,0,.20);
 }
 
+/* ── Aviation ───────────────────────────────────────────────────
+   Cockpit instrument-panel aesthetic. Dark navy, cyan, monospace.  */
+.root[data-wc-theme="aviation"] {
+  --wc-font:        'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+  --wc-accent:      #00d4ff;
+  --wc-accent-dim:  #001a22;
+  --wc-bg:          #080c16;
+  --wc-surface:     #0d1525;
+  --wc-surface-2:   #132030;
+  --wc-border:      #1a3a4a;
+  --wc-border-dark: #1f4d63;
+  --wc-text:        #c8e8f0;
+  --wc-text-muted:  #4a7a8a;
+  --wc-text-faint:  #2a4a5a;
+  --wc-radius:      4px;
+  --wc-radius-sm:   2px;
+  --wc-shadow:      0 4px 24px rgba(0,200,255,.10);
+  --wc-shadow-sm:   0 1px  6px rgba(0,200,255,.05);
+  --wc-danger:      #ff4040;
+  --wc-success:     #00e87a;
+  --wc-warning:     #ffaa00;
+  --wc-cat-0: #00d4ff; --wc-cat-1: #ffaa00;
+  --wc-cat-2: #ff4040; --wc-cat-3: #00e87a;
+  --wc-cat-4: #aa55ff; --wc-cat-5: #ff8000;
+  --wc-cat-6: #55aaff; --wc-cat-7: #ff55cc;
+}
+
+/* ── Soft ───────────────────────────────────────────────────────
+   Warm cream, violet accent, very rounded. Friendly and approachable. */
+.root[data-wc-theme="soft"] {
+  --wc-font:        'Nunito', 'Segoe UI', system-ui, sans-serif;
+  --wc-accent:      #7c3aed;
+  --wc-accent-dim:  #f5f3ff;
+  --wc-bg:          #fffbf7;
+  --wc-surface:     #fdf6ee;
+  --wc-surface-2:   #f5ece0;
+  --wc-border:      #e8d5c0;
+  --wc-border-dark: #d4b896;
+  --wc-text:        #2d1f0e;
+  --wc-text-muted:  #8b6a4a;
+  --wc-text-faint:  #c4a882;
+  --wc-radius:      16px;
+  --wc-radius-sm:   10px;
+  --wc-shadow:      0 4px 20px rgba(124,58,237,.12);
+  --wc-shadow-sm:   0 2px  8px rgba(124,58,237,.06);
+  --wc-danger:      #dc2626;
+  --wc-success:     #059669;
+  --wc-warning:     #d97706;
+  --wc-cat-0: #7c3aed; --wc-cat-1: #d97706;
+  --wc-cat-2: #dc2626; --wc-cat-3: #059669;
+  --wc-cat-4: #db2777; --wc-cat-5: #0891b2;
+  --wc-cat-6: #65a30d; --wc-cat-7: #ea580c;
+}
+
+/* ── Minimal ────────────────────────────────────────────────────
+   Pure white, near-invisible borders, indigo accent. Content-first. */
+.root[data-wc-theme="minimal"] {
+  --wc-accent:      #6366f1;
+  --wc-accent-dim:  #eef2ff;
+  --wc-bg:          #ffffff;
+  --wc-surface:     #ffffff;
+  --wc-surface-2:   #f9fafb;
+  --wc-border:      #f0f0f0;
+  --wc-border-dark: #e5e5e5;
+  --wc-text:        #111827;
+  --wc-text-muted:  #6b7280;
+  --wc-text-faint:  #d1d5db;
+  --wc-radius:      8px;
+  --wc-radius-sm:   4px;
+  --wc-shadow:      0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  --wc-shadow-sm:   0 1px 2px rgba(0,0,0,.04);
+  --wc-cat-0: #6366f1; --wc-cat-1: #d97706;
+  --wc-cat-2: #dc2626; --wc-cat-3: #059669;
+  --wc-cat-4: #7c3aed; --wc-cat-5: #be185d;
+  --wc-cat-6: #0e7490; --wc-cat-7: #c2410c;
+}
+
+/* ── Corporate ──────────────────────────────────────────────────
+   Professional navy, cool blue-gray surfaces, strong cobalt accent. */
+.root[data-wc-theme="corporate"] {
+  --wc-font:        'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --wc-accent:      #1d4ed8;
+  --wc-accent-dim:  #eff6ff;
+  --wc-bg:          #ffffff;
+  --wc-surface:     #f0f4f8;
+  --wc-surface-2:   #e2eaf2;
+  --wc-border:      #c9d4e0;
+  --wc-border-dark: #9fb3c8;
+  --wc-text:        #0f2040;
+  --wc-text-muted:  #4a6080;
+  --wc-text-faint:  #8aa0b8;
+  --wc-radius:      6px;
+  --wc-radius-sm:   3px;
+  --wc-shadow:      0 2px 8px rgba(15,32,64,.12);
+  --wc-shadow-sm:   0 1px 3px rgba(15,32,64,.08);
+  --wc-danger:      #dc2626;
+  --wc-success:     #16a34a;
+  --wc-warning:     #ca8a04;
+  --wc-cat-0: #1d4ed8; --wc-cat-1: #ca8a04;
+  --wc-cat-2: #dc2626; --wc-cat-3: #16a34a;
+  --wc-cat-4: #7c3aed; --wc-cat-5: #0369a1;
+  --wc-cat-6: #0d9488; --wc-cat-7: #ea580c;
+}
+
+/* ── Forest ─────────────────────────────────────────────────────
+   Earthy greens and warm browns. Natural, calm.                   */
+.root[data-wc-theme="forest"] {
+  --wc-accent:      #15803d;
+  --wc-accent-dim:  #f0fdf4;
+  --wc-bg:          #fafdf7;
+  --wc-surface:     #f2f8ee;
+  --wc-surface-2:   #e8f2e0;
+  --wc-border:      #c6ddb8;
+  --wc-border-dark: #a8c893;
+  --wc-text:        #1a2e12;
+  --wc-text-muted:  #4a7030;
+  --wc-text-faint:  #90b870;
+  --wc-radius:      10px;
+  --wc-radius-sm:   6px;
+  --wc-shadow:      0 4px 20px rgba(21,128,61,.12);
+  --wc-shadow-sm:   0 1px  6px rgba(21,128,61,.07);
+  --wc-danger:      #b91c1c;
+  --wc-success:     #15803d;
+  --wc-warning:     #a16207;
+  --wc-cat-0: #15803d; --wc-cat-1: #a16207;
+  --wc-cat-2: #b91c1c; --wc-cat-3: #0d9488;
+  --wc-cat-4: #6d28d9; --wc-cat-5: #b45309;
+  --wc-cat-6: #0369a1; --wc-cat-7: #c2410c;
+}
+
+/* ── Ocean ──────────────────────────────────────────────────────
+   Deep ocean blue, sky-blue accent. Dark ambient.                 */
+.root[data-wc-theme="ocean"] {
+  --wc-accent:      #0ea5e9;
+  --wc-accent-dim:  #082032;
+  --wc-bg:          #0a1628;
+  --wc-surface:     #0f1f38;
+  --wc-surface-2:   #162840;
+  --wc-border:      #1e3a5a;
+  --wc-border-dark: #254d78;
+  --wc-text:        #e0f2fe;
+  --wc-text-muted:  #5b8db8;
+  --wc-text-faint:  #2d5070;
+  --wc-radius:      8px;
+  --wc-radius-sm:   5px;
+  --wc-shadow:      0 4px 28px rgba(0,0,0,.45);
+  --wc-shadow-sm:   0 1px  8px rgba(0,0,0,.25);
+  --wc-danger:      #f43f5e;
+  --wc-success:     #10b981;
+  --wc-warning:     #f59e0b;
+  --wc-cat-0: #0ea5e9; --wc-cat-1: #f59e0b;
+  --wc-cat-2: #f43f5e; --wc-cat-3: #10b981;
+  --wc-cat-4: #8b5cf6; --wc-cat-5: #06b6d4;
+  --wc-cat-6: #34d399; --wc-cat-7: #fb923c;
+}
+
 /* Toolbar */
 .toolbar {
   display: flex;

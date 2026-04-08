@@ -1,0 +1,56 @@
+/**
+ * WorksCalendar — Forest Theme
+ *
+ * Earthy greens, warm browns, natural feel.
+ * Great for outdoor, agriculture, environmental, or wellness apps.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/forest';
+ *   <WorksCalendar theme="forest" />
+ */
+
+[data-wc-theme="forest"] {
+  /* Typography */
+  --wc-font: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Accent — forest green */
+  --wc-accent:     #15803d;
+  --wc-accent-dim: #f0fdf4;
+
+  /* Backgrounds — light green-white */
+  --wc-bg:        #fafdf7;
+  --wc-surface:   #f2f8ee;
+  --wc-surface-2: #e8f2e0;
+
+  /* Borders — sage/moss */
+  --wc-border:      #c6ddb8;
+  --wc-border-dark: #a8c893;
+
+  /* Text — dark forest */
+  --wc-text:       #1a2e12;
+  --wc-text-muted: #4a7030;
+  --wc-text-faint: #90b870;
+
+  /* Shape */
+  --wc-radius:    10px;
+  --wc-radius-sm: 6px;
+
+  /* Shadows — warm green tint */
+  --wc-shadow:    0 4px 20px rgba(21, 128, 61, 0.12);
+  --wc-shadow-sm: 0 1px 6px  rgba(21, 128, 61, 0.07);
+
+  /* Semantic */
+  --wc-danger:  #b91c1c;
+  --wc-success: #15803d;
+  --wc-warning: #a16207;
+
+  /* Category palette — nature-inspired */
+  --wc-cat-0: #15803d;   /* forest green  */
+  --wc-cat-1: #a16207;   /* golden brown  */
+  --wc-cat-2: #b91c1c;   /* berry red     */
+  --wc-cat-3: #0d9488;   /* teal          */
+  --wc-cat-4: #6d28d9;   /* deep purple   */
+  --wc-cat-5: #b45309;   /* rust          */
+  --wc-cat-6: #0369a1;   /* sky           */
+  --wc-cat-7: #c2410c;   /* burnt orange  */
+}

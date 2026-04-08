@@ -1,0 +1,56 @@
+/**
+ * WorksCalendar — Soft Theme
+ *
+ * Warm cream background, violet accent, large border radii.
+ * Friendly and approachable. Great for consumer-facing apps.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/soft';
+ *   <WorksCalendar theme="soft" />
+ */
+
+[data-wc-theme="soft"] {
+  /* Typography — rounded, friendly */
+  --wc-font: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+
+  /* Accent — violet */
+  --wc-accent:     #7c3aed;
+  --wc-accent-dim: #f5f3ff;
+
+  /* Backgrounds — warm cream */
+  --wc-bg:        #fffbf7;
+  --wc-surface:   #fdf6ee;
+  --wc-surface-2: #f5ece0;
+
+  /* Borders — warm tan */
+  --wc-border:      #e8d5c0;
+  --wc-border-dark: #d4b896;
+
+  /* Text — warm dark brown */
+  --wc-text:       #2d1f0e;
+  --wc-text-muted: #8b6a4a;
+  --wc-text-faint: #c4a882;
+
+  /* Shape — very rounded */
+  --wc-radius:    16px;
+  --wc-radius-sm: 10px;
+
+  /* Shadows — warm violet tint */
+  --wc-shadow:    0 4px 20px rgba(124, 58, 237, 0.12);
+  --wc-shadow-sm: 0 2px  8px rgba(124, 58, 237, 0.06);
+
+  /* Semantic */
+  --wc-danger:  #dc2626;
+  --wc-success: #059669;
+  --wc-warning: #d97706;
+
+  /* Category palette — rich jewel tones */
+  --wc-cat-0: #7c3aed;   /* violet     */
+  --wc-cat-1: #d97706;   /* amber      */
+  --wc-cat-2: #dc2626;   /* red        */
+  --wc-cat-3: #059669;   /* emerald    */
+  --wc-cat-4: #db2777;   /* pink       */
+  --wc-cat-5: #0891b2;   /* cyan       */
+  --wc-cat-6: #65a30d;   /* lime       */
+  --wc-cat-7: #ea580c;   /* orange     */
+}

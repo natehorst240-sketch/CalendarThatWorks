@@ -1,0 +1,56 @@
+/**
+ * WorksCalendar — Ocean Theme
+ *
+ * Deep ocean blue with sky-blue accents. Dark ambient feel.
+ * Works well for maritime, logistics, or any night-ops use case.
+ *
+ * Usage:
+ *   import 'works-calendar/styles/ocean';
+ *   <WorksCalendar theme="ocean" />
+ */
+
+[data-wc-theme="ocean"] {
+  /* Typography */
+  --wc-font: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Accent — sky blue */
+  --wc-accent:     #0ea5e9;
+  --wc-accent-dim: #082032;
+
+  /* Backgrounds — deep ocean */
+  --wc-bg:        #0a1628;
+  --wc-surface:   #0f1f38;
+  --wc-surface-2: #162840;
+
+  /* Borders — deep blue */
+  --wc-border:      #1e3a5a;
+  --wc-border-dark: #254d78;
+
+  /* Text — sky-tinted white */
+  --wc-text:       #e0f2fe;
+  --wc-text-muted: #5b8db8;
+  --wc-text-faint: #2d5070;
+
+  /* Shape */
+  --wc-radius:    8px;
+  --wc-radius-sm: 5px;
+
+  /* Shadows — deep ocean */
+  --wc-shadow:    0 4px 28px rgba(0, 0, 0, 0.45);
+  --wc-shadow-sm: 0 1px 8px  rgba(0, 0, 0, 0.25);
+
+  /* Semantic */
+  --wc-danger:  #f43f5e;
+  --wc-success: #10b981;
+  --wc-warning: #f59e0b;
+
+  /* Category palette — ocean / marine */
+  --wc-cat-0: #0ea5e9;   /* sky blue     */
+  --wc-cat-1: #f59e0b;   /* amber        */
+  --wc-cat-2: #f43f5e;   /* coral red    */
+  --wc-cat-3: #10b981;   /* seafoam      */
+  --wc-cat-4: #8b5cf6;   /* deep purple  */
+  --wc-cat-5: #06b6d4;   /* cyan         */
+  --wc-cat-6: #34d399;   /* emerald      */
+  --wc-cat-7: #fb923c;   /* sunset       */
+}
