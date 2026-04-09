@@ -56,7 +56,7 @@ function viewRange(view, date, weekStartDay = 0) {
       return { start: date, end: addDays(date, 1) };
     case 'schedule': {
       const s = startOfWeek(startOfMonth(date), { weekStartsOn: weekStartDay });
-      return { start: s, end: addDays(s, 7 * 6) };
+      return { start: s, end: addDays(s, 7 * 6 - 1) };
     }
     default: // month, agenda, timeline
       return { start: startOfMonth(date), end: endOfMonth(date) };
@@ -166,12 +166,17 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Merge all sources → normalize ────────────────────────────────────────
   const allNormalized = useMemo(() => {
+    // Deduplicate by id across sources (static + fetch + feed + realtime).
+    // Events without an id cannot be reliably deduplicated so they are
+    // included as-is — using title+start as a fallback key would silently
+    // drop events that happen to share the same title and start time.
     const map = new Map();
+    const noId = [];
     [...rawEvents, ...fetchedEvents, ...feedEvents, ...realtimeEvents].forEach(ev => {
-      const key = ev.id ?? `${ev.title}||${String(ev.start)}`;
-      map.set(key, ev);
+      if (ev.id != null) map.set(String(ev.id), ev);
+      else noId.push(ev);
     });
-    return normalizeEvents([...map.values()]);
+    return normalizeEvents([...map.values(), ...noId]);
   }, [rawEvents, fetchedEvents, feedEvents, realtimeEvents]);
 
   // ── Expand recurring events within the visible range ─────────────────────

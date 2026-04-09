@@ -43,11 +43,18 @@ export function layoutOverlaps(events) {
  */
 export function displayEndDay(ev) {
   const end = ev.end;
-  // All-day events have an exclusive end (DTEND in iCal), e.g. DTEND=Jan4 means Jan1-3.
-  // Timed events ending exactly at midnight also don't occupy that day.
-  const atMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
   const day = startOfDay(end);
-  return atMidnight ? addDays(day, -1) : day;
+  if (ev.allDay) {
+    // All-day events use iCal's exclusive DTEND convention:
+    // DTEND=Jan4 means the event covers Jan1–Jan3, not Jan4.
+    const atMidnight = end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0;
+    return atMidnight ? addDays(day, -1) : day;
+  }
+  // Timed events: the end timestamp is exact, not an exclusive boundary.
+  // A cross-midnight event ending at 00:00 Jan4 includes the Jan4 slot
+  // so it renders correctly in span layouts rather than silently dropping
+  // from the day it overlaps.
+  return day;
 }
 
 /**

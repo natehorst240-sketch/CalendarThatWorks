@@ -24,8 +24,14 @@ let _catColorIdx = 0;
 function categoryColor(cat) {
   if (!cat) return CATEGORY_COLORS[0];
   if (!_catColorMap.has(cat)) {
-    _catColorMap.set(cat, CATEGORY_COLORS[_catColorIdx % CATEGORY_COLORS.length]);
-    _catColorIdx++;
+    const idx = _catColorIdx++;
+    // Use the curated palette for the first 8 categories; beyond that derive
+    // colours via the golden-angle hue distribution so they stay visually
+    // distinct without ever repeating.
+    const color = idx < CATEGORY_COLORS.length
+      ? CATEGORY_COLORS[idx]
+      : `hsl(${Math.round((idx * 137.508) % 360)}, 62%, 45%)`;
+    _catColorMap.set(cat, color);
   }
   return _catColorMap.get(cat);
 }

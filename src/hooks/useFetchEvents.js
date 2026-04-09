@@ -26,7 +26,7 @@ function visibleRange(view, currentDate, weekStartDay = 0) {
       return { start: currentDate, end: addDays(currentDate, 1) };
     case 'schedule': {
       const s = startOfWeek(startOfMonth(currentDate), { weekStartsOn: weekStartDay });
-      return { start: s, end: addDays(s, 7 * 6) };
+      return { start: s, end: addDays(s, 7 * 6 - 1) };
     }
     case 'month':
     case 'agenda':
