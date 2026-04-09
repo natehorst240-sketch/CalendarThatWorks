@@ -18,3 +18,4 @@ export { useOccurrences }                 from './hooks/useOccurrences.js';
 export { useDrag }                        from './hooks/useDrag.js';
 export { useFeedEvents }                  from './hooks/useFeedEvents.js';
 export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout.js';
+export { validateChange }                 from './core/validator.js';

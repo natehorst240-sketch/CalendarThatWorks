@@ -20,6 +20,7 @@ import { useOccurrences }     from './hooks/useOccurrences.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
+import { validateChange }     from './core/validator.js';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
@@ -28,6 +29,7 @@ import OwnerLock              from './ui/OwnerLock.jsx';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
+import ValidationAlert        from './ui/ValidationAlert.jsx';
 import MonthView              from './views/MonthView.jsx';
 import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
@@ -96,6 +98,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     supabaseKey,
     supabaseTable,
     supabaseFilter,
+
+    // ── Validation ──
+    blockedWindows,
 
     // ── Appearance ──
     theme       = 'light',
@@ -188,6 +193,28 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
   const visibleEvents = useMemo(() => applyFilters(expandedEvents, cal.filters), [expandedEvents, cal.filters]);
 
+  // ── Validation pipeline ──────────────────────────────────────────────────
+  // Keep a ref so runAndCommit is stable but always reads the latest context.
+  const validationCtxRef = useRef(null);
+  validationCtxRef.current = {
+    events:         expandedEvents,
+    businessHours:  ownerCfg.config?.businessHours ?? businessHours,
+    blockedWindows: blockedWindows ?? [],
+  };
+
+  const [pendingAlert, setPendingAlert] = useState(null); // { violations, isHard, onConfirm }
+
+  const runAndCommit = useCallback((change, commit) => {
+    const result = validateChange(change, validationCtxRef.current);
+    if (result.severity === 'none') {
+      commit();
+    } else if (result.severity === 'soft') {
+      setPendingAlert({ violations: result.violations, isHard: false, onConfirm: commit });
+    } else {
+      setPendingAlert({ violations: result.violations, isHard: true,  onConfirm: null });
+    }
+  }, []); // stable — reads from ref
+
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [formEvent,     setFormEvent]     = useState(null);
@@ -215,23 +242,41 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
-  const handleEventSave = useCallback((ev) => {
-    onEventSave?.(ev);
-    setFormEvent(null);
-  }, [onEventSave]);
+  // All three handlers funnel through runAndCommit before touching host state.
 
-  // Drag callbacks — prefer specific handler, fall back to onEventSave
+  const handleEventSave = useCallback((rawEv) => {
+    const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
+    const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
+    const existing = rawEv.id
+      ? expandedEvents.find(e => e.id === String(rawEv.id)) ?? null
+      : null;
+    runAndCommit(
+      { type: existing ? 'move' : 'create', event: existing, newStart, newEnd, resource: rawEv.resource ?? null },
+      () => { onEventSave?.(rawEv); setFormEvent(null); },
+    );
+  }, [runAndCommit, expandedEvents, onEventSave]);
+
   const handleEventMove = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    if (onEventMove) onEventMove(ev, newStart, newEnd);
-    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
-  }, [onEventMove, onEventSave]);
+    runAndCommit(
+      { type: 'move', event: ev, newStart, newEnd },
+      () => {
+        if (onEventMove) onEventMove(ev, newStart, newEnd);
+        else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+      },
+    );
+  }, [runAndCommit, onEventMove, onEventSave]);
 
   const handleEventResize = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    if (onEventResize) onEventResize(ev, newStart, newEnd);
-    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
-  }, [onEventResize, onEventSave]);
+    runAndCommit(
+      { type: 'resize', event: ev, newStart, newEnd },
+      () => {
+        if (onEventResize) onEventResize(ev, newStart, newEnd);
+        else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+      },
+    );
+  }, [runAndCommit, onEventResize, onEventSave]);
 
   const handleEventDelete = useCallback((id) => {
     onEventDelete?.(id);
@@ -290,14 +335,13 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
-    currentDate:    cal.currentDate,
-    events:         visibleEvents,
-    onEventClick:   handleEventClick,
-    onEventSave:    handleEventSave,
-    onEventMove:    handleEventMove,
-    onEventResize:  handleEventResize,
-    onDateSelect:   handleDateSelect,
-    config:         ownerCfg.config,
+    currentDate:   cal.currentDate,
+    events:        visibleEvents,
+    onEventClick:  handleEventClick,
+    onEventMove:   handleEventMove,
+    onEventResize: handleEventResize,
+    onDateSelect:  handleDateSelect,
+    config:        ownerCfg.config,
     weekStartDay,
   };
 
@@ -435,6 +479,20 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {/* ── Import zone ── */}
         {importOpen && (
           <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
+        )}
+
+        {/* ── Validation alert ── */}
+        {pendingAlert && (
+          <ValidationAlert
+            violations={pendingAlert.violations}
+            isHard={pendingAlert.isHard}
+            onConfirm={pendingAlert.onConfirm ? () => {
+              const commit = pendingAlert.onConfirm;
+              setPendingAlert(null);
+              commit();
+            } : null}
+            onCancel={() => setPendingAlert(null)}
+          />
         )}
 
         {/* ── Owner config panel ── */}

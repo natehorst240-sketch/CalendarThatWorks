@@ -160,6 +160,47 @@ export interface ColorRule {
   color: string;
 }
 
+// ─── Validation ────────────────────────────────────────────────────────────────
+
+/** A time window during which events are blocked (hard violation). */
+export interface BlockedWindow {
+  start: Date | string;
+  end: Date | string;
+  /** If set, only events with a matching resource are blocked. */
+  resource?: string;
+  /** Human-readable reason shown in the validation alert. */
+  reason?: string;
+}
+
+export interface Violation {
+  rule: 'invalid-duration' | 'blocked-window' | 'overlap' | 'outside-business-hours' | string;
+  severity: 'hard' | 'soft';
+  message: string;
+  conflictingEvent?: NormalizedEvent;
+}
+
+export interface ValidationResult {
+  /** False when any hard violation is present. */
+  allowed: boolean;
+  severity: 'none' | 'soft' | 'hard';
+  violations: Violation[];
+  suggestedChange: null;
+}
+
+export interface ValidationChange {
+  type: 'create' | 'move' | 'resize';
+  event: NormalizedEvent | null;
+  newStart: Date;
+  newEnd: Date;
+  resource?: string | null;
+}
+
+export interface ValidationContext {
+  events?: NormalizedEvent[];
+  businessHours?: BusinessHours;
+  blockedWindows?: BlockedWindow[];
+}
+
 // ─── iCal ──────────────────────────────────────────────────────────────────────
 
 export interface ICalFeed {
@@ -275,6 +316,14 @@ export interface WorksCalendarProps {
   supabaseTable?: string;
   /** Supabase PostgREST filter, e.g. "calendar_id=eq.my-cal". */
   supabaseFilter?: string;
+
+  // ── Validation ──
+  /**
+   * Time windows that are hard-blocked — any event overlapping a window is
+   * rejected before the host's onEventSave/onEventMove/onEventResize fires.
+   * A window with no `resource` blocks all events during that period.
+   */
+  blockedWindows?: BlockedWindow[];
 
   // ── Appearance ──
   theme?: ThemeId;
@@ -452,6 +501,17 @@ export declare function layoutSpans(
  * For timed events ending at midnight, treats the end as the previous day.
  */
 export declare function displayEndDay(ev: NormalizedEvent): Date;
+
+// ─── Validation ────────────────────────────────────────────────────────────────
+
+/**
+ * Run the shared validation pipeline against a proposed change.
+ * Can be called from outside WorksCalendar (e.g. custom toolbars, forms).
+ */
+export declare function validateChange(
+  change: ValidationChange,
+  context?: ValidationContext,
+): ValidationResult;
 
 // ─── Theme metadata ────────────────────────────────────────────────────────────
 
