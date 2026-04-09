@@ -276,9 +276,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     // legacy shapes passed directly (e.g. from the EventForm).
     const eventId  = rawEv._eventId ?? (rawEv.id ? String(rawEv.id) : null);
     const op = eventId
-      ? { type: 'move',   id: eventId, newStart, newEnd, source: 'form' }
-      : { type: 'create', event: {
-            title:      rawEv.title ?? '(untitled)',
+      ? {
+          // Full patch so all editable fields flow through the engine, not just time.
+          type:  'update',
+          id:    eventId,
+          patch: {
+            title:      rawEv.title      ?? '(untitled)',
             start:      newStart,
             end:        newEnd,
             allDay:     rawEv.allDay     ?? false,
@@ -286,7 +289,24 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             category:   rawEv.category   ?? null,
             color:      rawEv.color      ?? null,
             status:     rawEv.status     ?? 'confirmed',
-          }, source: 'form' };
+            rrule:      rawEv.rrule      ?? null,
+          },
+          source: 'form',
+        }
+      : {
+          type:   'create',
+          event: {
+            title:      rawEv.title      ?? '(untitled)',
+            start:      newStart,
+            end:        newEnd,
+            allDay:     rawEv.allDay     ?? false,
+            resourceId: rawEv.resource   ?? null,
+            category:   rawEv.category   ?? null,
+            color:      rawEv.color      ?? null,
+            status:     rawEv.status     ?? 'confirmed',
+          },
+          source: 'form',
+        };
     applyEngineOp(op, () => { onEventSave?.(rawEv); setFormEvent(null); });
   }, [applyEngineOp, onEventSave]);
 
@@ -313,9 +333,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [applyEngineOp, onEventResize, onEventSave]);
 
   const handleEventDelete = useCallback((id) => {
-    onEventDelete?.(id);
-    setFormEvent(null);
-  }, [onEventDelete]);
+    // Route through the engine so deletion participates in the unified mutation
+    // pipeline (validation, recurrence-scope logic, state notification).
+    const eventId = String(id);
+    applyEngineOp(
+      { type: 'delete', id: eventId, source: 'form' },
+      () => { onEventDelete?.(id); setFormEvent(null); },
+    );
+  }, [applyEngineOp, onEventDelete]);
 
   const handleImport = useCallback((imported) => {
     onImport?.(imported);
