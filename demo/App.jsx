@@ -4,43 +4,119 @@ import { WorksCalendar } from '../src/index.js';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
 
-/* Seed demo profiles into localStorage so they show up on first load */
-const DEMO_CALENDAR_ID = 'ihc-fleet-demo';
+/* ─── Demo profiles ─────────────────────────────────────────────── */
+const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
 const DEMO_PROFILES = [
-  { id:'demo-p1', name:'All AOG Aircraft',    color:'#ef4444', filters:{ categories:['AOG'],                     resources:[], search:'' }, view:'agenda'    },
-  { id:'demo-p2', name:'Inspections Due',     color:'#f59e0b', filters:{ categories:['Inspection'],              resources:[], search:'' }, view:'month'     },
-  { id:'demo-p3', name:'N251HC Schedule',     color:'#3b82f6', filters:{ categories:[],                          resources:['N251HC'], search:'' }, view:'schedule' },
-  { id:'demo-p4', name:'Maintenance + AOG',   color:'#8b5cf6', filters:{ categories:['Maintenance','AOG'],       resources:[], search:'' }, view:null        },
-  { id:'demo-p5', name:'Flight Ops',          color:'#06b6d4', filters:{ categories:['Utilization'],             resources:[], search:'' }, view:'week'      },
-  { id:'demo-p6', name:'Full Fleet Timeline', color:'#10b981', filters:{ categories:[],                          resources:[], search:'' }, view:'timeline'  },
+  { id:'p1', name:'Full Schedule',       color:'#10b981', filters:{ categories:[],              resources:[], search:'' }, view:'schedule' },
+  { id:'p2', name:'On-Call Only',        color:'#ef4444', filters:{ categories:['on-call'],      resources:[], search:'' }, view:'schedule' },
+  { id:'p3', name:'Incidents',           color:'#f59e0b', filters:{ categories:['Incident'],     resources:[], search:'' }, view:'agenda'   },
+  { id:'p4', name:'Sarah\'s Week',       color:'#3b82f6', filters:{ categories:[],              resources:['emp-sarah'], search:'' }, view:'week' },
+  { id:'p5', name:'Month Overview',      color:'#8b5cf6', filters:{ categories:[],              resources:[], search:'' }, view:'month'    },
 ];
 const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
 
-/* ─── Sample events ─────────────────────────────────────────────── */
-const today = new Date();
-const d    = (offset, h = 9) => { const dt = new Date(today); dt.setDate(dt.getDate() + offset); dt.setHours(h, 0, 0, 0); return dt.toISOString(); };
-const dEnd = (offset, h = 9, dur = 2) => { const dt = new Date(today); dt.setDate(dt.getDate() + offset); dt.setHours(h + dur, 0, 0, 0); return dt.toISOString(); };
-
-const INITIAL_EVENTS = [
-  { id:'1',  title:'N251HC — 100hr Due',        start:d(-2),   end:dEnd(-2,9,4),  category:'Inspection',  resource:'N251HC', color:'#f59e0b', meta:{ priority:'High',      tech:'Smith'    } },
-  { id:'2',  title:'N261HC — AOG Hydraulic',    start:d(-1),   end:dEnd(-1,9,3),  category:'AOG',         resource:'N261HC', color:'#ef4444', meta:{ squawk:'Hyd leak main rotor'           } },
-  { id:'3',  title:'N271HC — Phase 3',          start:d(0),    end:dEnd(0,9,6),   category:'Inspection',  resource:'N271HC', color:'#f59e0b', meta:{ tech:'Jones'                           } },
-  { id:'4',  title:'N281HC — Flight SAT',       start:d(1,7),  end:dEnd(1,7,2),   category:'Utilization', resource:'N281HC', color:'#3b82f6', meta:{ hours:'1.2'                            } },
-  { id:'5',  title:'N291HC — Blade Track',      start:d(2,10), end:dEnd(2,10,3),  category:'Maintenance', resource:'N291HC', color:'#8b5cf6', meta:{ tech:'Brown'                           } },
-  { id:'6',  title:'N431HC — Flight SLC',       start:d(2,14), end:dEnd(2,14,1),  category:'Utilization', resource:'N431HC', color:'#3b82f6', meta:{ hours:'0.8'                            } },
-  { id:'7',  title:'N531HC — 300hr Inspection', start:d(4,8),  end:dEnd(4,8,8),   category:'Inspection',  resource:'N531HC', color:'#f59e0b', meta:{ priority:'Scheduled'                   } },
-  { id:'8',  title:'N631HC — AOG Avionics',     start:d(4,11), end:dEnd(4,11,2),  category:'AOG',         resource:'N631HC', color:'#ef4444', meta:{ squawk:'AFCS fault code 7'             } },
-  { id:'9',  title:'N731HC — Annual',           start:d(7,8),  end:dEnd(7,8,48),  category:'Inspection',  resource:'N731HC', color:'#f59e0b', meta:{ tech:'Garcia'                          } },
-  { id:'10', title:'N251HC — Flight LAS',       start:d(3,6),  end:dEnd(3,6,3),   category:'Utilization', resource:'N251HC', color:'#3b82f6', meta:{ hours:'2.5'                            } },
-  { id:'11', title:'N261HC — Gear Box Inspect', start:d(5,9),  end:dEnd(5,9,4),   category:'Maintenance', resource:'N261HC', color:'#8b5cf6', meta:{ tech:'Williams', priority:'Medium'     } },
-  { id:'12', title:'N271HC — Flight PHX',       start:d(6,13), end:dEnd(6,13,2),  category:'Utilization', resource:'N271HC', color:'#3b82f6', meta:{ hours:'1.8'                            } },
-  { id:'13', title:'N831HC — Incoming Delivery',start:d(8),    end:dEnd(8,9,1),   category:'Admin',       resource:'N831HC', color:'#06b6d4', meta:{ priority:'High'                        } },
-  { id:'14', title:'N531HC — Engine Wash',      start:d(-3,10),end:dEnd(-3,10,2), category:'Maintenance', resource:'N531HC', color:'#8b5cf6', meta:{ tech:'Smith'                           } },
-  { id:'15', title:'Staff Meeting',             start:d(0,8),  end:dEnd(0,8,1),   category:'Admin',       resource:null,     color:'#06b6d4', meta:{}                                       },
+/* ─── Employees ─────────────────────────────────────────────────── */
+const EMPLOYEES = [
+  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6' },
+  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444' },
+  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981' },
+  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6' },
+  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b' },
+  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4' },
 ];
 
-/* ─── Theme Swatch Picker ───────────────────────────────────────── */
+/* ─── Events ────────────────────────────────────────────────────── */
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+// Shift an ISO date by `days` days
+function shift(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+// Start of the current month
+const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+// Build on-call rotation: each engineer covers 7 days in round-robin order
+function buildOnCallRotation(employees, monthStart) {
+  const shifts = [];
+  let id = 100;
+  // 6 rotation slots across the month (some may overlap month boundary)
+  for (let slot = 0; slot < 5; slot++) {
+    const emp = employees[slot % employees.length];
+    const start = shift(monthStart, slot * 7);
+    const end   = shift(start, 7);     // exclusive end
+    shifts.push({
+      id: String(id++),
+      title: 'On Call',
+      start: start.toISOString(),
+      end:   end.toISOString(),
+      category: 'on-call',
+      resource: emp.id,
+      color: emp.color,
+    });
+  }
+  return shifts;
+}
+
+// Regular events
+function d(offsetDays, hour = 9) {
+  const dt = new Date(today);
+  dt.setDate(dt.getDate() + offsetDays);
+  dt.setHours(hour, 0, 0, 0);
+  return dt.toISOString();
+}
+function dEnd(offsetDays, hour = 9, durH = 1) {
+  const dt = new Date(today);
+  dt.setDate(dt.getDate() + offsetDays);
+  dt.setHours(hour + durH, 0, 0, 0);
+  return dt.toISOString();
+}
+
+const REGULAR_EVENTS = [
+  // Team standup — daily (not recurring in this demo, just a few instances)
+  { id:'m1',  title:'Daily Standup',        start:d(0,9),   end:dEnd(0,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'m2',  title:'Daily Standup',        start:d(1,9),   end:dEnd(1,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'m3',  title:'Daily Standup',        start:d(2,9),   end:dEnd(2,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'m4',  title:'Daily Standup',        start:d(3,9),   end:dEnd(3,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'m5',  title:'Daily Standup',        start:d(4,9),   end:dEnd(4,9,0.25),  category:'Meeting',  resource:null,         color:'#64748b' },
+
+  // 1-on-1s
+  { id:'o1',  title:'1-on-1 w/ Sarah',      start:d(1,10),  end:dEnd(1,10),      category:'Meeting',  resource:'emp-sarah',  color:'#3b82f6' },
+  { id:'o2',  title:'1-on-1 w/ Marcus',     start:d(2,10),  end:dEnd(2,10),      category:'Meeting',  resource:'emp-marcus', color:'#ef4444' },
+  { id:'o3',  title:'1-on-1 w/ Alex',       start:d(3,11),  end:dEnd(3,11),      category:'Meeting',  resource:'emp-alex',   color:'#f59e0b' },
+  { id:'o4',  title:'1-on-1 w/ Dana',       start:d(5,14),  end:dEnd(5,14),      category:'Meeting',  resource:'emp-dana',   color:'#06b6d4' },
+
+  // Incidents
+  { id:'i1',  title:'P1 Incident — API timeout',  start:d(-1,2),  end:dEnd(-1,2,3),  category:'Incident', resource:'emp-marcus', color:'#ef4444', status:'confirmed' },
+  { id:'i2',  title:'P2 Incident — DB slow query', start:d(2,14), end:dEnd(2,14,2),  category:'Incident', resource:'emp-james',  color:'#f97316' },
+
+  // Code reviews / deploys
+  { id:'d1',  title:'Prod Deploy — v2.4.1',  start:d(4,15),  end:dEnd(4,15,1),   category:'Deploy',   resource:'emp-james',  color:'#8b5cf6' },
+  { id:'d2',  title:'Staging Deploy',        start:d(1,16),  end:dEnd(1,16,1),   category:'Deploy',   resource:'emp-james',  color:'#8b5cf6' },
+
+  // Sprint events
+  { id:'s1',  title:'Sprint Planning',       start:d(7,9),   end:dEnd(7,9,3),    category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'s2',  title:'Sprint Retrospective',  start:d(-3,14), end:dEnd(-3,14,2),  category:'Meeting',  resource:null,         color:'#64748b' },
+  { id:'s3',  title:'Sprint Demo',           start:d(-1,15), end:dEnd(-1,15,1),  category:'Meeting',  resource:null,         color:'#64748b' },
+
+  // PTO
+  { id:'v1',  title:'PTO — Priya',           start:d(8),     end:dEnd(11),       category:'PTO',      resource:'emp-priya',  color:'#10b981', allDay:true },
+
+  // Training
+  { id:'t1',  title:'AWS Security Training', start:d(5,10),  end:dEnd(5,10,4),   category:'Training', resource:'emp-alex',   color:'#f59e0b' },
+  { id:'t2',  title:'K8s Workshop',          start:d(6,9),   end:dEnd(6,9,3),    category:'Training', resource:'emp-dana',   color:'#06b6d4' },
+];
+
+const INITIAL_EVENTS = [
+  ...buildOnCallRotation(EMPLOYEES, monthStart),
+  ...REGULAR_EVENTS,
+];
+
+/* ─── Theme picker ──────────────────────────────────────────────── */
 function ThemePicker({ current, onChange }) {
   const [open, setOpen] = useState(false);
   const active = THEMES.find(t => t.id === current) ?? THEMES[0];
@@ -61,7 +137,7 @@ function ThemePicker({ current, onChange }) {
         title="Change theme"
       >
         <span style={{ display:'flex', gap:3 }}>
-          {[active.preview.accent, active.preview.bg, active.preview.surface].map((c,i) => (
+          {[active.preview.accent, active.preview.bg, active.preview.surface].map((c, i) => (
             <span key={i} style={{ width:12, height:12, borderRadius:'50%', background:c, border:'1px solid rgba(0,0,0,.15)', display:'inline-block' }} />
           ))}
         </span>
@@ -93,11 +169,9 @@ function ThemePicker({ current, onChange }) {
                 outlineOffset: -2,
               }}
             >
-              {/* Mini calendar swatch */}
               <div style={{
                 width: 36, height: 28, borderRadius: 5, flexShrink: 0,
-                background: t.preview.bg,
-                border: `1px solid ${t.preview.border}`,
+                background: t.preview.bg, border: `1px solid ${t.preview.border}`,
                 overflow: 'hidden', position: 'relative',
               }}>
                 <div style={{ height: 8, background: t.preview.surface, borderBottom: `1px solid ${t.preview.border}` }} />
@@ -127,7 +201,7 @@ function App() {
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
-  const isDark = THEMES.find(t => t.id === theme)?.dark ?? false;
+  const isDark       = THEMES.find(t => t.id === theme)?.dark ?? false;
   const headerBg     = isDark ? '#0f172a' : '#fff';
   const headerBorder = isDark ? '#1e293b' : '#e2e8f0';
   const pageBg       = isDark ? '#060d1a' : '#f1f5f9';
@@ -164,19 +238,18 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
 
-      {/* ── Demo header ── */}
+      {/* ── Header ── */}
       <header style={{
-        background: headerBg,
-        borderBottom: `1px solid ${headerBorder}`,
-        padding: '10px 20px',
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, flexWrap: 'wrap',
+        background: headerBg, borderBottom: `1px solid ${headerBorder}`,
+        padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
+        flexShrink: 0, flexWrap: 'wrap',
       }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: isDark ? '#f1f5f9' : '#0f172a' }}>
             WorksCalendar
           </h1>
           <p style={{ margin: 0, fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>
-            IHC Fleet Dashboard — Demo
+            Engineering On-Call Schedule — Demo
           </p>
         </div>
 
@@ -190,6 +263,7 @@ function App() {
         <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
             events={events}
+            employees={EMPLOYEES}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
             onConfigSave={() => log('Config saved')}
@@ -220,9 +294,9 @@ function App() {
           </>
         )}
         <span>⚙ Owner pw: <code style={{ background: isDark ? '#1e293b' : '#f1f5f9', padding: '1px 5px', borderRadius: 3 }}>demo1234</code></span>
+        <span>Schedule tab → employee on-call rotation</span>
+        <span>🌙 Striped bars = on-call shifts</span>
         <span>Click event → hover card + notes</span>
-        <span>Profile bar → save any filter combo</span>
-        <span>📥 Export visible events to Excel/CSV</span>
       </div>
     </div>
   );
