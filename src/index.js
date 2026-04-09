@@ -14,3 +14,6 @@ export { useRealtimeEvents }              from './hooks/useRealtimeEvents.js';
 export { loadProfiles, saveProfiles, createProfile, serializeFilters, deserializeFilters, PROFILE_COLORS } from './core/profileStore.js';
 export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
+export { useOccurrences }                 from './hooks/useOccurrences.js';
+export { useFeedEvents }                  from './hooks/useFeedEvents.js';
+export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout.js';

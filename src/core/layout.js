@@ -41,7 +41,7 @@ export function layoutOverlaps(events) {
  * The "display end day" of an event — the last calendar day the event
  * occupies (inclusive), accounting for exclusive all-day ends.
  */
-function displayEndDay(ev) {
+export function displayEndDay(ev) {
   const end = ev.end;
   // All-day events have an exclusive end (DTEND in iCal), e.g. DTEND=Jan4 means Jan1-3.
   // Timed events ending exactly at midnight also don't occupy that day.

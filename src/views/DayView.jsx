@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import {
-  format, isToday, isSameDay, getHours, getMinutes,
+  format, isToday, isSameDay, getHours, getMinutes, startOfDay, addDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps } from '../core/layout.js';
@@ -16,8 +16,14 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
-  const allDayEvs = events.filter(e => isSameDay(e.start, currentDate) &&
-    (e.allDay || !isSameDay(e.start, e.end)));
+  // All-day row: any event that spans through currentDate (not just starts today)
+  const dayFloor  = startOfDay(currentDate);
+  const dayCeil   = addDays(dayFloor, 1); // exclusive upper bound
+  const allDayEvs = events.filter(e => {
+    if (!(e.allDay || !isSameDay(e.start, e.end))) return false;
+    return e.start < dayCeil && e.end > dayFloor;
+  });
+  // Timed events: only single-day events that start today
   const rawTimed  = events.filter(e => isSameDay(e.start, currentDate) &&
     !e.allDay && isSameDay(e.start, e.end));
   const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
