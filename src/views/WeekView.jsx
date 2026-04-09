@@ -1,23 +1,25 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
   format, isSameDay, isToday,
   getHours, getMinutes,
-  startOfDay, addMinutes,
+  startOfDay, addDays, addMinutes,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps, layoutSpans } from '../core/layout.js';
 import { useDrag } from '../hooks/useDrag.js';
 import styles from './WeekView.module.css';
 
-const SPAN_H   = 22;
-const SPAN_GAP = 2;
+const SPAN_H    = 22;
+const SPAN_GAP  = 2;
 const MAX_SPANS = 4;
-const GUTTER_W  = 56; // px — width of the time gutter column
+const GUTTER_W  = 56;
 
 function isMultiDay(ev) {
   return ev.allDay || !isSameDay(ev.start, ev.end);
 }
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 export default function WeekView({
   currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onSlotClick,
@@ -30,7 +32,8 @@ export default function WeekView({
   const pxPerHour  = 64;
   const bizHours   = ctx?.businessHours ?? null;
 
-  const gridRef = useRef(null);
+  const gridRef    = useRef(null);
+  const allDayRef  = useRef(null);
 
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: weekStartDay });
@@ -85,11 +88,16 @@ export default function WeekView({
   }
 
   const now = new Date();
-  const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
+  const nowTop      = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
   const showNowLine = getHours(now) >= dayStart && getHours(now) < dayEnd;
 
-  // ── Drag interaction ──────────────────────────────────────────────────────
+  // ── Timed-grid drag ───────────────────────────────────────────────────────
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
+
+  const handleGridPointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    drag.startCreate(e, gridRef.current, days, GUTTER_W);
+  }, [drag.startCreate, days]);
 
   const handleGridPointerMove = useCallback((e) => {
     drag.onPointerMove(e);
@@ -98,35 +106,81 @@ export default function WeekView({
   const handleGridPointerUp = useCallback(() => {
     const result = drag.onPointerUp();
     if (!result) return;
+    if (result.type === 'create') {
+      onSlotClick?.(result.newStart, result.newStart, result.newEnd);
+      return;
+    }
     const raw     = result.ev._raw ?? result.ev;
     const updated = { ...raw, start: result.newStart, end: result.newEnd };
-    if (result.type === 'move' && onEventMove) {
-      onEventMove(result.ev, result.newStart, result.newEnd);
-    } else if (result.type === 'resize' && onEventResize) {
+    if ((result.type === 'resize' || result.type === 'resize-top') && onEventResize) {
       onEventResize(result.ev, result.newStart, result.newEnd);
+    } else if (result.type === 'move' && onEventMove) {
+      onEventMove(result.ev, result.newStart, result.newEnd);
     } else {
       onEventSave?.(updated);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onSlotClick]);
 
-  const handleGridClick = useCallback((e) => {
-    if (!onSlotClick) return;
-    if (e.target.closest('[data-event]')) return;
-    const grid = gridRef.current;
-    if (!grid) return;
+  // ── All-day bar drag ──────────────────────────────────────────────────────
+  const allDayDragRef  = useRef(null);
+  const allDayGhostRef = useRef(null);
+  const [allDayGhost, setAllDayGhost] = useState(null);
+
+  function updateAllDayGhost(next) {
+    allDayGhostRef.current = next;
+    setAllDayGhost(prev => {
+      if (!next && !prev) return prev;
+      if (!next) return null;
+      if (!prev) return next;
+      if (prev.startCol === next.startCol && prev.endCol === next.endCol) return prev;
+      return next;
+    });
+  }
+
+  function startAllDayBarDrag(ev, e, spanStartCol, spanEndCol) {
+    e.preventDefault();
+    e.stopPropagation();
+    const grid     = allDayRef.current;
     const rect     = grid.getBoundingClientRect();
-    const relY     = e.clientY - rect.top;
+    const colWidth = rect.width / 7;
     const relX     = e.clientX - rect.left;
-    const colWidth = (rect.width - GUTTER_W) / days.length;
-    const colIdx   = Math.max(0, Math.min(days.length - 1, Math.floor((relX - GUTTER_W) / colWidth)));
-    const day      = days[colIdx];
-    const rawMin   = (relY / pxPerHour) * 60 + dayStart * 60;
-    const snapped  = Math.round(rawMin / 15) * 15;
-    const clampMin = Math.max(dayStart * 60, Math.min((dayEnd - 1) * 60, snapped));
-    const startD   = new Date(startOfDay(day));
-    startD.setMinutes(clampMin);
-    onSlotClick(day, startD, addMinutes(startD, 60));
-  }, [onSlotClick, days, dayStart, dayEnd, pxPerHour]);
+    const clickCol = clamp(Math.floor(relX / colWidth), 0, 6);
+    allDayDragRef.current = {
+      ev, spanStartCol, spanEndCol,
+      spanWidth:    spanEndCol - spanStartCol,
+      clickOffset:  clickCol - spanStartCol,
+      colWidth,
+    };
+    grid.setPointerCapture(e.pointerId);
+    updateAllDayGhost({ ev, startCol: spanStartCol, endCol: spanEndCol });
+  }
+
+  function handleAllDayPointerMove(e) {
+    const d = allDayDragRef.current;
+    if (!d) return;
+    const rect       = allDayRef.current.getBoundingClientRect();
+    const relX       = e.clientX - rect.left;
+    const currentCol = clamp(Math.floor(relX / d.colWidth), 0, 6);
+    const newStart   = clamp(currentCol - d.clickOffset, 0, 7 - d.spanWidth - 1);
+    const newEnd     = newStart + d.spanWidth;
+    updateAllDayGhost({ ev: d.ev, startCol: newStart, endCol: newEnd });
+  }
+
+  function handleAllDayPointerUp() {
+    const d     = allDayDragRef.current;
+    const ghost = allDayGhostRef.current;
+    allDayDragRef.current  = null;
+    allDayGhostRef.current = null;
+    setAllDayGhost(null);
+    if (!d || !ghost) return;
+    const colDiff = ghost.startCol - d.spanStartCol;
+    if (colDiff === 0) return;
+    const newStart = addDays(d.ev.start, colDiff);
+    const newEnd   = addDays(d.ev.end,   colDiff);
+    const raw = d.ev._raw ?? d.ev;
+    if (onEventMove) onEventMove(d.ev, newStart, newEnd);
+    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+  }
 
   // ── Renderers ─────────────────────────────────────────────────────────────
 
@@ -142,15 +196,6 @@ export default function WeekView({
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
-    function handlePointerDown(e) {
-      if (e.button !== 0) return;
-      drag.startMove(ev, e, gridRef.current, days, GUTTER_W);
-    }
-    function handleResizeDown(e) {
-      if (e.button !== 0) return;
-      drag.startResize(ev, e, gridRef.current, days, GUTTER_W);
-    }
-
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
       : null;
@@ -162,15 +207,20 @@ export default function WeekView({
         role="button" tabIndex={0}
         onClick={onClick}
         onKeyDown={e => e.key === 'Enter' && onClick()}
-        onPointerDown={handlePointerDown}
+        onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
+        <div className={styles.resizeHandleTop}
+          onPointerDown={e => { if (e.button !== 0) return; drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          aria-hidden="true" />
         {inner ?? (
           <>
             <span className={styles.evTitle}>{ev.title}</span>
             <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
           </>
         )}
-        <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
+        <div className={styles.resizeHandle}
+          onPointerDown={e => { if (e.button !== 0) return; drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          aria-hidden="true" />
       </div>
     );
   }
@@ -179,10 +229,23 @@ export default function WeekView({
     const g = drag.ghost;
     if (!g || !isSameDay(g.start, day)) return null;
     const { top, height } = eventPosition(g.start, g.end);
-    const color = resolveColor(g.ev, ctx?.colorRules);
+    // For move/resize: preserve the source event's column metrics so the
+    // ghost respects overlap layout. For create: fill the column.
+    let left, width;
+    if (g.ev) {
+      const numCols = g.ev._numCols ?? 1;
+      const col     = g.ev._col     ?? 0;
+      left  = `${(col / numCols) * 100}%`;
+      width = `${(1 / numCols) * 100}%`;
+    } else {
+      left  = '2px';
+      width = 'calc(100% - 4px)';
+    }
+    const color = g.ev ? resolveColor(g.ev, ctx?.colorRules) : undefined;
     return (
-      <div key="ghost" className={styles.ghost} aria-hidden="true"
-        style={{ top, height, '--ev-color': color, left: '1%', width: '98%' }}
+      <div key="ghost" className={[styles.ghost, !g.ev && styles.ghostCreate].filter(Boolean).join(' ')}
+        aria-hidden="true"
+        style={{ top, height, '--ev-color': color, left, width }}
       />
     );
   }
@@ -207,7 +270,14 @@ export default function WeekView({
       {allDayLanes > 0 && (
         <div className={styles.allDayRow}>
           <div className={styles.timeGutter}><span>all&#8209;day</span></div>
-          <div className={styles.allDayGrid} style={{ height: allDayHeight }}>
+          <div
+            className={styles.allDayGrid}
+            style={{ height: allDayHeight }}
+            ref={allDayRef}
+            onPointerMove={handleAllDayPointerMove}
+            onPointerUp={handleAllDayPointerUp}
+            onPointerCancel={() => { allDayDragRef.current = null; setAllDayGhost(null); }}
+          >
             {allDaySpans
               .filter(s => s.lane < MAX_SPANS)
               .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
@@ -216,6 +286,7 @@ export default function WeekView({
                 const pctWidth = ((endCol - startCol + 1) / 7) * 100;
                 const statusClass = ev.status === 'cancelled' ? styles.cancelled
                   : ev.status === 'tentative' ? styles.tentative : '';
+                const isDimmedBar = allDayGhost?.ev?.id === ev.id;
                 return (
                   <button key={ev.id}
                     className={[
@@ -223,6 +294,7 @@ export default function WeekView({
                       continuesBefore && styles.continuesBefore,
                       continuesAfter  && styles.continuesAfter,
                       statusClass,
+                      isDimmedBar && styles.dragging,
                     ].filter(Boolean).join(' ')}
                     style={{
                       '--ev-color': color,
@@ -230,14 +302,34 @@ export default function WeekView({
                       width:  `${pctWidth}%`,
                       top:    lane * (SPAN_H + SPAN_GAP),
                       height: SPAN_H,
+                      cursor: 'grab',
                     }}
-                    onClick={() => onEventClick?.(ev)}
+                    onClick={() => !isDimmedBar && onEventClick?.(ev)}
+                    onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
                     title={ev.title}
                   >
                     {!continuesBefore && ev.title}
                   </button>
                 );
               })}
+
+            {/* All-day drag ghost */}
+            {allDayGhost && (() => {
+              const g = allDayGhost;
+              const color = resolveColor(g.ev, ctx?.colorRules);
+              return (
+                <div key="allday-ghost" className={styles.allDayGhost} aria-hidden="true"
+                  style={{
+                    '--ev-color': color,
+                    left:   `${(g.startCol / 7) * 100}%`,
+                    width:  `${((g.endCol - g.startCol + 1) / 7) * 100}%`,
+                    top:    0,
+                    height: SPAN_H,
+                  }}
+                />
+              );
+            })()}
+
             {allDayLanes > MAX_SPANS && (
               <span className={styles.allDayMore}>+{allDayLanes - MAX_SPANS} more</span>
             )}
@@ -249,10 +341,10 @@ export default function WeekView({
       <div
         className={styles.grid}
         ref={gridRef}
+        onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
         onPointerCancel={drag.cancel}
-        onClick={handleGridClick}
       >
         <div className={styles.timeCol}>
           {hours.map(h => (

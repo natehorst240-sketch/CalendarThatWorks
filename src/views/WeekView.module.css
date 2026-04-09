@@ -208,7 +208,7 @@
 }
 .evTime { font-size: 10px; opacity: 0.85; }
 
-/* ── Resize handle ── */
+/* ── Resize handles ── */
 .resizeHandle {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -227,7 +227,26 @@
   background: rgba(255,255,255,0.5);
 }
 
-/* ── Drag ghost (drop preview) ── */
+.resizeHandleTop {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
+  z-index: 2;
+}
+.resizeHandleTop::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px; height: 2px;
+  border-radius: 1px;
+  background: rgba(255,255,255,0.5);
+}
+
+/* ── Drag ghost (move/resize preview) ── */
 .ghost {
   position: absolute;
   border-radius: var(--wc-radius-sm);
@@ -238,6 +257,27 @@
   box-sizing: border-box;
   border: 2px dashed rgba(255,255,255,0.6);
 }
+
+/* ── Create ghost (drag-to-create preview) ── */
+.ghostCreate {
+  background: var(--wc-accent);
+  border: 2px dashed rgba(255,255,255,0.7);
+}
+
+/* ── All-day drag ghost ── */
+.allDayGhost {
+  position: absolute;
+  height: 22px;
+  border-radius: var(--wc-radius-sm);
+  background: var(--ev-color, var(--wc-accent));
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 20;
+  box-sizing: border-box;
+  border: 2px dashed rgba(255,255,255,0.7);
+}
+
+.allDaySpan.dragging { opacity: 0.3; }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 768px) {

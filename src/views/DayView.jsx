@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback } from 'react';
 import {
   format, isToday, isSameDay, getHours, getMinutes,
-  startOfDay, addDays, addMinutes,
+  startOfDay, addDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps } from '../core/layout.js';
@@ -59,6 +59,11 @@ export default function DayView({
   // ── Drag ────────────────────────────────────────────────────────────────
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
+  const handleGridPointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    drag.startCreate(e, gridRef.current, days, GUTTER_W);
+  }, [drag.startCreate, days]);
+
   const handleGridPointerMove = useCallback((e) => {
     drag.onPointerMove(e);
   }, [drag.onPointerMove]);
@@ -66,31 +71,20 @@ export default function DayView({
   const handleGridPointerUp = useCallback(() => {
     const result = drag.onPointerUp();
     if (!result) return;
+    if (result.type === 'create') {
+      onSlotClick?.(result.newStart, result.newStart, result.newEnd);
+      return;
+    }
     const raw     = result.ev._raw ?? result.ev;
     const updated = { ...raw, start: result.newStart, end: result.newEnd };
-    if (result.type === 'move' && onEventMove) {
-      onEventMove(result.ev, result.newStart, result.newEnd);
-    } else if (result.type === 'resize' && onEventResize) {
+    if ((result.type === 'resize' || result.type === 'resize-top') && onEventResize) {
       onEventResize(result.ev, result.newStart, result.newEnd);
+    } else if (result.type === 'move' && onEventMove) {
+      onEventMove(result.ev, result.newStart, result.newEnd);
     } else {
       onEventSave?.(updated);
     }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave]);
-
-  const handleGridClick = useCallback((e) => {
-    if (!onSlotClick) return;
-    if (e.target.closest('[data-event]')) return;
-    const grid = gridRef.current;
-    if (!grid) return;
-    const rect     = grid.getBoundingClientRect();
-    const relY     = e.clientY - rect.top;
-    const rawMin   = (relY / pxPerHour) * 60 + dayStart * 60;
-    const snapped  = Math.round(rawMin / 15) * 15;
-    const clampMin = Math.max(dayStart * 60, Math.min((dayEnd - 1) * 60, snapped));
-    const startD   = new Date(startOfDay(currentDate));
-    startD.setMinutes(clampMin);
-    onSlotClick(currentDate, startD, addMinutes(startD, 60));
-  }, [onSlotClick, currentDate, dayStart, dayEnd, pxPerHour]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onSlotClick]);
 
   // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev) {
@@ -105,15 +99,6 @@ export default function DayView({
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
-    function handlePointerDown(e) {
-      if (e.button !== 0) return;
-      drag.startMove(ev, e, gridRef.current, days, GUTTER_W);
-    }
-    function handleResizeDown(e) {
-      if (e.button !== 0) return;
-      drag.startResize(ev, e, gridRef.current, days, GUTTER_W);
-    }
-
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'day', isCompact: false, onClick, color });
       if (custom != null) {
@@ -121,10 +106,15 @@ export default function DayView({
           <div key={ev.id} data-event="1"
             className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
             style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
-            onPointerDown={handlePointerDown}
+            onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
           >
+            <div className={styles.resizeHandleTop}
+              onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+              aria-hidden="true" />
             {custom}
-            <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
+            <div className={styles.resizeHandle}
+              onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+              aria-hidden="true" />
           </div>
         );
       }
@@ -137,26 +127,43 @@ export default function DayView({
         role="button" tabIndex={0}
         onClick={onClick}
         onKeyDown={e => e.key === 'Enter' && onClick()}
-        onPointerDown={handlePointerDown}
+        onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
+        <div className={styles.resizeHandleTop}
+          onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          aria-hidden="true" />
         <span className={styles.evTitle}>{ev.title}</span>
         <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
-        <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
+        <div className={styles.resizeHandle}
+          onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          aria-hidden="true" />
       </div>
     );
   }
 
-  const g = drag.ghost;
-  const ghostEl = g && isSameDay(g.start, currentDate) ? (() => {
+  function renderGhost() {
+    const g = drag.ghost;
+    if (!g || !isSameDay(g.start, currentDate)) return null;
     const { top, height } = eventPosition(g.start, g.end);
-    const color = resolveColor(g.ev, ctx?.colorRules);
+    let left, width;
+    if (g.ev) {
+      const numCols = g.ev._numCols ?? 1;
+      const col     = g.ev._col     ?? 0;
+      left  = `${(col / numCols) * 100}%`;
+      width = `${(1 / numCols) * 100}%`;
+    } else {
+      left  = '2px';
+      width = 'calc(100% - 4px)';
+    }
+    const color = g.ev ? resolveColor(g.ev, ctx?.colorRules) : undefined;
     return (
-      <div className={styles.ghost} aria-hidden="true"
-        style={{ top, height, '--ev-color': color, left: '1%', width: '98%' }}
+      <div className={[styles.ghost, !g.ev && styles.ghostCreate].filter(Boolean).join(' ')}
+        aria-hidden="true"
+        style={{ top, height, '--ev-color': color, left, width }}
       />
     );
-  })() : null;
+  }
 
   return (
     <div className={styles.day}>
@@ -193,10 +200,10 @@ export default function DayView({
           className={styles.eventCol}
           style={{ height: (dayEnd - dayStart) * pxPerHour }}
           ref={gridRef}
+          onPointerDown={handleGridPointerDown}
           onPointerMove={handleGridPointerMove}
           onPointerUp={handleGridPointerUp}
           onPointerCancel={drag.cancel}
-          onClick={handleGridClick}
         >
           {hours.map(h => (
             <div key={h}
@@ -210,7 +217,7 @@ export default function DayView({
             </div>
           )}
           {dayEvents.map(ev => renderEvent(ev))}
-          {ghostEl}
+          {renderGhost()}
         </div>
       </div>
     </div>
