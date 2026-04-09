@@ -1,30 +1,36 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
   format, isSameDay, isToday,
   getHours, getMinutes,
-  startOfDay, differenceInCalendarDays, addDays,
+  startOfDay, addMinutes,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps, layoutSpans } from '../core/layout.js';
+import { useDrag } from '../hooks/useDrag.js';
 import styles from './WeekView.module.css';
 
 const SPAN_H   = 22;
 const SPAN_GAP = 2;
-const MAX_SPANS = 4; // max visible all-day span lanes before "+N more"
+const MAX_SPANS = 4;
+const GUTTER_W  = 56; // px — width of the time gutter column
 
-/** Does this event span more than one calendar day? */
 function isMultiDay(ev) {
   return ev.allDay || !isSameDay(ev.start, ev.end);
 }
 
-export default function WeekView({ currentDate, events, onEventClick, config, weekStartDay = 0 }) {
+export default function WeekView({
+  currentDate, events, onEventClick, onEventSave, onSlotClick,
+  config, weekStartDay = 0,
+}) {
   const ctx = useCalendarContext();
   const dayStart   = config?.display?.dayStart ?? 6;
   const dayEnd     = config?.display?.dayEnd   ?? 22;
   const totalHours = dayEnd - dayStart;
   const pxPerHour  = 64;
   const bizHours   = ctx?.businessHours ?? null;
+
+  const gridRef = useRef(null);
 
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: weekStartDay });
@@ -42,7 +48,6 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
     return { allDayEvents: allDay, timedEvents: timed };
   }, [events]);
 
-  // Lane-pack all-day / multi-day events across the week
   const allDaySpans = useMemo(
     () => layoutSpans(allDayEvents, weekStart, weekEnd),
     [allDayEvents, weekStart, weekEnd],
@@ -51,11 +56,10 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
   const allDayVisible = Math.min(allDayLanes, MAX_SPANS);
   const allDayHeight  = allDayVisible * (SPAN_H + SPAN_GAP);
 
-  // Column-pack timed events per day to avoid overlap
   const timedByDay = useMemo(() => {
     const map = new Map();
     days.forEach(day => {
-      const key  = format(day, 'yyyy-MM-dd');
+      const key    = format(day, 'yyyy-MM-dd');
       const dayEvs = timedEvents.filter(e => isSameDay(e.start, day));
       map.set(key, layoutOverlaps(dayEvs));
     });
@@ -71,9 +75,9 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
     return bizDays.includes(day.getDay()) && h >= bizHours.start && h < bizHours.end;
   }
 
-  function eventPosition(ev) {
-    const startMin = (getHours(ev.start) - dayStart) * 60 + getMinutes(ev.start);
-    const endMin   = (getHours(ev.end)   - dayStart) * 60 + getMinutes(ev.end);
+  function eventPosition(start, end) {
+    const startMin = (getHours(start) - dayStart) * 60 + getMinutes(start);
+    const endMin   = (getHours(end)   - dayStart) * 60 + getMinutes(end);
     return {
       top:    Math.max(0, startMin) / 60 * pxPerHour,
       height: Math.max(22, (endMin - startMin)) / 60 * pxPerHour,
@@ -84,37 +88,96 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
   const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
   const showNowLine = getHours(now) >= dayStart && getHours(now) < dayEnd;
 
+  // ── Drag interaction ──────────────────────────────────────────────────────
+  const drag = useDrag({ pxPerHour, dayStart, dayEnd });
+
+  const handleGridPointerMove = useCallback((e) => {
+    drag.onPointerMove(e, gridRef.current);
+  }, [drag.onPointerMove]);
+
+  const handleGridPointerUp = useCallback(() => {
+    const result = drag.onPointerUp();
+    if (result) {
+      const raw = result.ev._raw ?? result.ev;
+      onEventSave?.({ ...raw, start: result.newStart, end: result.newEnd });
+    }
+  }, [drag.onPointerUp, onEventSave]);
+
+  const handleGridClick = useCallback((e) => {
+    if (!onSlotClick) return;
+    if (e.target.closest('[data-event]')) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect     = grid.getBoundingClientRect();
+    const relY     = e.clientY - rect.top;
+    const relX     = e.clientX - rect.left;
+    const colWidth = (rect.width - GUTTER_W) / days.length;
+    const colIdx   = Math.max(0, Math.min(days.length - 1, Math.floor((relX - GUTTER_W) / colWidth)));
+    const day      = days[colIdx];
+    const rawMin   = (relY / pxPerHour) * 60 + dayStart * 60;
+    const snapped  = Math.round(rawMin / 15) * 15;
+    const clampMin = Math.max(dayStart * 60, Math.min((dayEnd - 1) * 60, snapped));
+    const startD   = new Date(startOfDay(day));
+    startD.setMinutes(clampMin);
+    onSlotClick(day, startD, addMinutes(startD, 60));
+  }, [onSlotClick, days, dayStart, dayEnd, pxPerHour]);
+
+  // ── Renderers ─────────────────────────────────────────────────────────────
+
   function renderTimedEvent(ev) {
-    const color   = resolveColor(ev, ctx?.colorRules);
-    const onClick = () => onEventClick?.(ev);
-    const { top, height } = eventPosition(ev);
-    // _col and _numCols from layoutOverlaps
-    const numCols = ev._numCols ?? 1;
-    const col     = ev._col     ?? 0;
+    const isDimmed = drag.draggedId === ev.id;
+    const color    = resolveColor(ev, ctx?.colorRules);
+    const onClick  = () => !isDimmed && onEventClick?.(ev);
+    const { top, height } = eventPosition(ev.start, ev.end);
+    const numCols  = ev._numCols ?? 1;
+    const col      = ev._col     ?? 0;
     const pctLeft  = (col / numCols) * 100;
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
-    if (ctx?.renderEvent) {
-      const custom = ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color });
-      if (custom != null) {
-        return (
-          <div key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-            style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}>
-            {custom}
-          </div>
-        );
-      }
+    function handlePointerDown(e) {
+      if (e.button !== 0) return;
+      drag.startMove(ev, e, gridRef.current, days, GUTTER_W);
+    }
+    function handleResizeDown(e) {
+      if (e.button !== 0) return;
+      drag.startResize(ev, e, gridRef.current, days, GUTTER_W);
     }
 
+    const inner = ctx?.renderEvent
+      ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
+      : null;
+
     return (
-      <button key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
+      <div key={ev.id} data-event="1"
+        className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
-        onClick={onClick}>
-        <span className={styles.evTitle}>{ev.title}</span>
-        <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
-      </button>
+        role="button" tabIndex={0}
+        onClick={onClick}
+        onKeyDown={e => e.key === 'Enter' && onClick()}
+        onPointerDown={handlePointerDown}
+      >
+        {inner ?? (
+          <>
+            <span className={styles.evTitle}>{ev.title}</span>
+            <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
+          </>
+        )}
+        <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
+      </div>
+    );
+  }
+
+  function renderGhost(day) {
+    const g = drag.ghost;
+    if (!g || !isSameDay(g.start, day)) return null;
+    const { top, height } = eventPosition(g.start, g.end);
+    const color = resolveColor(g.ev, ctx?.colorRules);
+    return (
+      <div key="ghost" className={styles.ghost} aria-hidden="true"
+        style={{ top, height, '--ev-color': color, left: '1%', width: '98%' }}
+      />
     );
   }
 
@@ -137,7 +200,7 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
       {/* ── All-day / multi-day row ── */}
       {allDayLanes > 0 && (
         <div className={styles.allDayRow}>
-          <div className={styles.timeGutter}><span>all‑day</span></div>
+          <div className={styles.timeGutter}><span>all&#8209;day</span></div>
           <div className={styles.allDayGrid} style={{ height: allDayHeight }}>
             {allDaySpans
               .filter(s => s.lane < MAX_SPANS)
@@ -170,16 +233,21 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
                 );
               })}
             {allDayLanes > MAX_SPANS && (
-              <span className={styles.allDayMore}>
-                +{allDayLanes - MAX_SPANS} more
-              </span>
+              <span className={styles.allDayMore}>+{allDayLanes - MAX_SPANS} more</span>
             )}
           </div>
         </div>
       )}
 
       {/* ── Time grid ── */}
-      <div className={styles.grid}>
+      <div
+        className={styles.grid}
+        ref={gridRef}
+        onPointerMove={handleGridPointerMove}
+        onPointerUp={handleGridPointerUp}
+        onPointerCancel={drag.cancel}
+        onClick={handleGridClick}
+      >
         <div className={styles.timeCol}>
           {hours.map(h => (
             <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }}>
@@ -189,15 +257,13 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
         </div>
 
         {days.map(day => {
-          const key = format(day, 'yyyy-MM-dd');
+          const key    = format(day, 'yyyy-MM-dd');
           const dayEvs = timedByDay.get(key) || [];
-
           return (
             <div key={key}
               className={[styles.dayCol, isToday(day) && styles.todayCol].filter(Boolean).join(' ')}
               style={{ height: totalHours * pxPerHour }}
             >
-              {/* Hour grid lines + business-hours shading */}
               {hours.map(h => (
                 <div key={h}
                   className={[
@@ -207,15 +273,13 @@ export default function WeekView({ currentDate, events, onEventClick, config, we
                   style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
                 />
               ))}
-
-              {/* Current time indicator */}
               {isToday(day) && showNowLine && (
                 <div className={styles.nowLine} style={{ top: nowTop }}>
                   <div className={styles.nowDot} />
                 </div>
               )}
-
               {dayEvs.map(ev => renderTimedEvent(ev))}
+              {renderGhost(day)}
             </div>
           );
         })}

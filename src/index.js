@@ -15,5 +15,6 @@ export { loadProfiles, saveProfiles, createProfile, serializeFilters, deserializ
 export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
 export { useOccurrences }                 from './hooks/useOccurrences.js';
+export { useDrag }                        from './hooks/useDrag.js';
 export { useFeedEvents }                  from './hooks/useFeedEvents.js';
 export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout.js';

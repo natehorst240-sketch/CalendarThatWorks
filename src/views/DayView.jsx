@@ -1,40 +1,49 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import {
-  format, isToday, isSameDay, getHours, getMinutes, startOfDay, addDays,
+  format, isToday, isSameDay, getHours, getMinutes,
+  startOfDay, addDays, addMinutes,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps } from '../core/layout.js';
+import { useDrag } from '../hooks/useDrag.js';
 import styles from './DayView.module.css';
 
-export default function DayView({ currentDate, events, onEventClick, config }) {
+const GUTTER_W = 56;
+
+export default function DayView({
+  currentDate, events, onEventClick, onEventSave, onSlotClick, config,
+}) {
   const ctx = useCalendarContext();
   const dayStart  = config?.display?.dayStart ?? 6;
   const dayEnd    = config?.display?.dayEnd   ?? 22;
   const pxPerHour = 64;
   const bizHours  = ctx?.businessHours ?? null;
 
+  const gridRef = useRef(null);
+  const days    = useMemo(() => [currentDate], [currentDate]);
+
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
-  // All-day row: any event that spans through currentDate (not just starts today)
+  // All-day row: multi-day events overlapping currentDate
   const dayFloor  = startOfDay(currentDate);
-  const dayCeil   = addDays(dayFloor, 1); // exclusive upper bound
+  const dayCeil   = addDays(dayFloor, 1);
   const allDayEvs = events.filter(e => {
     if (!(e.allDay || !isSameDay(e.start, e.end))) return false;
     return e.start < dayCeil && e.end > dayFloor;
   });
-  // Timed events: only single-day events that start today
-  const rawTimed  = events.filter(e => isSameDay(e.start, currentDate) &&
-    !e.allDay && isSameDay(e.start, e.end));
+  const rawTimed  = events.filter(e =>
+    isSameDay(e.start, currentDate) && !e.allDay && isSameDay(e.start, e.end),
+  );
   const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
 
-  const now = new Date();
+  const now    = new Date();
   const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
   const showNow = isToday(currentDate) && getHours(now) >= dayStart && getHours(now) < dayEnd;
 
-  function eventPosition(ev) {
-    const startMin = (getHours(ev.start) - dayStart) * 60 + getMinutes(ev.start);
-    const endMin   = (getHours(ev.end)   - dayStart) * 60 + getMinutes(ev.end);
+  function eventPosition(start, end) {
+    const startMin = (getHours(start) - dayStart) * 60 + getMinutes(start);
+    const endMin   = (getHours(end)   - dayStart) * 60 + getMinutes(end);
     return {
       top:    Math.max(0, startMin) / 60 * pxPerHour,
       height: Math.max(22, endMin - startMin) / 60 * pxPerHour,
@@ -47,10 +56,42 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
     return bizDays.includes(currentDate.getDay()) && h >= bizHours.start && h < bizHours.end;
   }
 
+  // ── Drag ────────────────────────────────────────────────────────────────
+  const drag = useDrag({ pxPerHour, dayStart, dayEnd });
+
+  const handleGridPointerMove = useCallback((e) => {
+    drag.onPointerMove(e, gridRef.current);
+  }, [drag.onPointerMove]);
+
+  const handleGridPointerUp = useCallback(() => {
+    const result = drag.onPointerUp();
+    if (result) {
+      const raw = result.ev._raw ?? result.ev;
+      onEventSave?.({ ...raw, start: result.newStart, end: result.newEnd });
+    }
+  }, [drag.onPointerUp, onEventSave]);
+
+  const handleGridClick = useCallback((e) => {
+    if (!onSlotClick) return;
+    if (e.target.closest('[data-event]')) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect     = grid.getBoundingClientRect();
+    const relY     = e.clientY - rect.top;
+    const rawMin   = (relY / pxPerHour) * 60 + dayStart * 60;
+    const snapped  = Math.round(rawMin / 15) * 15;
+    const clampMin = Math.max(dayStart * 60, Math.min((dayEnd - 1) * 60, snapped));
+    const startD   = new Date(startOfDay(currentDate));
+    startD.setMinutes(clampMin);
+    onSlotClick(currentDate, startD, addMinutes(startD, 60));
+  }, [onSlotClick, currentDate, dayStart, dayEnd, pxPerHour]);
+
+  // ── Renderers ─────────────────────────────────────────────────────────
   function renderEvent(ev) {
-    const color   = resolveColor(ev, ctx?.colorRules);
-    const onClick = () => onEventClick?.(ev);
-    const { top, height } = eventPosition(ev);
+    const isDimmed = drag.draggedId === ev.id;
+    const color    = resolveColor(ev, ctx?.colorRules);
+    const onClick  = () => !isDimmed && onEventClick?.(ev);
+    const { top, height } = eventPosition(ev.start, ev.end);
     const numCols  = ev._numCols ?? 1;
     const col      = ev._col     ?? 0;
     const pctLeft  = (col / numCols) * 100;
@@ -58,28 +99,58 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
+    function handlePointerDown(e) {
+      if (e.button !== 0) return;
+      drag.startMove(ev, e, gridRef.current, days, GUTTER_W);
+    }
+    function handleResizeDown(e) {
+      if (e.button !== 0) return;
+      drag.startResize(ev, e, gridRef.current, days, GUTTER_W);
+    }
+
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'day', isCompact: false, onClick, color });
       if (custom != null) {
         return (
-          <div key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
-            style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}>
+          <div key={ev.id} data-event="1"
+            className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+            style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
+            onPointerDown={handlePointerDown}
+          >
             {custom}
+            <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
           </div>
         );
       }
     }
 
     return (
-      <button key={ev.id} className={[styles.event, statusClass].filter(Boolean).join(' ')}
+      <div key={ev.id} data-event="1"
+        className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
-        onClick={onClick}>
+        role="button" tabIndex={0}
+        onClick={onClick}
+        onKeyDown={e => e.key === 'Enter' && onClick()}
+        onPointerDown={handlePointerDown}
+      >
         <span className={styles.evTitle}>{ev.title}</span>
         <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
-      </button>
+        <div className={styles.resizeHandle} onPointerDown={handleResizeDown} aria-hidden="true" />
+      </div>
     );
   }
+
+  const g = drag.ghost;
+  const ghostEl = g && isSameDay(g.start, currentDate) ? (() => {
+    const { top, height } = eventPosition(g.start, g.end);
+    const color = resolveColor(g.ev, ctx?.colorRules);
+    return (
+      <div className={styles.ghost} aria-hidden="true"
+        style={{ top, height, '--ev-color': color, left: '1%', width: '98%' }}
+      />
+    );
+  })() : null;
 
   return (
     <div className={styles.day}>
@@ -91,7 +162,7 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
 
       {allDayEvs.length > 0 && (
         <div className={styles.allDayRow}>
-          <div className={styles.timeLabel}>all‑day</div>
+          <div className={styles.timeLabel}>all&#8209;day</div>
           <div className={styles.allDayEvents}>
             {allDayEvs.map(ev => {
               const color = resolveColor(ev, ctx?.colorRules);
@@ -112,7 +183,15 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
             </div>
           ))}
         </div>
-        <div className={styles.eventCol} style={{ height: (dayEnd - dayStart) * pxPerHour }}>
+        <div
+          className={styles.eventCol}
+          style={{ height: (dayEnd - dayStart) * pxPerHour }}
+          ref={gridRef}
+          onPointerMove={handleGridPointerMove}
+          onPointerUp={handleGridPointerUp}
+          onPointerCancel={drag.cancel}
+          onClick={handleGridClick}
+        >
           {hours.map(h => (
             <div key={h}
               className={[styles.hourLine, bizHours && !isBizHour(h) && styles.offHour].filter(Boolean).join(' ')}
@@ -125,6 +204,7 @@ export default function DayView({ currentDate, events, onEventClick, config }) {
             </div>
           )}
           {dayEvents.map(ev => renderEvent(ev))}
+          {ghostEl}
         </div>
       </div>
     </div>

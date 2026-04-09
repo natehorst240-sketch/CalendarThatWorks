@@ -261,10 +261,18 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
+  // Slot click (empty area) → open form seeded with the clicked time
+  const handleSlotClick = useCallback((day, startD, endD) => {
+    if (!hasAddButton) return;
+    setFormEvent({ start: startD, end: endD });
+  }, [hasAddButton]);
+
   const sharedViewProps = {
     currentDate:  cal.currentDate,
     events:       visibleEvents,
     onEventClick: handleEventClick,
+    onEventSave:  handleEventSave,
+    onSlotClick:  handleSlotClick,
     config:       ownerCfg.config,
     weekStartDay,
   };

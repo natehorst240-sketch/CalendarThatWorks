@@ -1,26 +1,70 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
-  format, getISOWeek, startOfDay, addDays, differenceInCalendarDays,
+  format, getISOWeek, startOfDay,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutSpans } from '../core/layout.js';
 import styles from './MonthView.module.css';
 
-const SPAN_H   = 22; // px — height of a spanning event bar
-const SPAN_GAP = 3;  // px — gap between span lanes
-const MAX_SPANS_VISIBLE = 3; // max spanning lanes to render (rest collapse to "+N more")
+const SPAN_H   = 22;
+const SPAN_GAP = 3;
+const MAX_SPANS_VISIBLE = 3;
 
-/** Is this event multi-day (spans more than one calendar day)? */
 function isMultiDay(ev) {
   return ev.allDay || !isSameDay(ev.start, ev.end);
 }
 
-export default function MonthView({ currentDate, events, onEventClick, onDayClick, config, weekStartDay = 0 }) {
+export default function MonthView({
+  currentDate, events, onEventClick, onEventSave, onDayClick,
+  config, weekStartDay = 0,
+}) {
   const [popoverDay, setPopoverDay] = useState(null);
   const ctx = useCalendarContext();
 
+  // ── Drag state ───────────────────────────────────────────────────────────
+  const dragRef    = useRef(null); // { ev, moved, targetDay }
+  const [dragTarget, setDragTarget] = useState(null); // Date | null
+
+  function startPillDrag(ev, e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = { ev, moved: false, targetDay: null };
+  }
+
+  function handleCellPointerEnter(day) {
+    const d = dragRef.current;
+    if (!d) return;
+    d.moved     = true;
+    d.targetDay = day;
+    setDragTarget(day);
+  }
+
+  function commitDrag() {
+    const d = dragRef.current;
+    dragRef.current = null;
+    setDragTarget(null);
+    if (!d || !d.moved || !d.targetDay) return;
+    if (isSameDay(d.targetDay, d.ev.start)) return;
+
+    const durationMs = d.ev.end.getTime() - d.ev.start.getTime();
+    const newStart   = new Date(startOfDay(d.targetDay));
+    if (!d.ev.allDay) {
+      newStart.setHours(d.ev.start.getHours(), d.ev.start.getMinutes(), 0, 0);
+    }
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    const raw    = d.ev._raw ?? d.ev;
+    onEventSave?.({ ...raw, start: newStart, end: newEnd, allDay: d.ev.allDay });
+  }
+
+  function cancelDrag() {
+    dragRef.current = null;
+    setDragTarget(null);
+  }
+
+  // ── Data ─────────────────────────────────────────────────────────────────
   const { weeks, dayNames } = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd   = endOfMonth(currentDate);
@@ -34,7 +78,6 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
     return { weeks: wks, dayNames: names };
   }, [currentDate, weekStartDay]);
 
-  // Separate multi-day from single-day events
   const { multiDay, singleDay } = useMemo(() => {
     const multi = [];
     const single = [];
@@ -42,7 +85,6 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
     return { multiDay: multi, singleDay: single };
   }, [events]);
 
-  // Per-day buckets for single-day events
   const singleByDay = useMemo(() => {
     const map = new Map();
     singleDay.forEach(ev => {
@@ -55,9 +97,11 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
 
   const showWeekNumbers = config?.display?.showWeekNumbers;
 
+  // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev, extra = {}) {
-    const color   = resolveColor(ev, ctx?.colorRules);
-    const onClick = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
+    const color       = resolveColor(ev, ctx?.colorRules);
+    const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
+    const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
@@ -65,8 +109,11 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
       const custom = ctx.renderEvent(ev, { view: 'month', isCompact: true, onClick, color });
       if (custom != null) {
         return (
-          <div key={ev.id} className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
-            onClick={e => { e.stopPropagation(); onClick(); }}>
+          <div key={ev.id}
+            className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+            onClick={e => { e.stopPropagation(); onClick(); }}
+            onPointerDown={e => startPillDrag(ev, e)}
+          >
             {custom}
           </div>
         );
@@ -75,9 +122,10 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
 
     return (
       <button key={ev.id}
-        className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
+        className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ '--ev-color': color }}
         onClick={e => { e.stopPropagation(); onClick(); }}
+        onPointerDown={e => startPillDrag(ev, e)}
         title={ev.title}
       >
         {ev.title}
@@ -85,8 +133,26 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
     );
   }
 
+  function renderGhostPill() {
+    const d = dragRef.current;
+    if (!d || !dragTarget) return null;
+    const color = resolveColor(d.ev, ctx?.colorRules);
+    return (
+      <div
+        className={[styles.eventPill, styles.ghost].filter(Boolean).join(' ')}
+        style={{ '--ev-color': color }}
+        aria-hidden="true"
+      >
+        {d.ev.title}
+      </div>
+    );
+  }
+
   return (
-    <div className={styles.month}>
+    <div className={styles.month}
+      onPointerUp={commitDrag}
+      onPointerLeave={cancelDrag}
+    >
       {/* Day name header */}
       <div className={styles.header}
         style={{ gridTemplateColumns: showWeekNumbers ? `32px repeat(7, 1fr)` : `repeat(7, 1fr)` }}>
@@ -99,9 +165,8 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
           const weekStart = week[0];
           const weekEnd   = week[6];
 
-          // Compute spanning bars for this week row
           const spans = layoutSpans(multiDay, weekStart, weekEnd);
-          const laneCount = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
+          const laneCount   = spans.length ? Math.max(...spans.map(s => s.lane)) + 1 : 0;
           const spansHeight = Math.min(laneCount, MAX_SPANS_VISIBLE) * (SPAN_H + SPAN_GAP);
 
           return (
@@ -110,7 +175,6 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                 <div className={styles.weekNum}>{getISOWeek(week[0])}</div>
               )}
 
-              {/* Days area: spans layer + 7 cells */}
               <div className={styles.daysArea}>
                 {/* ── Spanning event bars ── */}
                 {laneCount > 0 && (
@@ -123,7 +187,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                         const pctWidth = ((endCol - startCol + 1) / 7) * 100;
                         const statusClass = ev.status === 'cancelled' ? styles.cancelled
                           : ev.status === 'tentative' ? styles.tentative : '';
-
+                        const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
                         return (
                           <button
                             key={`${ev.id}-w${wi}`}
@@ -132,6 +196,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                               continuesBefore && styles.continuesBefore,
                               continuesAfter  && styles.continuesAfter,
                               statusClass,
+                              isDimmed && styles.dragging,
                             ].filter(Boolean).join(' ')}
                             style={{
                               '--ev-color': color,
@@ -141,6 +206,7 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                               height: SPAN_H,
                             }}
                             onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
+                            onPointerDown={e => startPillDrag(ev, e)}
                             title={ev.title}
                           >
                             {!continuesBefore && ev.title}
@@ -153,14 +219,14 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                 {/* ── Day cells ── */}
                 <div className={styles.weekCells} style={{ paddingTop: spansHeight }}>
                   {week.map((day, di) => {
-                    const dayKey = format(day, 'yyyy-MM-dd');
+                    const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
+                    const isDropTarget = dragTarget && isSameDay(dragTarget, day);
 
-                    // Count hidden overflow from spanning bars
                     const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
                     const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
                     const visibleSpLanes = spansOnDay.filter(s => s.lane < MAX_SPANS_VISIBLE).length;
-                    const MAX_PILLS = Math.max(0, 3 - visibleSpLanes);
+                    const MAX_PILLS     = Math.max(0, 3 - visibleSpLanes);
                     const overflowCount = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
                     const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
 
@@ -171,13 +237,16 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                           styles.cell,
                           !isSameMonth(day, currentDate) && styles.otherMonth,
                           isToday(day) && styles.today,
+                          isDropTarget && styles.dropTarget,
                         ].filter(Boolean).join(' ')}
                         onClick={() => onDayClick?.(day)}
+                        onPointerEnter={() => handleCellPointerEnter(day)}
                       >
                         <span className={styles.dayNum}>{format(day, 'd')}</span>
 
                         <div className={styles.events}>
                           {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev))}
+                          {isDropTarget && renderGhostPill()}
                           {overflowCount > 0 && (
                             <button
                               className={styles.morePill}
@@ -197,11 +266,9 @@ export default function MonthView({ currentDate, events, onEventClick, onDayClic
                               <span>{format(day, 'MMMM d')}</span>
                               <button onClick={() => setPopoverDay(null)}>×</button>
                             </div>
-                            {/* Show all events for this day (both spanning and single) */}
-                            {[
-                              ...spansOnDay.map(s => s.ev),
-                              ...daySingles,
-                            ].map(ev => renderPill(ev, { onAfterClick: () => setPopoverDay(null) }))}
+                            {[...spansOnDay.map(s => s.ev), ...daySingles].map(ev =>
+                              renderPill(ev, { onAfterClick: () => setPopoverDay(null) }),
+                            )}
                           </div>
                         )}
                       </div>

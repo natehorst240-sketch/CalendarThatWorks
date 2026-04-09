@@ -112,6 +112,7 @@
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px);
 }
 .spanBar.cancelled { opacity: 0.45; text-decoration: line-through; }
+.spanBar.dragging { opacity: 0.3; pointer-events: none; }
 
 /* ── 7 day cells ── */
 .weekCells {
@@ -131,6 +132,7 @@
 }
 .cell:last-child { border-right: none; }
 .cell:hover { background: var(--wc-surface); }
+.cell.dropTarget { background: color-mix(in srgb, var(--wc-accent) 8%, var(--wc-surface)); }
 
 .otherMonth { opacity: 0.4; }
 
@@ -178,6 +180,8 @@
 .eventPill:hover { opacity: 0.85; }
 .eventPill.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
 .eventPill.cancelled { opacity: 0.5; text-decoration: line-through; }
+.eventPill.dragging { opacity: 0.3; pointer-events: none; cursor: grabbing; }
+.eventPill.ghost { opacity: 0.5; pointer-events: none; border: 1px dashed rgba(255,255,255,0.6); }
 
 .morePill {
   display: block;

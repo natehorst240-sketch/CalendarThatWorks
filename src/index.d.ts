@@ -355,6 +355,20 @@ export declare function useRealtimeEvents(opts: {
   status: 'connecting' | 'live' | 'error' | 'disabled';
 };
 
+export declare function useDrag(opts: {
+  pxPerHour: number;
+  dayStart: number;
+  dayEnd: number;
+}): {
+  ghost: { ev: NormalizedEvent; start: Date; end: Date } | null;
+  draggedId: string | null;
+  startMove: (ev: NormalizedEvent, e: React.PointerEvent, gridEl: HTMLElement, days: Date[], gutterWidth: number) => void;
+  startResize: (ev: NormalizedEvent, e: React.PointerEvent, gridEl: HTMLElement, days: Date[], gutterWidth: number) => void;
+  onPointerMove: (e: React.PointerEvent, gridEl: HTMLElement) => void;
+  onPointerUp: () => { ev: NormalizedEvent; newStart: Date; newEnd: Date } | null;
+  cancel: () => void;
+};
+
 export declare function useOccurrences(
   events: NormalizedEvent[],
   rangeStart: Date,
