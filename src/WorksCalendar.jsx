@@ -86,6 +86,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     // ── Event callbacks ──
     onEventClick: onEventClickProp,
     onEventSave,
+    onEventMove,
+    onEventResize,
     onEventDelete,
 
     // ── Supabase realtime ──
@@ -212,6 +214,19 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     setFormEvent(null);
   }, [onEventSave]);
 
+  // Drag callbacks — prefer specific handler, fall back to onEventSave
+  const handleEventMove = useCallback((ev, newStart, newEnd) => {
+    const raw = ev._raw ?? ev;
+    if (onEventMove) onEventMove(ev, newStart, newEnd);
+    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+  }, [onEventMove, onEventSave]);
+
+  const handleEventResize = useCallback((ev, newStart, newEnd) => {
+    const raw = ev._raw ?? ev;
+    if (onEventResize) onEventResize(ev, newStart, newEnd);
+    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+  }, [onEventResize, onEventSave]);
+
   const handleEventDelete = useCallback((id) => {
     onEventDelete?.(id);
     setFormEvent(null);
@@ -268,12 +283,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [hasAddButton]);
 
   const sharedViewProps = {
-    currentDate:  cal.currentDate,
-    events:       visibleEvents,
-    onEventClick: handleEventClick,
-    onEventSave:  handleEventSave,
-    onSlotClick:  handleSlotClick,
-    config:       ownerCfg.config,
+    currentDate:    cal.currentDate,
+    events:         visibleEvents,
+    onEventClick:   handleEventClick,
+    onEventSave:    handleEventSave,
+    onEventMove:    handleEventMove,
+    onEventResize:  handleEventResize,
+    onSlotClick:    handleSlotClick,
+    config:         ownerCfg.config,
     weekStartDay,
   };
 

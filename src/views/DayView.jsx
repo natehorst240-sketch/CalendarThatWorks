@@ -11,7 +11,7 @@ import styles from './DayView.module.css';
 const GUTTER_W = 56;
 
 export default function DayView({
-  currentDate, events, onEventClick, onEventSave, onSlotClick, config,
+  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onSlotClick, config,
 }) {
   const ctx = useCalendarContext();
   const dayStart  = config?.display?.dayStart ?? 6;
@@ -60,16 +60,22 @@ export default function DayView({
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
   const handleGridPointerMove = useCallback((e) => {
-    drag.onPointerMove(e, gridRef.current);
+    drag.onPointerMove(e);
   }, [drag.onPointerMove]);
 
   const handleGridPointerUp = useCallback(() => {
     const result = drag.onPointerUp();
-    if (result) {
-      const raw = result.ev._raw ?? result.ev;
-      onEventSave?.({ ...raw, start: result.newStart, end: result.newEnd });
+    if (!result) return;
+    const raw     = result.ev._raw ?? result.ev;
+    const updated = { ...raw, start: result.newStart, end: result.newEnd };
+    if (result.type === 'move' && onEventMove) {
+      onEventMove(result.ev, result.newStart, result.newEnd);
+    } else if (result.type === 'resize' && onEventResize) {
+      onEventResize(result.ev, result.newStart, result.newEnd);
+    } else {
+      onEventSave?.(updated);
     }
-  }, [drag.onPointerUp, onEventSave]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave]);
 
   const handleGridClick = useCallback((e) => {
     if (!onSlotClick) return;

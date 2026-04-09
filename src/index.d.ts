@@ -244,7 +244,19 @@ export interface WorksCalendarProps {
 
   // ── Event callbacks ──
   onEventClick?: (event: NormalizedEvent) => void;
+  /** Called from the form when an event is created or edited. */
   onEventSave?: (event: WorksCalendarEvent) => void;
+  /**
+   * Called when the user drags an event to a new time or day.
+   * Receives the normalized event plus the new start/end.
+   * Falls back to onEventSave if not provided.
+   */
+  onEventMove?: (event: NormalizedEvent, newStart: Date, newEnd: Date) => void;
+  /**
+   * Called when the user drags the resize handle to a new end time.
+   * Falls back to onEventSave if not provided.
+   */
+  onEventResize?: (event: NormalizedEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
   /** Called when events are imported via drag-drop or feed. */
   onImport?: (events: WorksCalendarEvent[]) => void;
@@ -362,10 +374,12 @@ export declare function useDrag(opts: {
 }): {
   ghost: { ev: NormalizedEvent; start: Date; end: Date } | null;
   draggedId: string | null;
+  /** Pass gridEl once here; it is stored internally for subsequent moves. */
   startMove: (ev: NormalizedEvent, e: React.PointerEvent, gridEl: HTMLElement, days: Date[], gutterWidth: number) => void;
   startResize: (ev: NormalizedEvent, e: React.PointerEvent, gridEl: HTMLElement, days: Date[], gutterWidth: number) => void;
-  onPointerMove: (e: React.PointerEvent, gridEl: HTMLElement) => void;
-  onPointerUp: () => { ev: NormalizedEvent; newStart: Date; newEnd: Date } | null;
+  /** No gridEl arg — stored from startMove/startResize. */
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: () => { ev: NormalizedEvent; newStart: Date; newEnd: Date; type: 'move' | 'resize' } | null;
   cancel: () => void;
 };
 
