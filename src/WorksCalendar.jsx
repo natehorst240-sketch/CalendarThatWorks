@@ -7,7 +7,7 @@ import {
 } from 'react';
 import {
   format, startOfMonth, endOfMonth,
-  startOfWeek, endOfWeek, addDays, addMonths,
+  startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Download, Plus, Upload } from 'lucide-react';
 
@@ -34,7 +34,6 @@ import MonthView              from './views/MonthView.jsx';
 import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
-import ScheduleView           from './views/ScheduleView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
 import { exportToExcel }      from './export/excelExport.js';
 
@@ -46,7 +45,6 @@ const VIEWS = [
   { id: 'day',      label: 'Day'      },
   { id: 'agenda',   label: 'Agenda'   },
   { id: 'schedule', label: 'Schedule' },
-  { id: 'timeline', label: 'Timeline' },
 ];
 
 /** Compute the visible [start, end] range for a given view + date. */
@@ -56,11 +54,7 @@ function viewRange(view, date, weekStartDay = 0) {
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
     case 'day':
       return { start: date, end: addDays(date, 1) };
-    case 'schedule': {
-      const s = startOfWeek(startOfMonth(date), { weekStartsOn: weekStartDay });
-      return { start: s, end: addDays(s, 7 * 6 - 1) };
-    }
-    default: // month, agenda, timeline
+    default: // month, agenda, schedule (timeline)
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
@@ -98,6 +92,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     supabaseKey,
     supabaseTable,
     supabaseFilter,
+
+    // ── Employees (for schedule/timeline view) ──
+    employees   = [],
 
     // ── Validation ──
     blockedWindows,
@@ -313,11 +310,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         if (sameYr)  return `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`;
         return `${format(ws, 'MMM d, yyyy')} – ${format(we, 'MMM d, yyyy')}`;
       }
-      case 'schedule': {
-        const ws = startOfWeek(startOfMonth(d), { weekStartsOn: weekStartDay });
-        const we = addDays(ws, 7 * 6 - 1);
-        return `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`;
-      }
       default:
         return format(d, 'MMMM yyyy');
     }
@@ -441,8 +433,14 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
               {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} />}
-              {cal.view === 'schedule' && <ScheduleView {...sharedViewProps} />}
-              {cal.view === 'timeline' && <TimelineView currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} />}
+              {cal.view === 'schedule' && (
+                <TimelineView
+                  currentDate={cal.currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  employees={employees}
+                />
+              )}
             </>
           )}
         </div>
