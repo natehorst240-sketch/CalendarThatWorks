@@ -22,7 +22,7 @@ function isMultiDay(ev) {
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
 export default function WeekView({
-  currentDate, events, onEventClick, onEventSave, onEventMove, onEventResize, onDateSelect,
+  currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect,
   config, weekStartDay = 0,
 }) {
   const ctx = useCalendarContext();
@@ -108,18 +108,12 @@ export default function WeekView({
     if (!result) return;
     if (result.type === 'create') {
       onDateSelect?.(result.newStart, result.newEnd);
-      return;
+    } else if (result.type === 'resize' || result.type === 'resize-top') {
+      onEventResize?.(result.ev, result.newStart, result.newEnd);
+    } else if (result.type === 'move') {
+      onEventMove?.(result.ev, result.newStart, result.newEnd);
     }
-    const raw     = result.ev._raw ?? result.ev;
-    const updated = { ...raw, start: result.newStart, end: result.newEnd };
-    if ((result.type === 'resize' || result.type === 'resize-top') && onEventResize) {
-      onEventResize(result.ev, result.newStart, result.newEnd);
-    } else if (result.type === 'move' && onEventMove) {
-      onEventMove(result.ev, result.newStart, result.newEnd);
-    } else {
-      onEventSave?.(updated);
-    }
-  }, [drag.onPointerUp, onEventMove, onEventResize, onEventSave, onDateSelect]);
+  }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
 
   // ── All-day bar drag ──────────────────────────────────────────────────────
   const allDayDragRef  = useRef(null);
@@ -177,9 +171,7 @@ export default function WeekView({
     if (colDiff === 0) return;
     const newStart = addDays(d.ev.start, colDiff);
     const newEnd   = addDays(d.ev.end,   colDiff);
-    const raw = d.ev._raw ?? d.ev;
-    if (onEventMove) onEventMove(d.ev, newStart, newEnd);
-    else onEventSave?.({ ...raw, start: newStart, end: newEnd });
+    onEventMove?.(d.ev, newStart, newEnd);
   }
 
   // ── Renderers ─────────────────────────────────────────────────────────────

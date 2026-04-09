@@ -17,7 +17,7 @@ function isMultiDay(ev) {
 }
 
 export default function MonthView({
-  currentDate, events, onEventClick, onEventMove, onEventSave, onDateSelect,
+  currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0,
 }) {
   const [popoverDay, setPopoverDay] = useState(null);
@@ -55,9 +55,7 @@ export default function MonthView({
       newStart.setHours(d.ev.start.getHours(), d.ev.start.getMinutes(), 0, 0);
     }
     const newEnd = new Date(newStart.getTime() + durationMs);
-    const raw    = d.ev._raw ?? d.ev;
-    if (onEventMove) onEventMove(d.ev, newStart, newEnd);
-    else onEventSave?.({ ...raw, start: newStart, end: newEnd, allDay: d.ev.allDay });
+    onEventMove?.(d.ev, newStart, newEnd);
   }
 
   function cancelDrag() {
