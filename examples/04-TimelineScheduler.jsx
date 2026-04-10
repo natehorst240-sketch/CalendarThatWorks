@@ -112,6 +112,7 @@ export function TimelineScheduler() {
   return (
     <div style={{ height: '100%' }}>
       <WorksCalendar
+        devMode
         events={events}
         employees={team}
         initialView="schedule"

@@ -124,6 +124,7 @@ export function WithFilters() {
         No additional props needed.
       */}
       <WorksCalendar
+        devMode
         events={events}
         colorRules={COLOR_RULES}
         showAddButton

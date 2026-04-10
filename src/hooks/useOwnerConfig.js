@@ -9,9 +9,9 @@ async function sha256(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave }) {
+export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode = false }) {
   const [config,        setConfig]        = useState(() => loadConfig(calendarId));
-  const [isOwner,       setIsOwner]       = useState(false);
+  const [isOwner,       setIsOwner]       = useState(devMode);
   const [configOpen,    setConfigOpen]    = useState(false);
   const [authError,     setAuthError]     = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);

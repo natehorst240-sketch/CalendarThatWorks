@@ -303,6 +303,19 @@
   gap: 6px;
 }
 
+.devBadge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #f59e0b;
+  color: #fff;
+  user-select: none;
+  flex-shrink: 0;
+}
+
 .addBtn {
   display: flex;
   align-items: center;

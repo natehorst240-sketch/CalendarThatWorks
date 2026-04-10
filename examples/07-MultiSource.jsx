@@ -174,6 +174,7 @@ export function MultiSource() {
         colorRules shade events by source so each feed is visually distinct.
       */}
       <WorksCalendar
+        devMode
         events={events}
         employees={TEAM}
         initialView="schedule"

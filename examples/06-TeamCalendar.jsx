@@ -140,6 +140,7 @@ export function TeamCalendar() {
         pill to show/hide that team's events.
       */}
       <WorksCalendar
+        devMode
         events={events}
         colorRules={COLOR_RULES}
         calendarId="team-calendar"

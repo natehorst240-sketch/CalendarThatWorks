@@ -97,6 +97,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     ownerPassword           = '',
     onConfigSave,
 
+    // ── Dev mode — unlocks all admin features without a password ──
+    devMode                 = false,
+
     // ── Notes ──
     notes       = {},
     onNoteSave,
@@ -154,7 +157,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // ── View / date / filter state ───────────────────────────────────────────
   const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
   const cal      = useCalendar([], initialView ?? 'month', schema);
-  const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave });
+  const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
 
   // Honor defaultView from owner config (applied once after config loads)
@@ -557,7 +560,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     }
   }
 
-  const hasAddButton = (showAddButton || ownerCfg.isOwner) && perms.canAddEvent;
+  const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
@@ -614,6 +617,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             </div>
 
             <div className={styles.actions}>
+              {devMode && <span className={styles.devBadge}>Dev</span>}
               {hasAddButton && (
                 <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
                   <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>

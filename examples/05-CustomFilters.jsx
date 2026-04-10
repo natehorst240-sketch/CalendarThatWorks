@@ -139,6 +139,7 @@ export function CustomFilters() {
   return (
     <div style={{ height: '100%' }}>
       <WorksCalendar
+        devMode
         events={events}
         filterSchema={FILTER_SCHEMA}
         colorRules={COLOR_RULES}

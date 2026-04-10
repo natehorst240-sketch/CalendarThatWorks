@@ -117,6 +117,7 @@ export function BasicCalendar() {
 
       <div style={{ flex: 1, minHeight: 0 }}>
         <WorksCalendar
+        devMode
           events={events}
           theme={theme}
           showAddButton

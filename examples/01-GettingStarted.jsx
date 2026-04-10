@@ -60,6 +60,7 @@ export function GettingStarted() {
     // WorksCalendar fills its container — give it a height.
     <div style={{ height: '100%' }}>
       <WorksCalendar
+        devMode
         events={events}
         showAddButton
         onEventSave={handleSave}
