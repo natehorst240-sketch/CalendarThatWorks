@@ -13,6 +13,7 @@
 
 import { parseISO, isValid, addHours } from 'date-fns';
 import type { EngineEvent, EventStatus } from '../schema/eventSchema.js';
+import type { EventConstraint, ConstraintType } from '../schema/constraintSchema.js';
 
 // ─── Internal ID counter ──────────────────────────────────────────────────────
 
@@ -41,6 +42,29 @@ function toDate(v: unknown): Date | null {
 function toDateArray(v: unknown): Date[] {
   if (!Array.isArray(v)) return [];
   return v.map(toDate).filter((d): d is Date => d !== null);
+}
+
+// ─── Constraint coercion ──────────────────────────────────────────────────────
+
+const VALID_CONSTRAINT_TYPES: ConstraintType[] = [
+  'asap', 'alap', 'must-start-on', 'must-end-on',
+  'snet', 'snlt', 'enet', 'enlt',
+];
+
+function toConstraints(v: unknown): readonly EventConstraint[] {
+  if (!Array.isArray(v)) return [];
+  const result: EventConstraint[] = [];
+  for (const item of v) {
+    if (!item || typeof item !== 'object') continue;
+    const c = item as Record<string, unknown>;
+    if (!VALID_CONSTRAINT_TYPES.includes(c.type as ConstraintType)) continue;
+    const d = c.date ? toDate(c.date) : null;
+    result.push({
+      type: c.type as ConstraintType,
+      ...(d !== null && { date: d }),
+    });
+  }
+  return result;
 }
 
 // ─── Status coercion ──────────────────────────────────────────────────────────
@@ -97,6 +121,7 @@ export function normalizeInputEvent(raw: RawInputEvent): EngineEvent {
     color:         typeof raw.color === 'string' ? raw.color : null,
     rrule:         hasRrule ? String(raw.rrule) : null,
     exdates:       toDateArray(raw.exdates),
+    constraints:   toConstraints(raw.constraints),
     meta:          raw.meta != null && typeof raw.meta === 'object' && !Array.isArray(raw.meta)
                    ? raw.meta as Record<string, unknown>
                    : {},

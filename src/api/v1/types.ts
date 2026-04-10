@@ -91,6 +91,45 @@ export interface CalendarEventV1 {
   meta?: Record<string, unknown>;
 }
 
+/**
+ * CalendarOccurrenceV1 — the render-time occurrence shape exposed to host apps.
+ *
+ * Returned by `occurrenceToV1()`.  All `CalendarEventV1` fields are present,
+ * plus occurrence-specific fields that let the host app route mutations back
+ * to the correct engine record.
+ *
+ * Key distinction: `id` here is the OCCURRENCE id (unique per rendered
+ * instance), while `eventId` is the SOURCE event id to use for mutations.
+ */
+export interface CalendarOccurrenceV1 extends Omit<CalendarEventV1, 'id'> {
+  /** Unique occurrence key, e.g. "evt-1-r3".  Pass to UI, NOT to mutations. */
+  readonly id: string;
+  /**
+   * Source EngineEvent id.  Pass this to move/resize/delete engine operations,
+   * NOT the occurrence id.
+   */
+  readonly eventId: string;
+  /** Null for non-recurring events. */
+  readonly seriesId: string | null;
+  /** False for standalone events and recurring series masters. */
+  readonly isRecurring: boolean;
+  /**
+   * 0-based index within the rendered range.
+   * 0 = first (or only) occurrence; 1+ = subsequent recurrences.
+   */
+  readonly occurrenceIndex: number;
+}
+
+// ─── Sync metadata key (private convention) ───────────────────────────────────
+
+/**
+ * The meta key used to round-trip SyncMetadata through EngineEvent.meta.
+ * Adapters write/read this key; consuming code should use the adapter functions
+ * rather than accessing the meta key directly.
+ * @internal
+ */
+export const SYNC_META_KEY = '_v1sync' as const;
+
 // ─── Engine schema re-exports ─────────────────────────────────────────────────
 
 // ── Event ────────────────────────────────────────────────────────────────────
