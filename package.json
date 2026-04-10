@@ -11,17 +11,21 @@
       "import": "./dist/works-calendar.es.js",
       "require": "./dist/works-calendar.umd.js"
     },
-    "./styles":           "./dist/style.css",
-    "./styles/aviation":  "./dist/themes/aviation.css",
-    "./styles/soft":      "./dist/themes/soft.css",
-    "./styles/minimal":   "./dist/themes/minimal.css",
+    "./styles": "./dist/style.css",
+    "./styles/aviation": "./dist/themes/aviation.css",
+    "./styles/soft": "./dist/themes/soft.css",
+    "./styles/minimal": "./dist/themes/minimal.css",
     "./styles/corporate": "./dist/themes/corporate.css",
-    "./styles/forest":    "./dist/themes/forest.css",
-    "./styles/ocean":     "./dist/themes/ocean.css",
-    "./themes":           "./dist/works-calendar.es.js"
+    "./styles/forest": "./dist/themes/forest.css",
+    "./styles/ocean": "./dist/themes/ocean.css",
+    "./themes": "./dist/works-calendar.es.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "vite --config vite.demo.config.js",
     "build": "vite build",
     "build:demo": "vite build --config vite.demo.config.js",
@@ -36,13 +40,14 @@
     "lucide-react": "^0.378.0"
   },
   "optionalDependencies": {
-    "xlsx": "^0.18.5",
-    "@supabase/supabase-js": "^2.43.4"
+    "@supabase/supabase-js": "^2.43.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "vitest": "^4.1.4"
   }
 }
