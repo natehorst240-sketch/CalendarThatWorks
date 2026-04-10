@@ -20,8 +20,10 @@ import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
+import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy } from './core/engine/adapters/toLegacyEvents.ts';
+import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
@@ -184,16 +186,23 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [rawEvents, fetchedEvents, feedEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
-  const engineRef = useRef(null);
-  if (engineRef.current === null) engineRef.current = new CalendarEngine();
+  const engineRef      = useRef(null);
+  const undoManagerRef = useRef(null);
+  if (engineRef.current === null) {
+    engineRef.current = new CalendarEngine();
+    undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
+  }
 
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
   useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
+  // Clear undo history on a full reload so stale entries can't reference
+  // events that no longer exist.
   useEffect(() => {
     engineRef.current.setEvents(fromLegacyEvents(allNormalized));
+    undoManagerRef.current.clear();
   }, [allNormalized]);
 
   // ── Expand recurring events within the visible range (via engine) ────────
@@ -216,26 +225,43 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     blockedWindows: blockedWindows ?? [],
   };
 
-  const [pendingAlert, setPendingAlert] = useState(null); // { violations, isHard, onConfirm }
+  const [pendingAlert,      setPendingAlert]      = useState(null); // { violations, isHard, onConfirm }
+  // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
+  const [recurringPrompt, setRecurringPrompt] = useState(null);
 
   const applyEngineOp = useCallback((op, onAccepted) => {
-    const engine = engineRef.current;
-    const ctx    = opCtxRef.current;
+    const engine  = engineRef.current;
+    const undoMgr = undoManagerRef.current;
+    const ctx     = opCtxRef.current;
+
+    // Pre-capture the state BEFORE mutation. We only record this to the undo
+    // stack on acceptance to keep the history free of rejected operations.
+    const preSnap = undoMgr.captureSnapshot();
+
     const result = engine.applyMutation(op, ctx);
+
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
+      // State has changed — record the pre-mutation snapshot.
+      undoMgr.record(preSnap, op.type);
       onAccepted();
+
     } else if (result.status === 'pending-confirmation') {
+      // Engine state is UNCHANGED at this point (pending means no commit yet).
+      // preSnap is still accurate as the pre-mutation snapshot.
       setPendingAlert({
         violations: result.validation.violations,
         isHard: false,
         onConfirm: () => {
           const confirmed = engine.applyMutation(op, ctx, { overrideSoftViolations: true });
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
+            undoMgr.record(preSnap, op.type);
             onAccepted();
           }
         },
       });
+
     } else {
+      // Rejected — state unchanged, nothing to record.
       setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
     }
   }, []); // stable — reads from refs
@@ -244,6 +270,29 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [formEvent,     setFormEvent]     = useState(null);
   const [importOpen,    setImportOpen]    = useState(false);
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undoManagerRef.current.undo();
+        return;
+      }
+      // Redo: Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z
+      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        undoManagerRef.current.redo();
+        return;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // ── CalendarApi / imperative handle ─────────────────────────────────────
   const api = useMemo(() => ({
@@ -257,6 +306,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     getVisibleEvents: ()     => visibleEvents,
     clearFilters:     ()     => cal.clearFilters(),
     addEvent:         (d={}) => setFormEvent(d),
+    undo:             ()     => undoManagerRef.current.undo(),
+    redo:             ()     => undoManagerRef.current.redo(),
+    get canUndo()            { return undoManagerRef.current?.canUndo ?? false; },
+    get canRedo()            { return undoManagerRef.current?.canRedo ?? false; },
   }), [cal, expandedEvents, visibleEvents]);
 
   useImperativeHandle(ref, () => api, [api]);
@@ -267,7 +320,32 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
-  // All three handlers run through applyEngineOp before touching host state.
+  // All handlers run through applyEngineOp before touching host state.
+
+  /**
+   * For a recurring event, show the scope picker and apply the op after the
+   * user chooses 'single' | 'following' | 'series'.
+   * For non-recurring events, apply the op immediately.
+   *
+   * Defined BEFORE any handler that references it to avoid stale closures.
+   */
+  const applyWithRecurringCheck = useCallback((ev, makeOp, onAccepted, actionLabel) => {
+    if (!ev._recurring) {
+      applyEngineOp(makeOp('series'), onAccepted);
+      return;
+    }
+    setRecurringPrompt({
+      actionLabel,
+      onConfirm: (scope) => {
+        setRecurringPrompt(null);
+        applyEngineOp(
+          { ...makeOp(scope), scope, occurrenceDate: ev.start instanceof Date ? ev.start : new Date(ev.start) },
+          onAccepted,
+        );
+      },
+      onCancel: () => setRecurringPrompt(null),
+    });
+  }, [applyEngineOp]);
 
   const handleEventSave = useCallback((rawEv) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
@@ -275,72 +353,90 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     // _eventId is present on occurrences from the engine; fall back to id for
     // legacy shapes passed directly (e.g. from the EventForm).
     const eventId  = rawEv._eventId ?? (rawEv.id ? String(rawEv.id) : null);
-    const op = eventId
-      ? {
-          // Full patch so all editable fields flow through the engine, not just time.
-          type:  'update',
-          id:    eventId,
-          patch: {
-            title:      rawEv.title      ?? '(untitled)',
-            start:      newStart,
-            end:        newEnd,
-            allDay:     rawEv.allDay     ?? false,
-            resourceId: rawEv.resource   ?? null,
-            category:   rawEv.category   ?? null,
-            color:      rawEv.color      ?? null,
-            status:     rawEv.status     ?? 'confirmed',
-            rrule:      rawEv.rrule      ?? null,
-          },
-          source: 'form',
-        }
-      : {
-          type:   'create',
-          event: {
-            title:      rawEv.title      ?? '(untitled)',
-            start:      newStart,
-            end:        newEnd,
-            allDay:     rawEv.allDay     ?? false,
-            resourceId: rawEv.resource   ?? null,
-            category:   rawEv.category   ?? null,
-            color:      rawEv.color      ?? null,
-            status:     rawEv.status     ?? 'confirmed',
-          },
-          source: 'form',
-        };
-    applyEngineOp(op, () => { onEventSave?.(rawEv); setFormEvent(null); });
-  }, [applyEngineOp, onEventSave]);
+
+    if (!eventId) {
+      // New event — no scope picker needed.
+      const op = {
+        type:  'create',
+        event: {
+          title:      rawEv.title      ?? '(untitled)',
+          start:      newStart,
+          end:        newEnd,
+          allDay:     rawEv.allDay     ?? false,
+          resourceId: rawEv.resource   ?? null,
+          category:   rawEv.category   ?? null,
+          color:      rawEv.color      ?? null,
+          status:     rawEv.status     ?? 'confirmed',
+        },
+        source: 'form',
+      };
+      applyEngineOp(op, () => { onEventSave?.(rawEv); setFormEvent(null); });
+      return;
+    }
+
+    // Existing event — may be a recurring occurrence.
+    applyWithRecurringCheck(
+      rawEv,
+      (scope) => ({
+        type:  'update',
+        id:    eventId,
+        patch: {
+          title:      rawEv.title      ?? '(untitled)',
+          start:      newStart,
+          end:        newEnd,
+          allDay:     rawEv.allDay     ?? false,
+          resourceId: rawEv.resource   ?? null,
+          category:   rawEv.category   ?? null,
+          color:      rawEv.color      ?? null,
+          status:     rawEv.status     ?? 'confirmed',
+          rrule:      rawEv.rrule      ?? null,
+        },
+        source: 'form',
+      }),
+      () => { onEventSave?.(rawEv); setFormEvent(null); },
+      'Edit',
+    );
+  }, [applyEngineOp, applyWithRecurringCheck, onEventSave]);
 
   const handleEventMove = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    applyEngineOp(
-      { type: 'move', id: ev._eventId ?? String(ev.id), newStart, newEnd, source: 'drag' },
+    const id  = ev._eventId ?? String(ev.id);
+    applyWithRecurringCheck(
+      ev,
+      (scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
       () => {
         if (onEventMove) onEventMove(ev, newStart, newEnd);
         else onEventSave?.({ ...raw, start: newStart, end: newEnd });
       },
+      'Move',
     );
-  }, [applyEngineOp, onEventMove, onEventSave]);
+  }, [applyWithRecurringCheck, onEventMove, onEventSave]);
 
   const handleEventResize = useCallback((ev, newStart, newEnd) => {
     const raw = ev._raw ?? ev;
-    applyEngineOp(
-      { type: 'resize', id: ev._eventId ?? String(ev.id), newStart, newEnd, source: 'resize' },
+    const id  = ev._eventId ?? String(ev.id);
+    applyWithRecurringCheck(
+      ev,
+      (scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
       () => {
         if (onEventResize) onEventResize(ev, newStart, newEnd);
         else onEventSave?.({ ...raw, start: newStart, end: newEnd });
       },
+      'Resize',
     );
-  }, [applyEngineOp, onEventResize, onEventSave]);
+  }, [applyWithRecurringCheck, onEventResize, onEventSave]);
 
   const handleEventDelete = useCallback((id) => {
-    // Route through the engine so deletion participates in the unified mutation
-    // pipeline (validation, recurrence-scope logic, state notification).
-    const eventId = String(id);
-    applyEngineOp(
-      { type: 'delete', id: eventId, source: 'form' },
+    // Find the event so we can check if it's recurring.
+    const ev      = expandedEvents.find(e => String(e.id) === String(id)) ?? { id };
+    const eventId = ev._eventId ?? String(id);
+    applyWithRecurringCheck(
+      ev,
+      (scope) => ({ type: 'delete', id: eventId, source: 'form' }),
       () => { onEventDelete?.(id); setFormEvent(null); },
+      'Delete',
     );
-  }, [applyEngineOp, onEventDelete]);
+  }, [applyWithRecurringCheck, expandedEvents, onEventDelete]);
 
   const handleImport = useCallback((imported) => {
     onImport?.(imported);
@@ -539,6 +635,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {/* ── Import zone ── */}
         {importOpen && (
           <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
+        )}
+
+        {/* ── Recurring scope picker ── */}
+        {recurringPrompt && (
+          <RecurringScopeDialog
+            actionLabel={recurringPrompt.actionLabel}
+            onConfirm={recurringPrompt.onConfirm}
+            onCancel={recurringPrompt.onCancel}
+          />
         )}
 
         {/* ── Validation alert ── */}

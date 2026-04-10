@@ -362,6 +362,32 @@ export class CalendarEngine {
     this._notify();
   }
 
+  /**
+   * Atomically restore all structural state maps (events, assignments,
+   * dependencies, resourceCalendars) from a snapshot.
+   *
+   * This is the undo/redo restore path — it updates all four collections
+   * in a single state object update and fires one notification.
+   *
+   * Only fields present on the snapshot object are overwritten; missing
+   * fields preserve the current state.
+   */
+  restoreState(snapshot: {
+    readonly events?:            ReadonlyMap<string, EngineEvent>;
+    readonly assignments?:       ReadonlyMap<string, Assignment>;
+    readonly dependencies?:      ReadonlyMap<string, Dependency>;
+    readonly resourceCalendars?: ReadonlyMap<string, ResourceCalendar>;
+  }): void {
+    this._state = {
+      ...this._state,
+      ...(snapshot.events            != null && { events:            snapshot.events }),
+      ...(snapshot.assignments       != null && { assignments:       snapshot.assignments }),
+      ...(snapshot.dependencies      != null && { dependencies:      snapshot.dependencies }),
+      ...(snapshot.resourceCalendars != null && { resourceCalendars: snapshot.resourceCalendars }),
+    };
+    this._notify();
+  }
+
   // ── Private ───────────────────────────────────────────────────────────────────
 
   private _notify(): void {
