@@ -164,6 +164,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [savedViewActiveId, setSavedViewActiveId] = useState(null);
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
+  const savedViews = useSavedViews(calendarId);
 
   // Mark dirty when filters/view change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
@@ -201,9 +202,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Source store (ICS feeds + CSV datasets, persisted per calendarId) ───
   const sourceStore = useSourceStore(calendarId);
-
-  // ── Saved views ──────────────────────────────────────────────────────────
-  const savedViews = useSavedViews(calendarId);
 
   // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
   const { events: sourceEvents, feedErrors } = useSourceAggregator({
