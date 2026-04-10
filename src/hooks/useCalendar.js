@@ -13,6 +13,7 @@ export function useCalendar(rawEvents, initialView = 'month') {
   const [filters,     setFilters]     = useState({
     categories: new Set(),
     resources:  new Set(),
+    sources:    new Set(),
     dateRange:  null,
     search:     '',
   });
@@ -60,11 +61,19 @@ export function useCalendar(rawEvents, initialView = 'month') {
     });
   }, []);
 
+  const toggleSourceFilter = useCallback((id) => {
+    setFilters(f => {
+      const next = new Set(f.sources);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return { ...f, sources: next };
+    });
+  }, []);
+
   const setSearch    = useCallback((search)    => setFilters(f => ({ ...f, search })),    []);
   const setDateRange = useCallback((dateRange) => setFilters(f => ({ ...f, dateRange })), []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ categories: new Set(), resources: new Set(), dateRange: null, search: '' });
+    setFilters({ categories: new Set(), resources: new Set(), sources: new Set(), dateRange: null, search: '' });
   }, []);
 
   /** Replace the entire filter state at once (used by profile apply). */
@@ -79,7 +88,7 @@ export function useCalendar(rawEvents, initialView = 'month') {
     categories, resources,
     filters,
     navigate, goToToday,
-    toggleCategory, toggleResource,
+    toggleCategory, toggleResource, toggleSourceFilter,
     setSearch, setDateRange,
     clearFilters,
     replaceFilters,

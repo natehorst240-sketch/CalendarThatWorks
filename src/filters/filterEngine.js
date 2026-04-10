@@ -1,16 +1,22 @@
 /**
  * filterEngine.js — Multi-level, chainable event filter.
  *
- * Pipeline: category → resource → date range → text search
+ * Pipeline: source → category → resource → date range → text search
  */
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 /**
  * @param {object[]} events   — normalized events
- * @param {object}   filters  — { categories, resources, dateRange, search }
+ * @param {object}   filters  — { sources, categories, resources, dateRange, search }
  */
 export function applyFilters(events, filters = {}) {
   let result = events;
+
+  // 0. Source filter (Set of _sourceId values; empty = show all)
+  // Events without _sourceId (prop-injected events) are always shown.
+  if (filters.sources && filters.sources.size > 0) {
+    result = result.filter(e => !e._sourceId || filters.sources.has(e._sourceId));
+  }
 
   // 1. Category filter (Set of active category strings; empty = show all)
   if (filters.categories && filters.categories.size > 0) {
@@ -71,4 +77,18 @@ export function getResources(events) {
   const set = new Set();
   events.forEach(e => { if (e.resource) set.add(e.resource); });
   return [...set].sort();
+}
+
+/**
+ * Extract unique { id, label } source pairs from an event list.
+ * Only includes events that have a _sourceId.
+ */
+export function getSources(events) {
+  const seen = new Map();
+  events.forEach(e => {
+    if (e._sourceId && !seen.has(e._sourceId)) {
+      seen.set(e._sourceId, { id: e._sourceId, label: e._sourceLabel ?? e._sourceId });
+    }
+  });
+  return [...seen.values()];
 }

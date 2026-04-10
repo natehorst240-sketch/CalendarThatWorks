@@ -148,3 +148,162 @@
     font-size: 11px;
   }
 }
+
+/* Source pills */
+.sourcePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 7px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+}
+.sourcePill:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-text);
+}
+.sourcePill.active {
+  color: #fff;
+  /* background and border-color set via inline style (source color) */
+}
+.sourceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sourceLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sourceType {
+  font-size: 10px;
+  opacity: 0.7;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Views dropdown */
+.viewsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  position: relative;
+}
+.viewsBtn:hover { border-color: var(--wc-accent); color: var(--wc-accent); }
+.viewsBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--wc-accent);
+  color: #fff;
+}
+.viewsDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 200px;
+  max-width: 260px;
+  background: var(--wc-bg);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm, 8px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.viewRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--wc-text);
+}
+.viewRow:hover { background: var(--wc-surface); }
+.viewName {
+  flex: 1;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--wc-text);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewDeleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-faint);
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.viewDeleteBtn:hover { color: var(--wc-danger); }
+.viewsDivider {
+  height: 1px;
+  background: var(--wc-border);
+  margin: 4px 0;
+}
+.saveViewBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.saveViewBtn:hover { background: var(--wc-surface); color: var(--wc-text); }
+.saveViewInput {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--wc-accent);
+  border-radius: 6px;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  outline: none;
+  box-sizing: border-box;
+}

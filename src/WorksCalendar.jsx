@@ -17,6 +17,7 @@ import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
 import { useSourceStore }      from './hooks/useSourceStore.js';
 import { useSourceAggregator } from './hooks/useSourceAggregator.js';
+import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
@@ -173,6 +174,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Source store (ICS feeds + CSV datasets, persisted per calendarId) ───
   const sourceStore = useSourceStore(calendarId);
+
+  // ── Saved views ──────────────────────────────────────────────────────────
+  const savedViews = useSavedViews(calendarId);
 
   // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
   const { events: sourceEvents, feedErrors } = useSourceAggregator({
@@ -614,10 +618,20 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           categories={categories}
           resources={resources}
           filters={cal.filters}
+          sources={sourceStore.sources}
+          filterSources={cal.filters.sources}
           onToggleCategory={cal.toggleCategory}
           onToggleResource={cal.toggleResource}
+          onToggleSource={cal.toggleSourceFilter}
           onSearch={cal.setSearch}
           onClear={cal.clearFilters}
+          savedViews={savedViews.views}
+          onSaveView={(name) => savedViews.saveView(name, cal.filters)}
+          onLoadView={(id) => {
+            const v = savedViews.views.find(v => v.id === id);
+            if (v) cal.replaceFilters(deserializeFilters(v.filters));
+          }}
+          onDeleteView={savedViews.deleteView}
         />
 
         {/* ── View area ── */}
