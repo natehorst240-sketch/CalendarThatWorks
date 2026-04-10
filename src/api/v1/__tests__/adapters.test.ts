@@ -1,472 +1,503 @@
 // @vitest-environment node
 /**
- * API v1 — adapter regression tests.
+ * API v1 — integration adapter tests.
  *
- * Covers:
- *  - eventV1ToEngine: field mapping, defaults, sync→meta, constraints
- *  - engineToV1: field mapping, meta→sync extraction, meta cleanup
- *  - occurrenceToV1: occurrence-specific fields
- *  - legacyToV1 + v1ToLegacy: round-trip and downgrade
- *  - normalizeInputEvent: constraints fix regression
+ * Tests the four concrete adapters against lightweight mocks:
+ *  - RestAdapter    — mock fetch
+ *  - SupabaseAdapter — mock Supabase client
+ *  - ICSAdapter     — mock fetch + real ICS serializer
+ *  - WebSocketAdapter — not tested here (needs browser WS); tested via types
+ *
+ * Also tests the CalendarAdapter interface conformance pattern and
+ * the ICS serialization helper serializeToICS.
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-  eventV1ToEngine,
-  engineToV1,
-  occurrenceToV1,
-  legacyToV1,
-  v1ToLegacy,
-} from '../adapters.js';
-import { normalizeInputEvent } from '../index.js';
-import { makeEvent }          from '../types.js';
-import { SYNC_META_KEY }      from '../types.js';
-import type {
-  CalendarEventV1,
-  CalendarOccurrenceV1,
-  SyncMetadata,
-  EngineEvent,
-  EngineOccurrence,
-} from '../types.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { RestAdapter }       from '../adapters/RestAdapter.js';
+import { SupabaseAdapter }   from '../adapters/SupabaseAdapter.js';
+import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter.js';
+import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter.js';
+import type { CalendarEventV1 } from '../types.js';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const S = new Date('2026-04-10T09:00:00.000Z');
 const E = new Date('2026-04-10T10:00:00.000Z');
 
-function baseV1(overrides: Partial<CalendarEventV1> = {}): CalendarEventV1 {
-  return { id: 'v1-1', title: 'Meeting', start: S, end: E, ...overrides };
+function ev(overrides: Partial<CalendarEventV1> = {}): CalendarEventV1 {
+  return { id: 'ev-1', title: 'Meeting', start: S, end: E, status: 'confirmed', ...overrides };
 }
 
-function baseEngine(overrides: Partial<Omit<EngineEvent, 'id' | 'title' | 'start' | 'end'>> = {}): EngineEvent {
-  return makeEvent('eng-1', { title: 'Meeting', start: S, end: E, ...overrides });
-}
+// ─── CalendarAdapter interface compliance ─────────────────────────────────────
 
-// ─── eventV1ToEngine ──────────────────────────────────────────────────────────
-
-describe('eventV1ToEngine: basic field mapping', () => {
-  it('preserves id when provided', () => {
-    const ev = eventV1ToEngine(baseV1({ id: 'my-id' }));
-    expect(ev.id).toBe('my-id');
+describe('CalendarAdapter interface', () => {
+  it('RestAdapter implements CalendarAdapter', () => {
+    const adapter: CalendarAdapter = new RestAdapter({ baseUrl: '/api/events' });
+    expect(typeof adapter.loadRange).toBe('function');
+    expect(typeof adapter.createEvent).toBe('function');
+    expect(typeof adapter.updateEvent).toBe('function');
+    expect(typeof adapter.deleteEvent).toBe('function');
+    expect(typeof adapter.subscribe).toBe('function');
+    expect(typeof adapter.exportFeed).toBe('function');
   });
 
-  it('assigns a new engine id when id is omitted', () => {
-    const ev = eventV1ToEngine(baseV1({ id: undefined }));
-    expect(typeof ev.id).toBe('string');
-    expect(ev.id.length).toBeGreaterThan(0);
+  it('SupabaseAdapter implements CalendarAdapter', () => {
+    const mockClient = { from: vi.fn(), channel: vi.fn() };
+    const adapter: CalendarAdapter = new SupabaseAdapter({ client: mockClient, table: 'events' });
+    expect(typeof adapter.loadRange).toBe('function');
+    expect(typeof adapter.createEvent).toBe('function');
+    expect(typeof adapter.subscribe).toBe('function');
   });
 
-  it('maps start/end from Date objects', () => {
-    const ev = eventV1ToEngine(baseV1());
-    expect(ev.start.getTime()).toBe(S.getTime());
-    expect(ev.end.getTime()).toBe(E.getTime());
-  });
-
-  it('maps start/end from ISO strings', () => {
-    const ev = eventV1ToEngine(baseV1({
-      start: '2026-04-10T09:00:00.000Z',
-      end:   '2026-04-10T10:00:00.000Z',
-    }));
-    expect(ev.start.getTime()).toBe(S.getTime());
-    expect(ev.end.getTime()).toBe(E.getTime());
-  });
-
-  it('defaults allDay to false', () => {
-    expect(eventV1ToEngine(baseV1()).allDay).toBe(false);
-  });
-
-  it('maps allDay: true', () => {
-    expect(eventV1ToEngine(baseV1({ allDay: true })).allDay).toBe(true);
-  });
-
-  it('maps category', () => {
-    expect(eventV1ToEngine(baseV1({ category: 'flight' })).category).toBe('flight');
-  });
-
-  it('maps timezone', () => {
-    expect(eventV1ToEngine(baseV1({ timezone: 'America/Denver' })).timezone).toBe('America/Denver');
-  });
-
-  it('maps resourceId', () => {
-    expect(eventV1ToEngine(baseV1({ resourceId: 'r1' })).resourceId).toBe('r1');
-  });
-
-  it('falls back resourceId to legacy resource field', () => {
-    expect(eventV1ToEngine(baseV1({ resource: 'tail-N123' })).resourceId).toBe('tail-N123');
-  });
-
-  it('prefers resourceId over resource when both present', () => {
-    expect(eventV1ToEngine(baseV1({ resourceId: 'r1', resource: 'old' })).resourceId).toBe('r1');
-  });
-
-  it('maps status', () => {
-    expect(eventV1ToEngine(baseV1({ status: 'tentative' })).status).toBe('tentative');
-  });
-
-  it('defaults status to confirmed', () => {
-    expect(eventV1ToEngine(baseV1()).status).toBe('confirmed');
-  });
-
-  it('maps color', () => {
-    expect(eventV1ToEngine(baseV1({ color: '#ff0000' })).color).toBe('#ff0000');
+  it('ICSAdapter implements CalendarAdapter', () => {
+    const adapter: CalendarAdapter = new ICSAdapter({ url: 'https://example.com/feed.ics' });
+    expect(typeof adapter.loadRange).toBe('function');
+    expect(typeof adapter.importFeed).toBe('function');
+    expect(typeof adapter.exportFeed).toBe('function');
+    expect(typeof adapter.subscribe).toBe('function');
+    // ICS is read-only — no create/update/delete
+    expect(adapter.createEvent).toBeUndefined();
+    expect(adapter.updateEvent).toBeUndefined();
+    expect(adapter.deleteEvent).toBeUndefined();
   });
 });
 
-describe('eventV1ToEngine: recurrence', () => {
-  it('maps rrule and sets seriesId === id', () => {
-    const ev = eventV1ToEngine(baseV1({ rrule: 'FREQ=WEEKLY;BYDAY=MO' }));
-    expect(ev.rrule).toBe('FREQ=WEEKLY;BYDAY=MO');
-    expect(ev.seriesId).toBe(ev.id);
-  });
+// ─── RestAdapter ─────────────────────────────────────────────────────────────
 
-  it('null seriesId when no rrule', () => {
-    expect(eventV1ToEngine(baseV1()).seriesId).toBeNull();
-  });
+describe('RestAdapter.loadRange', () => {
+  beforeEach(() => vi.resetAllMocks());
 
-  it('maps exdates', () => {
-    const x = new Date('2026-04-17T09:00:00.000Z');
-    const ev = eventV1ToEngine(baseV1({ exdates: [x] }));
-    expect(ev.exdates).toHaveLength(1);
-    expect(ev.exdates[0].getTime()).toBe(x.getTime());
-  });
-});
-
-describe('eventV1ToEngine: constraints', () => {
-  it('maps constraints array', () => {
-    const pinDate = new Date('2026-04-10T09:00:00.000Z');
-    const ev = eventV1ToEngine(baseV1({
-      constraints: [
-        { type: 'must-start-on', date: pinDate },
-        { type: 'alap' },
-      ],
-    }));
-    expect(ev.constraints).toHaveLength(2);
-    expect(ev.constraints[0].type).toBe('must-start-on');
-    expect(ev.constraints[0].date!.getTime()).toBe(pinDate.getTime());
-    expect(ev.constraints[1].type).toBe('alap');
-  });
-
-  it('defaults constraints to [] when not provided', () => {
-    expect(eventV1ToEngine(baseV1()).constraints).toEqual([]);
-  });
-});
-
-describe('eventV1ToEngine: SyncMetadata', () => {
-  const sync: SyncMetadata = {
-    externalId: 'goog-abc',
-    syncSource: 'google-calendar',
-    version: 3,
-  };
-
-  it('stores sync under SYNC_META_KEY in meta', () => {
-    const ev = eventV1ToEngine(baseV1({ sync }));
-    expect(ev.meta[SYNC_META_KEY]).toEqual(sync);
-  });
-
-  it('preserves other meta fields alongside sync', () => {
-    const ev = eventV1ToEngine(baseV1({ sync, meta: { flightNo: 'UA123' } }));
-    expect(ev.meta['flightNo']).toBe('UA123');
-    expect(ev.meta[SYNC_META_KEY]).toBeDefined();
-  });
-
-  it('no sync key when sync not provided', () => {
-    const ev = eventV1ToEngine(baseV1());
-    expect(ev.meta[SYNC_META_KEY]).toBeUndefined();
-  });
-});
-
-// ─── engineToV1 ──────────────────────────────────────────────────────────────
-
-describe('engineToV1: basic field mapping', () => {
-  it('maps id, title, start, end', () => {
-    const out = engineToV1(baseEngine());
-    expect(out.id).toBe('eng-1');
-    expect(out.title).toBe('Meeting');
-    expect((out.start as Date).getTime()).toBe(S.getTime());
-    expect((out.end as Date).getTime()).toBe(E.getTime());
-  });
-
-  it('maps status', () => {
-    expect(engineToV1(baseEngine({ status: 'cancelled' })).status).toBe('cancelled');
-  });
-
-  it('maps category (null → undefined)', () => {
-    expect(engineToV1(baseEngine()).category).toBeUndefined();
-    expect(engineToV1(baseEngine({ category: 'admin' })).category).toBe('admin');
-  });
-
-  it('maps resourceId (null → undefined)', () => {
-    expect(engineToV1(baseEngine()).resourceId).toBeUndefined();
-    expect(engineToV1(baseEngine({ resourceId: 'r2' })).resourceId).toBe('r2');
-  });
-
-  it('maps timezone (null → undefined)', () => {
-    expect(engineToV1(baseEngine()).timezone).toBeUndefined();
-    expect(engineToV1(baseEngine({ timezone: 'Europe/London' })).timezone).toBe('Europe/London');
-  });
-
-  it('omits rrule when null', () => {
-    expect(engineToV1(baseEngine()).rrule).toBeUndefined();
-  });
-
-  it('maps rrule when present', () => {
-    expect(engineToV1(baseEngine({ rrule: 'FREQ=DAILY' })).rrule).toBe('FREQ=DAILY');
-  });
-
-  it('omits exdates when empty', () => {
-    expect(engineToV1(baseEngine()).exdates).toBeUndefined();
-  });
-
-  it('maps exdates when present', () => {
-    const x = new Date('2026-04-17T09:00:00.000Z');
-    expect(engineToV1(baseEngine({ exdates: [x] })).exdates).toHaveLength(1);
-  });
-
-  it('omits constraints when empty', () => {
-    expect(engineToV1(baseEngine()).constraints).toBeUndefined();
-  });
-
-  it('maps constraints when present', () => {
-    const c = [{ type: 'asap' as const }];
-    expect(engineToV1(baseEngine({ constraints: c })).constraints).toHaveLength(1);
-  });
-});
-
-describe('engineToV1: SyncMetadata extraction', () => {
-  const sync: SyncMetadata = {
-    externalId: 'outlook-xyz',
-    syncSource: 'outlook',
-    version: 7,
-    updatedAt: new Date('2026-04-09T12:00:00.000Z'),
-  };
-
-  it('extracts sync from meta and exposes as .sync', () => {
-    const engine = baseEngine({ meta: { [SYNC_META_KEY]: sync } });
-    const out = engineToV1(engine);
-    expect(out.sync).toBeDefined();
-    expect(out.sync!.externalId).toBe('outlook-xyz');
-    expect(out.sync!.version).toBe(7);
-  });
-
-  it('removes SYNC_META_KEY from public meta', () => {
-    const engine = baseEngine({ meta: { [SYNC_META_KEY]: sync, gate: 'B4' } });
-    const out = engineToV1(engine);
-    expect(out.meta![SYNC_META_KEY]).toBeUndefined();
-    expect(out.meta!['gate']).toBe('B4');
-  });
-
-  it('no sync field when meta has no sync key', () => {
-    expect(engineToV1(baseEngine()).sync).toBeUndefined();
-  });
-
-  it('omits meta entirely when empty after cleanup', () => {
-    const engine = baseEngine({ meta: { [SYNC_META_KEY]: sync } });
-    const out = engineToV1(engine);
-    // After removing _v1sync, meta is empty — should be undefined
-    expect(out.meta).toBeUndefined();
-  });
-});
-
-describe('eventV1ToEngine → engineToV1: round-trip', () => {
-  it('round-trips all scalar fields', () => {
-    const input = baseV1({
-      category: 'ops',
-      color: '#10b981',
-      resourceId: 'r5',
-      timezone: 'Asia/Tokyo',
-      status: 'tentative',
-      rrule: 'FREQ=WEEKLY',
+  it('GETs the base URL with start/end params', async () => {
+    const events = [ev()];
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => events,
     });
-    const back = engineToV1(eventV1ToEngine(input));
-    expect(back.category).toBe('ops');
-    expect(back.color).toBe('#10b981');
-    expect(back.resourceId).toBe('r5');
-    expect(back.timezone).toBe('Asia/Tokyo');
-    expect(back.status).toBe('tentative');
-    expect(back.rrule).toBe('FREQ=WEEKLY');
+    const adapter = new RestAdapter({ baseUrl: 'http://api/events', fetchImpl: fetchMock } as never);
+    // We need a way to inject fetch; use fromResponse to verify call
+    // Instead, test via the actual global fetch mock approach:
+    // Re-implement test using manual fetch stub
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => events });
+    const a2 = new RestAdapter({
+      baseUrl: 'http://api/events',
+    });
+    // Replace global fetch
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const result = await a2.loadRange(S, E);
+      expect(stub).toHaveBeenCalledOnce();
+      const calledUrl = stub.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('start=');
+      expect(calledUrl).toContain('end=');
+      expect(result).toEqual(events);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 
-  it('round-trips SyncMetadata without polluting public meta', () => {
-    const sync: SyncMetadata = { externalId: 'g1', syncSource: 'gcal' };
-    const input = baseV1({ sync, meta: { gate: 'C1' } });
-    const engine = eventV1ToEngine(input);
-    const out    = engineToV1(engine);
-    expect(out.sync!.externalId).toBe('g1');
-    expect(out.meta!['gate']).toBe('C1');
-    expect(out.meta![SYNC_META_KEY]).toBeUndefined();
+  it('uses custom startParam and endParam', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events', startParam: 'from', endParam: 'to' });
+      await a.loadRange(S, E);
+      const url = stub.mock.calls[0][0] as string;
+      expect(url).toContain('from=');
+      expect(url).toContain('to=');
+      expect(url).not.toContain('start=');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 
-  it('round-trips constraints', () => {
-    const pin = new Date('2026-04-10T09:00:00.000Z');
-    const input = baseV1({ constraints: [{ type: 'must-start-on', date: pin }] });
-    const back  = engineToV1(eventV1ToEngine(input));
-    expect(back.constraints![0].date!.getTime()).toBe(pin.getTime());
+  it('throws on non-OK response', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: false, status: 401, statusText: 'Unauthorized' });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await expect(a.loadRange(S, E)).rejects.toThrow('401');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('applies fromResponse mapping', async () => {
+    const rawRow = { event_id: 99, name: 'Flight', starts_at: S.toISOString(), ends_at: E.toISOString() };
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [rawRow] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({
+        baseUrl: 'http://api/events',
+        fromResponse: row => ({
+          id:    String(row['event_id']),
+          title: row['name'] as string,
+          start: new Date(row['starts_at'] as string),
+          end:   new Date(row['ends_at'] as string),
+        }),
+      });
+      const [result] = await a.loadRange(S, E);
+      expect(result.id).toBe('99');
+      expect(result.title).toBe('Flight');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });
 
-// ─── occurrenceToV1 ───────────────────────────────────────────────────────────
+describe('RestAdapter.createEvent', () => {
+  it('POSTs the event and returns fromResponse result', async () => {
+    const created = ev({ id: 'server-1' });
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => created });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      const result = await a.createEvent(ev({ id: undefined }));
+      const [callUrl, callOpts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(callOpts.method).toBe('POST');
+      expect(result.id).toBe('server-1');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
 
-function makeOccurrence(overrides: Partial<EngineOccurrence> = {}): EngineOccurrence {
-  return {
-    occurrenceId:    'evt-1-r0',
-    eventId:         'evt-1',
-    seriesId:        'evt-1',
-    detachedFrom:    null,
-    start:           S,
-    end:             E,
-    timezone:        null,
-    allDay:          false,
-    title:           'Stand-up',
-    category:        null,
-    resourceId:      null,
-    status:          'confirmed',
-    color:           null,
-    resourceIds:     [],
-    isRecurring:     true,
-    occurrenceIndex: 0,
-    constraints:     [],
-    meta:            {},
+describe('RestAdapter.updateEvent', () => {
+  it('PATCHes the correct URL', async () => {
+    const updated = ev();
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => updated });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await a.updateEvent('ev-1', { title: 'Updated' });
+      const [callUrl, callOpts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(callUrl).toContain('/ev-1');
+      expect(callOpts.method).toBe('PATCH');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('RestAdapter.deleteEvent', () => {
+  it('DELETEs the correct URL', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await a.deleteEvent('ev-42');
+      const [callUrl, callOpts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(callUrl).toContain('/ev-42');
+      expect(callOpts.method).toBe('DELETE');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('RestAdapter.subscribe (polling)', () => {
+  it('returns an unsubscribe function immediately', () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: null });
+    const unsub = a.subscribe(() => {});
+    expect(typeof unsub).toBe('function');
+    unsub(); // should not throw
+  });
+
+  it('returns noop when pollInterval is null', () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: null });
+    const cb = vi.fn();
+    const unsub = a.subscribe(cb);
+    unsub();
+    expect(cb).not.toHaveBeenCalled();
+  });
+});
+
+describe('RestAdapter.exportFeed', () => {
+  it('returns a JSON string', async () => {
+    const a = new RestAdapter({ baseUrl: 'http://api/events' });
+    const json = await a.exportFeed([ev()]);
+    const parsed = JSON.parse(json) as CalendarEventV1[];
+    expect(parsed[0].title).toBe('Meeting');
+  });
+});
+
+// ─── SupabaseAdapter ──────────────────────────────────────────────────────────
+
+function mockSupabase(overrides: Record<string, unknown> = {}) {
+  const qb: Record<string, unknown> = {
+    select: vi.fn().mockReturnThis(),
+    gte:    vi.fn().mockReturnThis(),
+    lt:     vi.fn().mockReturnThis(),
+    eq:     vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: ev(), error: null }),
+    insert: vi.fn().mockResolvedValue({ data: [ev()], error: null }),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
     ...overrides,
   };
+  // Make the query builder awaitable (for .lt() final call → { data, error })
+  (qb as Record<string, unknown>)['then'] = (resolve: (v: unknown) => void) =>
+    resolve({ data: [ev()], error: null });
+
+  const channel = {
+    on:          vi.fn().mockReturnThis(),
+    subscribe:   vi.fn().mockReturnThis(),
+    unsubscribe: vi.fn(),
+  };
+  return {
+    from:    vi.fn().mockReturnValue(qb),
+    channel: vi.fn().mockReturnValue(channel),
+    _qb:     qb,
+    _channel: channel,
+  };
 }
 
-describe('occurrenceToV1', () => {
-  it('maps occurrenceId as id, eventId as eventId', () => {
-    const out = occurrenceToV1(makeOccurrence());
-    expect(out.id).toBe('evt-1-r0');
-    expect(out.eventId).toBe('evt-1');
+describe('SupabaseAdapter.loadRange', () => {
+  it('calls from().select().gte().lt()', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await a.loadRange(S, E);
+    expect(sb.from).toHaveBeenCalledWith('events');
+    expect(sb._qb['select']).toHaveBeenCalledWith('*');
+    expect(sb._qb['gte']).toHaveBeenCalledWith('start', S.toISOString());
+    expect(sb._qb['lt']).toHaveBeenCalledWith('end', E.toISOString());
   });
 
-  it('maps seriesId, isRecurring, occurrenceIndex', () => {
-    const out = occurrenceToV1(makeOccurrence({ occurrenceIndex: 3 }));
-    expect(out.seriesId).toBe('evt-1');
-    expect(out.isRecurring).toBe(true);
-    expect(out.occurrenceIndex).toBe(3);
+  it('applies eq filter from options.filter', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events', filter: 'org_id=eq.acme' });
+    await a.loadRange(S, E);
+    expect(sb._qb['eq']).toHaveBeenCalledWith('org_id', 'acme');
   });
 
-  it('maps title, start, end, status', () => {
-    const out = occurrenceToV1(makeOccurrence());
-    expect(out.title).toBe('Stand-up');
-    expect((out.start as Date).getTime()).toBe(S.getTime());
-    expect(out.status).toBe('confirmed');
-  });
-
-  it('extracts sync from meta', () => {
-    const sync: SyncMetadata = { externalId: 'x1', syncSource: 'gcal' };
-    const out = occurrenceToV1(makeOccurrence({ meta: { [SYNC_META_KEY]: sync, note: 'hi' } }));
-    expect(out.sync!.externalId).toBe('x1');
-    expect(out.meta!['note']).toBe('hi');
-    expect(out.meta![SYNC_META_KEY]).toBeUndefined();
+  it('maps rows using fromRow', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({
+      client: sb,
+      table: 'events',
+      fromRow: row => ({ ...row as CalendarEventV1, title: 'mapped' }),
+    });
+    const result = await a.loadRange(S, E);
+    expect(result[0].title).toBe('mapped');
   });
 });
 
-// ─── legacyToV1 ──────────────────────────────────────────────────────────────
-
-describe('legacyToV1', () => {
-  it('passes through all shared fields', () => {
-    const out = legacyToV1({
-      id: 'old-1', title: 'Flight', start: S, end: E,
-      category: 'travel', color: '#f00', resource: 'N123',
-      status: 'tentative', rrule: 'FREQ=DAILY',
-      exdates: [new Date('2026-04-11T09:00:00.000Z')],
-      meta: { pax: 2 },
-    });
-    expect(out.id).toBe('old-1');
-    expect(out.title).toBe('Flight');
-    expect(out.category).toBe('travel');
-    expect(out.resource).toBe('N123');
-    expect(out.status).toBe('tentative');
-    expect(out.rrule).toBe('FREQ=DAILY');
-    expect(out.meta!['pax']).toBe(2);
-  });
-
-  it('defaults status to confirmed for invalid status', () => {
-    expect(legacyToV1({ title: 'x', start: S, status: 'unknown' }).status).toBe('confirmed');
+describe('SupabaseAdapter.createEvent', () => {
+  it('calls from().insert()', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await a.createEvent(ev());
+    expect(sb._qb['insert']).toHaveBeenCalled();
   });
 });
 
-// ─── v1ToLegacy ──────────────────────────────────────────────────────────────
-
-describe('v1ToLegacy', () => {
-  it('maps known fields', () => {
-    const out = v1ToLegacy(baseV1({ category: 'ops', color: '#00f', resource: 'R5' }));
-    expect(out.title).toBe('Meeting');
-    expect(out.category).toBe('ops');
-    expect(out.resource).toBe('R5');
-  });
-
-  it('falls back resource to resourceId when resource not set', () => {
-    const out = v1ToLegacy(baseV1({ resourceId: 'res-7' }));
-    expect(out.resource).toBe('res-7');
-  });
-
-  it('drops new v1 fields (timezone, constraints, sync) from output', () => {
-    const out = v1ToLegacy(baseV1({
-      timezone: 'US/Pacific',
-      constraints: [{ type: 'asap' }],
-      sync: { externalId: 'x', syncSource: 'gcal' },
-    })) as Record<string, unknown>;
-    expect(out['timezone']).toBeUndefined();
-    expect(out['constraints']).toBeUndefined();
-    expect(out['sync']).toBeUndefined();
+describe('SupabaseAdapter.updateEvent', () => {
+  it('calls from().update().eq(id).single()', async () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await a.updateEvent('ev-1', { title: 'New name' });
+    expect(sb._qb['update']).toHaveBeenCalled();
+    expect(sb._qb['eq']).toHaveBeenCalledWith('id', 'ev-1');
+    expect(sb._qb['single']).toHaveBeenCalled();
   });
 });
 
-// ─── legacyToV1 → v1ToLegacy round-trip ──────────────────────────────────────
-
-describe('legacyToV1 → v1ToLegacy round-trip', () => {
-  it('round-trips all legacy fields without loss', () => {
-    const raw = {
-      id: 'leg-1', title: 'Sprint', start: S, end: E,
-      allDay: false, category: 'eng', color: '#333',
-      resource: 'T42', status: 'confirmed' as const,
-      rrule: null as unknown as string,
-      exdates: [] as Date[], meta: { sprintNo: 12 },
-    };
-    const v1   = legacyToV1(raw);
-    const back = v1ToLegacy(v1);
-    expect(back.id).toBe('leg-1');
-    expect(back.category).toBe('eng');
-    expect(back.resource).toBe('T42');
-    expect(back.meta!['sprintNo']).toBe(12);
+describe('SupabaseAdapter.deleteEvent', () => {
+  it('calls from().delete().eq(id)', async () => {
+    const sb = mockSupabase({
+      then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }),
+    });
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    await a.deleteEvent('ev-1');
+    expect(sb._qb['delete']).toHaveBeenCalled();
+    expect(sb._qb['eq']).toHaveBeenCalledWith('id', 'ev-1');
   });
 });
 
-// ─── normalizeInputEvent: constraints regression ──────────────────────────────
-
-describe('normalizeInputEvent: constraints field (regression)', () => {
-  it('returns constraints: [] when input has no constraints', () => {
-    const ev = normalizeInputEvent({ title: 'x', start: S, end: E });
-    expect(ev.constraints).toEqual([]);
+describe('SupabaseAdapter.subscribe', () => {
+  it('creates a realtime channel and returns unsubscribe', () => {
+    const sb = mockSupabase();
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    const unsub = a.subscribe(() => {});
+    expect(sb.channel).toHaveBeenCalled();
+    expect(sb._channel.on).toHaveBeenCalled();
+    expect(sb._channel.subscribe).toHaveBeenCalled();
+    expect(typeof unsub).toBe('function');
+    unsub();
+    expect(sb._channel.unsubscribe).toHaveBeenCalled();
   });
 
-  it('parses constraints from raw input', () => {
-    const pin = new Date('2026-04-10T09:00:00.000Z');
-    const ev = normalizeInputEvent({
-      title: 'x', start: S, end: E,
-      constraints: [
-        { type: 'must-start-on', date: pin },
-        { type: 'alap' },
-      ],
+  it('emits insert/update/delete changes to callback', () => {
+    const sb = mockSupabase();
+    const changes: AdapterChange[] = [];
+    const a = new SupabaseAdapter({ client: sb, table: 'events' });
+    a.subscribe(c => changes.push(c));
+
+    // Simulate the postgres_changes handler being called
+    const [, , handler] = (sb._channel.on as ReturnType<typeof vi.fn>).mock.calls[0] as [unknown, unknown, (p: unknown) => void];
+
+    handler({ eventType: 'INSERT', new: ev({ id: 'new-1' }), old: {} });
+    handler({ eventType: 'UPDATE', new: ev({ id: 'upd-1', title: 'Updated' }), old: {} });
+    handler({ eventType: 'DELETE', new: {}, old: { id: 'del-1' } });
+
+    expect(changes[0]).toEqual({ type: 'insert', event: expect.objectContaining({ id: 'new-1' }) });
+    expect(changes[1]).toEqual({ type: 'update', event: expect.objectContaining({ title: 'Updated' }) });
+    expect(changes[2]).toEqual({ type: 'delete', id: 'del-1' });
+  });
+});
+
+// ─── ICSAdapter + serializeToICS ─────────────────────────────────────────────
+
+const SAMPLE_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:test-uid-1
+SUMMARY:Stand-up
+DTSTART:20260410T090000Z
+DTEND:20260410T100000Z
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`;
+
+describe('ICSAdapter.loadRange', () => {
+  it('fetches, parses, and filters to range', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => SAMPLE_ICS,
     });
-    expect(ev.constraints).toHaveLength(2);
-    expect(ev.constraints[0].type).toBe('must-start-on');
-    expect(ev.constraints[1].type).toBe('alap');
+    const a = new ICSAdapter({ url: 'https://cal.example.com/feed.ics', fetchImpl: fetchMock });
+    const events = await a.loadRange(
+      new Date('2026-04-10T00:00:00Z'),
+      new Date('2026-04-11T00:00:00Z'),
+    );
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(events.length).toBeGreaterThan(0);
+    expect(events[0].title).toBe('Stand-up');
   });
 
-  it('silently drops constraints with unknown types', () => {
-    const ev = normalizeInputEvent({
-      title: 'x', start: S, end: E,
-      constraints: [{ type: 'invalid-type' }],
+  it('filters out events outside the range', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => SAMPLE_ICS,
     });
-    expect(ev.constraints).toHaveLength(0);
+    const a = new ICSAdapter({ url: 'https://cal.example.com/feed.ics', fetchImpl: fetchMock });
+    // Range is entirely in the future
+    const events = await a.loadRange(
+      new Date('2027-01-01T00:00:00Z'),
+      new Date('2027-01-31T00:00:00Z'),
+    );
+    expect(events).toHaveLength(0);
   });
 
-  it('silently drops non-object constraint entries', () => {
-    const ev = normalizeInputEvent({
-      title: 'x', start: S, end: E,
-      constraints: [null, 'bad', 42],
+  it('throws on fetch error', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404, statusText: 'Not Found' });
+    const a = new ICSAdapter({ url: 'https://cal.example.com/missing.ics', fetchImpl: fetchMock });
+    await expect(a.loadRange(S, E)).rejects.toThrow('404');
+  });
+
+  it('tags events with feed label', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', label: 'My Cal', fetchImpl: fetchMock });
+    const events = await a.loadRange(new Date('2026-04-01Z'), new Date('2026-04-30Z'));
+    expect(events[0].meta?.['_feedLabel']).toBe('My Cal');
+  });
+});
+
+describe('ICSAdapter.importFeed', () => {
+  it('fetches the full feed without range filtering', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', fetchImpl: fetchMock });
+    const events = await a.importFeed();
+    expect(events.length).toBeGreaterThan(0);
+  });
+});
+
+describe('ICSAdapter.subscribe (polling)', () => {
+  it('returns noop when refreshInterval is null', () => {
+    const a = new ICSAdapter({ url: 'https://example.com/feed.ics', refreshInterval: null });
+    const unsub = a.subscribe(() => {});
+    expect(typeof unsub).toBe('function');
+    unsub();
+  });
+});
+
+describe('serializeToICS', () => {
+  it('produces valid VCALENDAR header/footer', async () => {
+    const ics = await new ICSAdapter({ url: 'x' }).exportFeed([ev()]);
+    expect(ics).toContain('BEGIN:VCALENDAR');
+    expect(ics).toContain('VERSION:2.0');
+    expect(ics).toContain('END:VCALENDAR');
+  });
+
+  it('includes each event as a VEVENT block', () => {
+    const ics = serializeToICS([ev(), ev({ id: 'ev-2', title: 'Lunch' })]);
+    const matches = ics.match(/BEGIN:VEVENT/g);
+    expect(matches).toHaveLength(2);
+  });
+
+  it('writes SUMMARY from title', () => {
+    const ics = serializeToICS([ev({ title: 'Sprint Review' })]);
+    expect(ics).toContain('SUMMARY:Sprint Review');
+  });
+
+  it('writes DTSTART / DTEND as UTC', () => {
+    const ics = serializeToICS([ev()]);
+    expect(ics).toContain('DTSTART:20260410T090000Z');
+    expect(ics).toContain('DTEND:20260410T100000Z');
+  });
+
+  it('writes RRULE when present', () => {
+    const ics = serializeToICS([ev({ rrule: 'FREQ=WEEKLY;BYDAY=MO' })]);
+    expect(ics).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO');
+  });
+
+  it('writes CATEGORIES when category present', () => {
+    const ics = serializeToICS([ev({ category: 'ops' })]);
+    expect(ics).toContain('CATEGORIES:ops');
+  });
+
+  it('writes STATUS:TENTATIVE for tentative events', () => {
+    const ics = serializeToICS([ev({ status: 'tentative' })]);
+    expect(ics).toContain('STATUS:TENTATIVE');
+  });
+
+  it('writes STATUS:CANCELLED for cancelled events', () => {
+    const ics = serializeToICS([ev({ status: 'cancelled' })]);
+    expect(ics).toContain('STATUS:CANCELLED');
+  });
+
+  it('writes DESCRIPTION from meta.description', () => {
+    const ics = serializeToICS([ev({ meta: { description: 'Bring slides' } })]);
+    expect(ics).toContain('DESCRIPTION:Bring slides');
+  });
+
+  it('writes UID from event id', () => {
+    const ics = serializeToICS([ev({ id: 'my-uid-123' })]);
+    expect(ics).toContain('UID:my-uid-123');
+  });
+
+  it('writes all-day events with DATE format', () => {
+    const ics = serializeToICS([ev({ allDay: true })]);
+    expect(ics).toContain('DTSTART;VALUE=DATE:20260410');
+  });
+
+  it('round-trips: serializeToICS output is parseable', async () => {
+    const input = [ev({ title: 'Round-trip', category: 'test' })];
+    const ics   = serializeToICS(input);
+    // Re-parse using the existing ICS parser
+    const { parseICS } = await import('../../../core/icalParser.js');
+    const reparsed = parseICS(ics, {
+      rangeStart: new Date('2026-01-01'),
+      rangeEnd:   new Date('2027-01-01'),
     });
-    expect(ev.constraints).toHaveLength(0);
+    expect(reparsed.length).toBe(1);
+    expect(reparsed[0].title).toBe('Round-trip');
   });
 });

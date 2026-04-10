@@ -21,8 +21,8 @@ export * from './types.js';
 // ── Serialization helpers ─────────────────────────────────────────────────────
 export * from './serialization.js';
 
-// ── Adapter functions ─────────────────────────────────────────────────────────
-export * from './adapters.js';
+// ── Data-shape converters (CalendarEventV1 ↔ EngineEvent) ────────────────────
+export * from './converters.js';
 
 // ── Engine class + initialiser ────────────────────────────────────────────────
 export { CalendarEngine, createInitialState } from '../../core/engine/CalendarEngine.js';
@@ -67,3 +67,25 @@ export type {
   StateListener,
   Unsubscribe,
 } from '../../core/engine/types.js';
+
+// ── Integration adapters ──────────────────────────────────────────────────────
+// Individual adapters can also be imported from 'works-calendar/api/v1/adapters'.
+export type {
+  CalendarAdapter,
+  AdapterChange,
+  AdapterChangeCallback,
+  AdapterUnsubscribe,
+  AdapterStatus,
+} from './adapters/CalendarAdapter.js';
+
+export { RestAdapter }      from './adapters/RestAdapter.js';
+export type { RestAdapterOptions }      from './adapters/RestAdapter.js';
+
+export { SupabaseAdapter }  from './adapters/SupabaseAdapter.js';
+export type { SupabaseAdapterOptions }  from './adapters/SupabaseAdapter.js';
+
+export { ICSAdapter, serializeToICS } from './adapters/ICSAdapter.js';
+export type { ICSAdapterOptions }  from './adapters/ICSAdapter.js';
+
+export { WebSocketAdapter } from './adapters/WebSocketAdapter.js';
+export type { WebSocketAdapterOptions } from './adapters/WebSocketAdapter.js';
