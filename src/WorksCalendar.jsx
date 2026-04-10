@@ -13,7 +13,6 @@ import { ChevronLeft, ChevronRight, Download, Plus, Upload } from 'lucide-react'
 
 import { useCalendar }        from './hooks/useCalendar.js';
 import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
-import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
 import { useSourceStore }      from './hooks/useSourceStore.js';
 import { useSourceAggregator } from './hooks/useSourceAggregator.js';
@@ -161,13 +160,33 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     }
   }, [ownerCfg.config?.display?.defaultView]);
 
-  const profiles = useProfiles({
-    calendarId,
-    filters:    cal.filters,
-    view:       cal.view,
-    setFilters: cal.replaceFilters,
-    setView:    cal.setView,
-  });
+  // ── Saved view active state ──────────────────────────────────────────────
+  const [savedViewActiveId, setSavedViewActiveId] = useState(null);
+  const [savedViewDirty,    setSavedViewDirty]    = useState(false);
+  const skipDirtyRef = useRef(false);
+
+  // Mark dirty when filters/view change after a saved view was applied
+  // Use a ref to skip the first effect run immediately after applying
+  useEffect(() => {
+    if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
+    if (savedViewActiveId)    setSavedViewDirty(true);
+  }, [cal.filters, cal.view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleApplyView = useCallback((savedView) => {
+    skipDirtyRef.current = true;
+    cal.replaceFilters(deserializeFilters(savedView.filters, schema));
+    if (savedView.view) cal.setView(savedView.view);
+    setSavedViewActiveId(savedView.id);
+    setSavedViewDirty(false);
+  }, [cal, schema]);
+
+  const handleDeleteView = useCallback((id) => {
+    savedViews.deleteView(id);
+    if (savedViewActiveId === id) {
+      setSavedViewActiveId(null);
+      setSavedViewDirty(false);
+    }
+  }, [savedViews, savedViewActiveId]);
 
   // ── Visible date range (drives fetch + occurrence expansion) ─────────────
   const range = useMemo(
@@ -612,30 +631,29 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {/* ── Profile / Saved-views Bar ── */}
         {renderSavedViewsBar
           ? renderSavedViewsBar({
-              profiles:    profiles.profiles,
-              activeId:    profiles.activeId,
-              isDirty:     profiles.isDirty,
-              applyProfile:  profiles.applyProfile,
-              addProfile:    profiles.addProfile,
-              resaveProfile: profiles.resaveProfile,
-              updateProfile: profiles.updateProfile,
-              deleteProfile: profiles.deleteProfile,
+              views:       savedViews.views,
+              activeId:    savedViewActiveId,
+              isDirty:     savedViewDirty,
+              applyView:   handleApplyView,
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, opts),
+              updateView:  savedViews.updateView,
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view),
+              deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
             })
           : (
             <ProfileBar
-              profiles={profiles.profiles}
-              activeProfile={profiles.activeProfile}
-              activeId={profiles.activeId}
-              isDirty={profiles.isDirty}
-              categories={categories}
-              resources={resources}
-              onApply={profiles.applyProfile}
-              onAdd={profiles.addProfile}
-              onResave={profiles.resaveProfile}
-              onUpdate={profiles.updateProfile}
-              onDelete={profiles.deleteProfile}
+              views={savedViews.views}
+              activeId={savedViewActiveId}
+              isDirty={savedViewDirty}
+              onApply={handleApplyView}
+              onAdd={({ name, color, pinView }) =>
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null })
+              }
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view)}
+              onUpdate={savedViews.updateView}
+              onDelete={handleDeleteView}
             />
           )
         }
@@ -661,13 +679,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               onClear={cal.clearFilter}
               onClearAll={cal.clearFilters}
               sources={sourceStore.sources}
-              savedViews={savedViews.views}
-              onSaveView={(name) => savedViews.saveView(name, cal.filters)}
-              onLoadView={(id) => {
-                const v = savedViews.views.find(v => v.id === id);
-                if (v) cal.replaceFilters(deserializeFilters(v.filters, schema));
-              }}
-              onDeleteView={savedViews.deleteView}
             />
           )
         }

@@ -118,19 +118,25 @@ export interface CalendarConfig {
   access?: { viewerPassword?: string };
 }
 
-// ─── Profiles ──────────────────────────────────────────────────────────────────
+// ─── Saved Views ───────────────────────────────────────────────────────────────
 
-export interface Profile {
+export interface SavedView {
   id: string;
   name: string;
+  createdAt: string;
   color: string | null;
-  filters: {
-    categories: string[];
-    resources: string[];
-    search: string;
-  };
-  view: ViewType | null;
+  /** Optional pinned calendar view (e.g. 'month', 'week'). */
+  view: string | null;
+  filters: Record<string, unknown>;
 }
+
+export declare function useSavedViews(calendarId: string): {
+  views: SavedView[];
+  saveView: (name: string, filters: object, opts?: { color?: string; view?: string }) => SavedView;
+  updateView: (id: string, patch: Partial<SavedView>) => void;
+  resaveView: (id: string, filters: object, viewName?: string) => void;
+  deleteView: (id: string) => void;
+};
 
 // ─── Filters ───────────────────────────────────────────────────────────────────
 
@@ -395,25 +401,6 @@ export declare function useCalendar(
   replaceFilters: (filters: FilterState) => void;
 };
 
-export declare function useProfiles(opts: {
-  calendarId: string;
-  filters: FilterState;
-  view: ViewType;
-  setFilters: (f: FilterState) => void;
-  setView: (v: ViewType) => void;
-}): {
-  profiles: Profile[];
-  activeProfile: Profile | null;
-  activeId: string | null;
-  isDirty: boolean;
-  applyProfile: (p: Profile) => void;
-  addProfile: (opts: { name: string; color?: string; pinView?: boolean }) => Profile;
-  updateProfile: (id: string, patch: Partial<Profile>) => void;
-  resaveProfile: (id: string) => void;
-  deleteProfile: (id: string) => void;
-  clearActive: () => void;
-};
-
 export declare function useRealtimeEvents(opts: {
   supabaseClient: unknown;
   table?: string;
@@ -533,7 +520,6 @@ export declare const THEMES: ThemeDefinition[];
 export declare const THEMES_BY_ID: Record<ThemeId, ThemeDefinition>;
 export declare const THEME_IDS: ThemeId[];
 
-export declare const PROFILE_COLORS: string[];
 export declare const FIELD_TYPES: Array<{ value: FieldType; label: string }>;
 
 // ─── API v1: versioned public schema ──────────────────────────────────────────

@@ -13,9 +13,10 @@ export { applyFilters, getCategories, getResources } from './filters/filterEngin
 export { exportToExcel }                  from './export/excelExport.js';
 export { useCalendar }                    from './hooks/useCalendar.js';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig.js';
-export { useProfiles }                    from './hooks/useProfiles.js';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents.js';
-export { loadProfiles, saveProfiles, createProfile, serializeFilters, deserializeFilters, PROFILE_COLORS } from './core/profileStore.js';
+export { useSavedViews, serializeFilters, deserializeFilters } from './hooks/useSavedViews.js';
+export { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
+export { createInitialFilters, buildActiveFilterPills, isEmptyFilterValue } from './filters/filterState.js';
 export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
 export { useOccurrences }                 from './hooks/useOccurrences.js';

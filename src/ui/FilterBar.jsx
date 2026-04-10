@@ -2,7 +2,8 @@
  * FilterBar — schema-driven filter controls.
  *
  * Renders one pill group per multi-select field in the schema, a text search
- * input for text fields, a saved-views dropdown, and a clear-all button.
+ * input for text fields, active filter pills, and renderers for select,
+ * boolean, and date-range field types.
  *
  * New (schema-driven) props:
  *   schema        — FilterField[]          from filterSchema.ts
@@ -13,18 +14,19 @@
  *
  * Source-store props (optional, for colored source pills):
  *   sources       — CalendarSource[]       full list from useSourceStore
- *
- * Saved views props (optional):
- *   savedViews    — SavedView[]
- *   onSaveView    — (name) => void
- *   onLoadView    — (id) => void
- *   onDeleteView  — (id) => void
  */
-import { useState, useEffect, useRef } from 'react';
-import { Search, X, Bookmark, Trash2, Plus } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
-import { isEmptyFilterValue } from '../filters/filterState.js';
+import { isEmptyFilterValue, buildActiveFilterPills } from '../filters/filterState.js';
 import styles from './FilterBar.module.css';
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+function formatDateInput(date) {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toISOString().slice(0, 10);
+}
 
 // ── Source pill (colored dot + label + type badge) ────────────────────────────
 
@@ -60,46 +62,7 @@ export default function FilterBar({
 
   // Source store data (for color dots and enabled state on source pills)
   sources      = [],
-
-  // Saved views
-  savedViews   = [],
-  onSaveView   = () => {},
-  onLoadView   = () => {},
-  onDeleteView = () => {},
 }) {
-  const [viewsOpen,  setViewsOpen]  = useState(false);
-  const [savingView, setSavingView] = useState(false);
-  const [viewName,   setViewName]   = useState('');
-  const viewsRef = useRef(null);
-  const inputRef = useRef(null);
-
-  // Close views dropdown on outside click
-  useEffect(() => {
-    if (!viewsOpen) return;
-    function handleClick(e) {
-      if (viewsRef.current && !viewsRef.current.contains(e.target)) {
-        setViewsOpen(false);
-        setSavingView(false);
-        setViewName('');
-      }
-    }
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [viewsOpen]);
-
-  useEffect(() => {
-    if (savingView && inputRef.current) inputRef.current.focus();
-  }, [savingView]);
-
-  function handleSave() {
-    const name = viewName.trim();
-    if (!name) return;
-    onSaveView(name);
-    setViewName('');
-    setSavingView(false);
-    setViewsOpen(false);
-  }
-
   // Toggle a value inside a multi-select filter field
   function handleToggle(fieldKey, value) {
     const current = filters[fieldKey];
@@ -109,6 +72,13 @@ export default function FilterBar({
   }
 
   const hasActiveFilters = schema.some(field => !isEmptyFilterValue(filters[field.key]));
+
+  // Build active pills (for non-multi-select fields that have values)
+  const activePills = buildActiveFilterPills(filters, schema).filter(pill => {
+    // multi-select pills are already shown as toggled pills in the pill groups
+    const field = schema.find(f => f.key === pill.key);
+    return field && field.type !== 'multi-select';
+  });
 
   return (
     <div className={styles.bar}>
@@ -173,6 +143,24 @@ export default function FilterBar({
         );
       })}
 
+      {/* ── Active filter pills (for select, boolean, etc.) ── */}
+      {activePills.length > 0 && (
+        <div className={styles.activePills}>
+          {activePills.map((pill, i) => (
+            <span key={`${pill.key}-${i}`} className={styles.activePill}>
+              {pill.fieldLabel}: {pill.displayValue ?? pill.value}
+              <button
+                className={styles.pillRemove}
+                onClick={() => onClear?.(pill.key)}
+                aria-label={`Remove filter ${pill.fieldLabel}`}
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* ── Text / search inputs ── */}
       {schema
         .filter(field => field.type === 'text' && !field.hidden)
@@ -201,86 +189,66 @@ export default function FilterBar({
           );
         })}
 
-      {/* ── Views dropdown ── */}
-      <div style={{ position: 'relative' }} ref={viewsRef}>
-        <button
-          className={styles.viewsBtn}
-          onClick={e => { e.stopPropagation(); setViewsOpen(o => !o); }}
-          aria-label="Saved views"
-        >
-          <Bookmark size={13} />
-          Views
-          {savedViews.length > 0 && (
-            <span className={styles.viewsBadge}>{savedViews.length}</span>
-          )}
-        </button>
-
-        {viewsOpen && (
-          <div className={styles.viewsDropdown} onClick={e => e.stopPropagation()}>
-            {savedViews.length === 0 && !savingView && (
-              <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--wc-text-faint)' }}>
-                No saved views yet.
-              </div>
-            )}
-
-            {savedViews.map(view => (
-              <div key={view.id} className={styles.viewRow}>
-                <button
-                  className={styles.viewName}
-                  onClick={() => { onLoadView(view.id); setViewsOpen(false); }}
-                  title={view.name}
-                >
-                  {view.name}
-                </button>
-                <button
-                  className={styles.viewDeleteBtn}
-                  onClick={() => onDeleteView(view.id)}
-                  aria-label={`Delete view ${view.name}`}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
+      {/* ── Select inputs ── */}
+      {schema.filter(f => f.type === 'select' && !f.hidden).map(field => {
+        const options = field.getOptions ? field.getOptions(items) : (field.options ?? []);
+        const value = filters[field.key] ?? '';
+        return (
+          <select key={field.key} className={styles.selectInput}
+            value={value}
+            onChange={e => onChange?.(field.key, e.target.value || null)}>
+            <option value="">{field.placeholder ?? `All ${field.label ?? field.key}`}</option>
+            {options.map(opt => (
+              <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
             ))}
+          </select>
+        );
+      })}
 
-            {savedViews.length > 0 && <div className={styles.viewsDivider} />}
+      {/* ── Boolean (checkbox) fields ── */}
+      {schema.filter(f => f.type === 'boolean' && !f.hidden).map(field => {
+        const value = filters[field.key];
+        return (
+          <label key={field.key} className={styles.boolLabel}>
+            <input type="checkbox" className={styles.boolCheck}
+              checked={Boolean(value)}
+              onChange={e => onChange?.(field.key, e.target.checked || null)}
+            />
+            {field.label ?? field.key}
+          </label>
+        );
+      })}
 
-            {savingView ? (
-              <div style={{ padding: '4px 6px', display: 'flex', gap: 6 }}>
-                <input
-                  ref={inputRef}
-                  value={viewName}
-                  onChange={e => setViewName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleSave();
-                    if (e.key === 'Escape') { setSavingView(false); setViewName(''); }
-                  }}
-                  placeholder="View name…"
-                  className={styles.saveViewInput}
-                />
-                <button
-                  onClick={handleSave}
-                  disabled={!viewName.trim()}
-                  style={{
-                    padding: '5px 10px', fontSize: 12, fontWeight: 600,
-                    background: 'var(--wc-accent)', color: '#fff',
-                    border: 'none', borderRadius: 6, cursor: viewName.trim() ? 'pointer' : 'not-allowed',
-                    opacity: viewName.trim() ? 1 : 0.5, flexShrink: 0,
-                  }}
-                >
-                  Save
-                </button>
-              </div>
-            ) : (
-              <button
-                className={styles.saveViewBtn}
-                onClick={() => setSavingView(true)}
-              >
-                <Plus size={12} /> Save current view…
+      {/* ── Date range fields ── */}
+      {schema.filter(f => f.type === 'date-range' && !f.hidden).map(field => {
+        const range = filters[field.key];
+        const startVal = range?.start ? formatDateInput(range.start) : '';
+        const endVal   = range?.end   ? formatDateInput(range.end)   : '';
+        return (
+          <div key={field.key} className={styles.dateRange}>
+            <input type="date" className={styles.dateInput} value={startVal}
+              aria-label={`${field.label ?? 'Date'} from`}
+              onChange={e => {
+                const d = e.target.value ? new Date(e.target.value + 'T00:00:00') : null;
+                onChange?.(field.key, d || range?.end ? { start: d, end: range?.end ?? null } : null);
+              }}
+            />
+            <span className={styles.dateSep}>–</span>
+            <input type="date" className={styles.dateInput} value={endVal}
+              aria-label={`${field.label ?? 'Date'} to`}
+              onChange={e => {
+                const d = e.target.value ? new Date(e.target.value + 'T23:59:59') : null;
+                onChange?.(field.key, d || range?.start ? { start: range?.start ?? null, end: d } : null);
+              }}
+            />
+            {(startVal || endVal) && (
+              <button className={styles.clearSearch} onClick={() => onChange?.(field.key, null)} aria-label="Clear date range">
+                <X size={12} />
               </button>
             )}
           </div>
-        )}
-      </div>
+        );
+      })}
 
       {/* ── Clear all ── */}
       {hasActiveFilters && (
