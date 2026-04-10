@@ -11,33 +11,48 @@
  *   announcerRef.current?.announce('Error: end must be after start', 'assertive');
  *
  * Implementation detail:
- *   Uses two alternating hidden paragraphs.  Toggling between them forces
- *   screen readers to re-read identical messages (some ignore textContent
- *   changes when the text is the same as before).
+ *   Two independent live regions — one polite, one assertive — each with
+ *   two alternating hidden spans.  Toggling between slots forces screen
+ *   readers to re-read identical messages (some ignore textContent changes
+ *   when the text is the same as before).
  */
 
 import { useImperativeHandle, useRef, useState, forwardRef } from 'react';
 
-const styles = {
-  // Visually hidden but readable by screen readers.
-  // Using clip-path is more reliable than display:none or visibility:hidden.
-  srOnly: {
-    position:   'absolute',
-    width:      '1px',
-    height:     '1px',
-    padding:    0,
-    margin:     '-1px',
-    overflow:   'hidden',
-    clip:       'rect(0,0,0,0)',
-    whiteSpace: 'nowrap',
-    border:     0,
-  },
+const srOnly = {
+  position:   'absolute',
+  width:      '1px',
+  height:     '1px',
+  padding:    0,
+  margin:     '-1px',
+  overflow:   'hidden',
+  clip:       'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  border:     0,
 };
 
+/**
+ * A single live region with two alternating slots.
+ * `politeness` must be 'polite' or 'assertive'.
+ */
+function LiveRegion({ politeness, slots }) {
+  return (
+    <div aria-live={politeness} aria-atomic="true" style={srOnly}>
+      <span>{slots[0]}</span>
+      <span>{slots[1]}</span>
+    </div>
+  );
+}
+
 const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) {
-  const [slot, setSlot]     = useState(0);
-  const [msgs, setMsgs]     = useState(['', '']);
-  const timeoutRef          = useRef(null);
+  // Separate state for polite and assertive regions.
+  const [politeSlot,    setPoliteSlot]    = useState(0);
+  const [politeMsgs,    setPoliteMsgs]    = useState(['', '']);
+  const [assertiveSlot, setAssertiveSlot] = useState(0);
+  const [assertiveMsgs, setAssertiveMsgs] = useState(['', '']);
+
+  const politeTimer    = useRef(null);
+  const assertiveTimer = useRef(null);
 
   useImperativeHandle(ref, () => ({
     /**
@@ -45,31 +60,43 @@ const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) 
      * @param {'polite'|'assertive'} [politeness='polite']
      */
     announce(message, politeness = 'polite') {
-      // Clear any pending announcement first.
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-      // Brief delay lets the browser finish any ongoing rendering before
-      // the live region change, improving reliability.
-      timeoutRef.current = setTimeout(() => {
-        setSlot(prev => {
-          const next = 1 - prev;
-          setMsgs(m => {
-            const copy  = [...m];
-            copy[next]  = message;
-            copy[prev]  = '';          // clear the inactive slot
-            return copy;
+      if (politeness === 'assertive') {
+        if (assertiveTimer.current) clearTimeout(assertiveTimer.current);
+        assertiveTimer.current = setTimeout(() => {
+          setAssertiveSlot(prev => {
+            const next = 1 - prev;
+            setAssertiveMsgs(m => {
+              const copy = [...m];
+              copy[next] = message;
+              copy[prev] = '';
+              return copy;
+            });
+            return next;
           });
-          return next;
-        });
-      }, 50);
+        }, 50);
+      } else {
+        if (politeTimer.current) clearTimeout(politeTimer.current);
+        politeTimer.current = setTimeout(() => {
+          setPoliteSlot(prev => {
+            const next = 1 - prev;
+            setPoliteMsgs(m => {
+              const copy = [...m];
+              copy[next] = message;
+              copy[prev] = '';
+              return copy;
+            });
+            return next;
+          });
+        }, 50);
+      }
     },
   }), []);
 
   return (
-    <div aria-live="polite" aria-atomic="true" style={styles.srOnly}>
-      <span>{msgs[0]}</span>
-      <span>{msgs[1]}</span>
-    </div>
+    <>
+      <LiveRegion politeness="polite"    slots={politeMsgs}    />
+      <LiveRegion politeness="assertive" slots={assertiveMsgs} />
+    </>
   );
 });
 

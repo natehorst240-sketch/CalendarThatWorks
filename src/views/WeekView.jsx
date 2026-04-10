@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
   format, isSameDay, isToday,
@@ -35,6 +35,18 @@ export default function WeekView({
   const gridRef    = useRef(null);
   const allDayRef  = useRef(null);
 
+  // ── Roving tabIndex for time-slot keyboard navigation ─────────────────────
+  const [focusedSlot, setFocusedSlot] = useState({ dayIdx: 0, hourIdx: 0 });
+  const lastKeyNavSlot = useRef(false);
+
+  useEffect(() => {
+    if (!lastKeyNavSlot.current || !gridRef.current) return;
+    lastKeyNavSlot.current = false;
+    const { dayIdx, hourIdx } = focusedSlot;
+    const el = gridRef.current.querySelector(`[data-slot="${dayIdx}-${hourIdx}"]`);
+    el?.focus({ preventScroll: false });
+  }, [focusedSlot]);
+
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: weekStartDay });
     const end   = endOfWeek(currentDate,   { weekStartsOn: weekStartDay });
@@ -43,6 +55,34 @@ export default function WeekView({
 
   const weekStart = days[0];
   const weekEnd   = days[6];
+
+  // Slot hours = all hours that have a full slot below them (exclude the last boundary)
+  const slotHours = useMemo(() => {
+    const arr = [];
+    for (let h = dayStart; h < dayEnd; h++) arr.push(h);
+    return arr;
+  }, [dayStart, dayEnd]);
+
+  const handleSlotKeyDown = useCallback((e, di, hi, slotStart, slotEnd) => {
+    const maxDi = days.length - 1;
+    const maxHi = slotHours.length - 1;
+    let nextDi = di, nextHi = hi;
+    switch (e.key) {
+      case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     break;
+      case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); break;
+      case 'ArrowUp':    nextHi = Math.max(0, hi - 1);     break;
+      case 'ArrowDown':  nextHi = Math.min(maxHi, hi + 1); break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        onDateSelect?.(slotStart, slotEnd);
+        return;
+      default: return;
+    }
+    e.preventDefault();
+    lastKeyNavSlot.current = true;
+    setFocusedSlot({ dayIdx: nextDi, hourIdx: nextHi });
+  }, [days.length, slotHours.length, onDateSelect]);
 
   const { allDayEvents, timedEvents } = useMemo(() => {
     const allDay = [];
@@ -187,6 +227,7 @@ export default function WeekView({
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
@@ -197,6 +238,7 @@ export default function WeekView({
         className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
         role="button" tabIndex={0}
+        aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => e.key === 'Enter' && onClick()}
         onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
@@ -221,8 +263,6 @@ export default function WeekView({
     const g = drag.ghost;
     if (!g || !isSameDay(g.start, day)) return null;
     const { top, height } = eventPosition(g.start, g.end);
-    // For move/resize: preserve the source event's column metrics so the
-    // ghost respects overlap layout. For create: fill the column.
     let left, width;
     if (g.ev) {
       const numCols = g.ev._numCols ?? 1;
@@ -243,15 +283,21 @@ export default function WeekView({
   }
 
   return (
-    <div className={styles.week}>
+    <div
+      className={styles.week}
+      role="grid"
+      aria-label={`Week of ${format(weekStart, 'MMMM d')} – ${format(weekEnd, 'MMMM d, yyyy')}`}
+    >
       {/* ── Header row ── */}
-      <div className={styles.headerRow}>
-        <div className={styles.timeGutter} />
+      <div className={styles.headerRow} role="row" aria-rowindex={1}>
+        <div className={styles.timeGutter} role="presentation" />
         {days.map(day => (
           <div key={format(day, 'yyyy-MM-dd')}
+            role="columnheader"
+            aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
             className={[styles.dayHead, isToday(day) && styles.todayHead].filter(Boolean).join(' ')}>
-            <span className={styles.dayAbbr}>{format(day, 'EEE')}</span>
-            <span className={[styles.dayNum, isToday(day) && styles.todayNum].filter(Boolean).join(' ')}>
+            <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
+            <span className={[styles.dayNum, isToday(day) && styles.todayNum].filter(Boolean).join(' ')} aria-hidden="true">
               {format(day, 'd')}
             </span>
           </div>
@@ -260,12 +306,16 @@ export default function WeekView({
 
       {/* ── All-day / multi-day row ── */}
       {allDayLanes > 0 && (
-        <div className={styles.allDayRow}>
-          <div className={styles.timeGutter}><span>all&#8209;day</span></div>
+        <div className={styles.allDayRow} role="row" aria-rowindex={2}>
+          <div className={styles.timeGutter} role="rowheader" aria-label="All-day events">
+            <span aria-hidden="true">all&#8209;day</span>
+          </div>
           <div
             className={styles.allDayGrid}
             style={{ height: allDayHeight }}
             ref={allDayRef}
+            role="gridcell"
+            aria-label="All-day events area"
             onPointerMove={handleAllDayPointerMove}
             onPointerUp={handleAllDayPointerUp}
             onPointerCancel={() => { allDayDragRef.current = null; setAllDayGhost(null); }}
@@ -279,6 +329,7 @@ export default function WeekView({
                 const statusClass = ev.status === 'cancelled' ? styles.cancelled
                   : ev.status === 'tentative' ? styles.tentative : '';
                 const isDimmedBar = allDayGhost?.ev?.id === ev.id;
+                const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
                 return (
                   <button key={ev.id}
                     className={[
@@ -296,9 +347,9 @@ export default function WeekView({
                       height: SPAN_H,
                       cursor: 'grab',
                     }}
+                    aria-label={ariaLabel}
                     onClick={() => !isDimmedBar && onEventClick?.(ev)}
                     onPointerDown={e => startAllDayBarDrag(ev, e, startCol, endCol)}
-                    title={ev.title}
                   >
                     {!continuesBefore && ev.title}
                   </button>
@@ -323,7 +374,12 @@ export default function WeekView({
             })()}
 
             {allDayLanes > MAX_SPANS && (
-              <span className={styles.allDayMore}>+{allDayLanes - MAX_SPANS} more</span>
+              <button
+                className={styles.allDayMore}
+                aria-label={`${allDayLanes - MAX_SPANS} more all-day event${allDayLanes - MAX_SPANS === 1 ? '' : 's'}`}
+              >
+                +{allDayLanes - MAX_SPANS} more
+              </button>
             )}
           </div>
         </div>
@@ -338,15 +394,15 @@ export default function WeekView({
         onPointerUp={handleGridPointerUp}
         onPointerCancel={drag.cancel}
       >
-        <div className={styles.timeCol}>
+        <div className={styles.timeCol} role="presentation">
           {hours.map(h => (
-            <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }}>
+            <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }} aria-hidden="true">
               {h === dayStart ? '' : format(new Date().setHours(h, 0, 0, 0), 'h a')}
             </div>
           ))}
         </div>
 
-        {days.map(day => {
+        {days.map((day, di) => {
           const key    = format(day, 'yyyy-MM-dd');
           const dayEvs = timedByDay.get(key) || [];
           return (
@@ -354,6 +410,7 @@ export default function WeekView({
               className={[styles.dayCol, isToday(day) && styles.todayCol].filter(Boolean).join(' ')}
               style={{ height: totalHours * pxPerHour }}
             >
+              {/* Background hour lines */}
               {hours.map(h => (
                 <div key={h}
                   className={[
@@ -363,11 +420,36 @@ export default function WeekView({
                   style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
                 />
               ))}
+
+              {/* Keyboard-interactive slot cells (transparent to mouse, focusable by keyboard) */}
+              {slotHours.map((h, hi) => {
+                const isFocused = focusedSlot.dayIdx === di && focusedSlot.hourIdx === hi;
+                const slotStart = new Date(day); slotStart.setHours(h, 0, 0, 0);
+                const slotEnd   = new Date(day); slotEnd.setHours(h + 1, 0, 0, 0);
+                return (
+                  <div
+                    key={`slot-${h}`}
+                    role="gridcell"
+                    tabIndex={isFocused ? 0 : -1}
+                    data-slot={`${di}-${hi}`}
+                    aria-label={`${format(day, 'EEEE, MMMM d')}, ${format(slotStart, 'h:mm a')}${isToday(day) ? ', today' : ''}`}
+                    aria-rowindex={hi + 3}
+                    aria-colindex={di + 1}
+                    className={styles.slotCell}
+                    style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
+                    onKeyDown={e => handleSlotKeyDown(e, di, hi, slotStart, slotEnd)}
+                  />
+                );
+              })}
+
+              {/* Now line */}
               {isToday(day) && showNowLine && (
                 <div className={styles.nowLine} style={{ top: nowTop }}>
                   <div className={styles.nowDot} />
                 </div>
               )}
+
+              {/* Timed events (above slot cells) */}
               {dayEvs.map(ev => renderTimedEvent(ev))}
               {renderGhost(day)}
             </div>

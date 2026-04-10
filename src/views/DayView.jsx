@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import {
   format, isToday, isSameDay, getHours, getMinutes,
   startOfDay, addDays,
@@ -24,6 +24,46 @@ export default function DayView({
 
   const hours = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
+
+  // Slot hours: exclude last boundary label (each slot spans h to h+1)
+  const slotHours = useMemo(() => {
+    const arr = [];
+    for (let h = dayStart; h < dayEnd; h++) arr.push(h);
+    return arr;
+  }, [dayStart, dayEnd]);
+
+  // ── Roving tabIndex for time-slot keyboard navigation ─────────────────────
+  const [focusedHour, setFocusedHour] = useState(0);
+  const lastKeyNavSlot = useRef(false);
+
+  useEffect(() => {
+    if (!lastKeyNavSlot.current || !gridRef.current) return;
+    lastKeyNavSlot.current = false;
+    const el = gridRef.current.querySelector(`[data-slot="${focusedHour}"]`);
+    el?.focus({ preventScroll: false });
+  }, [focusedHour]);
+
+  const handleSlotKeyDown = useCallback((e, hi, slotStart, slotEnd) => {
+    const maxHi = slotHours.length - 1;
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        lastKeyNavSlot.current = true;
+        setFocusedHour(Math.max(0, hi - 1));
+        return;
+      case 'ArrowDown':
+        e.preventDefault();
+        lastKeyNavSlot.current = true;
+        setFocusedHour(Math.min(maxHi, hi + 1));
+        return;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        onDateSelect?.(slotStart, slotEnd);
+        return;
+      default: return;
+    }
+  }, [slotHours.length, onDateSelect]);
 
   // All-day row: multi-day events overlapping currentDate
   const dayFloor  = startOfDay(currentDate);
@@ -92,6 +132,7 @@ export default function DayView({
     const pctWidth = (1 / numCols) * 100;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'day', isCompact: false, onClick, color });
@@ -100,6 +141,10 @@ export default function DayView({
           <div key={ev.id} data-event="1"
             className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
             style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
+            role="button" tabIndex={0}
+            aria-label={ariaLabel}
+            onClick={onClick}
+            onKeyDown={e => e.key === 'Enter' && onClick()}
             onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles.resizeHandleTop}
@@ -119,6 +164,7 @@ export default function DayView({
         className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
         style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
         role="button" tabIndex={0}
+        aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => e.key === 'Enter' && onClick()}
         onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
@@ -159,22 +205,32 @@ export default function DayView({
     );
   }
 
+  const dayLabel = `${format(currentDate, 'EEEE, MMMM d')}${isToday(currentDate) ? ', today' : ''}`;
+
   return (
-    <div className={styles.day}>
-      <div className={styles.dayHeader}>
-        <span className={[styles.dayNum, isToday(currentDate) && styles.today].filter(Boolean).join(' ')}>
+    <div className={styles.day} role="grid" aria-label={dayLabel}>
+      <div className={styles.dayHeader} role="row" aria-rowindex={1}>
+        <span
+          role="columnheader"
+          aria-label={dayLabel}
+          className={[styles.dayNum, isToday(currentDate) && styles.today].filter(Boolean).join(' ')}
+        >
           {format(currentDate, 'EEEE, MMMM d')}
         </span>
       </div>
 
       {allDayEvs.length > 0 && (
-        <div className={styles.allDayRow}>
-          <div className={styles.timeLabel}>all&#8209;day</div>
-          <div className={styles.allDayEvents}>
+        <div className={styles.allDayRow} role="row" aria-rowindex={2}>
+          <div className={styles.timeLabel} role="rowheader" aria-label="All-day events">
+            <span aria-hidden="true">all&#8209;day</span>
+          </div>
+          <div className={styles.allDayEvents} role="gridcell" aria-label="All-day events">
             {allDayEvs.map(ev => {
               const color = resolveColor(ev, ctx?.colorRules);
+              const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
               return (
                 <button key={ev.id} className={styles.allDayPill} style={{ '--ev-color': color }}
+                  aria-label={ariaLabel}
                   onClick={() => onEventClick?.(ev)}>{ev.title}</button>
               );
             })}
@@ -182,8 +238,8 @@ export default function DayView({
         </div>
       )}
 
-      <div className={styles.grid}>
-        <div className={styles.timeCol}>
+      <div className={styles.grid} role="presentation">
+        <div className={styles.timeCol} aria-hidden="true">
           {hours.map(h => (
             <div key={h} className={styles.hourLabel} style={{ height: pxPerHour }}>
               {h === dayStart ? '' : format(new Date().setHours(h, 0, 0, 0), 'h a')}
@@ -199,12 +255,35 @@ export default function DayView({
           onPointerUp={handleGridPointerUp}
           onPointerCancel={drag.cancel}
         >
+          {/* Background hour lines */}
           {hours.map(h => (
             <div key={h}
               className={[styles.hourLine, bizHours && !isBizHour(h) && styles.offHour].filter(Boolean).join(' ')}
               style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
             />
           ))}
+
+          {/* Keyboard-interactive slot cells */}
+          {slotHours.map((h, hi) => {
+            const isFocused = focusedHour === hi;
+            const slotStart = new Date(currentDate); slotStart.setHours(h, 0, 0, 0);
+            const slotEnd   = new Date(currentDate); slotEnd.setHours(h + 1, 0, 0, 0);
+            return (
+              <div
+                key={`slot-${h}`}
+                role="gridcell"
+                tabIndex={isFocused ? 0 : -1}
+                data-slot={`${hi}`}
+                aria-label={`${format(currentDate, 'EEEE, MMMM d')}, ${format(slotStart, 'h:mm a')}${isToday(currentDate) ? ', today' : ''}`}
+                aria-rowindex={hi + 3}
+                aria-colindex={1}
+                className={styles.slotCell}
+                style={{ top: (h - dayStart) * pxPerHour, height: pxPerHour }}
+                onKeyDown={e => handleSlotKeyDown(e, hi, slotStart, slotEnd)}
+              />
+            );
+          })}
+
           {showNow && (
             <div className={styles.nowLine} style={{ top: nowTop }}>
               <div className={styles.nowDot} />

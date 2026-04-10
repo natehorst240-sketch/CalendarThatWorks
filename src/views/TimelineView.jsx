@@ -163,17 +163,32 @@ export default function TimelineView({
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.inner} style={{ width: NAME_W + totalDays * DAY_W }}>
+      <div
+        className={styles.inner}
+        style={{ width: NAME_W + totalDays * DAY_W }}
+        role="grid"
+        aria-label={`Timeline for ${format(currentDate, 'MMMM yyyy')}`}
+        aria-rowcount={rows.length + 1}
+        aria-colcount={totalDays + 1}
+      >
 
         {/* ── Sticky header ── */}
-        <div className={styles.headerRow}>
-          <div className={styles.cornerCell} style={{ width: NAME_W, minWidth: NAME_W }}>
+        <div className={styles.headerRow} role="row" aria-rowindex={1}>
+          <div
+            className={styles.cornerCell}
+            style={{ width: NAME_W, minWidth: NAME_W }}
+            role="columnheader"
+            aria-label={format(currentDate, 'MMMM yyyy')}
+          >
             {format(currentDate, 'MMMM yyyy')}
           </div>
-          <div className={styles.dayHeads}>
-            {days.map(day => (
+          <div className={styles.dayHeads} role="presentation">
+            {days.map((day, di) => (
               <div
                 key={format(day, 'yyyy-MM-dd')}
+                role="columnheader"
+                aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
+                aria-colindex={di + 2}
                 className={[
                   styles.dayHead,
                   isToday(day)   && styles.todayHead,
@@ -181,16 +196,16 @@ export default function TimelineView({
                 ].filter(Boolean).join(' ')}
                 style={{ width: DAY_W, minWidth: DAY_W }}
               >
-                <span className={styles.dayNum}>{format(day, 'd')}</span>
-                <span className={styles.dayAbbr}>{format(day, 'EEE')}</span>
+                <span className={styles.dayNum} aria-hidden="true">{format(day, 'd')}</span>
+                <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* ── Body rows ── */}
-        <div className={styles.body}>
-          {rows.map(({ key, emp, empIdx, resource, events: rowEvents, rowH }) => {
+        <div className={styles.body} role="presentation">
+          {rows.map(({ key, emp, empIdx, resource, events: rowEvents, rowH }, rowIdx) => {
             const label = emp ? emp.name : resource;
             const color = emp ? employeeColor(emp, empIdx) : null;
 
@@ -199,11 +214,15 @@ export default function TimelineView({
                 key={key}
                 className={styles.row}
                 style={{ height: rowH, minHeight: rowH }}
+                role="row"
+                aria-rowindex={rowIdx + 2}
               >
-                {/* Sticky name / employee cell */}
+                {/* Sticky name / employee cell — row header */}
                 <div
                   className={styles.nameCell}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
+                  role="rowheader"
+                  aria-label={label}
                 >
                   {emp ? (
                     /* Employee display: avatar + name + role */
@@ -228,10 +247,13 @@ export default function TimelineView({
                   )}
                 </div>
 
-                {/* Event zone */}
+                {/* Event zone — single gridcell spanning all day columns */}
                 <div
                   className={styles.eventZone}
                   style={{ width: totalDays * DAY_W, height: rowH, position: 'relative' }}
+                  role="gridcell"
+                  aria-label={`${label}, ${format(currentDate, 'MMMM yyyy')}`}
+                  aria-colindex={2}
                 >
                   {/* Day column backgrounds */}
                   {days.map((day, di) => (
@@ -260,6 +282,7 @@ export default function TimelineView({
 
                     const statusClass = ev.status === 'cancelled' ? styles.cancelled
                       : ev.status === 'tentative' ? styles.tentative : '';
+                    const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
                     if (ctx?.renderEvent) {
                       const custom = ctx.renderEvent(ev, {
@@ -275,6 +298,11 @@ export default function TimelineView({
                               statusClass,
                             ].filter(Boolean).join(' ')}
                             style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={ariaLabel}
+                            onClick={onClick}
+                            onKeyDown={e => e.key === 'Enter' && onClick()}
                           >
                             {custom}
                           </div>
@@ -292,15 +320,15 @@ export default function TimelineView({
                         ].filter(Boolean).join(' ')}
                         style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                         onClick={onClick}
-                        title={`${ev.title}${ev.category ? ` · ${ev.category}` : ''}`}
+                        aria-label={ariaLabel}
                       >
                         {isOnCall
                           ? <span className={styles.onCallIcon} aria-hidden="true">🌙</span>
-                          : <span className={styles.evDot} />
+                          : <span className={styles.evDot} aria-hidden="true" />
                         }
                         <span className={styles.evTitle}>{ev.title}</span>
                         {!isOnCall && (ev._dayEnd - ev._dayStart + 1) >= 3 && ev.category && (
-                          <span className={styles.evCat}>{ev.category}</span>
+                          <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
                         )}
                       </button>
                     );

@@ -292,6 +292,7 @@ export default function MonthView({
                     const MAX_PILLS     = Math.max(0, 3 - visibleSpLanes);
                     const overflowCount = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
                     const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
+                    const popoverId     = `wc-popover-${dayKey}`;
                     const totalEvents   = daySingles.length + spansOnDay.length;
                     const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
 
@@ -328,7 +329,8 @@ export default function MonthView({
                             <button
                               className={styles.morePill}
                               aria-label={`${overflowCount} more event${overflowCount === 1 ? '' : 's'} on ${format(day, 'MMMM d')}`}
-                              aria-expanded={isPopoverOpen}
+                              aria-expanded={!!isPopoverOpen}
+                              aria-controls={popoverId}
                               onClick={e => {
                                 e.stopPropagation();
                                 setPopoverDay(isPopoverOpen ? null : day);
@@ -340,7 +342,7 @@ export default function MonthView({
                         </div>
 
                         {isPopoverOpen && (
-                          <div className={styles.popover} onClick={e => e.stopPropagation()}>
+                          <div id={popoverId} className={styles.popover} onClick={e => e.stopPropagation()}>
                             <div className={styles.popoverHead}>
                               <span>{format(day, 'MMMM d')}</span>
                               <button onClick={() => setPopoverDay(null)}>×</button>

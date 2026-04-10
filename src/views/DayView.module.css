@@ -83,6 +83,20 @@
   background: var(--wc-border);
 }
 
+/* Keyboard-interactive time slot cells */
+.slotCell {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.slotCell:focus {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: -2px;
+  z-index: 3;
+}
+
 .nowLine {
   position: absolute;
   left: 0; right: 0;
