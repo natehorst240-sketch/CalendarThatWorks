@@ -203,6 +203,19 @@
   background: color-mix(in srgb, var(--wc-accent) 6%, transparent);
 }
 
+/* ── Keyboard-interactive day cells (transparent to mouse) ─────── */
+.kbCell {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+  z-index: 2; /* above day backgrounds, below event bars (z-index 5) */
+}
+.kbCell:focus {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: -2px;
+  z-index: 4;
+}
+
 /* ── Event bars ─────────────────────────────────────────────────── */
 .event {
   position: absolute;

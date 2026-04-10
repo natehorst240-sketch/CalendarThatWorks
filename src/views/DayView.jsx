@@ -45,17 +45,12 @@ export default function DayView({
 
   const handleSlotKeyDown = useCallback((e, hi, slotStart, slotEnd) => {
     const maxHi = slotHours.length - 1;
+    let next = null;
     switch (e.key) {
-      case 'ArrowUp':
-        e.preventDefault();
-        lastKeyNavSlot.current = true;
-        setFocusedHour(Math.max(0, hi - 1));
-        return;
-      case 'ArrowDown':
-        e.preventDefault();
-        lastKeyNavSlot.current = true;
-        setFocusedHour(Math.min(maxHi, hi + 1));
-        return;
+      case 'ArrowUp':  next = Math.max(0, hi - 1);    break;
+      case 'ArrowDown': next = Math.min(maxHi, hi + 1); break;
+      case 'Home':     next = 0;                       break;
+      case 'End':      next = maxHi;                   break;
       case 'Enter':
       case ' ':
         e.preventDefault();
@@ -63,6 +58,9 @@ export default function DayView({
         return;
       default: return;
     }
+    e.preventDefault();
+    lastKeyNavSlot.current = true;
+    setFocusedHour(next);
   }, [slotHours.length, onDateSelect]);
 
   // All-day row: multi-day events overlapping currentDate
@@ -144,7 +142,7 @@ export default function DayView({
             role="button" tabIndex={0}
             aria-label={ariaLabel}
             onClick={onClick}
-            onKeyDown={e => e.key === 'Enter' && onClick()}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
             onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles.resizeHandleTop}

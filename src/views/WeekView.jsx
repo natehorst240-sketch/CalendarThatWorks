@@ -8,6 +8,7 @@ import {
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { layoutOverlaps, layoutSpans } from '../core/layout.js';
 import { useDrag } from '../hooks/useDrag.js';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './WeekView.module.css';
 
 const SPAN_H    = 22;
@@ -56,22 +57,26 @@ export default function WeekView({
   const weekStart = days[0];
   const weekEnd   = days[6];
 
-  // Slot hours = all hours that have a full slot below them (exclude the last boundary)
+  // Slot hours = hours that have a full 1-hour slot below them
   const slotHours = useMemo(() => {
     const arr = [];
     for (let h = dayStart; h < dayEnd; h++) arr.push(h);
     return arr;
   }, [dayStart, dayEnd]);
 
+  // ── Slot keyboard navigation ───────────────────────────────────────────────
   const handleSlotKeyDown = useCallback((e, di, hi, slotStart, slotEnd) => {
     const maxDi = days.length - 1;
     const maxHi = slotHours.length - 1;
     let nextDi = di, nextHi = hi;
+    let move = false;
     switch (e.key) {
-      case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     break;
-      case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); break;
-      case 'ArrowUp':    nextHi = Math.max(0, hi - 1);     break;
-      case 'ArrowDown':  nextHi = Math.min(maxHi, hi + 1); break;
+      case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
+      case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
+      case 'ArrowUp':    nextHi = Math.max(0, hi - 1);     move = true; break;
+      case 'ArrowDown':  nextHi = Math.min(maxHi, hi + 1); move = true; break;
+      case 'Home':       nextDi = 0;                        move = true; break;
+      case 'End':        nextDi = maxDi;                    move = true; break;
       case 'Enter':
       case ' ':
         e.preventDefault();
@@ -79,10 +84,16 @@ export default function WeekView({
         return;
       default: return;
     }
-    e.preventDefault();
-    lastKeyNavSlot.current = true;
-    setFocusedSlot({ dayIdx: nextDi, hourIdx: nextHi });
+    if (move) {
+      e.preventDefault();
+      lastKeyNavSlot.current = true;
+      setFocusedSlot({ dayIdx: nextDi, hourIdx: nextHi });
+    }
   }, [days.length, slotHours.length, onDateSelect]);
+
+  // ── All-day overflow popover ───────────────────────────────────────────────
+  const [allDayOverflowOpen, setAllDayOverflowOpen] = useState(false);
+  const overflowTrapRef = useFocusTrap(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
 
   const { allDayEvents, timedEvents } = useMemo(() => {
     const allDay = [];
@@ -98,6 +109,7 @@ export default function WeekView({
   const allDayLanes   = allDaySpans.length ? Math.max(...allDaySpans.map(s => s.lane)) + 1 : 0;
   const allDayVisible = Math.min(allDayLanes, MAX_SPANS);
   const allDayHeight  = allDayVisible * (SPAN_H + SPAN_GAP);
+  const overflowCount = allDayLanes > MAX_SPANS ? allDayLanes - MAX_SPANS : 0;
 
   const timedByDay = useMemo(() => {
     const map = new Map();
@@ -240,7 +252,7 @@ export default function WeekView({
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
-        onKeyDown={e => e.key === 'Enter' && onClick()}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
         onPointerDown={e => { if (e.button !== 0) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
@@ -373,13 +385,56 @@ export default function WeekView({
               );
             })()}
 
-            {allDayLanes > MAX_SPANS && (
-              <button
-                className={styles.allDayMore}
-                aria-label={`${allDayLanes - MAX_SPANS} more all-day event${allDayLanes - MAX_SPANS === 1 ? '' : 's'}`}
-              >
-                +{allDayLanes - MAX_SPANS} more
-              </button>
+            {/* Overflow button + popover */}
+            {overflowCount > 0 && (
+              <div className={styles.allDayMoreWrapper}>
+                <button
+                  className={styles.allDayMore}
+                  aria-label={`${overflowCount} more all-day event${overflowCount === 1 ? '' : 's'}, ${allDayOverflowOpen ? 'expanded' : 'collapsed'}`}
+                  aria-expanded={allDayOverflowOpen}
+                  aria-controls="wc-allday-overflow"
+                  onClick={e => { e.stopPropagation(); setAllDayOverflowOpen(v => !v); }}
+                >
+                  +{overflowCount} more
+                </button>
+
+                {allDayOverflowOpen && (
+                  <div
+                    id="wc-allday-overflow"
+                    ref={overflowTrapRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Hidden all-day events"
+                    className={styles.allDayOverflowPopover}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className={styles.allDayOverflowHead}>
+                      <span>All-day events</span>
+                      <button
+                        className={styles.allDayOverflowClose}
+                        onClick={() => setAllDayOverflowOpen(false)}
+                        aria-label="Close"
+                      >×</button>
+                    </div>
+                    {allDaySpans
+                      .filter(s => s.lane >= MAX_SPANS)
+                      .map(({ ev }) => {
+                        const color = resolveColor(ev, ctx?.colorRules);
+                        return (
+                          <button
+                            key={ev.id}
+                            className={styles.allDayOverflowItem}
+                            style={{ '--ev-color': color }}
+                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}`}
+                            onClick={() => { onEventClick?.(ev); setAllDayOverflowOpen(false); }}
+                          >
+                            {ev.title}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

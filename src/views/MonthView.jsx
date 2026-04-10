@@ -158,7 +158,10 @@ export default function MonthView({
         return (
           <div key={ev.id}
             className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
+            role="button"
+            tabIndex={0}
             onClick={e => { e.stopPropagation(); onClick(); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onPointerDown={e => startPillDrag(ev, e)}
           >
             {custom}

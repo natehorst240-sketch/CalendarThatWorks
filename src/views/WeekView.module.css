@@ -67,7 +67,7 @@
 
 .allDayGrid {
   position: relative;
-  overflow: hidden;
+  /* overflow intentionally visible so the overflow popover can appear above the grid */
 }
 
 .allDaySpan {
@@ -95,13 +95,98 @@
 .allDaySpan.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
 .allDaySpan.cancelled { opacity: 0.45; text-decoration: line-through; }
 
-.allDayMore {
+/* Overflow button wrapper — sits at bottom-right of the all-day grid */
+.allDayMoreWrapper {
   position: absolute;
   bottom: 2px;
   right: 4px;
+  z-index: 20;
+}
+
+.allDayMore {
   font-size: 10px;
   color: var(--wc-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 1px 5px;
+  white-space: nowrap;
 }
+.allDayMore:hover {
+  background: var(--wc-surface);
+  border-color: var(--wc-border);
+  color: var(--wc-text);
+}
+.allDayMore:focus {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: 2px;
+}
+
+/* Overflow popover — opens upward from the button */
+.allDayOverflowPopover {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  min-width: 188px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius, 8px);
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+  padding: 8px;
+}
+
+.allDayOverflowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--wc-border);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.allDayOverflowClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--wc-text-muted);
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.allDayOverflowClose:hover { color: var(--wc-text); }
+.allDayOverflowClose:focus { outline: 2px solid var(--wc-accent, #0066cc); }
+
+.allDayOverflowItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 5px 8px;
+  margin-bottom: 3px;
+  border-radius: var(--wc-radius-sm, 4px);
+  background: var(--ev-color, var(--wc-accent));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.allDayOverflowItem:last-child { margin-bottom: 0; }
+.allDayOverflowItem:hover { filter: brightness(1.1); }
+.allDayOverflowItem:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: -2px; }
 
 /* ── Scrollable time grid ── */
 .grid {

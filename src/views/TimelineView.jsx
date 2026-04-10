@@ -14,7 +14,7 @@
  *   onCallCategory  Category string that marks on-call shift events.
  *                   Default: 'on-call'.  These get a striped background style.
  */
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isToday, isWeekend,
@@ -99,6 +99,11 @@ export default function TimelineView({
   );
   const totalDays = days.length;
 
+  // ── Keyboard grid navigation ───────────────────────────────────────────────
+  const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
+  const lastKeyNavCell = useRef(false);
+  const gridRef        = useRef(null);
+
   // ── Row source: employees list OR derive from event resources ──────────────
 
   const useEmployees = employees && employees.length > 0;
@@ -148,6 +153,45 @@ export default function TimelineView({
     });
   }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString()]);
 
+  // ── Keyboard grid navigation ───────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!lastKeyNavCell.current || !gridRef.current) return;
+    lastKeyNavCell.current = false;
+    const { rowIdx, dayIdx } = focusedCell;
+    const el = gridRef.current.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
+    el?.focus({ preventScroll: false });
+  }, [focusedCell]);
+
+  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents) => {
+    const maxRi = rows.length - 1;
+    const maxDi = totalDays - 1;
+    let nextRi = ri, nextDi = di;
+    let move = false;
+    switch (e.key) {
+      case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
+      case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
+      case 'ArrowUp':    nextRi = Math.max(0, ri - 1);     move = true; break;
+      case 'ArrowDown':  nextRi = Math.min(maxRi, ri + 1); move = true; break;
+      case 'Home':       nextDi = 0;                        move = true; break;
+      case 'End':        nextDi = maxDi;                    move = true; break;
+      case 'Enter':
+      case ' ': {
+        e.preventDefault();
+        // Activate the first event whose day range includes di
+        const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
+        if (hit) onEventClick?.(hit);
+        return;
+      }
+      default: return;
+    }
+    if (move) {
+      e.preventDefault();
+      lastKeyNavCell.current = true;
+      setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
+    }
+  }, [rows.length, totalDays, onEventClick]);
+
   // ── Empty state ────────────────────────────────────────────────────────────
 
   if (rows.length === 0) {
@@ -170,6 +214,7 @@ export default function TimelineView({
         aria-label={`Timeline for ${format(currentDate, 'MMMM yyyy')}`}
         aria-rowcount={rows.length + 1}
         aria-colcount={totalDays + 1}
+        ref={gridRef}
       >
 
         {/* ── Sticky header ── */}
@@ -247,15 +292,13 @@ export default function TimelineView({
                   )}
                 </div>
 
-                {/* Event zone — single gridcell spanning all day columns */}
+                {/* Event zone — contains day background bands + keyboard cells + event bars */}
                 <div
                   className={styles.eventZone}
                   style={{ width: totalDays * DAY_W, height: rowH, position: 'relative' }}
-                  role="gridcell"
-                  aria-label={`${label}, ${format(currentDate, 'MMMM yyyy')}`}
-                  aria-colindex={2}
+                  role="presentation"
                 >
-                  {/* Day column backgrounds */}
+                  {/* Day column backgrounds (pointer-events: none in CSS) */}
                   {days.map((day, di) => (
                     <div
                       key={di}
@@ -267,6 +310,25 @@ export default function TimelineView({
                       style={{ left: di * DAY_W, width: DAY_W, height: rowH }}
                     />
                   ))}
+
+                  {/* Per-day keyboard cells (transparent to mouse, keyboard-navigable) */}
+                  {days.map((day, di) => {
+                    const isFocused = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
+                    return (
+                      <div
+                        key={`kbcell-${di}`}
+                        role="gridcell"
+                        tabIndex={isFocused ? 0 : -1}
+                        data-cell={`${rowIdx}-${di}`}
+                        aria-label={`${label}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}`}
+                        aria-rowindex={rowIdx + 2}
+                        aria-colindex={di + 2}
+                        className={styles.kbCell}
+                        style={{ left: di * DAY_W, width: DAY_W, top: 0, height: rowH }}
+                        onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents)}
+                      />
+                    );
+                  })}
 
                   {/* Event bars */}
                   {rowEvents.map(ev => {
@@ -302,7 +364,7 @@ export default function TimelineView({
                             tabIndex={0}
                             aria-label={ariaLabel}
                             onClick={onClick}
-                            onKeyDown={e => e.key === 'Enter' && onClick()}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
                           >
                             {custom}
                           </div>
