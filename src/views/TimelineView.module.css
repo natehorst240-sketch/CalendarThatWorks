@@ -40,6 +40,106 @@
   flex-shrink: 0;
 }
 
+/* ── Add-person button & form ────────────────────────────────────── */
+.addPersonBtn {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--wc-accent, #0066cc);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: filter 0.1s;
+}
+.addPersonBtn:hover { filter: brightness(1.15); }
+
+.addPersonForm {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--wc-surface, #fff);
+  border: 1px solid var(--wc-border-dark, #ccc);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+
+.addPersonInput {
+  border: 1px solid var(--wc-border-dark, #ccc);
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 13px;
+  background: var(--wc-bg, #fff);
+  color: var(--wc-text, #111);
+  outline: none;
+}
+.addPersonInput:focus { border-color: var(--wc-accent, #0066cc); }
+
+.addPersonActions {
+  display: flex;
+  gap: 6px;
+}
+
+.addPersonSave {
+  flex: 1;
+  padding: 4px 0;
+  background: var(--wc-accent, #0066cc);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.1s;
+}
+.addPersonSave:hover { filter: brightness(1.12); }
+
+.addPersonCancel {
+  flex: 1;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--wc-text-muted, #666);
+  border: 1px solid var(--wc-border-dark, #ccc);
+  border-radius: 5px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.addPersonCancel:hover { background: var(--wc-surface, #f5f5f5); }
+
+/* ── Remove employee button ──────────────────────────────────────── */
+.removeEmpBtn {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--wc-text-muted, #888);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.1s;
+}
+.row:hover .removeEmpBtn { opacity: 1; }
+.removeEmpBtn:hover { background: var(--wc-danger-bg, #fee2e2); color: var(--wc-danger, #dc2626); }
+
 .dayHeads {
   display: flex;
   flex: 1;

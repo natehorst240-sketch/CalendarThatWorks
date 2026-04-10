@@ -116,6 +116,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
     // ── Employees (for schedule/timeline view) ──
     employees   = [],
+    onEmployeeAdd,
+    onEmployeeDelete,
 
     // ── Validation ──
     blockedWindows,
@@ -696,7 +698,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
+                  onDateSelect={handleDateSelect}
                   employees={employees}
+                  onEmployeeAdd={onEmployeeAdd}
+                  onEmployeeDelete={onEmployeeDelete}
                 />
               )}
             </>

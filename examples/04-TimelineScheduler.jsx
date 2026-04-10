@@ -18,7 +18,7 @@ import { useState, useCallback } from 'react';
 import { WorksCalendar } from '../src/index.js';
 
 // ── Team ──────────────────────────────────────────────────────────────────────
-const TEAM = [
+const INITIAL_TEAM = [
   { id: 'alice',  name: 'Alice Park',   role: 'Engineering Lead',  color: '#3b82f6' },
   { id: 'ben',    name: 'Ben Torres',   role: 'Senior Engineer',   color: '#10b981' },
   { id: 'carla',  name: 'Carla Singh',  role: 'Software Engineer', color: '#8b5cf6' },
@@ -76,6 +76,7 @@ const INITIAL_EVENTS = [
 // ── Component ─────────────────────────────────────────────────────────────────
 export function TimelineScheduler() {
   const [events, setEvents] = useState(INITIAL_EVENTS);
+  const [team,   setTeam]   = useState(INITIAL_TEAM);
 
   // onEventMove receives the updated event with newStart, newEnd, and
   // (in schedule view) newResource when the bar is dragged to a different row.
@@ -100,17 +101,27 @@ export function TimelineScheduler() {
     });
   }, []);
 
+  const handleEmployeeAdd = useCallback((emp) => {
+    setTeam(prev => [...prev, emp]);
+  }, []);
+
+  const handleEmployeeDelete = useCallback((id) => {
+    setTeam(prev => prev.filter(e => e.id !== id));
+  }, []);
+
   return (
     <div style={{ height: '100%' }}>
       <WorksCalendar
         events={events}
-        employees={TEAM}   // defines the rows in schedule view
+        employees={team}
         initialView="schedule"
         showAddButton
         onEventMove={handleMove}
         onEventResize={handleResize}
         onEventSave={handleSave}
         onEventDelete={(id) => setEvents(prev => prev.filter(e => e.id !== id))}
+        onEmployeeAdd={handleEmployeeAdd}
+        onEmployeeDelete={handleEmployeeDelete}
       />
     </div>
   );

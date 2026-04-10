@@ -98,8 +98,16 @@ export default function TimelineView({
   onDateSelect,
   employees = [],
   onCallCategory = 'on-call',
+  onEmployeeAdd,
+  onEmployeeDelete,
 }) {
   const ctx        = useCalendarContext();
+
+  // ── Add-person form state ─────────────────────────────────────────────────
+  const [addFormOpen, setAddFormOpen]   = useState(false);
+  const [addName,     setAddName]       = useState('');
+  const [addRole,     setAddRole]       = useState('');
+  const nameInputRef                    = useRef(null);
   const monthStart = startOfMonth(currentDate);
   const monthEnd   = endOfMonth(currentDate);
   const days       = useMemo(
@@ -143,6 +151,19 @@ export default function TimelineView({
       ro?.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    if (addFormOpen) nameInputRef.current?.focus();
+  }, [addFormOpen]);
+
+  const submitAddForm = useCallback(() => {
+    const trimmed = addName.trim();
+    if (!trimmed) return;
+    onEmployeeAdd?.({ id: `emp-${Date.now()}`, name: trimmed, role: addRole.trim() || undefined });
+    setAddName('');
+    setAddRole('');
+    setAddFormOpen(false);
+  }, [addName, addRole, onEmployeeAdd]);
 
   // ── Row source: employees list OR derive from event resources ──────────────
 
@@ -315,11 +336,43 @@ export default function TimelineView({
         <div className={styles.headerRow} role="row" aria-rowindex={1}>
           <div
             className={styles.cornerCell}
-            style={{ width: NAME_W, minWidth: NAME_W }}
+            style={{ width: NAME_W, minWidth: NAME_W, position: 'relative' }}
             role="columnheader"
             aria-label={format(currentDate, 'MMMM yyyy')}
           >
             {format(currentDate, 'MMMM yyyy')}
+            {onEmployeeAdd && (
+              <button
+                className={styles.addPersonBtn}
+                onClick={() => setAddFormOpen(v => !v)}
+                title="Add person"
+                aria-label="Add person"
+              >+</button>
+            )}
+            {/* Add-person form dropdown */}
+            {addFormOpen && (
+              <div className={styles.addPersonForm} role="dialog" aria-label="Add person">
+                <input
+                  ref={nameInputRef}
+                  className={styles.addPersonInput}
+                  placeholder="Name"
+                  value={addName}
+                  onChange={e => setAddName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submitAddForm(); if (e.key === 'Escape') setAddFormOpen(false); }}
+                />
+                <input
+                  className={styles.addPersonInput}
+                  placeholder="Role (optional)"
+                  value={addRole}
+                  onChange={e => setAddRole(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submitAddForm(); if (e.key === 'Escape') setAddFormOpen(false); }}
+                />
+                <div className={styles.addPersonActions}>
+                  <button className={styles.addPersonSave} onClick={submitAddForm}>Add</button>
+                  <button className={styles.addPersonCancel} onClick={() => setAddFormOpen(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
           </div>
           <div className={styles.dayHeads} role="presentation">
             {days.map((day, di) => (
@@ -394,6 +447,14 @@ export default function TimelineView({
                         <span className={styles.empName}>{emp.name}</span>
                         {emp.role && <span className={styles.empRole}>{emp.role}</span>}
                       </div>
+                      {onEmployeeDelete && (
+                        <button
+                          className={styles.removeEmpBtn}
+                          onClick={e => { e.stopPropagation(); onEmployeeDelete(emp.id); }}
+                          title={`Remove ${emp.name}`}
+                          aria-label={`Remove ${emp.name}`}
+                        >×</button>
+                      )}
                     </>
                   ) : (
                     <span className={styles.resourceName}>{label}</span>
