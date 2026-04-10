@@ -92,14 +92,16 @@
 /* ── Body ───────────────────────────────────────────────────────── */
 .body {
   flex: 1;
+  /* height set inline by JS for virtualization; position: relative set inline */
 }
 
 /* ── Resource row ───────────────────────────────────────────────── */
 .row {
   display: flex;
+  /* position / top / left / right / height set inline for virtualized rows */
   border-bottom: 1px solid var(--wc-border);
+  box-sizing: border-box;
 }
-.row:last-child { border-bottom: none; }
 .row:hover { background: color-mix(in srgb, var(--wc-text) 1.5%, transparent); }
 
 /* Sticky name cell */

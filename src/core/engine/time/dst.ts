@@ -66,13 +66,14 @@ export function preserveWallClockAfterDST(
  * library (date-fns-tz or Temporal) is recommended.
  */
 export function isInSpringForwardGap(d: Date, tz: string): boolean {
-  // Check one minute before and one minute after: if the offset is different
-  // and larger before (clocks went forward), the point is in the gap.
+  // Check one minute before and one minute after.  In a spring-forward
+  // transition the UTC offset INCREASES going forward in time
+  // (e.g. EST -300 → EDT -240, or GMT 0 → BST +60).
   const before = new Date(d.getTime() - 60_000);
   const after  = new Date(d.getTime() + 60_000);
   const offBefore = utcOffsetMinutes(before, tz);
   const offAfter  = utcOffsetMinutes(after,  tz);
-  return offBefore > offAfter; // offset decreased = clocks went forward
+  return offBefore < offAfter; // offset increased = clocks went forward (spring)
 }
 
 /**
@@ -80,9 +81,11 @@ export function isInSpringForwardGap(d: Date, tz: string): boolean {
  * In a fall-back transition, wall-clock times like 1:30 AM occur twice.
  */
 export function isInFallBackRepeat(d: Date, tz: string): boolean {
+  // In a fall-back transition the UTC offset DECREASES going forward in time
+  // (e.g. EDT -240 → EST -300, or BST +60 → GMT 0).
   const before = new Date(d.getTime() - 60_000);
   const after  = new Date(d.getTime() + 60_000);
   const offBefore = utcOffsetMinutes(before, tz);
   const offAfter  = utcOffsetMinutes(after,  tz);
-  return offBefore < offAfter; // offset increased = clocks went back
+  return offBefore > offAfter; // offset decreased = clocks went back (fall)
 }

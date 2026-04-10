@@ -13,6 +13,11 @@
  *                   resource-derived rows.
  *   onCallCategory  Category string that marks on-call shift events.
  *                   Default: 'on-call'.  These get a striped background style.
+ *
+ * Performance:
+ *   Row virtualization — only rows inside the visible viewport ± OVERSCAN_ROWS
+ *   are rendered.  The body container is sized to the full total height so the
+ *   scrollbar is correct and each row is absolutely positioned at its offset.
  */
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import {
@@ -30,6 +35,9 @@ const DAY_W    = 52;   // px — each day column
 const LANE_H   = 26;   // px — each event lane
 const LANE_GAP = 3;    // px — gap between lanes
 const ROW_PAD  = 8;    // px — top/bottom padding per row
+
+// Virtualization: rows above and below the visible area to keep rendered
+const OVERSCAN_ROWS = 3;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,7 +110,38 @@ export default function TimelineView({
   // ── Keyboard grid navigation ───────────────────────────────────────────────
   const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
   const lastKeyNavCell = useRef(false);
-  const gridRef        = useRef(null);
+  const gridRef        = useRef(null); // ref on .inner (for querySelector)
+  const wrapRef        = useRef(null); // ref on .wrap (scroll container)
+
+  // ── Virtualization: track scroll position + viewport size ─────────────────
+  // Default height is large so that tests (clientHeight = 0) see all rows.
+  const [scrollState, setScrollState] = useState({ top: 0, height: 2000 });
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const update = () => {
+      setScrollState({
+        top:    el.scrollTop,
+        height: el.clientHeight || 2000,
+      });
+    };
+
+    update(); // initial measurement
+
+    el.addEventListener('scroll', update, { passive: true });
+
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(update)
+      : null;
+    ro?.observe(el);
+
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro?.disconnect();
+    };
+  }, []);
 
   // ── Row source: employees list OR derive from event resources ──────────────
 
@@ -153,15 +192,63 @@ export default function TimelineView({
     });
   }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString()]);
 
+  // ── Cumulative row offsets (for absolute positioning + scroll math) ────────
+  const rowOffsets = useMemo(() => {
+    const offsets = [0];
+    for (const row of rows) offsets.push(offsets[offsets.length - 1] + row.rowH);
+    return offsets;
+  }, [rows]);
+
+  const totalBodyH = rowOffsets[rows.length] ?? 0;
+
+  // ── Visible row window ─────────────────────────────────────────────────────
+  const [visStart, visEnd] = useMemo(() => {
+    const { top, height } = scrollState;
+    const viewH = height || 2000;
+    let s = 0;
+    let e = rows.length - 1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rowOffsets[i + 1] <= top) s = i + 1;
+    }
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rowOffsets[i] < top + viewH) { e = i; break; }
+    }
+    return [
+      Math.max(0, s - OVERSCAN_ROWS),
+      Math.min(rows.length - 1, e + OVERSCAN_ROWS),
+    ];
+  }, [scrollState, rowOffsets, rows.length]);
+
   // ── Keyboard grid navigation ───────────────────────────────────────────────
 
   useEffect(() => {
-    if (!lastKeyNavCell.current || !gridRef.current) return;
+    if (!lastKeyNavCell.current) return;
     lastKeyNavCell.current = false;
     const { rowIdx, dayIdx } = focusedCell;
-    const el = gridRef.current.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
-    el?.focus({ preventScroll: false });
-  }, [focusedCell]);
+
+    // Scroll the target row into the visible viewport if needed
+    const wrap = wrapRef.current;
+    if (wrap && rowOffsets.length > rowIdx + 1) {
+      const rowTop    = rowOffsets[rowIdx];
+      const rowBottom = rowOffsets[rowIdx + 1];
+      if (rowTop < wrap.scrollTop) {
+        wrap.scrollTop = rowTop;
+      } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
+        wrap.scrollTop = rowBottom - wrap.clientHeight;
+      }
+    }
+
+    // Focus the keyboard cell — try immediately (works when row already rendered),
+    // then via rAF after any scroll-triggered re-render.
+    const tryFocus = () => {
+      const el = gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
+      el?.focus({ preventScroll: false });
+    };
+    tryFocus();
+    if (!gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`)) {
+      requestAnimationFrame(tryFocus);
+    }
+  }, [focusedCell, rowOffsets]);
 
   const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents) => {
     const maxRi = rows.length - 1;
@@ -206,7 +293,7 @@ export default function TimelineView({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} ref={wrapRef}>
       <div
         className={styles.inner}
         style={{ width: NAME_W + totalDays * DAY_W }}
@@ -248,17 +335,31 @@ export default function TimelineView({
           </div>
         </div>
 
-        {/* ── Body rows ── */}
-        <div className={styles.body} role="presentation">
-          {rows.map(({ key, emp, empIdx, resource, events: rowEvents, rowH }, rowIdx) => {
+        {/* ── Body (virtualized rows) ── */}
+        <div
+          className={styles.body}
+          role="presentation"
+          style={{ position: 'relative', height: totalBodyH }}
+        >
+          {rows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
+            const rowIdx  = visStart + relIdx;
+            const { key, emp, empIdx, resource, events: rowEvents, rowH } = rowData;
             const label = emp ? emp.name : resource;
             const color = emp ? employeeColor(emp, empIdx) : null;
+            const topOffset = rowOffsets[rowIdx];
 
             return (
               <div
                 key={key}
                 className={styles.row}
-                style={{ height: rowH, minHeight: rowH }}
+                style={{
+                  position: 'absolute',
+                  top:      topOffset,
+                  left:     0,
+                  right:    0,
+                  height:   rowH,
+                  minHeight: rowH,
+                }}
                 role="row"
                 aria-rowindex={rowIdx + 2}
               >

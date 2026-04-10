@@ -4,6 +4,7 @@ import {
   startOfDay, addDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { hoursInTimezone } from '../core/engine/time/timezone.js';
 import { layoutOverlaps } from '../core/layout.js';
 import { useDrag } from '../hooks/useDrag.js';
 import styles from './DayView.module.css';
@@ -75,13 +76,18 @@ export default function DayView({
   );
   const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
 
-  const now    = new Date();
-  const nowTop = ((getHours(now) - dayStart) * 60 + getMinutes(now)) / 60 * pxPerHour;
-  const showNow = isToday(currentDate) && getHours(now) >= dayStart && getHours(now) < dayEnd;
+  const displayTz = ctx?.displayTimezone ?? null;
+
+  const now     = new Date();
+  const nowHour = displayTz ? hoursInTimezone(now, displayTz) : getHours(now) + getMinutes(now) / 60;
+  const nowTop  = (nowHour - dayStart) * pxPerHour;
+  const showNow = isToday(currentDate) && nowHour >= dayStart && nowHour < dayEnd;
 
   function eventPosition(start, end) {
-    const startMin = (getHours(start) - dayStart) * 60 + getMinutes(start);
-    const endMin   = (getHours(end)   - dayStart) * 60 + getMinutes(end);
+    const startH = displayTz ? hoursInTimezone(start, displayTz) : getHours(start) + getMinutes(start) / 60;
+    const endH   = displayTz ? hoursInTimezone(end,   displayTz) : getHours(end)   + getMinutes(end)   / 60;
+    const startMin = (startH - dayStart) * 60;
+    const endMin   = (endH   - dayStart) * 60;
     return {
       top:    Math.max(0, startMin) / 60 * pxPerHour,
       height: Math.max(22, endMin - startMin) / 60 * pxPerHour,
