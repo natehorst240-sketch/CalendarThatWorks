@@ -124,6 +124,14 @@ export function TeamCalendar() {
     });
   }, []);
 
+  const handleMove = useCallback(({ event, newStart, newEnd }) => {
+    setEvents(prev => prev.map(e => e.id !== event.id ? e : { ...e, start: newStart, end: newEnd }));
+  }, []);
+
+  const handleResize = useCallback(({ event, newEnd }) => {
+    setEvents(prev => prev.map(e => e.id !== event.id ? e : { ...e, end: newEnd }));
+  }, []);
+
   return (
     <div style={{ height: '100%' }}>
       {/*
@@ -137,6 +145,8 @@ export function TeamCalendar() {
         calendarId="team-calendar"
         showAddButton
         onEventSave={handleSave}
+        onEventMove={handleMove}
+        onEventResize={handleResize}
         onEventDelete={(id) => setEvents(prev => prev.filter(e => e.id !== id))}
       />
     </div>
