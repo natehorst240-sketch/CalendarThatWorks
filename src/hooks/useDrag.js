@@ -65,7 +65,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }) {
     return clamp(
       snap((relY / pxPerHour) * 60 + dayStart * 60),
       dayStart * 60,
-      (dayEnd - 1) * 60,
+      dayEnd * 60 - SNAP_MIN,   // last reachable snap = e.g. 21:45 when dayEnd=22
     );
   }
 

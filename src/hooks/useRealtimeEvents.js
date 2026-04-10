@@ -49,16 +49,27 @@ export function useRealtimeEvents({ supabaseClient, table, filter }) {
 
     channelRef.current = channel;
 
-    // Also do an initial fetch if possible
+    // Initial fetch — merged with any realtime rows that arrive before it resolves.
+    // A cancelled flag guards against setState after unmount.
+    let cancelled = false;
     supabaseClient
       .from(table)
       .select('*')
       .then(({ data, error }) => {
-        if (!error && data) setEvents(data);
+        if (cancelled || error || !data) return;
+        setEvents(prev => {
+          // prev may already contain INSERT payloads from the realtime channel.
+          // Build a map keyed by id: initial data wins for rows it knows about,
+          // but any realtime rows not in the initial fetch are preserved.
+          const map = new Map(data.map(r => [String(r.id), r]));
+          prev.forEach(r => { if (!map.has(String(r.id))) map.set(String(r.id), r); });
+          return [...map.values()];
+        });
       })
-      .catch(() => { /* optional, may not have select permissions */ });
+      .catch(() => { /* select permission is optional */ });
 
     return () => {
+      cancelled = true;
       channel.unsubscribe();
       channelRef.current = null;
     };
