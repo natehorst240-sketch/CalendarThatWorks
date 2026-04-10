@@ -16,6 +16,7 @@ import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
 import { useProfiles }        from './hooks/useProfiles.js';
 import { useFetchEvents }     from './hooks/useFetchEvents.js';
 import { useFeedEvents }      from './hooks/useFeedEvents.js';
+import { useFeedStore }      from './hooks/useFeedStore.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
@@ -170,8 +171,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     fetchEvents, cal.view, cal.currentDate, weekStartDay,
   );
 
-  // ── iCal feed polling ────────────────────────────────────────────────────
-  const { feedEvents } = useFeedEvents(icalFeeds);
+  // ── iCal feed store (persisted in localStorage per calendarId) ──────────
+  const feedStore = useFeedStore(calendarId);
+
+  // ── iCal feed polling (external icalFeeds prop + stored feeds merged) ───
+  const allIcalFeeds = useMemo(
+    () => [...(icalFeeds ?? []), ...feedStore.activeFeeds],
+    [icalFeeds, feedStore.activeFeeds],
+  );
+  const { feedEvents, feedErrors } = useFeedEvents(allIcalFeeds);
 
   // ── Supabase Realtime ────────────────────────────────────────────────────
   const [supabaseClient, setSupabaseClient] = useState(null);
@@ -691,6 +699,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             categories={categories}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
+            feeds={feedStore.feeds}
+            feedErrors={feedErrors}
+            onAddFeed={feedStore.addFeed}
+            onRemoveFeed={feedStore.removeFeed}
+            onToggleFeed={feedStore.toggleFeed}
+            onUpdateFeed={feedStore.updateFeed}
           />
         )}
 
