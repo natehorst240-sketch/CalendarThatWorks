@@ -27,6 +27,8 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy } from './core/engine/adapters/toLegacyEvents.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
+import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
+import { buildActiveFilterPills } from './filters/filterState.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
 import HoverCard              from './ui/HoverCard.jsx';
@@ -128,7 +130,12 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     renderEvent,
     renderHoverCard,
     renderToolbar,
+    renderFilterBar,
+    renderSavedViewsBar,
     emptyState,
+
+    // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
+    filterSchema,
 
     // ── UI toggles ──
     showAddButton           = false,
@@ -139,7 +146,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   ref,
 ) {
   // ── View / date / filter state ───────────────────────────────────────────
-  const cal      = useCalendar([], initialView ?? 'month');
+  const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
+  const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave });
   const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
 
@@ -245,7 +253,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // ── Derive categories / resources / filtered events ──────────────────────
   const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
-  const visibleEvents = useMemo(() => applyFilters(expandedEvents, cal.filters), [expandedEvents, cal.filters]);
+  const visibleEvents = useMemo(
+    () => applyFilters(expandedEvents, cal.filters, schema),
+    [expandedEvents, cal.filters, schema],
+  );
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
@@ -598,41 +609,68 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           </div>
         )}
 
-        {/* ── Profile Bar ── */}
-        <ProfileBar
-          profiles={profiles.profiles}
-          activeProfile={profiles.activeProfile}
-          activeId={profiles.activeId}
-          isDirty={profiles.isDirty}
-          categories={categories}
-          resources={resources}
-          onApply={profiles.applyProfile}
-          onAdd={profiles.addProfile}
-          onResave={profiles.resaveProfile}
-          onUpdate={profiles.updateProfile}
-          onDelete={profiles.deleteProfile}
-        />
+        {/* ── Profile / Saved-views Bar ── */}
+        {renderSavedViewsBar
+          ? renderSavedViewsBar({
+              profiles:    profiles.profiles,
+              activeId:    profiles.activeId,
+              isDirty:     profiles.isDirty,
+              applyProfile:  profiles.applyProfile,
+              addProfile:    profiles.addProfile,
+              resaveProfile: profiles.resaveProfile,
+              updateProfile: profiles.updateProfile,
+              deleteProfile: profiles.deleteProfile,
+              currentFilters: cal.filters,
+              currentView:    cal.view,
+            })
+          : (
+            <ProfileBar
+              profiles={profiles.profiles}
+              activeProfile={profiles.activeProfile}
+              activeId={profiles.activeId}
+              isDirty={profiles.isDirty}
+              categories={categories}
+              resources={resources}
+              onApply={profiles.applyProfile}
+              onAdd={profiles.addProfile}
+              onResave={profiles.resaveProfile}
+              onUpdate={profiles.updateProfile}
+              onDelete={profiles.deleteProfile}
+            />
+          )
+        }
 
         {/* ── Filter Bar ── */}
-        <FilterBar
-          categories={categories}
-          resources={resources}
-          filters={cal.filters}
-          sources={sourceStore.sources}
-          filterSources={cal.filters.sources}
-          onToggleCategory={cal.toggleCategory}
-          onToggleResource={cal.toggleResource}
-          onToggleSource={cal.toggleSourceFilter}
-          onSearch={cal.setSearch}
-          onClear={cal.clearFilters}
-          savedViews={savedViews.views}
-          onSaveView={(name) => savedViews.saveView(name, cal.filters)}
-          onLoadView={(id) => {
-            const v = savedViews.views.find(v => v.id === id);
-            if (v) cal.replaceFilters(deserializeFilters(v.filters));
-          }}
-          onDeleteView={savedViews.deleteView}
-        />
+        {renderFilterBar
+          ? renderFilterBar({
+              schema,
+              filters:       cal.filters,
+              setFilter:     cal.setFilter,
+              toggleFilter:  cal.toggleFilter,
+              clearFilter:   cal.clearFilter,
+              clearAllFilters: cal.clearFilters,
+              activePills:   buildActiveFilterPills(cal.filters, schema),
+              items:         expandedEvents,
+            })
+          : (
+            <FilterBar
+              schema={schema}
+              filters={cal.filters}
+              items={expandedEvents}
+              onChange={cal.setFilter}
+              onClear={cal.clearFilter}
+              onClearAll={cal.clearFilters}
+              sources={sourceStore.sources}
+              savedViews={savedViews.views}
+              onSaveView={(name) => savedViews.saveView(name, cal.filters)}
+              onLoadView={(id) => {
+                const v = savedViews.views.find(v => v.id === id);
+                if (v) cal.replaceFilters(deserializeFilters(v.filters, schema));
+              }}
+              onDeleteView={savedViews.deleteView}
+            />
+          )
+        }
 
         {/* ── View area ── */}
         <div className={styles.viewArea}>

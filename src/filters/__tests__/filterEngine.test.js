@@ -174,3 +174,66 @@ describe('getResources', () => {
     expect(getResources(events)).toEqual(['Alice', 'Zara']);
   });
 });
+
+// ── Schema-driven applyFilters ────────────────────────────────────────────────
+
+describe('applyFilters — custom schema', () => {
+  const customSchema = [
+    {
+      key: 'status',
+      label: 'Status',
+      type: 'multi-select',
+      predicate: (item, value) =>
+        value instanceof Set ? value.has(item.status) : value.includes(item.status),
+    },
+    {
+      key: 'search',
+      label: 'Search',
+      type: 'text',
+    },
+  ];
+
+  const events = [
+    ev({ id: '1', title: 'Open task',   status: 'open'   }),
+    ev({ id: '2', title: 'Closed task', status: 'closed' }),
+    ev({ id: '3', title: 'Open item',   status: 'open'   }),
+  ];
+
+  it('filters by custom predicate field', () => {
+    const result = applyFilters(events, { status: new Set(['open']) }, customSchema);
+    expect(result).toHaveLength(2);
+    expect(result.every(e => e.status === 'open')).toBe(true);
+  });
+
+  it('text field matches title', () => {
+    const result = applyFilters(events, { search: 'Closed' }, customSchema);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('2');
+  });
+
+  it('unknown field type defaults to pass-through', () => {
+    const schema = [{ key: 'unknown', type: 'custom' }];
+    const result = applyFilters(events, { unknown: 'anything' }, schema);
+    expect(result).toHaveLength(3);
+  });
+
+  it('defaultMatch handles select type', () => {
+    const schema = [{ key: 'status', type: 'select' }];
+    const evts = [
+      ev({ id: 'x', status: 'open' }),
+      ev({ id: 'y', status: 'closed' }),
+    ];
+    const result = applyFilters(evts, { status: 'open' }, schema);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('x');
+  });
+
+  it('uses DEFAULT_FILTER_SCHEMA when schema omitted', () => {
+    const result = applyFilters(
+      [ev({ id: '1', category: 'Meeting' }), ev({ id: '2', category: 'PTO' })],
+      { categories: new Set(['Meeting']) },
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe('Meeting');
+  });
+});

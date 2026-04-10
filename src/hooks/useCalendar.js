@@ -1,22 +1,21 @@
 /**
  * useCalendar.js — Central state hook: current date, view, filters.
+ *
+ * Accepts an optional filterSchema (FilterField[]) that drives the initial
+ * filter state shape and the applyFilters call.  When omitted,
+ * DEFAULT_FILTER_SCHEMA is used and behaviour is identical to before.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { addMonths, addWeeks, addDays, startOfWeek, endOfWeek } from 'date-fns';
+import { addMonths, addWeeks, addDays } from 'date-fns';
 import { normalizeEvents } from '../core/eventModel.js';
 import { applyFilters, getCategories, getResources } from '../filters/filterEngine.js';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
+import { createInitialFilters, clearFilterValue } from '../filters/filterState.js';
 
-export function useCalendar(rawEvents, initialView = 'month') {
+export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEFAULT_FILTER_SCHEMA) {
   const [view,        setView]        = useState(initialView);
-  // Use actual today — views compute their own visible range from currentDate
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [filters,     setFilters]     = useState({
-    categories: new Set(),
-    resources:  new Set(),
-    sources:    new Set(),
-    dateRange:  null,
-    search:     '',
-  });
+  const [filters,     setFilters]     = useState(() => createInitialFilters(filterSchema));
 
   const events = useMemo(() => normalizeEvents(rawEvents), [rawEvents]);
 
@@ -24,8 +23,8 @@ export function useCalendar(rawEvents, initialView = 'month') {
   const resources  = useMemo(() => getResources(events),  [events]);
 
   const visibleEvents = useMemo(
-    () => applyFilters(events, filters),
-    [events, filters],
+    () => applyFilters(events, filters, filterSchema),
+    [events, filters, filterSchema],
   );
 
   const navigate = useCallback((direction) => {
@@ -42,8 +41,9 @@ export function useCalendar(rawEvents, initialView = 'month') {
     });
   }, [view]);
 
-  /** Jump to today in the context of the current view. */
   const goToToday = useCallback(() => setCurrentDate(new Date()), []);
+
+  // ── Named toggles (backward-compatible) ──────────────────────────────────────
 
   const toggleCategory = useCallback((cat) => {
     setFilters(f => {
@@ -72,11 +72,34 @@ export function useCalendar(rawEvents, initialView = 'month') {
   const setSearch    = useCallback((search)    => setFilters(f => ({ ...f, search })),    []);
   const setDateRange = useCallback((dateRange) => setFilters(f => ({ ...f, dateRange })), []);
 
-  const clearFilters = useCallback(() => {
-    setFilters({ categories: new Set(), resources: new Set(), sources: new Set(), dateRange: null, search: '' });
+  // ── Generic schema-driven API ─────────────────────────────────────────────────
+
+  /** Set a single filter field by key. */
+  const setFilter = useCallback((key, value) => {
+    setFilters(f => ({ ...f, [key]: value }));
   }, []);
 
-  /** Replace the entire filter state at once (used by profile apply). */
+  /** Toggle a single value inside a multi-select filter field. */
+  const toggleFilter = useCallback((key, value) => {
+    setFilters(f => {
+      const current = f[key];
+      const next = current instanceof Set ? new Set(current) : new Set();
+      next.has(value) ? next.delete(value) : next.add(value);
+      return { ...f, [key]: next };
+    });
+  }, []);
+
+  /** Clear one filter field back to its default (empty) value. */
+  const clearFilter = useCallback((key) => {
+    const field = filterSchema.find(fd => fd.key === key);
+    setFilters(f => ({ ...f, [key]: clearFilterValue(field) }));
+  }, [filterSchema]);
+
+  const clearFilters = useCallback(() => {
+    setFilters(createInitialFilters(filterSchema));
+  }, [filterSchema]);
+
+  /** Replace the entire filter state at once (used by saved-view apply). */
   const replaceFilters = useCallback((newFilters) => {
     setFilters(newFilters);
   }, []);
@@ -88,8 +111,11 @@ export function useCalendar(rawEvents, initialView = 'month') {
     categories, resources,
     filters,
     navigate, goToToday,
+    // Named callbacks (backward compat)
     toggleCategory, toggleResource, toggleSourceFilter,
     setSearch, setDateRange,
+    // Generic schema-driven API
+    setFilter, toggleFilter, clearFilter,
     clearFilters,
     replaceFilters,
   };

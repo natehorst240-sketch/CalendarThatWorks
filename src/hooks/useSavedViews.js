@@ -30,46 +30,58 @@ function persistViews(calendarId, views) {
 
 /**
  * Convert a live filter state (with Sets) to a JSON-safe object.
- * @param {object} filters — { categories: Set, resources: Set, sources: Set, search, dateRange }
- * @returns {object} SerializedFilters
+ * Generic: converts any Set values to arrays, preserves everything else.
+ *
+ * @param {object} filters — live filter state (may contain Sets)
+ * @returns {object} JSON-safe serialized filters
  */
 export function serializeFilters(filters) {
-  return {
-    categories: [...(filters.categories ?? [])],
-    resources:  [...(filters.resources  ?? [])],
-    sources:    [...(filters.sources    ?? [])],
-    search:     filters.search ?? '',
-    dateRange:  filters.dateRange
-      ? {
-          start: filters.dateRange.start instanceof Date
-            ? filters.dateRange.start.toISOString()
-            : filters.dateRange.start,
-          end: filters.dateRange.end instanceof Date
-            ? filters.dateRange.end.toISOString()
-            : filters.dateRange.end,
-        }
-      : null,
-  };
+  return JSON.parse(
+    JSON.stringify(filters, (_key, value) => {
+      if (value instanceof Set) return [...value];
+      return value;
+    }),
+  );
 }
 
 /**
- * Convert a SerializedFilters object back to live filter state (with Sets).
- * @param {object} saved — SerializedFilters
+ * Convert a serialized filters object back to live filter state.
+ * Schema-aware: restores Set for every field whose type is 'multi-select'.
+ * Falls back to a hardcoded list of known Set fields when no schema given.
+ *
+ * @param {object}   saved  — serialized filters (arrays instead of Sets)
+ * @param {import('../filters/filterSchema.js').FilterField[]} [schema]
  * @returns {object} live filter state
  */
-export function deserializeFilters(saved) {
-  return {
-    categories: new Set(saved.categories ?? []),
-    resources:  new Set(saved.resources  ?? []),
-    sources:    new Set(saved.sources    ?? []),
-    search:     saved.search ?? '',
-    dateRange:  saved.dateRange
-      ? {
-          start: new Date(saved.dateRange.start),
-          end:   new Date(saved.dateRange.end),
-        }
-      : null,
-  };
+export function deserializeFilters(saved, schema) {
+  if (!saved) return {};
+
+  const result = { ...saved };
+
+  // Determine which keys should be restored as Sets
+  let setKeys;
+  if (schema) {
+    setKeys = schema.filter(f => f.type === 'multi-select').map(f => f.key);
+  } else {
+    // Fallback for callers that don't pass a schema
+    setKeys = ['categories', 'resources', 'sources'];
+  }
+
+  for (const key of setKeys) {
+    if (Array.isArray(result[key])) {
+      result[key] = new Set(result[key]);
+    }
+  }
+
+  // Restore dateRange Date objects
+  if (result.dateRange) {
+    result.dateRange = {
+      start: new Date(result.dateRange.start),
+      end:   new Date(result.dateRange.end),
+    };
+  }
+
+  return result;
 }
 
 /**

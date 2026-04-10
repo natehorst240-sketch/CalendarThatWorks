@@ -1,94 +1,119 @@
 /**
- * filterEngine.js — Multi-level, chainable event filter.
+ * filterEngine.js — schema-driven, chainable event filter.
  *
- * Pipeline: source → category → resource → date range → text search
+ * applyFilters(items, filters, schema) loops through the schema and applies
+ * each field's filter in order. Fields with a custom predicate use it
+ * directly; built-in types (text, date-range, multi-select …) fall back to
+ * the shared matching helpers.
+ *
+ * Backward-compatible: the schema parameter defaults to DEFAULT_FILTER_SCHEMA
+ * which reproduces the previous hardcoded pipeline exactly.
  */
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { DEFAULT_FILTER_SCHEMA } from './filterSchema.js';
+import { isEmptyFilterValue }    from './filterState.js';
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * @param {object[]} events   — normalized events
- * @param {object}   filters  — { sources, categories, resources, dateRange, search }
+ * Filter an array of events using a filter state object and an optional schema.
+ *
+ * @param {object[]} items    — normalized events
+ * @param {object}   filters  — { [fieldKey]: value }
+ * @param {import('./filterSchema.js').FilterField[]} [schema]
+ * @returns {object[]}
  */
-export function applyFilters(events, filters = {}) {
-  let result = events;
+export function applyFilters(items, filters = {}, schema = DEFAULT_FILTER_SCHEMA) {
+  return items.filter(item =>
+    schema.every(field => {
+      const value = filters[field.key];
+      if (isEmptyFilterValue(value)) return true;
 
-  // 0. Source filter (Set of _sourceId values; empty = show all)
-  // Events without _sourceId (prop-injected events) are always shown.
-  if (filters.sources && filters.sources.size > 0) {
-    result = result.filter(e => !e._sourceId || filters.sources.has(e._sourceId));
-  }
+      // Custom predicate takes absolute priority
+      if (field.predicate) return field.predicate(item, value);
 
-  // 1. Category filter (Set of active category strings; empty = show all)
-  if (filters.categories && filters.categories.size > 0) {
-    result = result.filter(e => filters.categories.has(e.category));
-  }
-
-  // 2. Resource filter
-  if (filters.resources && filters.resources.size > 0) {
-    result = result.filter(e => filters.resources.has(e.resource));
-  }
-
-  // 3. Date range filter
-  if (filters.dateRange) {
-    const { start, end } = filters.dateRange;
-    if (start || end) {
-      const rangeStart = start ? startOfDay(start) : new Date(0);
-      const rangeEnd   = end   ? endOfDay(end)     : new Date(8640000000000000);
-      result = result.filter(e =>
-        isWithinInterval(e.start, { start: rangeStart, end: rangeEnd }) ||
-        isWithinInterval(e.end,   { start: rangeStart, end: rangeEnd }) ||
-        (e.start <= rangeStart && e.end >= rangeEnd)
-      );
-    }
-  }
-
-  // 4. Text search (title + resource + meta values)
-  if (filters.search && filters.search.trim()) {
-    const q = filters.search.toLowerCase();
-    result = result.filter(e => {
-      if (e.title?.toLowerCase().includes(q)) return true;
-      if (e.resource?.toLowerCase().includes(q)) return true;
-      if (e.category?.toLowerCase().includes(q)) return true;
-      if (e.meta) {
-        return Object.values(e.meta).some(v =>
-          String(v).toLowerCase().includes(q)
-        );
+      // Built-in type dispatch
+      if (field.type === 'text' || field.key === 'search') {
+        return _matchSearch(item, value);
       }
-      return false;
-    });
-  }
-
-  return result;
+      if (field.type === 'date-range' || field.key === 'dateRange') {
+        return _matchDateRange(item, value);
+      }
+      return _defaultMatch(item[field.key], value, field.type);
+    }),
+  );
 }
 
-/**
- * Extract unique sorted categories from an event list.
- */
+// ── Built-in matching helpers ─────────────────────────────────────────────────
+
+function _defaultMatch(itemValue, filterValue, fieldType) {
+  switch (fieldType) {
+    case 'multi-select': {
+      const set = filterValue instanceof Set ? filterValue : new Set(filterValue ?? []);
+      return set.has(itemValue);
+    }
+    case 'select':
+      return itemValue === filterValue;
+    case 'boolean':
+      return Boolean(itemValue) === Boolean(filterValue);
+    case 'text':
+      return String(itemValue ?? '').toLowerCase()
+        .includes(String(filterValue).toLowerCase());
+    default:
+      return true;
+  }
+}
+
+function _matchDateRange(item, range) {
+  if (!range) return true;
+  const { start, end } = range;
+  if (!start && !end) return true;
+  const rangeStart = start ? startOfDay(start) : new Date(0);
+  const rangeEnd   = end   ? endOfDay(end)     : new Date(8640000000000000);
+  const evStart    = item.start;
+  const evEnd      = item.end ?? item.start;
+  return (
+    isWithinInterval(evStart, { start: rangeStart, end: rangeEnd }) ||
+    isWithinInterval(evEnd,   { start: rangeStart, end: rangeEnd }) ||
+    (evStart <= rangeStart && evEnd >= rangeEnd)
+  );
+}
+
+function _matchSearch(item, query) {
+  if (!query || !query.trim()) return true;
+  const q = query.toLowerCase();
+  if (item.title?.toLowerCase().includes(q))    return true;
+  if (item.resource?.toLowerCase().includes(q)) return true;
+  if (item.category?.toLowerCase().includes(q)) return true;
+  if (item.meta) {
+    return Object.values(item.meta).some(v => String(v).toLowerCase().includes(q));
+  }
+  return false;
+}
+
+// ── Option extractors ─────────────────────────────────────────────────────────
+
+/** Extract unique sorted categories from an event list. */
 export function getCategories(events) {
   const set = new Set();
   events.forEach(e => { if (e.category) set.add(e.category); });
   return [...set].sort();
 }
 
-/**
- * Extract unique sorted resources from an event list.
- */
+/** Extract unique sorted resources from an event list. */
 export function getResources(events) {
   const set = new Set();
   events.forEach(e => { if (e.resource) set.add(e.resource); });
   return [...set].sort();
 }
 
-/**
- * Extract unique { id, label } source pairs from an event list.
- * Only includes events that have a _sourceId.
- */
+/** Extract unique { id, label } source pairs from an event list. */
 export function getSources(events) {
-  const seen = new Map();
+  const map = new Map();
   events.forEach(e => {
-    if (e._sourceId && !seen.has(e._sourceId)) {
-      seen.set(e._sourceId, { id: e._sourceId, label: e._sourceLabel ?? e._sourceId });
+    if (e._sourceId && !map.has(e._sourceId)) {
+      map.set(e._sourceId, { id: e._sourceId, label: e._sourceLabel ?? e._sourceId });
     }
   });
-  return [...seen.values()];
+  return [...map.values()];
 }
