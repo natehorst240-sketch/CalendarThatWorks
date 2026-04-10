@@ -156,4 +156,43 @@ describe('buildActiveFilterPills', () => {
     const catPill = pills.find(p => p.key === 'categories');
     expect(catPill.fieldLabel).toBe('Category');
   });
+
+  it('produces one pill for an active select field', () => {
+    const schema = [{ key: 'priority', label: 'Priority', type: 'select' }];
+    const pills = buildActiveFilterPills({ priority: 'high' }, schema);
+    expect(pills).toHaveLength(1);
+    expect(pills[0].key).toBe('priority');
+    expect(pills[0].value).toBe('high');
+    expect(pills[0].displayValue).toBe('high');
+    expect(pills[0].fieldLabel).toBe('Priority');
+  });
+
+  it('produces one pill for an active boolean field', () => {
+    const schema = [{ key: 'urgent', label: 'Urgent only', type: 'boolean' }];
+    const pills = buildActiveFilterPills({ urgent: true }, schema);
+    expect(pills).toHaveLength(1);
+    expect(pills[0].key).toBe('urgent');
+    expect(pills[0].value).toBe(true);
+  });
+
+  it('skips null/false boolean values', () => {
+    const schema = [{ key: 'flag', label: 'Flag', type: 'boolean' }];
+    expect(buildActiveFilterPills({ flag: null }, schema)).toHaveLength(0);
+    // false is a deliberate filter value (not cleared), so it generates a pill
+    expect(buildActiveFilterPills({ flag: false }, schema)).toHaveLength(1);
+  });
+
+  it('uses pillLabel on select field', () => {
+    const schema = [{
+      key: 'status', label: 'Status', type: 'select',
+      pillLabel: (v) => `Status: ${v}`,
+    }];
+    const pills = buildActiveFilterPills({ status: 'open' }, schema);
+    expect(pills[0].displayValue).toBe('Status: open');
+  });
+
+  it('select with null value produces no pill', () => {
+    const schema = [{ key: 'priority', label: 'Priority', type: 'select' }];
+    expect(buildActiveFilterPills({ priority: null }, schema)).toHaveLength(0);
+  });
 });

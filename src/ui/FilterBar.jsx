@@ -73,12 +73,10 @@ export default function FilterBar({
 
   const hasActiveFilters = schema.some(field => !isEmptyFilterValue(filters[field.key]));
 
-  // Build active pills (for non-multi-select fields that have values)
-  const activePills = buildActiveFilterPills(filters, schema).filter(pill => {
-    // multi-select pills are already shown as toggled pills in the pill groups
-    const field = schema.find(f => f.key === pill.key);
-    return field && field.type !== 'multi-select';
-  });
+  // All active filter values as removable pills.
+  // date-range and text fields are already skipped inside buildActiveFilterPills
+  // because they have their own inline controls with clear buttons.
+  const activePills = buildActiveFilterPills(filters, schema);
 
   return (
     <div className={styles.bar}>

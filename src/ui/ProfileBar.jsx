@@ -202,53 +202,35 @@ function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageT
 /* ─── Filter Summary (inside manage panel) ─────────────────────── */
 function FilterSummary({ savedView }) {
   const filters = savedView.filters ?? {};
-  const { categories = [], resources = [], search = '' } = filters;
 
-  // Check for known fields
-  const hasKnown = categories.length || resources.length || search;
+  // Collect every non-empty filter entry generically.
+  // Saved filters are always serialized (arrays, not Sets) so we can inspect them directly.
+  const activeEntries = Object.entries(filters).filter(([, v]) => {
+    if (v == null || v === '') return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    return true;
+  });
 
-  // Check for any other non-empty keys beyond the known ones
-  const knownKeys = new Set(['categories', 'resources', 'search']);
-  const unknownKeys = Object.keys(filters).filter(k => !knownKeys.has(k) && filters[k] != null && filters[k] !== '' && !(Array.isArray(filters[k]) && filters[k].length === 0));
-
-  if (!hasKnown && unknownKeys.length === 0 && !savedView.view) {
+  if (activeEntries.length === 0 && !savedView.view) {
     return <p className={styles.summaryNone}>No filters — matches all events</p>;
   }
 
   return (
     <div className={styles.summary}>
-      {categories.length > 0 && (
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Categories</span>
-          <span className={styles.summaryTags}>
-            {categories.map(c => <span key={c} className={styles.tag}>{c}</span>)}
-          </span>
-        </div>
-      )}
-      {resources.length > 0 && (
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Resources</span>
-          <span className={styles.summaryTags}>
-            {resources.map(r => <span key={r} className={styles.tag}>{r}</span>)}
-          </span>
-        </div>
-      )}
-      {search && (
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Search</span>
-          <span className={styles.summaryTags}>
-            <span className={styles.tag}>"{search}"</span>
-          </span>
-        </div>
-      )}
-      {unknownKeys.length > 0 && (
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Active filters</span>
-          <span className={styles.summaryTags}>
-            {unknownKeys.map(k => <span key={k} className={styles.tag}>{k}</span>)}
-          </span>
-        </div>
-      )}
+      {activeEntries.map(([key, value]) => {
+        const label = key.charAt(0).toUpperCase() + key.slice(1);
+        return (
+          <div key={key} className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>{label}</span>
+            <span className={styles.summaryTags}>
+              {Array.isArray(value)
+                ? value.map(v => <span key={v} className={styles.tag}>{v}</span>)
+                : <span className={styles.tag}>{String(value)}</span>
+              }
+            </span>
+          </div>
+        );
+      })}
       {savedView.view && (
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>Pinned view</span>
@@ -317,11 +299,15 @@ function SaveForm({ onSave, onCancel }) {
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 function buildSummary(savedView) {
-  const { categories = [], resources = [], search = '' } = savedView.filters ?? {};
+  const filters = savedView.filters ?? {};
   const parts = [];
-  if (categories.length) parts.push(`Categories: ${categories.join(', ')}`);
-  if (resources.length)  parts.push(`Resources: ${resources.join(', ')}`);
-  if (search)            parts.push(`Search: "${search}"`);
-  if (savedView.view)    parts.push(`View: ${savedView.view}`);
+  for (const [key, value] of Object.entries(filters)) {
+    if (value == null || value === '') continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    const label   = key.charAt(0).toUpperCase() + key.slice(1);
+    const display = Array.isArray(value) ? value.join(', ') : String(value);
+    parts.push(`${label}: ${display}`);
+  }
+  if (savedView.view) parts.push(`View: ${savedView.view}`);
   return parts.length ? parts.join(' · ') : 'No filters applied';
 }
