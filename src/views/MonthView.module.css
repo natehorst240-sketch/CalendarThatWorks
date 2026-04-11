@@ -37,8 +37,13 @@
   flex: 1;
   min-height: 100px;
   border-bottom: 1px solid var(--wc-border);
+  transition: flex 0.2s ease, min-height 0.2s ease;
 }
 .weekRow:last-child { border-bottom: none; }
+.weekRowHovered {
+  flex: 1.5;
+  min-height: 150px;
+}
 
 .weekNum {
   display: flex;
@@ -240,6 +245,7 @@
 
 @media (max-width: 768px) {
   .weekRow { min-height: 72px; }
+  .weekRowHovered { min-height: 108px; }
   .cell { padding: 2px; }
   .dayNum { width: 22px; height: 22px; font-size: 11px; }
   .eventPill { font-size: 10px; padding: 1px 4px; }
@@ -250,6 +256,7 @@
 
 @media (max-width: 480px) {
   .weekRow { min-height: 56px; }
+  .weekRowHovered { min-height: 84px; }
   .cell { padding: 2px 1px; }
   .dayName { font-size: 9px; letter-spacing: 0; }
   .dayNum  { width: 20px; height: 20px; font-size: 10px; margin-bottom: 1px; }

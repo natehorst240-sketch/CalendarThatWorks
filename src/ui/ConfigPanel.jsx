@@ -210,6 +210,15 @@ function DisplayTab({ config, onUpdate }) {
           onChange={e => set('showWeekNumbers', e.target.checked)} />
         <span className={styles.toggleTrack} />
       </label>
+      <label className={styles.toggle}>
+        <span>Enlarge month row on hover</span>
+        <input
+          type="checkbox"
+          checked={!!d.enlargeMonthRowOnHover}
+          onChange={e => set('enlargeMonthRowOnHover', e.target.checked)}
+        />
+        <span className={styles.toggleTrack} />
+      </label>
     </div>
   );
 }
