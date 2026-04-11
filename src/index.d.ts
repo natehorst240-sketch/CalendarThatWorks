@@ -206,11 +206,19 @@ export interface RenderEventContext {
   color: string;
 }
 
-export interface ColorRule {
-  /** Return true to apply this rule's color. Rules are checked in order. */
-  when: (event: NormalizedEvent) => boolean;
-  color: string;
-}
+export type ColorRule =
+  | {
+    /** Return true to apply this rule's color. Rules are checked in order. */
+    when: (event: NormalizedEvent) => boolean;
+    color: string;
+  }
+  | {
+    /** Declarative field match, e.g. "category", "resource", or "status". */
+    field: string;
+    /** Exact value to match for the selected field. */
+    value: unknown;
+    color: string;
+  };
 
 // ─── Validation ────────────────────────────────────────────────────────────────
 
@@ -381,7 +389,9 @@ export interface WorksCalendarProps {
   theme?: ThemeId;
   /**
    * Conditional color overrides. Checked in order — first match wins.
+   * Supports both predicate and declarative forms:
    * @example [{ when: e => e.category === 'AOG', color: '#ef4444' }]
+   * @example [{ field: 'category', value: 'AOG', color: '#ef4444' }]
    */
   colorRules?: ColorRule[];
   /** Shade non-business hours in week/day views. */

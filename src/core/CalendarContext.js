@@ -19,7 +19,15 @@ export function resolveColor(ev, colorRules) {
   if (colorRules?.length) {
     for (const rule of colorRules) {
       try {
-        if (rule.when(ev)) return rule.color;
+        // Function rule shape: { when: (event) => boolean, color }
+        if (typeof rule?.when === 'function') {
+          if (rule.when(ev)) return rule.color;
+          continue;
+        }
+        // Declarative rule shape: { field: 'category', value: 'Incident', color }
+        if (rule && typeof rule === 'object' && typeof rule.field === 'string' && 'value' in rule) {
+          if (ev?.[rule.field] === rule.value) return rule.color;
+        }
       } catch (_) { /* ignore rule errors */ }
     }
   }
