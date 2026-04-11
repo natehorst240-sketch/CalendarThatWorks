@@ -108,6 +108,8 @@ export interface DisplayConfig {
   /** Last visible hour in week/day views (1–24). Default 22. */
   dayEnd?: number;
   showWeekNumbers?: boolean;
+  /** Month view: animate a hovered week row to 150% height for easier reading. */
+  enlargeMonthRowOnHover?: boolean;
 }
 
 export interface CalendarConfig {

@@ -21,6 +21,7 @@ export default function MonthView({
   config, weekStartDay = 0,
 }) {
   const [popoverDay,  setPopoverDay]  = useState(null);
+  const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
   // Keyboard-focused day cell (roving tabindex pattern).
   const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
   const gridRef = useRef(null);
@@ -143,9 +144,10 @@ export default function MonthView({
   }, [singleDay]);
 
   const showWeekNumbers = config?.display?.showWeekNumbers;
+  const enlargeMonthRowOnHover = !!config?.display?.enlargeMonthRowOnHover;
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev, extra = {}) {
+  function renderPill(ev, extra = {}, weekIdx = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
@@ -163,6 +165,12 @@ export default function MonthView({
             onClick={e => { e.stopPropagation(); onClick(); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onPointerDown={e => startPillDrag(ev, e)}
+            onMouseEnter={() => {
+              if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
+            }}
+            onMouseLeave={() => {
+              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
+            }}
           >
             {custom}
           </div>
@@ -181,6 +189,12 @@ export default function MonthView({
         style={{ '--ev-color': color }}
         onClick={e => { e.stopPropagation(); onClick(); }}
         onPointerDown={e => startPillDrag(ev, e)}
+        onMouseEnter={() => {
+          if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
+        }}
+        onMouseLeave={() => {
+          if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
+        }}
         aria-label={ariaLabel}
       >
         {ev.title}
@@ -235,7 +249,13 @@ export default function MonthView({
           const spansHeight = Math.min(laneCount, MAX_SPANS_VISIBLE) * (SPAN_H + SPAN_GAP);
 
           return (
-            <div key={wi} className={styles.weekRow}>
+            <div
+              key={wi}
+              className={[
+                styles.weekRow,
+                enlargeMonthRowOnHover && hoveredWeekIdx === wi && styles.weekRowHovered,
+              ].filter(Boolean).join(' ')}
+            >
               {showWeekNumbers && (
                 <div className={styles.weekNum}>{getISOWeek(week[0])}</div>
               )}
@@ -272,6 +292,12 @@ export default function MonthView({
                             }}
                             onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
                             onPointerDown={e => startPillDrag(ev, e)}
+                            onMouseEnter={() => {
+                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
+                            }}
+                            onMouseLeave={() => {
+                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
+                            }}
                             aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                           >
                             {!continuesBefore && ev.title}
@@ -326,7 +352,7 @@ export default function MonthView({
                         <span className={styles.dayNum}>{format(day, 'd')}</span>
 
                         <div className={styles.events}>
-                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev))}
+                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
                           {isDropTarget && renderGhostPill()}
                           {overflowCount > 0 && (
                             <button
@@ -351,7 +377,7 @@ export default function MonthView({
                               <button onClick={() => setPopoverDay(null)}>×</button>
                             </div>
                             {[...spansOnDay.map(s => s.ev), ...daySingles].map(ev =>
-                              renderPill(ev, { onAfterClick: () => setPopoverDay(null) }),
+                              renderPill(ev, { onAfterClick: () => setPopoverDay(null) }, wi),
                             )}
                           </div>
                         )}

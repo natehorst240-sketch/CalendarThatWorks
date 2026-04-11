@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG = {
     dayStart:     6,        // hour (0-23)
     dayEnd:       22,       // hour (0-23)
     showWeekNumbers: false,
+    enlargeMonthRowOnHover: false,
   },
 
   // Access control
