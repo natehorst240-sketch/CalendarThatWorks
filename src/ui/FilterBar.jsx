@@ -62,6 +62,10 @@ export default function FilterBar({
 
   // Source store data (for color dots and enabled state on source pills)
   sources      = [],
+
+  // Display options
+  pillHoverTitle         = false,
+  onPillHoverTitleToggle = undefined,
 }) {
   // Toggle a value inside a multi-select filter field
   function handleToggle(fieldKey, value) {
@@ -252,6 +256,18 @@ export default function FilterBar({
       {hasActiveFilters && (
         <button className={styles.clearAll} onClick={onClearAll}>
           Clear filters
+        </button>
+      )}
+
+      {/* ── Pill hover-title toggle ── */}
+      {onPillHoverTitleToggle && (
+        <button
+          className={[styles.hoverToggle, pillHoverTitle && styles.hoverToggleActive].filter(Boolean).join(' ')}
+          onClick={onPillHoverTitleToggle}
+          aria-pressed={pillHoverTitle}
+          title={pillHoverTitle ? 'Disable large title on hover' : 'Show large title when hovering events'}
+        >
+          Aa
         </button>
       )}
     </div>

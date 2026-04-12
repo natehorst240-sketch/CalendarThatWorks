@@ -267,3 +267,28 @@
 }
 .dateInput:focus { outline: none; border-color: var(--wc-accent); }
 .dateSep { font-size: 12px; color: var(--wc-text-faint); }
+
+/* ── Pill hover-title toggle ── */
+.hoverToggle {
+  padding: 4px 9px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+.hoverToggle:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+.hoverToggleActive {
+  background: var(--wc-accent);
+  border-color: var(--wc-accent);
+  color: #fff;
+}

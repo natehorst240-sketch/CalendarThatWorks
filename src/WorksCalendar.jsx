@@ -303,6 +303,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
   const [recurringPrompt, setRecurringPrompt] = useState(null);
 
+  // ── Display options ──────────────────────────────────────────────────────
+  const [pillHoverTitle, setPillHoverTitle] = useState(false);
+
   const applyEngineOp = useCallback((op, onAccepted) => {
     const engine  = engineRef.current;
     const undoMgr = undoManagerRef.current;
@@ -580,6 +583,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onDateSelect:  handleDateSelect,
     config:        ownerCfg.config,
     weekStartDay,
+    pillHoverTitle,
   };
 
   return (
@@ -695,6 +699,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               onClear={cal.clearFilter}
               onClearAll={cal.clearFilters}
               sources={sourceStore.sources}
+              pillHoverTitle={pillHoverTitle}
+              onPillHoverTitleToggle={() => setPillHoverTitle(v => !v)}
             />
           )
         }
