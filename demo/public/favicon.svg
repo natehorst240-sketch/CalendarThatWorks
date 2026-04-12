@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="5" fill="#4f46e5"/>
+  <rect x="5" y="8" width="22" height="19" rx="2" fill="white" opacity="0.95"/>
+  <rect x="5" y="8" width="22" height="7" rx="2" fill="#3730a3"/>
+  <rect x="5" y="12" width="22" height="3" fill="#3730a3"/>
+  <!-- Binding rings -->
+  <rect x="10" y="5" width="3" height="7" rx="1.5" fill="#1e1b4b"/>
+  <rect x="19" y="5" width="3" height="7" rx="1.5" fill="#1e1b4b"/>
+  <!-- Day squares -->
+  <rect x="7" y="18" width="4" height="3" rx="1" fill="#ede9fe"/>
+  <rect x="13" y="18" width="4" height="3" rx="1" fill="#4f46e5"/>
+  <rect x="19" y="18" width="4" height="3" rx="1" fill="#ede9fe"/>
+  <rect x="7" y="23" width="4" height="3" rx="1" fill="#ede9fe"/>
+  <rect x="13" y="23" width="4" height="3" rx="1" fill="#ede9fe"/>
+  <rect x="19" y="23" width="4" height="3" rx="1" fill="#ede9fe"/>
+</svg>

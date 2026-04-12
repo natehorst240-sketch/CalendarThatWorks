@@ -18,10 +18,12 @@ function isMultiDay(ev) {
 
 export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
-  config, weekStartDay = 0,
+  config, weekStartDay = 0, pillHoverTitle = false,
 }) {
   const [popoverDay,  setPopoverDay]  = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
+  // { title, color, x, y } — position is the center-top of the hovered pill
+  const [titleHover, setTitleHover] = useState(null);
   // Keyboard-focused day cell (roving tabindex pattern).
   const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
   const gridRef = useRef(null);
@@ -154,6 +156,18 @@ export default function MonthView({
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
 
+    function handlePillMouseEnter(e) {
+      if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
+      if (pillHoverTitle) {
+        const r = e.currentTarget.getBoundingClientRect();
+        setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
+      }
+    }
+    function handlePillMouseLeave() {
+      if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
+      if (pillHoverTitle) setTitleHover(null);
+    }
+
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'month', isCompact: true, onClick, color });
       if (custom != null) {
@@ -165,12 +179,8 @@ export default function MonthView({
             onClick={e => { e.stopPropagation(); onClick(); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onPointerDown={e => startPillDrag(ev, e)}
-            onMouseEnter={() => {
-              if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
-            }}
-            onMouseLeave={() => {
-              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
-            }}
+            onMouseEnter={handlePillMouseEnter}
+            onMouseLeave={handlePillMouseLeave}
           >
             {custom}
           </div>
@@ -189,12 +199,8 @@ export default function MonthView({
         style={{ '--ev-color': color }}
         onClick={e => { e.stopPropagation(); onClick(); }}
         onPointerDown={e => startPillDrag(ev, e)}
-        onMouseEnter={() => {
-          if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
-        }}
-        onMouseLeave={() => {
-          if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
-        }}
+        onMouseEnter={handlePillMouseEnter}
+        onMouseLeave={handlePillMouseLeave}
         aria-label={ariaLabel}
       >
         {ev.title}
@@ -218,6 +224,7 @@ export default function MonthView({
   }
 
   return (
+    <>
     <div
       className={styles.month}
       onPointerUp={commitDrag}
@@ -292,11 +299,16 @@ export default function MonthView({
                             }}
                             onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
                             onPointerDown={e => startPillDrag(ev, e)}
-                            onMouseEnter={() => {
+                            onMouseEnter={(e) => {
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
+                              if (pillHoverTitle) {
+                                const r = e.currentTarget.getBoundingClientRect();
+                                setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
+                              }
                             }}
                             onMouseLeave={() => {
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
+                              if (pillHoverTitle) setTitleHover(null);
                             }}
                             aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
                           >
@@ -391,5 +403,34 @@ export default function MonthView({
         })}
       </div>
     </div>
+
+    {/* ── Pill hover title overlay ── */}
+    {pillHoverTitle && titleHover && (
+      <div
+        aria-hidden="true"
+        style={{
+          position:      'fixed',
+          left:          titleHover.x,
+          top:           titleHover.y - 10,
+          transform:     'translate(-50%, -100%)',
+          background:    titleHover.color,
+          color:         '#fff',
+          fontSize:      36,
+          fontWeight:    700,
+          lineHeight:    1.1,
+          padding:       '6px 18px',
+          borderRadius:  10,
+          pointerEvents: 'none',
+          zIndex:        9999,
+          whiteSpace:    'nowrap',
+          boxShadow:     '0 4px 20px rgba(0,0,0,0.28)',
+          letterSpacing: '-0.01em',
+          textShadow:    '0 1px 3px rgba(0,0,0,0.25)',
+        }}
+      >
+        {titleHover.title}
+      </div>
+    )}
+    </>
   );
 }
