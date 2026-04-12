@@ -22,7 +22,12 @@ function tsExtensionFallback() {
   };
 }
 
+// Set VITE_BASE=/CalendarThatWorks/ when building for GitHub Pages.
+// Defaults to '/' for local dev and preview.
+const base = process.env.VITE_BASE ?? '/';
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     tsExtensionFallback(),
@@ -36,8 +41,8 @@ export default defineConfig({
         theme_color: '#4f46e5',
         background_color: '#f1f5f9',
         display: 'standalone',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         icons: [
           {
             src: 'icon-192.svg',
