@@ -134,7 +134,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0;
+  opacity: 0.45;
   transition: opacity 0.15s, background 0.1s;
 }
 .row:hover .removeEmpBtn { opacity: 1; }

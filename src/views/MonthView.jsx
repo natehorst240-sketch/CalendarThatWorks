@@ -320,7 +320,7 @@ export default function MonthView({
                 )}
 
                 {/* ── Day cells ── */}
-                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2} style={{ paddingTop: spansHeight }}>
+                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2}>
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
