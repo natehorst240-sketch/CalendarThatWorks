@@ -303,9 +303,6 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
   const [recurringPrompt, setRecurringPrompt] = useState(null);
 
-  // ── Display options ──────────────────────────────────────────────────────
-  const [pillHoverTitle, setPillHoverTitle] = useState(false);
-
   const applyEngineOp = useCallback((op, onAccepted) => {
     const engine  = engineRef.current;
     const undoMgr = undoManagerRef.current;
