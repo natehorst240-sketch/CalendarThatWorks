@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './HoverCard.module.css';
@@ -24,6 +24,12 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
     onNoteSave?.({ eventId: event.id, body: noteText });
     setEditing(false);
   }
+
+  const timeRangeText = event.allDay
+    ? 'All day'
+    : isSameDay(event.start, event.end)
+      ? `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'h:mm a')}`
+      : `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'MMM d, h:mm a')}`;
 
   return (
     <div ref={(node) => { cardRef.current = node; trapRef.current = node; }} className={styles.card} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
@@ -51,11 +57,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
         {hc.showTime !== false && (
           <div className={styles.field}>
             <Clock size={13} className={styles.icon} />
-            <span>
-              {event.allDay
-                ? 'All day'
-                : `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'h:mm a')}`}
-            </span>
+            <span>{timeRangeText}</span>
           </div>
         )}
 
