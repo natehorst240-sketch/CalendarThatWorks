@@ -58,8 +58,19 @@ for (const c of cases) {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/pill-span-matrix-fixture.html');
 
-    const pill = page.getByRole('button', { name: new RegExp(`^${c.label}, ${c.label === 'On Call Matrix' ? 'on-call' : c.label.includes('PTO') ? 'PTO' : c.label.includes('Deploy') ? 'Deploy' : 'Incident'}$`, 'i') }).first();
-    await expect(pill).toBeVisible();
+const category =
+  c.label === 'On Call Matrix' ? 'on-call'
+  : c.label.includes('PTO') ? 'PTO'
+  : c.label.includes('Deploy') ? 'Deploy'
+  : 'Incident';
+
+const pillName =
+  c.type === 'cross-week'
+    ? new RegExp(`^${c.label}, ${category}, continues next week$`, 'i')
+    : new RegExp(`^${c.label}, ${category}$`, 'i');
+
+const pill = page.getByRole('button', { name: pillName }).first();
+await expect(pill).toBeVisible();
 
     const startCell = page.locator(`[data-date="${dateKey(c.start)}"]`).first();
     const lastCoveredCell = page.locator(`[data-date="${dateKey(c.lastCoveredDay)}"]`).first();
