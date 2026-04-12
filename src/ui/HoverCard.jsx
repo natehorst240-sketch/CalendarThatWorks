@@ -34,7 +34,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
         <div className={styles.titleRow}>
           <h3 className={styles.title}>{event.title}</h3>
           {onEdit && (
-            <button className={styles.editBtn} onClick={() => onEdit(event)} aria-label="Edit event" title="Edit">
+            <button className={styles.editBtn} onClick={e => { e.stopPropagation(); onEdit(event); }} aria-label="Edit event" title="Edit">
               <Pencil size={13} />
             </button>
           )}

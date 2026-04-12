@@ -63,7 +63,7 @@ export default function FilterBar({
   // Source store data (for color dots and enabled state on source pills)
   sources      = [],
 
-  // Display options
+  // Pill hover title toggle (shows large floating title on pill hover in month view)
   pillHoverTitle         = false,
   onPillHoverTitleToggle = undefined,
 }) {
@@ -259,7 +259,7 @@ export default function FilterBar({
         </button>
       )}
 
-      {/* ── Pill hover-title toggle ── */}
+      {/* ── Aa pill hover-title toggle ── */}
       {onPillHoverTitleToggle && (
         <button
           className={[styles.hoverToggle, pillHoverTitle && styles.hoverToggleActive].filter(Boolean).join(' ')}

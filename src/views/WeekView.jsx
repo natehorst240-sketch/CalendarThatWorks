@@ -36,6 +36,9 @@ export default function WeekView({
 
   const gridRef    = useRef(null);
   const allDayRef  = useRef(null);
+  // Tracks whether the most recent pointer-up was a real drag (not a click).
+  // Used to guard onClick handlers so a just-finished drag doesn't fire onEventClick.
+  const wasDragRef = useRef(false);
 
   // ── Roving tabIndex for time-slot keyboard navigation ─────────────────────
   const [focusedSlot, setFocusedSlot] = useState({ dayIdx: 0, hourIdx: 0 });
@@ -165,6 +168,9 @@ export default function WeekView({
   const handleGridPointerUp = useCallback(() => {
     const result = drag.onPointerUp();
     if (!result) return;
+    // Mark that a real drag just ended so the subsequent click event is ignored.
+    wasDragRef.current = true;
+    requestAnimationFrame(() => { wasDragRef.current = false; });
     if (result.type === 'create') {
       onDateSelect?.(result.newStart, result.newEnd);
     } else if (result.type === 'resize' || result.type === 'resize-top') {
@@ -238,7 +244,7 @@ export default function WeekView({
   function renderTimedEvent(ev) {
     const isDimmed = drag.draggedId === ev.id;
     const color    = resolveColor(ev, ctx?.colorRules);
-    const onClick  = () => !isDimmed && onEventClick?.(ev);
+    const onClick  = () => !wasDragRef.current && onEventClick?.(ev);
     const { top, height } = eventPosition(ev.start, ev.end);
     const numCols  = ev._numCols ?? 1;
     const col      = ev._col     ?? 0;

@@ -18,7 +18,7 @@ const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
 
 /* ─── Employees ─────────────────────────────────────────────────── */
-const EMPLOYEES = [
+const INITIAL_EMPLOYEES = [
   { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6' },
   { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444' },
   { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981' },
@@ -113,7 +113,7 @@ const REGULAR_EVENTS = [
 ];
 
 const INITIAL_EVENTS = [
-  ...buildOnCallRotation(EMPLOYEES, monthStart),
+  ...buildOnCallRotation(INITIAL_EMPLOYEES, monthStart),
   ...REGULAR_EVENTS,
 ];
 
@@ -232,6 +232,7 @@ function App() {
   const [events,       setEvents]       = useState(INITIAL_EVENTS);
   const [notes,        setNotes]        = useState({});
   const [theme,        setTheme]        = useState('light');
+  const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
 
@@ -278,6 +279,16 @@ function App() {
     log(`Note deleted: ${noteId}`);
   }, []);
 
+  const handleEmployeeAdd = useCallback((emp) => {
+    setEmployees(prev => [...prev, emp]);
+    log(`Added employee: ${emp.name}`);
+  }, []);
+
+  const handleEmployeeDelete = useCallback((id) => {
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    log(`Removed employee: ${id}`);
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
 
@@ -306,7 +317,9 @@ function App() {
         <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
             events={events}
-            employees={EMPLOYEES}
+            employees={employees}
+            onEmployeeAdd={handleEmployeeAdd}
+            onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
             onConfigSave={() => log('Config saved')}

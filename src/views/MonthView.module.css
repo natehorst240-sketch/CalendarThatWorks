@@ -35,7 +35,7 @@
 .weekRow {
   display: flex;
   flex: 1;
-  min-height: 100px;
+  min-height: 120px;
   border-bottom: 1px solid var(--wc-border);
   transition: flex 0.2s ease, min-height 0.2s ease;
 }

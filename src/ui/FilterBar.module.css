@@ -268,7 +268,7 @@
 .dateInput:focus { outline: none; border-color: var(--wc-accent); }
 .dateSep { font-size: 12px; color: var(--wc-text-faint); }
 
-/* ── Pill hover-title toggle ── */
+/* ── Aa pill hover-title toggle ── */
 .hoverToggle {
   padding: 4px 9px;
   border-radius: 100px;

@@ -330,7 +330,7 @@ export default function MonthView({
                     const spansOnDay    = spans.filter(s => s.startCol <= di && s.endCol >= di);
                     const hiddenSpans   = spansOnDay.filter(s => s.lane >= MAX_SPANS_VISIBLE).length;
                     const visibleSpLanes = spansOnDay.filter(s => s.lane < MAX_SPANS_VISIBLE).length;
-                    const MAX_PILLS     = Math.max(0, 3 - visibleSpLanes);
+                    const MAX_PILLS     = Math.max(1, 3 - visibleSpLanes);
                     const overflowCount = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
                     const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
                     const popoverId     = `wc-popover-${dayKey}`;

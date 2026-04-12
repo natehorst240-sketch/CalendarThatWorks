@@ -346,9 +346,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, []); // stable — reads from refs
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [formEvent,     setFormEvent]     = useState(null);
-  const [importOpen,    setImportOpen]    = useState(false);
+  const [selectedEvent,  setSelectedEvent]  = useState(null);
+  const [formEvent,      setFormEvent]      = useState(null);
+  const [importOpen,     setImportOpen]     = useState(false);
+  const [pillHoverTitle, setPillHoverTitle] = useState(false);
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
