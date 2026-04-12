@@ -92,12 +92,7 @@
   box-sizing: border-box;
   z-index: 2;
   transition: filter 0.1s;
-  /* Inset 2px from left/right so adjacent spans have a gap at boundaries */
-  margin-left: 2px;
-  width: calc(100% - 4px) !important; /* overridden by inline width */
 }
-/* Use CSS custom property width trick to respect margin */
-.spanBar { margin-left: 0; }
 .spanBar:hover { filter: brightness(1.1); }
 .spanBar.continuesBefore {
   border-top-left-radius: 0;
