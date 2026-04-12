@@ -1,0 +1,107 @@
+[
+  {
+    "id": "bug-2026-04-12-001",
+    "title": "Dragging a pill crashes the site",
+    "area": "month-view drag",
+    "status": "open",
+    "symptoms": [
+      "dragging an event pill can crash the page",
+      "calendar may disappear after drag attempt"
+    ],
+    "expected_behavior": [
+      "dragging should not crash the page",
+      "calendar stays rendered after drag",
+      "drag should either move the event or fail safely"
+    ],
+    "repro_steps": [
+      "open /regression-bugs.html",
+      "drag the event pill titled 'Drag Crash Pill' to the next day"
+    ],
+    "selectors_that_worked": [
+      "[data-testid='works-calendar']",
+      "[data-date='YYYY-MM-DD']",
+      "button[aria-label*='Drag Crash Pill']"
+    ],
+    "test_file": "tests-e2e/calendar.regressions.spec.ts",
+    "notes": [
+      "watch pageerror and console error events during drag",
+      "run in desktop viewport first"
+    ]
+  },
+  {
+    "id": "bug-2026-04-12-002",
+    "title": "Hover card date range does not match multi-day pill span",
+    "area": "hover-card time rendering",
+    "status": "open",
+    "symptoms": [
+      "hover card can show a time range that drops the ending date",
+      "timed event crosses into the next day but text only shows one date"
+    ],
+    "expected_behavior": [
+      "hover card should show both the start date and the end date when they differ",
+      "displayed range should match the event span shown in the calendar"
+    ],
+    "repro_steps": [
+      "open /regression-bugs.html",
+      "click the event titled 'Cross-Day Hover Range'",
+      "compare the hover card range with the event span"
+    ],
+    "selectors_that_worked": [
+      "role=dialog[name*='Cross-Day Hover Range']",
+      "button[aria-label*='Cross-Day Hover Range']"
+    ],
+    "test_file": "tests-e2e/calendar.regressions.spec.ts",
+    "notes": [
+      "current regression test is marked test.fail until the bug is fixed"
+    ]
+  },
+  {
+    "id": "bug-2026-04-12-003",
+    "title": "Mobile event pills lose visible text",
+    "area": "month-view mobile rendering",
+    "status": "open",
+    "symptoms": [
+      "event pills render without readable words in mobile month view"
+    ],
+    "expected_behavior": [
+      "visible mobile pills should keep readable title text"
+    ],
+    "repro_steps": [
+      "open /regression-bugs.html in a 390x844 viewport",
+      "inspect the event titled 'Mobile Pill Text'"
+    ],
+    "selectors_that_worked": [
+      "button[aria-label*='Mobile Pill Text']"
+    ],
+    "test_file": "tests-e2e/calendar.regressions.spec.ts",
+    "notes": [
+      "current regression test is marked test.fail until the bug is fixed"
+    ]
+  },
+  {
+    "id": "bug-2026-04-12-004",
+    "title": "Edit pen does not always open the editor",
+    "area": "hover-card edit flow",
+    "status": "open",
+    "symptoms": [
+      "clicking the hover-card edit pen can fail to open the editor"
+    ],
+    "expected_behavior": [
+      "edit pen should open the event editor every time",
+      "editor should be populated with the clicked event"
+    ],
+    "repro_steps": [
+      "open /regression-bugs.html",
+      "click the event titled 'Edit Pen Fixture'",
+      "click the hover-card edit button"
+    ],
+    "selectors_that_worked": [
+      "button[aria-label='Edit event']",
+      "role=dialog[name='Edit event']"
+    ],
+    "test_file": "tests-e2e/calendar.regressions.spec.ts",
+    "notes": [
+      "verify the title field contains the source event title"
+    ]
+  }
+]
