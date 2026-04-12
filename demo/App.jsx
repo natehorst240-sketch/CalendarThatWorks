@@ -1,5 +1,6 @@
 import { StrictMode, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import { WorksCalendar } from '../src/index.js';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
@@ -192,12 +193,54 @@ function ThemePicker({ current, onChange }) {
   );
 }
 
+/* ─── PWA update toast ──────────────────────────────────────────── */
+function UpdateToast({ onUpdate, onDismiss }) {
+  return (
+    <div style={{
+      position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+      background: '#1e293b', color: '#f1f5f9', borderRadius: 10,
+      padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: '0 4px 24px rgba(0,0,0,.35)', zIndex: 9999, fontSize: 13,
+      border: '1px solid #334155',
+    }}>
+      <span>A new version is available.</span>
+      <button
+        onClick={onUpdate}
+        style={{
+          background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 6,
+          padding: '4px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+        }}
+      >
+        Update
+      </button>
+      <button
+        onClick={onDismiss}
+        style={{
+          background: 'transparent', color: '#94a3b8', border: 'none',
+          cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 2px',
+        }}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
-  const [events,   setEvents]   = useState(INITIAL_EVENTS);
-  const [notes,    setNotes]    = useState({});
-  const [theme,    setTheme]    = useState('light');
-  const [eventLog, setEventLog] = useState([]);
+  const [events,       setEvents]       = useState(INITIAL_EVENTS);
+  const [notes,        setNotes]        = useState({});
+  const [theme,        setTheme]        = useState('light');
+  const [eventLog,     setEventLog]     = useState([]);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+
+  const [updateSW] = useState(() =>
+    registerSW({
+      onNeedRefresh() { setNeedsRefresh(true); },
+      onOfflineReady() { console.info('[PWA] App ready to work offline.'); },
+    })
+  );
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
@@ -298,6 +341,13 @@ function App() {
         <span>🌙 Striped bars = on-call shifts</span>
         <span>Click event → hover card + notes</span>
       </div>
+
+      {needsRefresh && (
+        <UpdateToast
+          onUpdate={() => { updateSW(true); setNeedsRefresh(false); }}
+          onDismiss={() => setNeedsRefresh(false)}
+        />
+      )}
     </div>
   );
 }

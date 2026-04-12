@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- Background (Apple rounds it externally, keep square) -->
+  <rect width="180" height="180" fill="#4f46e5"/>
+  <!-- Calendar card -->
+  <rect x="22" y="38" width="136" height="116" rx="10" fill="white" opacity="0.97"/>
+  <!-- Header bar -->
+  <rect x="22" y="38" width="136" height="30" rx="10" fill="#3730a3"/>
+  <rect x="22" y="58" width="136" height="10" fill="#3730a3"/>
+  <!-- Binding rings -->
+  <rect x="52" y="26" width="10" height="26" rx="5" fill="#1e1b4b"/>
+  <rect x="118" y="26" width="10" height="26" rx="5" fill="#1e1b4b"/>
+  <!-- Day grid row 1 -->
+  <rect x="34" y="84" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="56" y="84" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="78" y="84" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="100" y="84" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="122" y="84" width="16" height="13" rx="3" fill="#4f46e5"/>
+  <!-- Day grid row 2 -->
+  <rect x="34" y="103" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="56" y="103" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="78" y="103" width="16" height="13" rx="3" fill="#4f46e5"/>
+  <rect x="100" y="103" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="122" y="103" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <!-- Day grid row 3 -->
+  <rect x="34" y="122" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="56" y="122" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="78" y="122" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="100" y="122" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <rect x="122" y="122" width="16" height="13" rx="3" fill="#ede9fe"/>
+  <!-- Day grid row 4 -->
+  <rect x="34" y="141" width="16" height="8" rx="3" fill="#ede9fe"/>
+  <rect x="56" y="141" width="16" height="8" rx="3" fill="#ede9fe"/>
+  <rect x="78" y="141" width="16" height="8" rx="3" fill="#ede9fe"/>
+</svg>
