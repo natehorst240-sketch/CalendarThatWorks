@@ -50,7 +50,9 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    await page.getByRole('button', { name: /Cross-Day Hover Range/i }).first().click();
+    const crossDay = page.getByRole('button', { name: /^Cross-Day Hover Range, Incident$/i }).first();
+    await expect(crossDay).toBeVisible();
+    await crossDay.click({ force: true });
 
     const dialog = page.getByRole('dialog', { name: /Event details: Cross-Day Hover Range/i });
     await expect(dialog).toBeVisible();
