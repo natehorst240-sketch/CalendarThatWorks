@@ -44,8 +44,7 @@ test.describe('WorksCalendar targeted regressions', () => {
     expect(consoleErrors).toEqual([]);
   });
 
-  test('mobile month pills keep visible title text', async ({ page }) => {
-
+  test('hover card shows the full cross-day range for a timed multi-day event', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
@@ -66,8 +65,6 @@ test.describe('WorksCalendar targeted regressions', () => {
   });
 
   test('mobile month pills keep visible title text', async ({ page }) => {
-    test.fail(true, 'Known bug: event pills can lose visible title text in mobile month view.');
-
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/regression-bugs.html');
 
