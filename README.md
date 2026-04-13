@@ -76,3 +76,38 @@ import 'works-calendar/styles/ocean';   // optional theme
 Available themes: `light`, `dark`, `aviation`, `soft`, `minimal`, `corporate`, `forest`, `ocean`
 
 Owner password for config panel: `demo1234` (demo only — set your own via `ownerPassword` prop).
+
+## DataAdapter pattern (backend-agnostic)
+
+Use a submit adapter to keep form UX independent from storage/auth choices.
+
+```jsx
+import { CalendarExternalForm, createLocalStorageDataAdapter } from 'works-calendar';
+
+const adapter = createLocalStorageDataAdapter({ key: 'my-app:events' });
+
+<CalendarExternalForm adapter={adapter} />
+```
+
+Adapter contract:
+
+```ts
+{
+  submitEvent(payload, context): Promise<unknown>
+}
+```
+
+## External form workflows
+
+`CalendarExternalForm` is a standalone form that can be embedded outside the main calendar UI. It supports:
+
+- field-schema driven rendering
+- required-field + date-order validation
+- per-host transform/validate hooks
+- adapter-level error handling for network/backend failures
+
+## Microsoft 365 example
+
+A Microsoft Graph adapter example is included at `examples/microsoft-365/`.
+
+It is intentionally example-only to keep the core package free from required MSAL dependencies and enterprise auth opinions.

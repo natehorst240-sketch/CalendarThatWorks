@@ -646,3 +646,46 @@ export declare const FIELD_TYPES: Array<{ value: FieldType; label: string }>;
 // Re-exports everything from the versioned public schema layer.
 // Consumers can also import directly from 'works-calendar/api/v1'.
 export * from './api/v1/index';
+
+// ─── External forms ───────────────────────────────────────────────────────────
+
+export interface CalendarExternalFormFieldOption {
+  label: string;
+  value: string;
+}
+
+export interface CalendarExternalFormField {
+  name: string;
+  label: string;
+  type?: 'text' | 'textarea' | 'datetime-local' | 'date' | 'checkbox' | 'select';
+  required?: boolean;
+  placeholder?: string;
+  options?: CalendarExternalFormFieldOption[];
+}
+
+export interface CalendarExternalFormAdapter {
+  submitEvent: (payload: Record<string, unknown>, context: {
+    values: Record<string, unknown>;
+    fields: CalendarExternalFormField[];
+  }) => Promise<unknown>;
+}
+
+export interface CalendarExternalFormProps {
+  adapter: CalendarExternalFormAdapter;
+  fields?: CalendarExternalFormField[];
+  initialValues?: Record<string, unknown>;
+  validate?: (
+    values: Record<string, unknown>,
+    fields: CalendarExternalFormField[],
+  ) => Record<string, string>;
+  transform?: (values: Record<string, unknown>) => Record<string, unknown>;
+  submitLabel?: string;
+  onSuccess?: (result: unknown, values: Record<string, unknown>) => void;
+  onError?: (error: unknown, values: Record<string, unknown>) => void;
+}
+
+export const CalendarExternalForm: React.ComponentType<CalendarExternalFormProps>;
+
+export declare function createLocalStorageDataAdapter(options?: {
+  key?: string;
+}): CalendarExternalFormAdapter;
