@@ -37,6 +37,7 @@ import OwnerLock              from './ui/OwnerLock.jsx';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
+import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -45,6 +46,7 @@ import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
 import { exportToExcel }      from './export/excelExport.js';
+import { instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
 
@@ -89,6 +91,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     fetchEvents,
     icalFeeds,
     onImport,
+    scheduleTemplates = [],
 
     // ── Identity ──
     calendarId              = 'default',
@@ -346,6 +349,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [selectedEvent,  setSelectedEvent]  = useState(null);
   const [formEvent,      setFormEvent]      = useState(null);
   const [importOpen,     setImportOpen]     = useState(false);
+  const [scheduleOpen,   setScheduleOpen]   = useState(false);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
@@ -532,6 +536,35 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     setImportOpen(false);
   }, [onImport, sourceStore]);
 
+  const handleScheduleInstantiate = useCallback((request) => {
+    const template = scheduleTemplates.find(t => t.id === request.templateId);
+    if (!template) return;
+    const result = instantiateScheduleTemplate(template, request);
+
+    result.generated.forEach((ev) => {
+      const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
+      const end = ev.end instanceof Date ? ev.end : new Date(ev.end);
+      applyEngineOp({
+        type: 'create',
+        event: {
+          title: ev.title ?? '(untitled)',
+          start,
+          end,
+          allDay: ev.allDay ?? false,
+          resourceId: ev.resource ?? null,
+          category: ev.category ?? null,
+          color: ev.color ?? null,
+          status: ev.status ?? 'confirmed',
+          rrule: ev.rrule ?? null,
+          exdates: ev.exdates ?? [],
+          meta: ev.meta ?? {},
+        },
+        source: 'template',
+      }, () => onEventSave?.(ev));
+    });
+    setScheduleOpen(false);
+  }, [applyEngineOp, onEventSave, scheduleTemplates]);
+
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
     setFormEvent(ev._raw ?? ev);
@@ -564,6 +597,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }
 
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
+  const hasScheduleTemplates = Array.isArray(scheduleTemplates) && scheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
@@ -625,6 +659,11 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
               {hasAddButton && (
                 <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
                   <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
+                </button>
+              )}
+              {hasAddButton && hasScheduleTemplates && (
+                <button className={styles.addBtn} onClick={() => setScheduleOpen(true)} aria-label="Add schedule from template">
+                  <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Schedule</span>
                 </button>
               )}
               {hasImport && (
@@ -764,6 +803,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {/* ── Import zone ── */}
         {importOpen && (
           <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
+        )}
+
+        {/* ── Schedule templates ── */}
+        {scheduleOpen && (
+          <ScheduleTemplateDialog
+            templates={scheduleTemplates}
+            onInstantiate={handleScheduleInstantiate}
+            onClose={() => setScheduleOpen(false)}
+          />
         )}
 
         {/* ── Recurring scope picker ── */}
