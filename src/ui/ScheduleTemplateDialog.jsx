@@ -8,7 +8,29 @@ function toDatetimeLocal(date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function ScheduleTemplateDialog({ templates = [], onInstantiate, onClose }) {
+function validateTemplate(template) {
+  if (!template) return 'Please choose a schedule template.';
+  if (!Array.isArray(template.entries) || template.entries.length === 0) {
+    return 'The selected template has no entries to generate.';
+  }
+  const hasMalformedEntry = template.entries.some((entry) => (
+    !entry
+    || typeof entry.title !== 'string'
+    || !Number.isFinite(entry.startOffsetMinutes)
+    || !Number.isFinite(entry.durationMinutes)
+  ));
+  if (hasMalformedEntry) {
+    return 'The selected template has malformed entries and cannot be instantiated.';
+  }
+  return '';
+}
+
+export default function ScheduleTemplateDialog({
+  templates = [],
+  onInstantiate,
+  onPreview,
+  onClose,
+}) {
   const [templateId, setTemplateId] = useState(() => templates[0]?.id ?? '');
   const [anchor, setAnchor] = useState(() => toDatetimeLocal(new Date()));
   const [resource, setResource] = useState('');
@@ -19,18 +41,35 @@ export default function ScheduleTemplateDialog({ templates = [], onInstantiate, 
     [templates, templateId],
   );
 
+  const anchorDate = useMemo(() => new Date(anchor), [anchor]);
+  const anchorError = Number.isNaN(anchorDate.getTime()) ? 'Enter a valid anchor start date/time.' : '';
+  const templateError = useMemo(() => validateTemplate(selectedTemplate), [selectedTemplate]);
+
+  const request = useMemo(() => ({
+    templateId: selectedTemplate?.id,
+    anchor: anchorDate,
+    resource: resource.trim() || undefined,
+    category: category.trim() || undefined,
+  }), [anchorDate, category, resource, selectedTemplate]);
+
+  const preview = useMemo(() => {
+    if (!selectedTemplate || anchorError || templateError) {
+      return { generated: [], conflicts: [], error: anchorError || templateError || '' };
+    }
+    try {
+      return onPreview?.(request) ?? { generated: [], conflicts: [], error: '' };
+    } catch {
+      return { generated: [], conflicts: [], error: 'Unable to build schedule preview.' };
+    }
+  }, [anchorError, onPreview, request, selectedTemplate, templateError]);
+
+  const submitDisabled = !!(templateError || anchorError || preview.error);
+
   function handleSubmit(e) {
     e.preventDefault();
-    if (!selectedTemplate) return;
-    const anchorDate = new Date(anchor);
-    if (Number.isNaN(anchorDate.getTime())) return;
+    if (submitDisabled || !selectedTemplate) return;
 
-    onInstantiate?.({
-      templateId: selectedTemplate.id,
-      anchor: anchorDate,
-      resource: resource.trim() || undefined,
-      category: category.trim() || undefined,
-    });
+    onInstantiate?.(request);
   }
 
   return (
@@ -76,13 +115,40 @@ export default function ScheduleTemplateDialog({ templates = [], onInstantiate, 
               <input className={styles.input} value={category} onChange={(e) => setCategory(e.target.value)} />
             </label>
 
-            <div className={styles.meta}>
+            <div className={styles.meta} role="status">
               {selectedTemplate ? `${selectedTemplate.entries.length} entries will be generated.` : 'Choose a template.'}
             </div>
 
+            {(templateError || anchorError || preview.error) && (
+              <div className={styles.error} role="alert">
+                {templateError || anchorError || preview.error}
+              </div>
+            )}
+
+            {preview.generated.length > 0 && (
+              <div className={styles.preview} aria-label="Generated schedule preview">
+                <div className={styles.previewHeader}>
+                  Preview ({preview.generated.length})
+                  {preview.conflicts.length > 0 && (
+                    <span className={styles.conflictBadge}>
+                      {preview.conflicts.length} conflict{preview.conflicts.length === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </div>
+                <ul className={styles.previewList}>
+                  {preview.generated.map((ev, idx) => (
+                    <li key={`${ev.title}-${idx}`} className={styles.previewItem}>
+                      <span>{ev.title ?? '(untitled)'}</span>
+                      <span>{toDatetimeLocal(ev.start)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className={styles.actions}>
               <button type="button" className={styles.cancelBtn} onClick={onClose}>Cancel</button>
-              <button type="submit" className={styles.submitBtn}>Create schedule</button>
+              <button type="submit" className={styles.submitBtn} disabled={submitDisabled}>Create schedule</button>
             </div>
           </form>
         )}

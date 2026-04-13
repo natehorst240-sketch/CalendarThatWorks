@@ -26,6 +26,7 @@ import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
 import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy } from './core/engine/adapters/toLegacyEvents.ts';
+import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
 import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
@@ -538,7 +539,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   const handleScheduleInstantiate = useCallback((request) => {
     const template = scheduleTemplates.find(t => t.id === request.templateId);
-    if (!template) return;
+    if (!template || !Array.isArray(template.entries) || template.entries.length === 0) return;
+    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
+    if (Number.isNaN(anchor.getTime())) return;
     const result = instantiateScheduleTemplate(template, request);
 
     result.generated.forEach((ev) => {
@@ -564,6 +567,61 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     });
     setScheduleOpen(false);
   }, [applyEngineOp, onEventSave, scheduleTemplates]);
+
+  const buildSchedulePreview = useCallback((request) => {
+    const template = scheduleTemplates.find(t => t.id === request.templateId);
+    if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
+    if (!Array.isArray(template.entries) || template.entries.length === 0) {
+      return { generated: [], conflicts: [], error: 'Selected template does not have valid entries.' };
+    }
+
+    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
+    if (Number.isNaN(anchor.getTime())) {
+      return { generated: [], conflicts: [], error: 'Enter a valid anchor date/time.' };
+    }
+
+    let generated;
+    try {
+      generated = instantiateScheduleTemplate(template, { ...request, anchor }).generated;
+    } catch {
+      return { generated: [], conflicts: [], error: 'Unable to build schedule preview.' };
+    }
+
+    const ctx = opCtxRef.current;
+    const seededEvents = [...engineRef.current.state.events.values()];
+    const conflicts = [];
+
+    generated.forEach((ev, index) => {
+      const legacy = [{
+        id: `preview:${template.id}:${index}`,
+        title: ev.title ?? '(untitled)',
+        start: ev.start,
+        end: ev.end,
+        allDay: ev.allDay ?? false,
+        resource: ev.resource ?? null,
+        category: ev.category ?? null,
+        color: ev.color ?? null,
+        status: ev.status ?? 'confirmed',
+        rrule: ev.rrule ?? null,
+        exdates: ev.exdates ?? [],
+        meta: ev.meta ?? {},
+      }];
+      const previewEvent = fromLegacyEvents(legacy)[0];
+      const op = { type: 'create', event: previewEvent };
+      const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
+      if (validation.violations.length > 0) {
+        conflicts.push({
+          index,
+          title: ev.title ?? '(untitled)',
+          severity: validation.severity,
+          violations: validation.violations,
+        });
+      }
+      seededEvents.push(previewEvent);
+    });
+
+    return { generated, conflicts, error: '' };
+  }, [scheduleTemplates]);
 
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
@@ -809,6 +867,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {scheduleOpen && (
           <ScheduleTemplateDialog
             templates={scheduleTemplates}
+            onPreview={buildSchedulePreview}
             onInstantiate={handleScheduleInstantiate}
             onClose={() => setScheduleOpen(false)}
           />
