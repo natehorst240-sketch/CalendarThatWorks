@@ -11,6 +11,7 @@ import styles from './MonthView.module.css';
 const SPAN_H   = 22;
 const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
+const DAY_NUM_TRACK_H = 32;
 
 function isMultiDay(ev) {
   return ev.allDay || !isSameDay(ev.start, ev.end);
@@ -142,6 +143,17 @@ export default function MonthView({
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(ev);
     });
+
+    map.forEach((dayEvents, key) => {
+      dayEvents.sort((a, b) => {
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+        const startDiff = a.start.getTime() - b.start.getTime();
+        if (startDiff !== 0) return startDiff;
+        return a.title.localeCompare(b.title);
+      });
+      map.set(key, dayEvents);
+    });
+
     return map;
   }, [singleDay]);
 
@@ -268,59 +280,13 @@ export default function MonthView({
               )}
 
               <div className={styles.daysArea}>
-                {/* ── Spanning event bars ── */}
-                {laneCount > 0 && (
-                  <div className={styles.spansLayer} style={{ height: spansHeight }}>
-                    {spans
-                      .filter(s => s.lane < MAX_SPANS_VISIBLE)
-                      .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                        const color = resolveColor(ev, ctx?.colorRules);
-                        const pctLeft  = (startCol / 7) * 100;
-                        const pctWidth = ((endCol - startCol + 1) / 7) * 100;
-                        const statusClass = ev.status === 'cancelled' ? styles.cancelled
-                          : ev.status === 'tentative' ? styles.tentative : '';
-                        const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
-                        return (
-                          <button
-                            key={`${ev.id}-w${wi}`}
-                            className={[
-                              styles.spanBar,
-                              continuesBefore && styles.continuesBefore,
-                              continuesAfter  && styles.continuesAfter,
-                              statusClass,
-                              isDimmed && styles.dragging,
-                            ].filter(Boolean).join(' ')}
-                            style={{
-                              '--ev-color': color,
-                              left:   `${pctLeft}%`,
-                              width:  `${pctWidth}%`,
-                              top:    lane * (SPAN_H + SPAN_GAP),
-                              height: SPAN_H,
-                            }}
-                            onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
-                            onPointerDown={e => startPillDrag(ev, e)}
-                            onMouseEnter={(e) => {
-                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
-                              if (pillHoverTitle) {
-                                const r = e.currentTarget.getBoundingClientRect();
-                                setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
-                              }
-                            }}
-                            onMouseLeave={() => {
-                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
-                              if (pillHoverTitle) setTitleHover(null);
-                            }}
-                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
-                          >
-                            {!continuesBefore && ev.title}
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-
                 {/* ── Day cells ── */}
-                <div className={styles.weekCells} role="row" aria-rowindex={wi + 2}>
+                <div
+                  className={styles.weekCells}
+                  role="row"
+                  aria-rowindex={wi + 2}
+                  style={{ '--week-span-height': `${spansHeight}px` }}
+                >
                   {week.map((day, di) => {
                     const dayKey     = format(day, 'yyyy-MM-dd');
                     const daySingles = singleByDay.get(dayKey) || [];
@@ -397,6 +363,57 @@ export default function MonthView({
                     );
                   })}
                 </div>
+
+                {/* ── Spanning event bars ── */}
+                {laneCount > 0 && (
+                  <div className={styles.spansLayer} style={{ top: DAY_NUM_TRACK_H, height: spansHeight }}>
+                    {spans
+                      .filter(s => s.lane < MAX_SPANS_VISIBLE)
+                      .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
+                        const color = resolveColor(ev, ctx?.colorRules);
+                        const pctLeft  = (startCol / 7) * 100;
+                        const pctWidth = ((endCol - startCol + 1) / 7) * 100;
+                        const statusClass = ev.status === 'cancelled' ? styles.cancelled
+                          : ev.status === 'tentative' ? styles.tentative : '';
+                        const isDimmed = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
+                        return (
+                          <button
+                            key={`${ev.id}-w${wi}`}
+                            className={[
+                              styles.spanBar,
+                              continuesBefore && styles.continuesBefore,
+                              continuesAfter  && styles.continuesAfter,
+                              statusClass,
+                              isDimmed && styles.dragging,
+                            ].filter(Boolean).join(' ')}
+                            style={{
+                              '--ev-color': color,
+                              left:   `${pctLeft}%`,
+                              width:  `${pctWidth}%`,
+                              top:    lane * (SPAN_H + SPAN_GAP),
+                              height: SPAN_H,
+                            }}
+                            onClick={e => { e.stopPropagation(); onEventClick?.(ev); }}
+                            onPointerDown={e => startPillDrag(ev, e)}
+                            onMouseEnter={(e) => {
+                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
+                              if (pillHoverTitle) {
+                                const r = e.currentTarget.getBoundingClientRect();
+                                setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
+                              if (pillHoverTitle) setTitleHover(null);
+                            }}
+                            aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}
+                          >
+                            {!continuesBefore && ev.title}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             </div>
           );
