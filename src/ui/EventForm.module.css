@@ -191,6 +191,10 @@
   font-size: 11px;
   color: var(--wc-danger);
 }
+.helperText {
+  font-size: 11px;
+  color: var(--wc-text-faint);
+}
 
 .row2 {
   display: grid;

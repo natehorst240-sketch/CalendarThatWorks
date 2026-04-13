@@ -9,6 +9,40 @@ import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import styles from './EventForm.module.css';
 
 const BUILT_IN_CATEGORIES = [];
+const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const RECURRENCE_PRESETS = [
+  { id: 'none', label: 'Does not repeat' },
+  { id: 'daily', label: 'Daily' },
+  { id: 'weekdays', label: 'Weekdays (Mon–Fri)' },
+  { id: 'weekly', label: 'Weekly on start day' },
+  { id: 'monthlyDate', label: 'Monthly on start date' },
+  { id: 'custom', label: 'Custom RRULE' },
+];
+const EVENT_TEMPLATES = [
+  {
+    id: 'none',
+    label: 'Blank event',
+    defaults: null,
+  },
+  {
+    id: 'dailyStandup',
+    label: 'Daily standup',
+    defaults: {
+      title:           'Daily standup',
+      durationMinutes: 15,
+      recurrencePreset:'weekdays',
+    },
+  },
+  {
+    id: 'weekly1on1',
+    label: 'Weekly 1:1',
+    defaults: {
+      title:           'Weekly 1:1',
+      durationMinutes: 30,
+      recurrencePreset:'weekly',
+    },
+  },
+];
 
 function toDatetimeLocal(date) {
   if (!date) return '';
@@ -23,6 +57,26 @@ function fromDatetimeLocal(str) {
   if (!str) return null;
   const d = new Date(str);
   return isValid(d) ? d : null;
+}
+
+function inferPresetFromRRule(rrule) {
+  if (!rrule) return 'none';
+  const normalized = String(rrule).trim().toUpperCase();
+  if (normalized === 'FREQ=DAILY') return 'daily';
+  if (normalized === 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR') return 'weekdays';
+  if (normalized.startsWith('FREQ=WEEKLY;BYDAY=')) return 'weekly';
+  if (normalized.startsWith('FREQ=MONTHLY;BYMONTHDAY=')) return 'monthlyDate';
+  return 'custom';
+}
+
+function buildRRuleFromPreset(preset, startValue) {
+  const start = fromDatetimeLocal(startValue);
+  if (!start) return null;
+  if (preset === 'daily') return 'FREQ=DAILY';
+  if (preset === 'weekdays') return 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+  if (preset === 'weekly') return `FREQ=WEEKLY;BYDAY=${WEEKDAY_CODES[start.getDay()]}`;
+  if (preset === 'monthlyDate') return `FREQ=MONTHLY;BYMONTHDAY=${start.getDate()}`;
+  return null;
 }
 
 export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }) {
@@ -53,6 +107,9 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
     color:    event?.color    ?? '',
     meta:     event?.meta     ?? {},
   }));
+  const [templateId, setTemplateId] = useState('none');
+  const [recurrencePreset, setRecurrencePreset] = useState(() => inferPresetFromRRule(event?.rrule ?? null));
+  const [customRrule, setCustomRrule] = useState(() => (event?.rrule && inferPresetFromRRule(event.rrule) === 'custom' ? event.rrule : ''));
 
   const [errors, setErrors] = useState({});
 
@@ -71,6 +128,29 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
   function setMeta(key, val) {
     setValues(v => ({ ...v, meta: { ...v.meta, [key]: val } }));
+  }
+
+  function applyTemplate(nextTemplateId) {
+    setTemplateId(nextTemplateId);
+    const template = EVENT_TEMPLATES.find(t => t.id === nextTemplateId);
+    if (!template?.defaults) return;
+    setValues((v) => {
+      const startDate = fromDatetimeLocal(v.start);
+      const next = { ...v };
+      if (template.defaults.title) next.title = template.defaults.title;
+      if (template.defaults.category) next.category = template.defaults.category;
+      if (template.defaults.resource) next.resource = template.defaults.resource;
+      if (typeof template.defaults.allDay === 'boolean') next.allDay = template.defaults.allDay;
+      if (startDate && Number.isFinite(template.defaults.durationMinutes)) {
+        const nextEnd = new Date(startDate.getTime() + template.defaults.durationMinutes * 60 * 1000);
+        next.end = toDatetimeLocal(nextEnd);
+      }
+      return next;
+    });
+    if (template.defaults.recurrencePreset) {
+      setRecurrencePreset(template.defaults.recurrencePreset);
+      if (template.defaults.recurrencePreset !== 'custom') setCustomRrule('');
+    }
   }
 
   function validate() {
@@ -95,6 +175,12 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
     e.preventDefault();
     if (!validate()) return;
 
+    const presetRrule = buildRRuleFromPreset(recurrencePreset, values.start);
+    const normalizedCustom = customRrule.trim().toUpperCase();
+    const rrule = recurrencePreset === 'custom'
+      ? (normalizedCustom || null)
+      : presetRrule;
+
     onSave({
       ...(event || {}),
       title:    values.title.trim(),
@@ -105,6 +191,8 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
       resource: values.resource.trim() || null,
       color:    values.color || undefined,
       meta:     values.meta,
+      rrule,
+      exdates:  event?.exdates ?? [],
     });
   }
 
@@ -120,6 +208,13 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           {/* Title */}
+          <div className={styles.field}>
+            <label className={styles.label}>Template</label>
+            <select className={styles.select} value={templateId} onChange={e => applyTemplate(e.target.value)}>
+              {EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+
           <div className={styles.field}>
             <label className={styles.label}>Title <span className={styles.req}>*</span></label>
             <input
@@ -160,6 +255,31 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>
+          </div>
+
+          {/* Recurrence */}
+          <div className={styles.field}>
+            <label className={styles.label}>Repeat</label>
+            <select
+              className={styles.select}
+              value={recurrencePreset}
+              onChange={(e) => {
+                const next = e.target.value;
+                setRecurrencePreset(next);
+                if (next !== 'custom') setCustomRrule('');
+              }}
+            >
+              {RECURRENCE_PRESETS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+            {recurrencePreset === 'custom' && (
+              <input
+                className={styles.input}
+                value={customRrule}
+                onChange={(e) => setCustomRrule(e.target.value)}
+                placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"
+              />
+            )}
+            <span className={styles.helperText}>Uses RFC5545 RRULE format internally.</span>
           </div>
 
           {/* Category */}

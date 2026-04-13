@@ -446,6 +446,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           category:   rawEv.category   ?? null,
           color:      rawEv.color      ?? null,
           status:     rawEv.status     ?? 'confirmed',
+          rrule:      rawEv.rrule      ?? null,
+          exdates:    rawEv.exdates    ?? [],
         },
         source: 'form',
       };
