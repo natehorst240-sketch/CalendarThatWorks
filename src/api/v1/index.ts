@@ -60,6 +60,30 @@ export type {
   EngineRuntimeConfig,
 } from '../../core/engine/engineConfig.js';
 
+// ── Validation + error contracts + guarded mutation/recurrence ──────────────
+export type {
+  ValidationMode,
+  EventValidationCode,
+  EventValidationIssue,
+  EventValidationResult,
+  ValidateEventOptions,
+  CalendarErrorDomain,
+  CalendarErrorSeverity,
+  StructuredCalendarError,
+  OnErrorMeta,
+  OnError,
+  SafeMutateOptions,
+  SafeMutateResult,
+  ExpandRecurrenceSafeOptions,
+} from '../../core/engine/engineTypes.js';
+
+export {
+  validateEvent,
+  toStructuredError,
+  safeMutate,
+  expandRecurrenceSafe,
+} from '../../core/engine/engineTypes.js';
+
 // ── Engine state types ────────────────────────────────────────────────────────
 export type {
   CalendarView,

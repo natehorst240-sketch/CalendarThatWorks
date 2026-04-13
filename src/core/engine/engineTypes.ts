@@ -50,6 +50,17 @@ export {
   mergeRuntimeConfig,
 } from './engineConfig.js';
 
+// ── Error contracts ───────────────────────────────────────────────────────────
+export type {
+  CalendarErrorDomain,
+  CalendarErrorSeverity,
+  StructuredCalendarError,
+  OnErrorMeta,
+  OnError,
+} from './errors/onError.js';
+
+export { toStructuredError } from './errors/onError.js';
+
 // ── Validation types ──────────────────────────────────────────────────────────
 export type {
   Violation,
@@ -61,6 +72,16 @@ export type {
 } from './validation/validationTypes.js';
 
 export { VALID_RESULT } from './validation/validationTypes.js';
+
+export type {
+  ValidationMode,
+  EventValidationCode,
+  EventValidationIssue,
+  EventValidationResult,
+  ValidateEventOptions,
+} from './validation/validateEvent.js';
+
+export { validateEvent } from './validation/validateEvent.js';
 
 // ── Operation result ──────────────────────────────────────────────────────────
 export type {
@@ -74,6 +95,17 @@ export {
   makeRejectedResult,
   makePendingResult,
 } from './operations/operationResult.js';
+
+export type {
+  SafeMutateOptions,
+  SafeMutateResult,
+} from './operations/safeMutate.js';
+
+export { safeMutate } from './operations/safeMutate.js';
+
+// ── Recurrence guards ────────────────────────────────────────────────────────
+export type { ExpandRecurrenceSafeOptions } from './recurrence/expandRecurrenceSafe.js';
+export { expandRecurrenceSafe } from './recurrence/expandRecurrenceSafe.js';
 
 // ── Time utilities ─────────────────────────────────────────────────────────────
 export type { DateRange } from './time/rangeMath.js';
