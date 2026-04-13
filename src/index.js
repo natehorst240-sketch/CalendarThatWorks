@@ -21,6 +21,8 @@ export {
 } from './filters/filterSchema.js';
 export { createInitialFilters, buildActiveFilterPills, isEmptyFilterValue } from './filters/filterState.js';
 export { THEMES, THEMES_BY_ID, THEME_IDS } from './styles/themes.js';
+export { default as CalendarExternalForm } from './ui/CalendarExternalForm.jsx';
+export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
 export { useOccurrences }                 from './hooks/useOccurrences.js';
 export { useDrag }                        from './hooks/useDrag.js';
