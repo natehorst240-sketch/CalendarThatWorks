@@ -686,6 +686,8 @@ export interface CalendarExternalFormProps {
 
 export const CalendarExternalForm: React.ComponentType<CalendarExternalFormProps>;
 
+export const SUPPORTED_EXTERNAL_FORM_FIELD_TYPES: Array<NonNullable<CalendarExternalFormField['type']>>;
+
 export declare function createLocalStorageDataAdapter(options?: {
   key?: string;
 }): CalendarExternalFormAdapter;

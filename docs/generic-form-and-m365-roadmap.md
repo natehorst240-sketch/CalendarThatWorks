@@ -16,6 +16,23 @@ This roadmap has clear product value and improves adoption:
 3. Expand docs/examples to frame Microsoft 365 as one integration among many.
 4. Harden with form-focused Playwright tests and explicit failure isolation paths.
 
+## Phase 1 (started): Generic `CalendarExternalForm` contract hardening
+
+### Completed in this kickoff
+
+- Adapter runtime contract now fails fast when `submitEvent(payload, context)` is missing.
+- Field-schema normalization now guarantees:
+  - unique field names,
+  - supported field types,
+  - default labels/required/options for consistent rendering.
+- Added tests for contract failures (missing adapter method + duplicate field names).
+- Exported supported field-type constant so host apps can validate/compose schemas before render.
+
+### Remaining in Phase 1
+
+- Add a Playwright external-form smoke suite in demo/examples.
+- Add one more non-Microsoft adapter example beyond localStorage (Supabase stub).
+
 ## Acceptance criteria for PR #2
 
 - Generic form can submit through a backend-agnostic adapter interface.
