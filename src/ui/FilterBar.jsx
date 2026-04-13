@@ -265,7 +265,7 @@ export default function FilterBar({
           className={[styles.hoverToggle, pillHoverTitle && styles.hoverToggleActive].filter(Boolean).join(' ')}
           onClick={onPillHoverTitleToggle}
           aria-pressed={pillHoverTitle}
-          title={pillHoverTitle ? 'Disable large title on hover' : 'Show large title when hovering events'}
+          title={pillHoverTitle ? 'Disable hover details projection' : 'Project date, category, resource, and notes when hovering events'}
         >
           Aa
         </button>

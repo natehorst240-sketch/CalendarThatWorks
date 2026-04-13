@@ -24,7 +24,7 @@ export default function MonthView({
 }) {
   const [popoverDay,  setPopoverDay]  = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
-  // { title, color, x, y } — position is the center-top of the hovered pill
+  // Hover projection panel state (positioned above hovered month-view pills).
   const [titleHover, setTitleHover] = useState(null);
   // Keyboard-focused day cell (roving tabindex pattern).
   const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
@@ -161,6 +161,29 @@ export default function MonthView({
   const showWeekNumbers = config?.display?.showWeekNumbers;
   const enlargeMonthRowOnHover = !!config?.display?.enlargeMonthRowOnHover;
 
+  function buildHoverProjection(ev, color, rect) {
+    const dates = ev.allDay
+      ? (isSameDay(ev.start, ev.end)
+        ? format(ev.start, 'EEE, MMM d')
+        : `${format(ev.start, 'EEE, MMM d')} – ${format(ev.end, 'EEE, MMM d')}`)
+      : (isSameDay(ev.start, ev.end)
+        ? `${format(ev.start, 'EEE, MMM d, h:mm a')} – ${format(ev.end, 'h:mm a')}`
+        : `${format(ev.start, 'EEE, MMM d, h:mm a')} – ${format(ev.end, 'EEE, MMM d, h:mm a')}`);
+
+    const notes = ev.notes ?? ev.meta?.notes ?? ev._raw?.notes ?? '';
+
+    return {
+      title: ev.title,
+      color,
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+      dates,
+      category: ev.category || null,
+      resource: ev.resource || null,
+      notes: notes ? String(notes) : null,
+    };
+  }
+
   // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev, extra = {}, weekIdx = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
@@ -173,7 +196,7 @@ export default function MonthView({
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
       if (pillHoverTitle) {
         const r = e.currentTarget.getBoundingClientRect();
-        setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
+        setTitleHover(buildHoverProjection(ev, color, r));
       }
     }
     function handlePillMouseLeave() {
@@ -400,7 +423,7 @@ export default function MonthView({
                               if (enlargeMonthRowOnHover) setHoveredWeekIdx(wi);
                               if (pillHoverTitle) {
                                 const r = e.currentTarget.getBoundingClientRect();
-                                setTitleHover({ title: ev.title, color, x: r.left + r.width / 2, y: r.top });
+                                setTitleHover(buildHoverProjection(ev, color, r));
                               }
                             }}
                             onMouseLeave={() => {
@@ -422,7 +445,7 @@ export default function MonthView({
       </div>
     </div>
 
-    {/* ── Pill hover title overlay ── */}
+    {/* ── Pill hover projection overlay ── */}
     {pillHoverTitle && titleHover && (
       <div
         aria-hidden="true"
@@ -433,20 +456,27 @@ export default function MonthView({
           transform:     'translate(-50%, -100%)',
           background:    titleHover.color,
           color:         '#fff',
-          fontSize:      36,
-          fontWeight:    700,
-          lineHeight:    1.1,
-          padding:       '6px 18px',
+          fontSize:      16,
+          fontWeight:    600,
+          lineHeight:    1.25,
+          padding:       '10px 14px',
           borderRadius:  10,
           pointerEvents: 'none',
           zIndex:        9999,
-          whiteSpace:    'nowrap',
+          maxWidth:      460,
           boxShadow:     '0 4px 20px rgba(0,0,0,0.28)',
-          letterSpacing: '-0.01em',
           textShadow:    '0 1px 3px rgba(0,0,0,0.25)',
         }}
       >
-        {titleHover.title}
+        <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>{titleHover.title}</div>
+        <div style={{ opacity: 0.95 }}>{titleHover.dates}</div>
+        {titleHover.category && <div>Category: {titleHover.category}</div>}
+        {titleHover.resource && <div>Resource: {titleHover.resource}</div>}
+        {titleHover.notes && (
+          <div style={{ marginTop: 4, opacity: 0.95 }}>
+            Notes: {titleHover.notes.length > 140 ? `${titleHover.notes.slice(0, 140)}…` : titleHover.notes}
+          </div>
+        )}
       </div>
     )}
     </>
