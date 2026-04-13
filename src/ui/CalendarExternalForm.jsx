@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import styles from './CalendarExternalForm.module.css';
 
+const SUPPORTED_FIELD_TYPES = new Set(['text', 'textarea', 'datetime-local', 'date', 'checkbox', 'select']);
+
 const DEFAULT_FIELDS = [
   { name: 'title', label: 'Title', type: 'text', required: true },
   { name: 'start', label: 'Start', type: 'datetime-local', required: true },
@@ -10,6 +12,44 @@ const DEFAULT_FIELDS = [
   { name: 'resource', label: 'Resource', type: 'text', required: false },
   { name: 'description', label: 'Description', type: 'textarea', required: false },
 ];
+
+function normalizeFields(fields) {
+  if (!Array.isArray(fields) || fields.length === 0) {
+    throw new Error('CalendarExternalForm requires at least one field.');
+  }
+
+  const names = new Set();
+  return fields.map((field) => {
+    if (!field?.name || typeof field.name !== 'string') {
+      throw new Error('Each field requires a string `name`.');
+    }
+
+    if (names.has(field.name)) {
+      throw new Error(`Duplicate field name: ${field.name}`);
+    }
+    names.add(field.name);
+
+    const type = field.type || 'text';
+    if (!SUPPORTED_FIELD_TYPES.has(type)) {
+      throw new Error(`Unsupported field type: ${type}`);
+    }
+
+    return {
+      ...field,
+      type,
+      label: field.label ?? field.name,
+      required: Boolean(field.required),
+      options: field.options ?? [],
+    };
+  });
+}
+
+function ensureAdapter(adapter) {
+  if (!adapter || typeof adapter.submitEvent !== 'function') {
+    throw new Error('CalendarExternalForm adapter must define submitEvent(payload, context).');
+  }
+  return adapter;
+}
 
 function defaultValidate(values, fields) {
   const errors = {};
@@ -45,13 +85,16 @@ export default function CalendarExternalForm({
   onSuccess,
   onError,
 }) {
+  const safeAdapter = ensureAdapter(adapter);
+  const normalizedFields = useMemo(() => normalizeFields(fields), [fields]);
+
   const mergedInitialValues = useMemo(() => {
-    const fromFields = fields.reduce((acc, field) => {
+    const fromFields = normalizedFields.reduce((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
     return { ...fromFields, ...initialValues };
-  }, [fields, initialValues]);
+  }, [normalizedFields, initialValues]);
 
   const [values, setValues] = useState(mergedInitialValues);
   const [errors, setErrors] = useState({});
@@ -66,7 +109,7 @@ export default function CalendarExternalForm({
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const validationErrors = validate(values, fields);
+    const validationErrors = validate(values, normalizedFields);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -75,7 +118,7 @@ export default function CalendarExternalForm({
 
     try {
       const payload = transform(values);
-      const result = await adapter.submitEvent(payload, { values, fields });
+      const result = await safeAdapter.submitEvent(payload, { values, fields: normalizedFields });
       onSuccess?.(result, values);
       setValues(mergedInitialValues);
     } catch (err) {
@@ -90,7 +133,7 @@ export default function CalendarExternalForm({
   return (
     <div className={styles.wrapper}>
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
-        {fields.map((field) => {
+        {normalizedFields.map((field) => {
           const inputId = `external-${field.name}`;
           const value = values[field.name];
           return (
@@ -154,4 +197,4 @@ export default function CalendarExternalForm({
   );
 }
 
-export { DEFAULT_FIELDS };
+export { DEFAULT_FIELDS, SUPPORTED_FIELD_TYPES as SUPPORTED_EXTERNAL_FORM_FIELD_TYPES };

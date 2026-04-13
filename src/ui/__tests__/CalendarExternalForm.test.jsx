@@ -48,4 +48,22 @@ describe('CalendarExternalForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('network failed');
   });
+
+  it('throws when adapter does not implement submitEvent', () => {
+    expect(() => render(<CalendarExternalForm adapter={{}} />)).toThrow(
+      'CalendarExternalForm adapter must define submitEvent(payload, context).',
+    );
+  });
+
+  it('throws on duplicate field names', () => {
+    expect(() => render(
+      <CalendarExternalForm
+        adapter={{ submitEvent: vi.fn(async () => ({})) }}
+        fields={[
+          { name: 'title', label: 'Title' },
+          { name: 'title', label: 'Title duplicate' },
+        ]}
+      />, 
+    )).toThrow('Duplicate field name: title');
+  });
 });
