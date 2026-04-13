@@ -39,6 +39,10 @@ Deliver a complete "Add Schedule" workflow that uses reusable schedule templates
 - Core callbacks (`onEventSave`) fire for generated events.
 - Tests cover template selection and instantiate callback payload.
 
+### Phase 1 kickoff notes (April 13, 2026)
+- Added `WorksCalendar` integration coverage ensuring the `Add Schedule` action only appears when visible schedule templates exist.
+- Added a focused flow test that opens the schedule dialog, submits template generation, and verifies `onEventSave` receives generated master payloads.
+
 ### Phase 0 kickoff notes (April 13, 2026)
 - Added a dedicated recurring expansion baseline test suite at `src/core/engine/__tests__/recurringPhase0Baseline.test.ts`.
 - Locked deterministic occurrence ID behavior across repeated expansion calls for the same query window.
