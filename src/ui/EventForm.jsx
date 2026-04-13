@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X, Plus } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { BUILT_IN_EVENT_TEMPLATES, getEventTemplateById } from '../core/engine/recurrence/templates.ts';
 import styles from './EventForm.module.css';
 
 const BUILT_IN_CATEGORIES = [];
@@ -18,32 +19,6 @@ const RECURRENCE_PRESETS = [
   { id: 'monthlyDate', label: 'Monthly on start date' },
   { id: 'custom', label: 'Custom RRULE' },
 ];
-const EVENT_TEMPLATES = [
-  {
-    id: 'none',
-    label: 'Blank event',
-    defaults: null,
-  },
-  {
-    id: 'dailyStandup',
-    label: 'Daily standup',
-    defaults: {
-      title:           'Daily standup',
-      durationMinutes: 15,
-      recurrencePreset:'weekdays',
-    },
-  },
-  {
-    id: 'weekly1on1',
-    label: 'Weekly 1:1',
-    defaults: {
-      title:           'Weekly 1:1',
-      durationMinutes: 30,
-      recurrencePreset:'weekly',
-    },
-  },
-];
-
 function toDatetimeLocal(date) {
   if (!date) return '';
   try {
@@ -132,14 +107,22 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
 
   function applyTemplate(nextTemplateId) {
     setTemplateId(nextTemplateId);
-    const template = EVENT_TEMPLATES.find(t => t.id === nextTemplateId);
+    const template = getEventTemplateById(nextTemplateId);
     if (!template?.defaults) return;
     setValues((v) => {
       const startDate = fromDatetimeLocal(v.start);
-      const next = { ...v };
+      const next = {
+        ...v,
+        meta: {
+          ...(v.meta ?? {}),
+          templateId: template.id,
+          templateVersion: template.version,
+        },
+      };
       if (template.defaults.title) next.title = template.defaults.title;
       if (template.defaults.category) next.category = template.defaults.category;
       if (template.defaults.resource) next.resource = template.defaults.resource;
+      if (template.defaults.color) next.color = template.defaults.color;
       if (typeof template.defaults.allDay === 'boolean') next.allDay = template.defaults.allDay;
       if (startDate && Number.isFinite(template.defaults.durationMinutes)) {
         const nextEnd = new Date(startDate.getTime() + template.defaults.durationMinutes * 60 * 1000);
@@ -211,7 +194,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
           <div className={styles.field}>
             <label className={styles.label}>Template</label>
             <select className={styles.select} value={templateId} onChange={e => applyTemplate(e.target.value)}>
-              {EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              {BUILT_IN_EVENT_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
             </select>
           </div>
 

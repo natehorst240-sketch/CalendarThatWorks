@@ -42,7 +42,7 @@ describe('EventForm recurrence controls', () => {
   });
 
   it('applies the Daily standup template defaults', () => {
-    renderForm({
+    const { onSave } = renderForm({
       event: {
         title: '',
       },
@@ -56,5 +56,12 @@ describe('EventForm recurrence controls', () => {
 
     expect(screen.getByPlaceholderText('Event title')).toHaveValue('Daily standup');
     expect(recurrenceSelect).toHaveValue('weekdays');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].meta).toMatchObject({
+      templateId: 'dailyStandup',
+      templateVersion: 1,
+    });
   });
 });
