@@ -58,34 +58,67 @@ import 'works-calendar/styles/ocean'; // optional theme CSS
 
 ---
 
-## WorksCalendar props (core)
+## WorksCalendar props reference
+
+### Data & loading
 
 | Prop | Type | Description |
 |---|---|---|
 | `events` | `WorksCalendarEvent[]` | Static event array source. |
-| `fetchEvents` | `(params) => Promise<WorksCalendarEvent[]>` | Async range-based loading; merged with `events`. |
-| `calendarId` | `string` | Namespaces local state (owner config, saved views, sources). |
-| `ownerPassword` | `string` | Password for owner config access. |
-| `theme` | `ThemeId` | Visual theme id (`light`, `dark`, etc.). |
-| `showAddButton` | `boolean` | Enables add-event CTA (owner mode always can add). |
-| `filterSchema` | `FilterField[]` | Extend/replace default filters with custom dimensions. |
-| `employees` | `Employee[]` | Resources used in schedule/timeline modes. |
-| `blockedWindows` | `BlockedWindow[]` | Hard-block time ranges for validation. |
-| `supabaseUrl` / `supabaseKey` | `string` | Enables realtime subscriptions. |
+| `fetchEvents` | `(params: FetchEventsParams) => Promise<WorksCalendarEvent[]>` | Async range-based loading when view window changes. |
+| `icalFeeds` | `ICalFeed[]` | Subscribe to one or more `.ics` feeds and merge into visible events. |
+| `scheduleTemplates` | `ScheduleTemplate[]` | Inline templates exposed in **Add Schedule** flow. |
+| `scheduleTemplateAdapter` | `ScheduleTemplateAdapter` | Backend adapter for listing/creating/deleting templates. |
+| `scheduleInstantiationLimits` | `ScheduleInstantiationLimits` | Guardrails for preview/create expansion volume. |
+| `onScheduleTemplateAnalytics` | `(event: ScheduleTemplateAnalyticsEvent) => void` | Optional analytics sink for schedule-template lifecycle telemetry. |
+
+### Identity, owner config, and notes
+
+| Prop | Type | Description |
+|---|---|---|
+| `calendarId` | `string` | Namespaces local state (`default` when omitted). |
+| `ownerPassword` | `string` | Password for owner configuration access. |
+| `onConfigSave` | `(config: CalendarConfig) => void` | Called when owner config is changed/saved. |
+| `notes` | `Record<string, Note>` | External notes state keyed by note id. |
+| `onNoteSave` | `(note: Partial<Note>) => void` | Persist note create/update from hover card/editor flows. |
+| `onNoteDelete` | `(noteId: string) => void` | Delete note callback. |
+
+### Event interaction callbacks
+
+| Prop | Type | Description |
+|---|---|---|
+| `onEventClick` | `(event: NormalizedEvent) => void` | Fired when user clicks an event. |
+| `onEventSave` | `(event: WorksCalendarEvent) => void` | Create/edit persistence callback. |
+| `onEventMove` | `(event, newStart, newEnd) => void` | Drag/move callback; falls back to `onEventSave` if omitted. |
+| `onEventResize` | `(event, newStart, newEnd) => void` | Resize callback; falls back to `onEventSave` if omitted. |
+| `onEventDelete` | `(eventId: string) => void` | Delete callback. |
+| `onDateSelect` | `(start: Date, end: Date) => void` | Empty-range selection callback. |
+| `onImport` | `(events: WorksCalendarEvent[]) => void` | Called after drag/drop/feed import actions. |
+
+### Realtime + validation + appearance
+
+| Prop | Type | Description |
+|---|---|---|
+| `supabaseUrl` / `supabaseKey` | `string` | Enables realtime event subscriptions. |
 | `supabaseTable` / `supabaseFilter` | `string` | Controls realtime source table and row filter. |
-| `renderToolbar` | `(api) => ReactNode` | Custom toolbar render hook. |
-| `renderFilterBar` | `(ctx) => ReactNode` | Replace default filter bar UI. |
-| `renderSavedViewsBar` | `(ctx) => ReactNode` | Replace default saved-views bar UI. |
+| `blockedWindows` | `BlockedWindow[]` | Hard-block windows used by built-in validation. |
+| `theme` | `ThemeId` | Visual theme id (`light`, `dark`, `aviation`, `soft`, `minimal`, `corporate`, `forest`, `ocean`). |
+| `colorRules` | `ColorRule[]` | Conditional color overrides (predicate or field/value rules). |
+| `businessHours` | `BusinessHours` | Defines business-day shading and validation context. |
+
+### Rendering, composition, and UI toggles
+
+| Prop | Type | Description |
+|---|---|---|
 | `renderEvent` | `(event, context) => ReactNode` | Custom event content renderer. |
-| `renderHoverCard` | `(event, onClose) => ReactNode` | Custom hover card renderer. |
-| `onEventSave` | `(event) => void` | Create/edit persistence callback. |
-| `onEventMove` | `(event, newStart, newEnd) => void` | Drag move callback. |
-| `onEventResize` | `(event, newStart, newEnd) => void` | Resize callback. |
-| `onEventDelete` | `(eventId) => void` | Delete callback. |
-| `onDateSelect` | `(start, end) => void` | Empty-range select callback. |
-| `onImport` | `(events) => void` | Receives imported event payloads. |
+| `renderHoverCard` | `(event, onClose) => ReactNode` | Replace default hover card. |
+| `renderToolbar` | `(api: CalendarApi) => ReactNode` | Replace full toolbar with custom controls. |
+| `emptyState` | `ReactNode` | Custom empty state when filtered result set is empty. |
+| `showAddButton` | `boolean` | Enables add-event CTA in non-owner mode. |
+| `ref` | `React.Ref<CalendarApi>` | Imperative API handle (`navigateTo`, `setView`, `addEvent`, etc.). |
 
 For full typings, see `src/index.d.ts`.
+
 
 ---
 
@@ -148,19 +181,48 @@ Examples:
 - [`examples/external-form.jsx`](./examples/external-form.jsx)
 - [`examples/microsoft-365/Microsoft365ExternalFormExample.jsx`](./examples/microsoft-365/Microsoft365ExternalFormExample.jsx)
 
+## Feature demos (copy/paste)
+
+Run all demos:
+
+```bash
+npm run examples
+```
+
+Focused examples:
+
+| Feature | Example file |
+|---|---|
+| Setup Wizard onboarding flow | [`examples/setup-wizard.jsx`](./examples/setup-wizard.jsx) |
+| Advanced smart views / nested filters | [`examples/advanced-filters.jsx`](./examples/advanced-filters.jsx) |
+| DataAdapter with local persistence | [`examples/data-adapter-local.jsx`](./examples/data-adapter-local.jsx) |
+| DataAdapter with Microsoft 365 | [`examples/data-adapter-microsoft365.jsx`](./examples/data-adapter-microsoft365.jsx) |
+| Standalone CalendarExternalForm | [`examples/external-form.jsx`](./examples/external-form.jsx) |
+
 ## Theming
 
-Theme css bundles:
+1. Import base styles once:
 
 ```jsx
 import 'works-calendar/styles';
-import 'works-calendar/styles/forest';
+```
+
+2. Optionally import a preset bundle:
+
+```jsx
+import 'works-calendar/styles/ocean';
+```
+
+3. Pass the matching `theme` prop:
+
+```jsx
+<WorksCalendar theme="ocean" />
 ```
 
 Available theme ids:
 `light`, `dark`, `aviation`, `soft`, `minimal`, `corporate`, `forest`, `ocean`
 
-You can also combine theme selection with owner config defaults.
+You can combine theme selection with owner config defaults from the Setup Wizard.
 
 ## Owner Config & Security Notes
 
