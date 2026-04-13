@@ -106,6 +106,79 @@ Adapter contract:
 - per-host transform/validate hooks
 - adapter-level error handling for network/backend failures
 
+## Shift coverage tracking (Schedule view)
+
+When the Schedule (Timeline) view is used with an `employees` array, on-call
+and on-shift events gain a built-in coverage workflow — no extra props required.
+
+### How it works
+
+| Step | Action | Visual result |
+|------|--------|---------------|
+| 1 | Click **▾** on any on-call pill | Dropdown: _🏖 Mark as PTO_ / _🚫 Mark as Unavailable_ |
+| 2 | Choose a status | Pill shows a **"PTO"** or **"Unavail."** badge; button turns amber **⚠** |
+| 3 | Click the pulsing red **"⚠ Shift not covered / Available"** pill | Coverage picker popover lists all other employees |
+| 4 | Select an employee | Red pill → green **"✓ Shift covered by [Name]"** |
+| 5 | — | Covering employee's row gains an indigo **"📞 On call (covering for [Name])"** pill |
+
+Clicking **✕ Clear Status** in the dropdown resets both the status and any
+assigned coverage in one step.
+
+### Where state lives
+
+Coverage is stored in each event's `meta` field so it travels with normal
+`onEventSave` callbacks and survives engine undo/redo:
+
+```js
+// event.meta after marking as PTO + assigning Ben as cover:
+{
+  shiftStatus: 'pto',    // 'pto' | 'unavailable'
+  coveredBy:   'ben',    // employee id
+}
+```
+
+### Persisting to your backend
+
+```jsx
+<WorksCalendar
+  events={events}
+  employees={team}
+  initialView="schedule"
+  onEventSave={(ev) => {
+    if (ev.meta?.shiftStatus) {
+      myApi.updateShift(ev.id, {
+        status:    ev.meta.shiftStatus,
+        coveredBy: ev.meta.coveredBy ?? null,
+      });
+    }
+  }}
+/>
+```
+
+### Pre-seeding coverage from your backend
+
+Pass coverage data via the `meta` field when supplying events:
+
+```js
+const events = [
+  {
+    id: 'shift-42',
+    title: 'On Call',
+    resource: 'alice',
+    category: 'on-call',
+    start: new Date('2026-05-01'),
+    end:   new Date('2026-05-07'),
+    allDay: true,
+    meta: {
+      shiftStatus: 'pto',
+      coveredBy:   'ben',   // shows green pill + covering-for pill immediately
+    },
+  },
+];
+```
+
+See `examples/08-ShiftCoverageTracking.jsx` for a full runnable example.
+
 ## Microsoft 365 example
 
 A Microsoft Graph adapter example is included at `examples/microsoft-365/`.

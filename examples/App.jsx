@@ -9,13 +9,14 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { GettingStarted }    from './01-GettingStarted.jsx';
-import { BasicCalendar }     from './02-BasicCalendar.jsx';
-import { WithFilters }       from './03-WithFilters.jsx';
-import { TimelineScheduler } from './04-TimelineScheduler.jsx';
-import { CustomFilters }     from './05-CustomFilters.jsx';
-import { TeamCalendar }      from './06-TeamCalendar.jsx';
-import { MultiSource }       from './07-MultiSource.jsx';
+import { GettingStarted }       from './01-GettingStarted.jsx';
+import { BasicCalendar }        from './02-BasicCalendar.jsx';
+import { WithFilters }          from './03-WithFilters.jsx';
+import { TimelineScheduler }    from './04-TimelineScheduler.jsx';
+import { CustomFilters }        from './05-CustomFilters.jsx';
+import { TeamCalendar }         from './06-TeamCalendar.jsx';
+import { MultiSource }          from './07-MultiSource.jsx';
+import { ShiftCoverageTracking } from './08-ShiftCoverageTracking.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
@@ -67,6 +68,13 @@ const EXAMPLES = [
     tag:   'Sources + timeline',
     desc:  'Timeline view with four simulated calendar feeds. Filter by source, resource, or combine both.',
     component: MultiSource,
+  },
+  {
+    id:    'shift-coverage',
+    label: 'Shift Coverage Tracking',
+    tag:   'PTO · coverage · on-call',
+    desc:  'Mark on-call shifts as PTO or Unavailable, pick up uncovered shifts, and track who is covering for whom.',
+    component: ShiftCoverageTracking,
   },
 ];
 
@@ -152,6 +160,7 @@ function SourceHint({ id }) {
     'custom-filters':  '05-CustomFilters.jsx',
     'team-calendar':   '06-TeamCalendar.jsx',
     'multi-source':    '07-MultiSource.jsx',
+    'shift-coverage':  '08-ShiftCoverageTracking.jsx',
   }[id];
 
   return (
