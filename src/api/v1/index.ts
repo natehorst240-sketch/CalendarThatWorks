@@ -24,6 +24,9 @@ export * from './serialization.js';
 // ── Data-shape converters (CalendarEventV1 ↔ EngineEvent) ────────────────────
 export * from './converters.js';
 
+// ── Schedule template scaffolding ────────────────────────────────────────────
+export * from './templates.js';
+
 // ── Engine class + initialiser ────────────────────────────────────────────────
 export { CalendarEngine, createInitialState } from '../../core/engine/CalendarEngine.js';
 

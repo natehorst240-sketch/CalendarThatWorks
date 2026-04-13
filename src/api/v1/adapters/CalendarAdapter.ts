@@ -22,6 +22,11 @@
  */
 
 import type { CalendarEventV1 } from '../types.js';
+import type {
+  ScheduleTemplateV1,
+  ScheduleInstantiationRequestV1,
+  ScheduleInstantiationResultV1,
+} from '../templates.js';
 
 // ─── Change notification types ────────────────────────────────────────────────
 
@@ -112,4 +117,13 @@ export interface CalendarAdapter {
    * The string is suitable for file download or transmission to another system.
    */
   exportFeed?(events: CalendarEventV1[]): Promise<string>;
+
+  /** List reusable schedule templates (for Add Schedule flows). */
+  listScheduleTemplates?(): Promise<ScheduleTemplateV1[]>;
+
+  /** Create a schedule template. */
+  createScheduleTemplate?(template: Omit<ScheduleTemplateV1, 'id'>): Promise<ScheduleTemplateV1>;
+
+  /** Instantiate a schedule template into concrete master events. */
+  instantiateScheduleTemplate?(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1>;
 }

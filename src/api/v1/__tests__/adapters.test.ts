@@ -39,6 +39,9 @@ describe('CalendarAdapter interface', () => {
     expect(typeof adapter.deleteEvent).toBe('function');
     expect(typeof adapter.subscribe).toBe('function');
     expect(typeof adapter.exportFeed).toBe('function');
+    expect(typeof adapter.listScheduleTemplates).toBe('function');
+    expect(typeof adapter.createScheduleTemplate).toBe('function');
+    expect(typeof adapter.instantiateScheduleTemplate).toBe('function');
   });
 
   it('SupabaseAdapter implements CalendarAdapter', () => {
@@ -224,6 +227,39 @@ describe('RestAdapter.exportFeed', () => {
     const json = await a.exportFeed([ev()]);
     const parsed = JSON.parse(json) as CalendarEventV1[];
     expect(parsed[0].title).toBe('Meeting');
+  });
+});
+
+
+describe('RestAdapter schedule template scaffolding', () => {
+  it('GETs schedule templates', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ id: 'sched-1', name: 'Clinic', entries: [] }] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      const templates = await a.listScheduleTemplates();
+      expect(stub.mock.calls[0][0]).toContain('/templates/schedules');
+      expect(templates[0].id).toBe('sched-1');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('POSTs schedule template instantiation request', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ templateId: 'sched-1', generated: [] }) });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      const result = await a.instantiateScheduleTemplate({ templateId: 'sched-1', anchor: S.toISOString() });
+      const [url, opts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/schedules/instantiate');
+      expect(opts.method).toBe('POST');
+      expect(result.templateId).toBe('sched-1');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });
 

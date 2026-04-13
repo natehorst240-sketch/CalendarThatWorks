@@ -34,6 +34,11 @@
 
 import type { CalendarAdapter, AdapterChangeCallback, AdapterUnsubscribe } from './CalendarAdapter.js';
 import type { CalendarEventV1 } from '../types.js';
+import type {
+  ScheduleTemplateV1,
+  ScheduleInstantiationRequestV1,
+  ScheduleInstantiationResultV1,
+} from '../templates.js';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +76,12 @@ export interface RestAdapterOptions {
    * Default: 60_000 (1 minute).  Set to null to disable polling.
    */
   readonly pollInterval?: number | null;
+
+  /** Optional base URL override for template endpoints. Default: `${baseUrl}/templates/schedules`. */
+  readonly scheduleTemplatesUrl?: string;
+
+  /** Optional endpoint override for schedule instantiation. Default: `${baseUrl}/schedules/instantiate`. */
+  readonly scheduleInstantiateUrl?: string;
 }
 
 // ─── Adapter ─────────────────────────────────────────────────────────────────
@@ -83,6 +94,8 @@ export class RestAdapter implements CalendarAdapter {
   private readonly _fromResponse: (raw: Record<string, unknown>) => CalendarEventV1;
   private readonly _toRequest: (ev: CalendarEventV1 | Partial<CalendarEventV1>) => Record<string, unknown>;
   private readonly _pollInterval: number | null;
+  private readonly _scheduleTemplatesUrl: string;
+  private readonly _scheduleInstantiateUrl: string;
 
   constructor(options: RestAdapterOptions) {
     this._base        = options.baseUrl.replace(/\/$/, '');
@@ -92,6 +105,8 @@ export class RestAdapter implements CalendarAdapter {
     this._fromResponse = options.fromResponse ?? (raw => raw as unknown as CalendarEventV1);
     this._toRequest   = options.toRequest   ?? (ev  => ev  as unknown as Record<string, unknown>);
     this._pollInterval = options.pollInterval !== undefined ? options.pollInterval : 60_000;
+    this._scheduleTemplatesUrl = options.scheduleTemplatesUrl ?? `${this._base}/templates/schedules`;
+    this._scheduleInstantiateUrl = options.scheduleInstantiateUrl ?? `${this._base}/schedules/instantiate`;
   }
 
   // ── loadRange ───────────────────────────────────────────────────────────────
@@ -182,6 +197,37 @@ export class RestAdapter implements CalendarAdapter {
       clearInterval(timer);
       controller.abort();
     };
+  }
+
+  // ── schedule templates ─────────────────────────────────────────────────────
+
+  async listScheduleTemplates(): Promise<ScheduleTemplateV1[]> {
+    const res = await fetch(this._scheduleTemplatesUrl, {
+      method: 'GET',
+      headers: this._headers,
+    });
+    if (!res.ok) throw new Error(`RestAdapter.listScheduleTemplates: ${res.status} ${res.statusText}`);
+    return await res.json() as ScheduleTemplateV1[];
+  }
+
+  async createScheduleTemplate(template: Omit<ScheduleTemplateV1, 'id'>): Promise<ScheduleTemplateV1> {
+    const res = await fetch(this._scheduleTemplatesUrl, {
+      method: 'POST',
+      headers: this._headers,
+      body: JSON.stringify(template),
+    });
+    if (!res.ok) throw new Error(`RestAdapter.createScheduleTemplate: ${res.status} ${res.statusText}`);
+    return await res.json() as ScheduleTemplateV1;
+  }
+
+  async instantiateScheduleTemplate(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1> {
+    const res = await fetch(this._scheduleInstantiateUrl, {
+      method: 'POST',
+      headers: this._headers,
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) throw new Error(`RestAdapter.instantiateScheduleTemplate: ${res.status} ${res.statusText}`);
+    return await res.json() as ScheduleInstantiationResultV1;
   }
 
   // ── exportFeed ──────────────────────────────────────────────────────────────
