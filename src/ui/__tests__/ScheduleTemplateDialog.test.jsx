@@ -19,10 +19,12 @@ const templates = [
 describe('ScheduleTemplateDialog', () => {
   it('submits selected template and overrides', () => {
     const onInstantiate = vi.fn();
+    const onPreview = vi.fn(() => ({ generated: templates[0].entries, conflicts: [], error: '' }));
 
     render(
       <ScheduleTemplateDialog
         templates={templates}
+        onPreview={onPreview}
         onInstantiate={onInstantiate}
         onClose={() => {}}
       />,
@@ -39,5 +41,25 @@ describe('ScheduleTemplateDialog', () => {
       category: 'On-call',
     });
     expect(onInstantiate.mock.calls[0][0].anchor).toBeInstanceOf(Date);
+    expect(onPreview).toHaveBeenCalled();
+  });
+
+  it('shows an error and blocks submit when anchor is invalid', () => {
+    const onInstantiate = vi.fn();
+
+    render(
+      <ScheduleTemplateDialog
+        templates={templates}
+        onPreview={() => ({ generated: [], conflicts: [], error: '' })}
+        onInstantiate={onInstantiate}
+        onClose={() => {}}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Anchor start'), { target: { value: 'bad' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid anchor start date/time.');
+    expect(screen.getByRole('button', { name: 'Create schedule' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+    expect(onInstantiate).not.toHaveBeenCalled();
   });
 });
