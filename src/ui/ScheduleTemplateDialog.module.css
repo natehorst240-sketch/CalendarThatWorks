@@ -1,0 +1,79 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.dialog {
+  width: min(540px, 92vw);
+  background: var(--wc-panel, #fff);
+  border: 1px solid var(--wc-border, #e5e7eb);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+}
+
+.header { margin-bottom: 8px; }
+.title { margin: 0; font-size: 1.1rem; }
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--wc-muted, #4b5563);
+}
+
+.input,
+.select {
+  border: 1px solid var(--wc-border, #d1d5db);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  background: var(--wc-bg, #fff);
+  color: var(--wc-text, #111827);
+}
+
+.meta {
+  font-size: 0.85rem;
+  color: var(--wc-muted, #6b7280);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cancelBtn,
+.submitBtn {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.submitBtn {
+  background: #2563eb;
+  color: white;
+}
+
+.emptyState {
+  font-size: 0.9rem;
+  color: var(--wc-muted, #6b7280);
+  padding: 8px 0;
+}

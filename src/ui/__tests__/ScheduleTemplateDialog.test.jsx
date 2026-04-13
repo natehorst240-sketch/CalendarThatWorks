@@ -1,0 +1,43 @@
+// @vitest-environment happy-dom
+
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import ScheduleTemplateDialog from '../ScheduleTemplateDialog.jsx';
+
+const templates = [
+  {
+    id: 'sched-ops',
+    name: 'Ops Coverage',
+    entries: [
+      { title: 'Primary', startOffsetMinutes: 0, durationMinutes: 480, rrule: 'FREQ=DAILY' },
+      { title: 'Backup', startOffsetMinutes: 60, durationMinutes: 480, rrule: 'FREQ=DAILY' },
+    ],
+  },
+];
+
+describe('ScheduleTemplateDialog', () => {
+  it('submits selected template and overrides', () => {
+    const onInstantiate = vi.fn();
+
+    render(
+      <ScheduleTemplateDialog
+        templates={templates}
+        onInstantiate={onInstantiate}
+        onClose={() => {}}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Resource override (optional)'), { target: { value: 'Ops Team' } });
+    fireEvent.change(screen.getByLabelText('Category override (optional)'), { target: { value: 'On-call' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+
+    expect(onInstantiate).toHaveBeenCalledTimes(1);
+    expect(onInstantiate.mock.calls[0][0]).toMatchObject({
+      templateId: 'sched-ops',
+      resource: 'Ops Team',
+      category: 'On-call',
+    });
+    expect(onInstantiate.mock.calls[0][0].anchor).toBeInstanceOf(Date);
+  });
+});

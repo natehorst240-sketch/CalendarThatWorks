@@ -287,6 +287,27 @@ export interface FetchEventsParams {
   signal?: AbortSignal;
 }
 
+export interface ScheduleTemplateEntry {
+  id?: string;
+  title: string;
+  startOffsetMinutes: number;
+  durationMinutes: number;
+  allDay?: boolean;
+  category?: string;
+  resource?: string;
+  rrule?: string;
+  color?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface ScheduleTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  timezone?: string;
+  entries: ScheduleTemplateEntry[];
+}
+
 // ─── Imperative API ────────────────────────────────────────────────────────────
 
 export interface CalendarApi {
@@ -331,6 +352,8 @@ export interface WorksCalendarProps {
   fetchEvents?: (params: FetchEventsParams) => Promise<WorksCalendarEvent[]>;
   /** Live iCal feed URLs to subscribe to. */
   icalFeeds?: ICalFeed[];
+  /** Optional reusable templates shown in the Add Schedule flow. */
+  scheduleTemplates?: ScheduleTemplate[];
 
   // ── Identity ──
   /** Namespaces localStorage (config, profiles). Default: 'default'. */
