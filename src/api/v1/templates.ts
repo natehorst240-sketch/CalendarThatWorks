@@ -44,6 +44,13 @@ export interface ScheduleTemplateV1 {
   readonly entries: readonly ScheduleTemplateEntryV1[];
 }
 
+export interface ScheduleTemplateViewerContext {
+  readonly isOwner?: boolean;
+  readonly role?: 'admin' | 'user' | 'readonly';
+  readonly teamId?: string | null;
+  readonly userId?: string | null;
+}
+
 export interface ScheduleInstantiationRequestV1 {
   readonly templateId?: string;
   readonly anchor: Date | string | number;
@@ -56,6 +63,16 @@ export interface ScheduleInstantiationRequestV1 {
 export interface ScheduleInstantiationResultV1 {
   readonly templateId: string;
   readonly generated: readonly CalendarEventV1[];
+}
+
+export function canViewScheduleTemplate(
+  template: ScheduleTemplateV1,
+  viewer: ScheduleTemplateViewerContext = {},
+): boolean {
+  const visibility = template.visibility ?? 'org';
+  if (visibility === 'org') return true;
+  if (visibility === 'team') return viewer.role === 'admin' || viewer.role === 'user' || !!viewer.isOwner;
+  return !!viewer.isOwner || viewer.role === 'admin';
 }
 
 function asDate(input: Date | string | number): Date {

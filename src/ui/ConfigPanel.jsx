@@ -10,6 +10,7 @@ const TABS = [
   { id: 'eventFields', label: 'Event Fields' },
   { id: 'display',     label: 'Display' },
   { id: 'feeds',       label: 'Feeds' },
+  { id: 'templates',   label: 'Templates' },
   { id: 'access',      label: 'Access' },
 ];
 
@@ -17,6 +18,7 @@ export default function ConfigPanel({
   config, categories, onUpdate, onClose,
   // Source store props (optional — omitted when owner has no source store)
   sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
+  scheduleTemplates, onCreateScheduleTemplate, onDeleteScheduleTemplate, scheduleTemplateError,
 }) {
   const [tab, setTab] = useState('hoverCard');
   const trapRef = useFocusTrap(onClose);
@@ -55,9 +57,105 @@ export default function ConfigPanel({
               onUpdate={onUpdateSource}
             />
           )}
+          {tab === 'templates'   && (
+            <TemplateTab
+              templates={scheduleTemplates ?? []}
+              onCreate={onCreateScheduleTemplate}
+              onDelete={onDeleteScheduleTemplate}
+              error={scheduleTemplateError}
+            />
+          )}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TemplateTab({ templates, onCreate, onDelete, error }) {
+  const [name, setName] = useState('');
+  const [visibility, setVisibility] = useState('team');
+  const [title, setTitle] = useState('');
+  const [startOffsetMinutes, setStartOffsetMinutes] = useState(0);
+  const [durationMinutes, setDurationMinutes] = useState(60);
+  const [rrule, setRrule] = useState('FREQ=DAILY');
+
+  function resetForm() {
+    setName('');
+    setVisibility('team');
+    setTitle('');
+    setStartOffsetMinutes(0);
+    setDurationMinutes(60);
+    setRrule('FREQ=DAILY');
+  }
+
+  async function handleCreate() {
+    if (!onCreate) return;
+    const cleanName = name.trim();
+    const cleanTitle = title.trim();
+    if (!cleanName || !cleanTitle) return;
+    await onCreate({
+      name: cleanName,
+      visibility,
+      entries: [{
+        title: cleanTitle,
+        startOffsetMinutes: Number(startOffsetMinutes) || 0,
+        durationMinutes: Math.max(1, Number(durationMinutes) || 1),
+        rrule: rrule.trim() || undefined,
+      }],
+    });
+    resetForm();
+  }
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>Create and govern schedule templates for Add Schedule flows.</p>
+
+      {error && <div className={styles.sectionDesc} role="alert">{error}</div>}
+
+      <label className={styles.formRow}>
+        <span>Template name</span>
+        <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Morning coverage" />
+      </label>
+      <label className={styles.formRow}>
+        <span>Visibility</span>
+        <select className={styles.select} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+          <option value="private">Private</option>
+          <option value="team">Team</option>
+          <option value="org">Org</option>
+        </select>
+      </label>
+      <label className={styles.formRow}>
+        <span>Default entry title</span>
+        <input className={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Primary shift" />
+      </label>
+      <label className={styles.formRow}>
+        <span>Offset (minutes)</span>
+        <input className={styles.input} type="number" value={startOffsetMinutes} onChange={(e) => setStartOffsetMinutes(e.target.value)} />
+      </label>
+      <label className={styles.formRow}>
+        <span>Duration (minutes)</span>
+        <input className={styles.input} type="number" min={1} value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} />
+      </label>
+      <label className={styles.formRow}>
+        <span>RRULE</span>
+        <input className={styles.input} value={rrule} onChange={(e) => setRrule(e.target.value)} />
+      </label>
+      <button className={styles.addFieldBtn} onClick={handleCreate} disabled={!onCreate}>Create template</button>
+
+      {templates.map((template) => (
+        <div key={template.id} className={styles.fieldRow}>
+          <div>
+            <strong>{template.name}</strong>
+            <div className={styles.sectionDesc}>
+              {template.visibility ?? 'org'} · {template.entries?.length ?? 0} entr{(template.entries?.length ?? 0) === 1 ? 'y' : 'ies'}
+            </div>
+          </div>
+          <button className={styles.removeBtn} onClick={() => onDelete?.(template.id)} disabled={!onDelete}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

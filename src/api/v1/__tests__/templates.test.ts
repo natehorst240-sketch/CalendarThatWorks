@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { instantiateScheduleTemplate, type ScheduleTemplateV1 } from '../templates.js';
+import { canViewScheduleTemplate, instantiateScheduleTemplate, type ScheduleTemplateV1 } from '../templates.js';
 
 const template: ScheduleTemplateV1 = {
   id: 'sched-team-oncall',
@@ -34,5 +34,15 @@ describe('instantiateScheduleTemplate', () => {
       scheduleTemplateEntryId: 'primary',
       generatedBy: 'wizard',
     });
+  });
+});
+
+describe('canViewScheduleTemplate', () => {
+  it('enforces private/team/org visibility', () => {
+    expect(canViewScheduleTemplate({ ...template, visibility: 'org' }, { role: 'readonly' })).toBe(true);
+    expect(canViewScheduleTemplate({ ...template, visibility: 'team' }, { role: 'user' })).toBe(true);
+    expect(canViewScheduleTemplate({ ...template, visibility: 'team' }, { role: 'readonly' })).toBe(false);
+    expect(canViewScheduleTemplate({ ...template, visibility: 'private' }, { role: 'user' })).toBe(false);
+    expect(canViewScheduleTemplate({ ...template, visibility: 'private' }, { role: 'admin' })).toBe(true);
   });
 });

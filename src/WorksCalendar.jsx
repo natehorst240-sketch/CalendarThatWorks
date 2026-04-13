@@ -47,7 +47,7 @@ import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
 import { exportToExcel }      from './export/excelExport.js';
-import { instantiateScheduleTemplate } from './api/v1/templates.ts';
+import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
 
@@ -93,6 +93,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     icalFeeds,
     onImport,
     scheduleTemplates = [],
+    scheduleTemplateAdapter,
 
     // ── Identity ──
     calendarId              = 'default',
@@ -352,6 +353,37 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [importOpen,     setImportOpen]     = useState(false);
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
+  const [remoteTemplates, setRemoteTemplates] = useState([]);
+  const [templateError, setTemplateError] = useState('');
+
+  const reloadRemoteTemplates = useCallback(async () => {
+    if (!scheduleTemplateAdapter?.listScheduleTemplates) return;
+    try {
+      const templates = await scheduleTemplateAdapter.listScheduleTemplates();
+      setRemoteTemplates(Array.isArray(templates) ? templates : []);
+      setTemplateError('');
+    } catch {
+      setTemplateError('Unable to load schedule templates from adapter.');
+    }
+  }, [scheduleTemplateAdapter]);
+
+  useEffect(() => {
+    reloadRemoteTemplates();
+  }, [reloadRemoteTemplates]);
+
+  const mergedScheduleTemplates = useMemo(() => {
+    const combined = [...scheduleTemplates, ...remoteTemplates];
+    const byId = new Map();
+    combined.forEach((template) => {
+      if (template?.id) byId.set(template.id, template);
+    });
+    return Array.from(byId.values());
+  }, [remoteTemplates, scheduleTemplates]);
+
+  const visibleScheduleTemplates = useMemo(
+    () => mergedScheduleTemplates.filter((template) => canViewScheduleTemplate(template, { role, isOwner: ownerCfg.isOwner })),
+    [mergedScheduleTemplates, ownerCfg.isOwner, role],
+  );
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
@@ -538,7 +570,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [onImport, sourceStore]);
 
   const handleScheduleInstantiate = useCallback((request) => {
-    const template = scheduleTemplates.find(t => t.id === request.templateId);
+    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template || !Array.isArray(template.entries) || template.entries.length === 0) return;
     const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
     if (Number.isNaN(anchor.getTime())) return;
@@ -566,10 +598,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       }, () => onEventSave?.(ev));
     });
     setScheduleOpen(false);
-  }, [applyEngineOp, onEventSave, scheduleTemplates]);
+  }, [applyEngineOp, onEventSave, visibleScheduleTemplates]);
 
   const buildSchedulePreview = useCallback((request) => {
-    const template = scheduleTemplates.find(t => t.id === request.templateId);
+    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
     if (!Array.isArray(template.entries) || template.entries.length === 0) {
       return { generated: [], conflicts: [], error: 'Selected template does not have valid entries.' };
@@ -621,7 +653,29 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     });
 
     return { generated, conflicts, error: '' };
-  }, [scheduleTemplates]);
+  }, [visibleScheduleTemplates]);
+
+  const handleCreateScheduleTemplate = useCallback(async (template) => {
+    if (!scheduleTemplateAdapter?.createScheduleTemplate) return;
+    try {
+      await scheduleTemplateAdapter.createScheduleTemplate(template);
+      await reloadRemoteTemplates();
+      setTemplateError('');
+    } catch {
+      setTemplateError('Unable to create schedule template.');
+    }
+  }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
+
+  const handleDeleteScheduleTemplate = useCallback(async (templateId) => {
+    if (!scheduleTemplateAdapter?.deleteScheduleTemplate) return;
+    try {
+      await scheduleTemplateAdapter.deleteScheduleTemplate(templateId);
+      await reloadRemoteTemplates();
+      setTemplateError('');
+    } catch {
+      setTemplateError('Unable to delete schedule template.');
+    }
+  }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
 
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
@@ -655,7 +709,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }
 
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
-  const hasScheduleTemplates = Array.isArray(scheduleTemplates) && scheduleTemplates.length > 0;
+  const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
@@ -866,7 +920,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         {/* ── Schedule templates ── */}
         {scheduleOpen && (
           <ScheduleTemplateDialog
-            templates={scheduleTemplates}
+            templates={visibleScheduleTemplates}
             onPreview={buildSchedulePreview}
             onInstantiate={handleScheduleInstantiate}
             onClose={() => setScheduleOpen(false)}
@@ -909,6 +963,10 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             onRemoveSource={sourceStore.removeSource}
             onToggleSource={sourceStore.toggleSource}
             onUpdateSource={sourceStore.updateSource}
+            scheduleTemplates={mergedScheduleTemplates}
+            onCreateScheduleTemplate={ownerCfg.isOwner ? handleCreateScheduleTemplate : undefined}
+            onDeleteScheduleTemplate={ownerCfg.isOwner ? handleDeleteScheduleTemplate : undefined}
+            scheduleTemplateError={templateError}
           />
         )}
 

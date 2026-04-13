@@ -124,6 +124,12 @@ export interface CalendarAdapter {
   /** Create a schedule template. */
   createScheduleTemplate?(template: Omit<ScheduleTemplateV1, 'id'>): Promise<ScheduleTemplateV1>;
 
+  /** Update a schedule template. */
+  updateScheduleTemplate?(id: string, patch: Partial<ScheduleTemplateV1>): Promise<ScheduleTemplateV1>;
+
+  /** Delete a schedule template. */
+  deleteScheduleTemplate?(id: string): Promise<void>;
+
   /** Instantiate a schedule template into concrete master events. */
   instantiateScheduleTemplate?(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1>;
 }

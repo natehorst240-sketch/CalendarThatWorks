@@ -304,8 +304,15 @@ export interface ScheduleTemplate {
   id: string;
   name: string;
   description?: string;
+  visibility?: 'private' | 'team' | 'org';
   timezone?: string;
   entries: ScheduleTemplateEntry[];
+}
+
+export interface ScheduleTemplateAdapter {
+  listScheduleTemplates?: () => Promise<ScheduleTemplate[]>;
+  createScheduleTemplate?: (template: Omit<ScheduleTemplate, 'id'>) => Promise<ScheduleTemplate>;
+  deleteScheduleTemplate?: (id: string) => Promise<void>;
 }
 
 // ─── Imperative API ────────────────────────────────────────────────────────────
@@ -354,6 +361,8 @@ export interface WorksCalendarProps {
   icalFeeds?: ICalFeed[];
   /** Optional reusable templates shown in the Add Schedule flow. */
   scheduleTemplates?: ScheduleTemplate[];
+  /** Optional backend adapter for template management and tenant-governed template loading. */
+  scheduleTemplateAdapter?: ScheduleTemplateAdapter;
 
   // ── Identity ──
   /** Namespaces localStorage (config, profiles). Default: 'default'. */

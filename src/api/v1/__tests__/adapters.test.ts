@@ -41,6 +41,8 @@ describe('CalendarAdapter interface', () => {
     expect(typeof adapter.exportFeed).toBe('function');
     expect(typeof adapter.listScheduleTemplates).toBe('function');
     expect(typeof adapter.createScheduleTemplate).toBe('function');
+    expect(typeof adapter.updateScheduleTemplate).toBe('function');
+    expect(typeof adapter.deleteScheduleTemplate).toBe('function');
     expect(typeof adapter.instantiateScheduleTemplate).toBe('function');
   });
 
@@ -257,6 +259,37 @@ describe('RestAdapter schedule template scaffolding', () => {
       expect(url).toContain('/schedules/instantiate');
       expect(opts.method).toBe('POST');
       expect(result.templateId).toBe('sched-1');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('PATCHes a schedule template', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'sched-1', name: 'Updated', entries: [] }) });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      const result = await a.updateScheduleTemplate('sched-1', { name: 'Updated' });
+      const [url, opts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/templates/schedules/sched-1');
+      expect(opts.method).toBe('PATCH');
+      expect(result.name).toBe('Updated');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('DELETEs a schedule template', async () => {
+    const stub = vi.fn().mockResolvedValue({ ok: true });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events' });
+      await a.deleteScheduleTemplate('sched-2');
+      const [url, opts] = stub.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/templates/schedules/sched-2');
+      expect(opts.method).toBe('DELETE');
     } finally {
       globalThis.fetch = origFetch;
     }

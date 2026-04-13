@@ -220,6 +220,24 @@ export class RestAdapter implements CalendarAdapter {
     return await res.json() as ScheduleTemplateV1;
   }
 
+  async updateScheduleTemplate(id: string, patch: Partial<ScheduleTemplateV1>): Promise<ScheduleTemplateV1> {
+    const res = await fetch(`${this._scheduleTemplatesUrl}/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: this._headers,
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new Error(`RestAdapter.updateScheduleTemplate: ${res.status} ${res.statusText}`);
+    return await res.json() as ScheduleTemplateV1;
+  }
+
+  async deleteScheduleTemplate(id: string): Promise<void> {
+    const res = await fetch(`${this._scheduleTemplatesUrl}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: this._headers,
+    });
+    if (!res.ok) throw new Error(`RestAdapter.deleteScheduleTemplate: ${res.status} ${res.statusText}`);
+  }
+
   async instantiateScheduleTemplate(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1> {
     const res = await fetch(this._scheduleInstantiateUrl, {
       method: 'POST',
