@@ -80,4 +80,29 @@ describe('ScheduleTemplateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
     expect(onInstantiate).not.toHaveBeenCalled();
   });
+
+  it('renders conflict details from preview results', () => {
+    render(
+      <ScheduleTemplateDialog
+        templates={templates}
+        onPreview={() => ({
+          generated: templates[0].entries,
+          conflicts: [
+            {
+              index: 0,
+              violations: [
+                { rule: 'overlap', message: 'Overlaps an existing event.' },
+              ],
+            },
+          ],
+          error: '',
+        })}
+        onInstantiate={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('1 conflict')).toBeInTheDocument();
+    expect(screen.getByText('Overlaps an existing event.')).toBeInTheDocument();
+  });
 });

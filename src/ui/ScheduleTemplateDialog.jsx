@@ -64,6 +64,14 @@ export default function ScheduleTemplateDialog({
   }, [anchorError, onPreview, request, selectedTemplate, templateError]);
 
   const submitDisabled = !!(templateError || anchorError || preview.error);
+  const conflictsByIndex = useMemo(() => {
+    const map = new Map();
+    (preview.conflicts ?? []).forEach((conflict) => {
+      if (typeof conflict?.index !== 'number') return;
+      map.set(conflict.index, conflict);
+    });
+    return map;
+  }, [preview.conflicts]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -137,9 +145,23 @@ export default function ScheduleTemplateDialog({
                 </div>
                 <ul className={styles.previewList}>
                   {preview.generated.map((ev, idx) => (
-                    <li key={`${ev.title}-${idx}`} className={styles.previewItem}>
-                      <span>{ev.title ?? '(untitled)'}</span>
-                      <span>{toDatetimeLocal(ev.start)}</span>
+                    <li
+                      key={`${ev.title}-${idx}`}
+                      className={`${styles.previewItem} ${conflictsByIndex.has(idx) ? styles.previewItemConflict : ''}`}
+                    >
+                      <div className={styles.previewSummary}>
+                        <span>{ev.title ?? '(untitled)'}</span>
+                        <span>{toDatetimeLocal(ev.start)}</span>
+                      </div>
+                      {conflictsByIndex.has(idx) && (
+                        <ul className={styles.conflictList}>
+                          {conflictsByIndex.get(idx).violations?.map((violation, vIdx) => (
+                            <li key={`${violation.rule}-${vIdx}`} className={styles.conflictItem}>
+                              {violation.message}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

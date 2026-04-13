@@ -123,8 +123,28 @@
 }
 
 .previewItem {
+  display: grid;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.previewSummary {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 2px 0;
+}
+
+.previewItemConflict {
+  border-left: 3px solid #f59e0b;
+  padding-left: 8px;
+}
+
+.conflictList {
+  margin: 0;
+  padding-left: 18px;
+  color: #92400e;
+}
+
+.conflictItem {
+  font-size: 0.78rem;
 }

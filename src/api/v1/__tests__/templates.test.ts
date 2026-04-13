@@ -35,6 +35,27 @@ describe('instantiateScheduleTemplate', () => {
       generatedBy: 'wizard',
     });
   });
+
+  it('throws on malformed anchor and malformed template entries', () => {
+    expect(() => instantiateScheduleTemplate(template, { anchor: 'bad-anchor' })).toThrow(
+      'Schedule anchor must be a valid date.',
+    );
+
+    const malformedTemplate: ScheduleTemplateV1 = {
+      ...template,
+      entries: [
+        {
+          title: '',
+          startOffsetMinutes: Number.NaN,
+          durationMinutes: Number.NaN,
+        },
+      ],
+    };
+
+    expect(() => instantiateScheduleTemplate(malformedTemplate, { anchor: new Date('2026-04-20T08:00:00.000Z') })).toThrow(
+      'Schedule template entry 1 is missing a valid title.',
+    );
+  });
 });
 
 describe('canViewScheduleTemplate', () => {

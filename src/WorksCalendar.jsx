@@ -612,7 +612,16 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       });
       return;
     }
-    const result = instantiateScheduleTemplate(template, request);
+    let result;
+    try {
+      result = instantiateScheduleTemplate(template, request);
+    } catch {
+      trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
+        reason: 'instantiate-throw',
+        templateId: template.id,
+      });
+      return;
+    }
     if (result.generated.length > resolvedScheduleLimits.createMax) {
       trackScheduleTemplateAnalytics('schedule_instantiate_failed', {
         reason: 'create-limit-exceeded',

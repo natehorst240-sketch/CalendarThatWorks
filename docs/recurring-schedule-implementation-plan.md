@@ -48,10 +48,15 @@ Deliver a complete "Add Schedule" workflow that uses reusable schedule templates
 - Locked deterministic occurrence ID behavior across repeated expansion calls for the same query window.
 - Added explicit regression coverage for `EXDATE` filtering and `maxPerSeries` generation caps.
 
-## Phase 2 — Preview + safety
+## Phase 2 — Preview + safety (started)
 1. Add pre-submit preview list of generated masters.
 2. Highlight obvious conflicts using existing validation pipeline.
 3. Add validation for malformed anchors/template payloads and user-facing errors.
+
+### Phase 2 kickoff notes (April 13, 2026)
+- Added per-entry conflict details in `ScheduleTemplateDialog` preview rows so users can see validation messages before creation.
+- Hardened `instantiateScheduleTemplate` with explicit validation for invalid anchors and malformed schedule template entries.
+- Added regression tests for preview conflict rendering and template/anchor validation failures.
 
 ## Phase 3 — Template management and backend integration
 1. Optional adapter-backed template fetching/creation flows.

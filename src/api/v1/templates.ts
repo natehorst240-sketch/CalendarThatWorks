@@ -79,6 +79,24 @@ function asDate(input: Date | string | number): Date {
   return input instanceof Date ? input : new Date(input);
 }
 
+function ensureValidTemplate(template: ScheduleTemplateV1): void {
+  if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
+    throw new Error('Schedule template must include at least one entry.');
+  }
+
+  template.entries.forEach((entry, idx) => {
+    if (!entry || typeof entry.title !== 'string' || !entry.title.trim()) {
+      throw new Error(`Schedule template entry ${idx + 1} is missing a valid title.`);
+    }
+    if (!Number.isFinite(entry.startOffsetMinutes)) {
+      throw new Error(`Schedule template entry ${idx + 1} has an invalid start offset.`);
+    }
+    if (!Number.isFinite(entry.durationMinutes)) {
+      throw new Error(`Schedule template entry ${idx + 1} has an invalid duration.`);
+    }
+  });
+}
+
 /**
  * Build master events from a schedule template and user-selected anchor.
  * This is pure client-side scaffolding for "Add Schedule" flows.
@@ -87,7 +105,11 @@ export function instantiateScheduleTemplate(
   template: ScheduleTemplateV1,
   request: ScheduleInstantiationRequestV1,
 ): ScheduleInstantiationResultV1 {
+  ensureValidTemplate(template);
   const anchor = asDate(request.anchor);
+  if (Number.isNaN(anchor.getTime())) {
+    throw new Error('Schedule anchor must be a valid date.');
+  }
 
   const generated = template.entries.map((entry, idx) => {
     const start = addMinutes(anchor, entry.startOffsetMinutes);
