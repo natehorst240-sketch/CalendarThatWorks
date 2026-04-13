@@ -1,0 +1,221 @@
+/* AdvancedFilterBuilder.module.css */
+
+.builder {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ─── Condition list ─────────────────────────────────────────────────────── */
+
+.conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conditionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* AND / OR connector between rows */
+.logicRow {
+  display: flex;
+  gap: 6px;
+  padding: 4px 2px;
+  align-items: center;
+}
+
+.logicBtn {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--wc-border-dark);
+  border-radius: 100px;
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.logicBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+.logicActive {
+  background: var(--wc-accent);
+  border-color: var(--wc-accent);
+  color: #fff;
+}
+
+/* Individual condition row */
+.conditionRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+}
+
+/* ─── Form controls ──────────────────────────────────────────────────────── */
+
+.select {
+  padding: 5px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s;
+  flex-shrink: 0;
+}
+.select:focus { border-color: var(--wc-accent); }
+
+.valueSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.input {
+  padding: 5px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  outline: none;
+  transition: border-color 0.12s;
+}
+.input:focus { border-color: var(--wc-accent); }
+.inputError { border-color: var(--wc-danger) !important; }
+
+.valueInput {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Remove button */
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-faint);
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.12s, background 0.12s;
+}
+.removeBtn:hover:not(:disabled) {
+  color: var(--wc-danger);
+  background: color-mix(in srgb, var(--wc-danger) 10%, transparent);
+}
+.removeBtn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* ─── Add condition row ──────────────────────────────────────────────────── */
+
+.addRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px dashed var(--wc-border-dark);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.addBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+  background: var(--wc-accent-dim, color-mix(in srgb, var(--wc-accent) 8%, transparent));
+}
+
+/* ─── Save section ───────────────────────────────────────────────────────── */
+
+.saveSection {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding-top: 10px;
+  border-top: 1px solid var(--wc-border);
+  margin-top: 2px;
+}
+
+.nameField {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nameInput {
+  width: 100%;
+}
+
+.errorMsg {
+  font-size: 11px;
+  color: var(--wc-danger);
+}
+
+.saveBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.12s, background 0.2s;
+  flex-shrink: 0;
+}
+.saveBtn:hover { opacity: 0.85; }
+
+.saveBtnSaved {
+  background: var(--wc-success, #10b981);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .conditionRow {
+    flex-wrap: wrap;
+  }
+  .valueSelect,
+  .valueInput {
+    flex-basis: 100%;
+  }
+  .saveSection {
+    flex-direction: column;
+  }
+  .saveBtn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+}

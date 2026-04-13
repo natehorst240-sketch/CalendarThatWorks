@@ -1,0 +1,476 @@
+/* SetupWizardModal.module.css */
+
+/* ─── Overlay ────────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Modal shell ────────────────────────────────────────────────────────── */
+
+.modal {
+  background: var(--wc-bg);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow), 0 0 0 1px var(--wc-border);
+  width: 580px;
+  max-width: 100%;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--wc-border);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerIcon {
+  display: flex;
+  align-items: center;
+  color: var(--wc-accent);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wc-text);
+  margin: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepPill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  background: var(--wc-surface-2);
+  border-radius: 100px;
+  padding: 2px 10px;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  border-radius: 6px;
+  padding: 4px;
+  transition: background 0.1s, color 0.1s;
+}
+.closeBtn:hover { background: var(--wc-surface-2); color: var(--wc-text); }
+
+/* ─── Progress bar ───────────────────────────────────────────────────────── */
+
+.progressTrack {
+  height: 3px;
+  background: var(--wc-border);
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--wc-accent);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 8px;
+}
+
+/* ─── Step layout ────────────────────────────────────────────────────────── */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stepHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stepTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wc-text);
+  margin: 0;
+}
+
+.stepDesc {
+  font-size: 13px;
+  color: var(--wc-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── Form field ─────────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.input {
+  padding: 9px 12px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.input:focus {
+  border-color: var(--wc-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wc-accent) 15%, transparent);
+}
+
+/* ─── Theme grid ─────────────────────────────────────────────────────────── */
+
+.themeGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.themeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  background: var(--wc-surface);
+  border: 2px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  position: relative;
+}
+.themeCard:hover {
+  border-color: var(--wc-accent);
+  background: var(--wc-surface-2);
+}
+.themeCardSelected {
+  border-color: var(--wc-accent);
+  background: color-mix(in srgb, var(--wc-accent) 6%, var(--wc-surface));
+}
+
+/* Mini swatch preview */
+.themeSwatch {
+  width: 100%;
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 5px;
+  gap: 3px;
+  box-sizing: border-box;
+}
+
+.swatchAccent {
+  height: 4px;
+  border-radius: 2px;
+  width: 40%;
+}
+
+.swatchLines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 1px;
+}
+
+.swatchLines span {
+  height: 2px;
+  width: 80%;
+  border-radius: 1px;
+  opacity: 0.3;
+  display: block;
+}
+
+.themeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+}
+
+.themeCheck {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--wc-accent);
+  color: #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Step 2: created views list ─────────────────────────────────────────── */
+
+.createdList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wc-border);
+}
+
+.createdLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.createdChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.createdChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: color-mix(in srgb, var(--wc-success, #10b981) 12%, var(--wc-surface));
+  color: var(--wc-success, #10b981);
+  border-radius: 100px;
+  border: 1px solid color-mix(in srgb, var(--wc-success, #10b981) 25%, transparent);
+}
+
+/* ─── Step 3: done ───────────────────────────────────────────────────────── */
+
+.stepDone {
+  align-items: center;
+  text-align: center;
+}
+
+.doneIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--wc-success, #10b981) 12%, var(--wc-surface));
+  color: var(--wc-success, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.summaryGrid {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.summaryCard {
+  flex: 1;
+  max-width: 160px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  padding: 12px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summaryCardLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summaryCardValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wc-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.themeColorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.themeNote {
+  font-size: 12px;
+  color: var(--wc-text-muted);
+  background: var(--wc-surface-2);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  padding: 10px 14px;
+  text-align: left;
+  line-height: 1.6;
+  width: 100%;
+}
+
+.code {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 11px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border-dark);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--wc-accent);
+}
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--wc-border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.footerLeft,
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backBtn {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  background: none;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.backBtn:hover { border-color: var(--wc-border-dark); color: var(--wc-text); }
+
+.nextBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.nextBtn:hover { opacity: 0.85; }
+
+.finishBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--wc-success, #10b981);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.finishBtn:hover { opacity: 0.85; }
+
+/* ─── Responsive: bottom sheet on mobile ────────────────────────────────── */
+
+@media (max-width: 520px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: var(--wc-radius) var(--wc-radius) 0 0;
+  }
+  .themeGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .summaryGrid {
+    flex-direction: row;
+  }
+}
