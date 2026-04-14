@@ -120,11 +120,17 @@ function SetupTab({ config, onUpdate }) {
             title={theme.description}
             aria-pressed={selectedTheme === theme.id}
           >
-            <div className={styles.themeCardTop}>
-              <span className={styles.themeColorDot} style={{ background: theme.preview.accent }} />
-              <span>{theme.label}</span>
+            <div className={styles.themeCardPreview} style={{ background: theme.preview.bg, borderColor: theme.preview.border }}>
+              <div className={styles.themeCardAccent} style={{ background: theme.preview.accent }} />
+              <div className={styles.themeCardLines}>
+                <span style={{ background: theme.preview.text }} />
+                <span style={{ background: theme.preview.text, width: '65%' }} />
+              </div>
             </div>
-            {selectedTheme === theme.id && <Check size={12} />}
+            <div className={styles.themeCardTop}>
+              <span>{theme.label}</span>
+              {selectedTheme === theme.id && <Check size={12} />}
+            </div>
           </button>
         ))}
       </div>

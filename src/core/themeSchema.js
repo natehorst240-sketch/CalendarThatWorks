@@ -12,6 +12,8 @@ export const DEFAULT_CUSTOM_THEME = {
   },
   typography: {
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    headingFontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    monoFontFamily: "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace",
     baseSize: 14,
   },
   spacing: {
@@ -61,6 +63,8 @@ export function customThemeToCssVars(themeInput) {
     '--wc-text': theme.colors.text,
     '--wc-text-muted': theme.colors.textMuted,
     '--wc-font': theme.typography.fontFamily,
+    '--wc-font-heading': theme.typography.headingFontFamily || theme.typography.fontFamily,
+    '--wc-font-mono': theme.typography.monoFontFamily || "ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace",
     '--wc-radius': `${theme.borders.radius}px`,
     '--wc-radius-sm': `${theme.borders.radiusSm}px`,
     '--wc-border-width': `${theme.borders.borderWidth}px`,

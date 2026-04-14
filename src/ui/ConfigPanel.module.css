@@ -264,13 +264,14 @@
 
 .themeCard {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   border: 1px solid var(--wc-border);
   border-radius: var(--wc-radius-sm);
   background: var(--wc-surface);
   color: var(--wc-text);
-  padding: 8px 10px;
+  padding: 10px;
   cursor: pointer;
 }
 
@@ -278,16 +279,40 @@
   border-color: var(--wc-accent);
 }
 
+.themeCardPreview {
+  height: 42px;
+  border-radius: 7px;
+  border: 1px solid var(--wc-border);
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.themeCardAccent {
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.themeCardLines {
+  padding: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.themeCardLines span {
+  height: 4px;
+  border-radius: 999px;
+  opacity: 0.8;
+}
+
 .themeCardTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-}
-
-.themeColorDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
 }
 
 .memberRow {
