@@ -44,6 +44,12 @@ import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import AvailabilityForm        from './ui/AvailabilityForm.jsx';
 import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
 import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
+import {
+  isCoveringEvent,
+  isOpenShiftEvent,
+  normalizeScheduleKind,
+  SCHEDULE_KINDS,
+} from './core/scheduleModel.js';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
@@ -588,7 +594,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const linkedOpenShifts = expandedEvents.filter((candidate) => {
         const candidateId = String(candidate._eventId ?? candidate.id ?? '');
         const linkedById = openShiftId && candidateId === String(openShiftId);
-        const linkedBySource = candidate.meta?.kind === 'open-shift'
+        const linkedBySource = isOpenShiftEvent(candidate)
           && String(candidate.meta?.sourceShiftId ?? '') === String(eventId);
         return linkedById || linkedBySource;
       });
@@ -599,7 +605,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       });
 
       const mirroredCoverage = expandedEvents.filter(
-        (candidate) => candidate.meta?.kind === 'covering-shift'
+        (candidate) => isCoveringEvent(candidate)
           && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
       );
       mirroredCoverage.forEach((coverEv) => {
@@ -640,7 +646,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     const mirroredCoverage = expandedEvents.filter(
-      (candidate) => candidate.meta?.kind === 'covering-shift'
+      (candidate) => isCoveringEvent(candidate)
         && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
     );
     mirroredCoverage.slice(1).forEach((duplicateEv) => {
@@ -658,7 +664,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       category: onCallCat,
       resource: coveringEmployeeId,
       meta: {
-        kind:              'covering-shift',
+        kind:              SCHEDULE_KINDS.COVERING,
         sourceShiftId:     eventId,
         coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
       },
@@ -690,7 +696,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const initialEvent = action === 'availability'
         ? expandedEvents
           .filter((ev) => {
-            const evKind = String(ev?.kind ?? ev?.meta?.kind ?? '').toLowerCase();
+            const evKind = normalizeScheduleKind(ev?.kind ?? ev?.meta?.kind);
             const evCat  = String(ev?.category ?? '').toLowerCase();
             const resourceId = String(ev?.resource ?? ev?.resourceId ?? ev?.employeeId ?? '');
             return resourceId === String(empId) && (evKind === 'availability' || evCat === 'availability');
@@ -753,7 +759,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
         if (!shiftId) return;
         const existingOpenShifts = expandedEvents.filter(
-          (candidate) => candidate.meta?.kind === 'open-shift'
+          (candidate) => isOpenShiftEvent(candidate)
             && String(candidate.meta?.sourceShiftId ?? '') === String(shiftId),
         );
         existingOpenShifts.slice(1).forEach((duplicateOpenShift) => {
@@ -769,7 +775,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           resource: null,
           meta: {
             ...(existingOpenShifts[0]?.meta ?? {}),
-            kind:               'open-shift',
+            kind:               SCHEDULE_KINDS.OPEN_SHIFT,
             sourceShiftId:      String(shiftId),
             originalEmployeeId: String(shiftEv.resource ?? shiftEv.employeeId ?? ''),
             reason:             availEv.kind,

@@ -1,3 +1,11 @@
+import {
+  isCoveringEvent,
+  isCoveredShift,
+  isOpenShiftEvent,
+  isShiftOrOnCallEvent,
+  SCHEDULE_KINDS,
+} from './scheduleModel.js';
+
 /**
  * scheduleOverlap.js — utilities for detecting shift / on-call conflicts
  * when an employee submits a PTO or Unavailable request.
@@ -52,15 +60,13 @@ export function detectShiftConflicts({
     // Must belong to this employee
     if (String(ev.resource ?? ev.employeeId ?? '') !== empId) return false;
 
-    // Must be a shift or on-call event (not another PTO/unavailable)
-    const isShiftKind = ev.meta?.kind === 'shift'
-      || ev.meta?.onCall === true
-      || ev.category === onCallCategory;
-    if (!isShiftKind) return false;
+    // Must be a real shift/on-call event, not an open-shift or mirror event.
+    if (!isShiftOrOnCallEvent(ev, onCallCategory)) return false;
+    if (isOpenShiftEvent(ev) || isCoveringEvent(ev)) return false;
 
-    // Must already have a shiftStatus that is NOT already covered
-    // (We want to flag uncovered shifts, not already-covered ones)
-    if (ev.meta?.shiftStatus === 'covered') return false;
+    // Conflict generation should be idempotent: already-covered shifts
+    // should not keep regenerating open-shift work.
+    if (isCoveredShift(ev)) return false;
 
     const evStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const evEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
@@ -97,7 +103,7 @@ export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'o
     resource: null,    // unassigned — no covering employee yet
     color:    '#f59e0b', // amber — visually distinct "needs coverage" colour
     meta: {
-      kind:               'open-shift',
+      kind:               SCHEDULE_KINDS.OPEN_SHIFT,
       sourceShiftId:      String(shiftEvent._eventId ?? shiftEvent.id ?? ''),
       originalEmployeeId: String(shiftEvent.resource ?? shiftEvent.employeeId ?? ''),
       reason,
