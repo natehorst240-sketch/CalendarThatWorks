@@ -67,6 +67,18 @@ const PRESET_THEMES = [
   },
 ];
 
+const FONT_FAMILY_OPTIONS = [
+  { label: 'Inter (Default)', value: "'Inter', system-ui, -apple-system, sans-serif" },
+  { label: 'System UI', value: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
+  { label: 'Segoe UI', value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
+  { label: 'Roboto', value: "'Roboto', 'Helvetica Neue', Arial, sans-serif" },
+  { label: 'Arial', value: "Arial, 'Helvetica Neue', sans-serif" },
+  { label: 'Georgia', value: "Georgia, 'Times New Roman', serif" },
+  { label: 'Nunito', value: "'Nunito', 'Segoe UI', system-ui, sans-serif" },
+  { label: 'IBM Plex Sans', value: "'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" },
+  { label: 'JetBrains Mono', value: "'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace" },
+];
+
 function valueLabel(value, suffix) {
   if (suffix === 'x') return `${Number(value).toFixed(2)}x`;
   if (!suffix) return String(value);
@@ -118,7 +130,13 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const [importSuccess, setImportSuccess] = useState('');
   const [copyState, setCopyState] = useState('');
   const merged = normalizeCustomTheme(theme);
+  const hasNamedFontOption = FONT_FAMILY_OPTIONS.some((option) => option.value === merged.typography.fontFamily);
+  const selectedFontOption = hasNamedFontOption ? merged.typography.fontFamily : '__custom__';
   const previewVars = customThemeToCssVars(merged);
+  const previewStyle = {
+    ...previewVars,
+    '--tc-density': merged.spacing.density,
+  };
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
   const contrastChecks = useMemo(() => ([
     { id: 'text-on-bg', label: 'Body text on background', fg: merged.colors.text, bg: merged.colors.bg },
@@ -211,11 +229,25 @@ export default function ThemeCustomizer({ theme, onChange }) {
 
         <label className={styles.control}>
           <span>Font Family</span>
-          <input
-            type="text"
-            value={merged.typography.fontFamily}
-            onChange={(e) => update(['typography', 'fontFamily'], e.target.value)}
-          />
+          <select
+            value={selectedFontOption}
+            onChange={(e) => {
+              if (e.target.value !== '__custom__') update(['typography', 'fontFamily'], e.target.value);
+            }}
+          >
+            {FONT_FAMILY_OPTIONS.map((option) => (
+              <option key={option.label} value={option.value}>{option.label}</option>
+            ))}
+            <option value="__custom__">Custom…</option>
+          </select>
+          {selectedFontOption === '__custom__' && (
+            <input
+              type="text"
+              value={merged.typography.fontFamily}
+              onChange={(e) => update(['typography', 'fontFamily'], e.target.value)}
+              placeholder="Enter custom font stack"
+            />
+          )}
         </label>
 
         {TOKEN_SLIDERS.map(([group, key, label, min, max, step, suffix]) => (
@@ -244,12 +276,15 @@ export default function ThemeCustomizer({ theme, onChange }) {
         </div>
       </div>
 
-      <div className={styles.preview} style={previewVars}>
+      <div className={styles.preview} style={previewStyle}>
         <div className={styles.previewHeader}>
           <strong>Live Preview</strong>
           <span className={styles.badge}>Mini Calendar</span>
         </div>
         <div className={styles.previewBody}>
+          <div className={styles.previewLegend}>
+            Aa Text preview • Border {merged.borders.borderWidth}px • Density {merged.spacing.density.toFixed(2)}x
+          </div>
           {Array.from({ length: 14 }).map((_, i) => (
             <div key={i} className={styles.day}>
               {(i === 2 || i === 8) && <div className={styles.event} />}

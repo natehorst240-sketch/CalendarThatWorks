@@ -43,6 +43,17 @@ describe('ThemeCustomizer', () => {
     expect(latest.customTheme.spacing.density).toBe(1.15);
   });
 
+  it('updates font family from dropdown selection', () => {
+    const { setConfig } = renderWithConfig({});
+
+    fireEvent.change(screen.getByLabelText('Font Family'), {
+      target: { value: "'Roboto', 'Helvetica Neue', Arial, sans-serif" },
+    });
+
+    const latest = setConfig.mock.calls.at(-1)[0];
+    expect(latest.customTheme.typography.fontFamily).toBe("'Roboto', 'Helvetica Neue', Arial, sans-serif");
+  });
+
   it('resets customTheme to defaults payload', () => {
     const { setConfig } = renderWithConfig({ colors: { accent: '#111111' } });
 
