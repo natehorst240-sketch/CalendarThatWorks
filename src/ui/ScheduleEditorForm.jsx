@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format, parseISO, isValid, addDays, addHours } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { createId } from '../core/createId.js';
 import styles from './ScheduleEditorForm.module.css';
 
 // ─── Shift templates ──────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ export default function ScheduleEditorForm({
 
   function buildEvent(startDate, endDate, rrule) {
     return {
-      id:       `shift-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id:       createId('shift'),
       title:    title.trim(),
       start:    startDate,
       end:      endDate,

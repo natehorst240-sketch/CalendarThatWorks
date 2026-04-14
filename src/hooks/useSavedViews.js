@@ -13,6 +13,7 @@
  *     search: string, dateRange: null | { start: string, end: string } }
  */
 import { useState, useEffect, useCallback } from 'react';
+import { createId } from '../core/createId.js';
 
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
 
@@ -127,7 +128,7 @@ export function useSavedViews(calendarId) {
 
   const saveView = useCallback((name, filters, { color, view } = {}) => {
     const savedView = {
-      id:        `view-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id:        createId('view'),
       name,
       createdAt: new Date().toISOString(),
       color:     color ?? null,

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { createId } from '../core/createId.js';
 import styles from './AvailabilityForm.module.css';
 
 // ─── Kind metadata ────────────────────────────────────────────────────────────
@@ -129,7 +130,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
     const en = fromInput(end, allDay);
 
     onSave({
-      id:         initialEvent?.id ?? `avail-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id:         initialEvent?.id ?? createId('avail'),
       employeeId: emp.id,
       kind,
       title:      title.trim(),
