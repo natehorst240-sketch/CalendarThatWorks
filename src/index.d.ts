@@ -495,6 +495,14 @@ export declare const WorksCalendar: React.ForwardRefExoticComponent<
   WorksCalendarProps & React.RefAttributes<CalendarApi>
 >;
 
+export interface CalendarErrorBoundaryProps {
+  children?: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, info: React.ErrorInfo) => void;
+}
+
+export declare const CalendarErrorBoundary: React.ComponentType<CalendarErrorBoundaryProps>;
+
 // ─── Hooks ─────────────────────────────────────────────────────────────────────
 
 export declare function useCalendar(

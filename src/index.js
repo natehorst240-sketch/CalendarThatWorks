@@ -25,6 +25,7 @@ export {
   default as CalendarExternalForm,
   SUPPORTED_EXTERNAL_FORM_FIELD_TYPES,
 } from './ui/CalendarExternalForm.jsx';
+export { default as CalendarErrorBoundary } from './ui/CalendarErrorBoundary.jsx';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter.js';
 export { parseICS, fetchAndParseICS }     from './core/icalParser.js';
 export { useOccurrences }                 from './hooks/useOccurrences.js';

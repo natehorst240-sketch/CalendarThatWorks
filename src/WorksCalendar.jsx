@@ -42,6 +42,7 @@ import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import SetupWizardModal        from './ui/SetupWizardModal.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
+import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
 import MonthView              from './views/MonthView.jsx';
 import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
@@ -168,6 +169,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   },
   ref,
 ) {
+  // SSR guard: avoid touching browser-only APIs during server rendering.
+  if (typeof window === 'undefined') return null;
+
   // ── View / date / filter state ───────────────────────────────────────────
   const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
   const cal      = useCalendar([], initialView ?? 'month', schema);
@@ -429,6 +433,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     const onKeyDown = (e) => {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
@@ -862,8 +867,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   };
 
   return (
-    <CalendarContext.Provider value={ctxValue}>
-      <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" style={customThemeVars}>
+    <CalendarErrorBoundary>
+      <CalendarContext.Provider value={ctxValue}>
+        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -1135,7 +1141,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
-      </div>
-    </CalendarContext.Provider>
+        </div>
+      </CalendarContext.Provider>
+    </CalendarErrorBoundary>
   );
 });
