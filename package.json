@@ -27,6 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "playwright test",
+    "qa:visual": "playwright test visual-qa --config playwright.config.ts && node scripts/ai-qa-review.mjs",
     "qa:review": "node scripts/ai-qa-review.mjs",
     "ai:qa": "playwright test && node scripts/ai-qa-review.mjs",
     "dev": "vite --config vite.demo.config.js",
