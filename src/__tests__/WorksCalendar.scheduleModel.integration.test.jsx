@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { createRef } from 'react';
 
@@ -6,6 +6,10 @@ import { WorksCalendar } from '../WorksCalendar.tsx';
 
 function getKinds(events) {
   return events.map((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase());
+}
+
+function getByKind(events, kind) {
+  return events.filter((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase() === kind);
 }
 
 describe('WorksCalendar schedule model integration', () => {
@@ -33,6 +37,11 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Save PTO Request' }));
   }
 
+  async function assignCoverageTo(nameRegex) {
+    fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
+    fireEvent.click(await screen.findByRole('button', { name: nameRegex }));
+  }
+
   it('creates an open-shift record when PTO overlaps a shift', async () => {
     const apiRef = createRef();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
@@ -47,15 +56,86 @@ describe('WorksCalendar schedule model integration', () => {
     });
   });
 
+  it('creates a PTO availability event and emits onAvailabilitySave', async () => {
+    const apiRef = createRef();
+    const onAvailabilitySave = vi.fn();
+
+    render(
+      <WorksCalendar
+        ref={apiRef}
+        employees={employees}
+        events={[baseShift]}
+        onAvailabilitySave={onAvailabilitySave}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+
+    await waitFor(() => {
+      expect(onAvailabilitySave).toHaveBeenCalledTimes(1);
+      const saved = onAvailabilitySave.mock.calls[0][0];
+      expect(saved.category).toBe('pto');
+      expect(saved.meta?.kind).toBe('pto');
+      expect(saved.resource).toBe('emp-1');
+
+      const visible = apiRef.current.getVisibleEvents();
+      const ptoEvents = visible.filter((ev) => String(ev?.meta?.kind ?? '') === 'pto');
+      expect(ptoEvents.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('does not create duplicate open-shift records when PTO is re-saved', async () => {
+    const apiRef = createRef();
+    render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+    await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' });
+    await requestPtoForAlex();
+
+    await waitFor(() => {
+      const visible = apiRef.current.getVisibleEvents();
+      const openShifts = getByKind(visible, 'open-shift').filter(
+        (ev) => String(ev.meta?.sourceShiftId ?? '') === 'shift-1',
+      );
+      expect(openShifts).toHaveLength(1);
+    });
+  }, 15000);
+
+  it('assigns coverage by updating shift/open-shift state and creating one mirror event', async () => {
+    const apiRef = createRef();
+    render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+    await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' });
+    await assignCoverageTo(/^Bailey Chen — RN$/);
+
+    await waitFor(() => {
+      const visible = apiRef.current.getVisibleEvents();
+      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-2');
+
+      const openShift = getByKind(visible, 'open-shift')[0];
+      expect(openShift).toBeTruthy();
+      expect(String(openShift.meta?.coveredBy ?? '')).toBe('emp-2');
+      expect(openShift.meta?.status).toBe('covered');
+
+      const mirrored = getByKind(visible, 'covering');
+      expect(mirrored).toHaveLength(1);
+      expect(String(mirrored[0].meta?.sourceShiftId ?? '')).toBe('shift-1');
+      expect(String(mirrored[0].meta?.coveredEmployeeId ?? '')).toBe('emp-1');
+    });
+  }, 15000);
+
   it('clears linked schedule metadata and open/covering events when status is cleared', async () => {
     const apiRef = createRef();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     await requestPtoForAlex();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
-    fireEvent.click(await screen.findByRole('button', { name: /^Bailey Chen — RN$/ }));
+    await assignCoverageTo(/^Bailey Chen — RN$/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
     fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
@@ -74,6 +154,41 @@ describe('WorksCalendar schedule model integration', () => {
     });
   });
 
+  it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
+    const apiRef = createRef();
+    const onEventSave = vi.fn();
+    const onEventDelete = vi.fn();
+    render(
+      <WorksCalendar
+        ref={apiRef}
+        employees={employees}
+        events={[baseShift]}
+        onEventSave={onEventSave}
+        onEventDelete={onEventDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+    await assignCoverageTo(/^Bailey Chen — RN$/);
+    fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
+    fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
+
+    await waitFor(() => {
+      expect(onEventSave.mock.calls.length).toBeGreaterThan(0);
+      expect(onEventDelete.mock.calls.length).toBeGreaterThan(0);
+      const savedShiftWithCoverage = onEventSave.mock.calls
+        .map(([payload]) => payload)
+        .find(
+          (payload) => String(payload?.id ?? '') === 'shift-1'
+            && String(payload?.meta?.coveredBy ?? '') === 'emp-2'
+            && String(payload?.meta?.shiftStatus ?? '') === 'pto'
+            && String(payload?.meta?.openShiftId ?? '') !== '',
+        );
+      expect(savedShiftWithCoverage).toBeTruthy();
+    });
+  }, 15000);
+
   it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
@@ -81,15 +196,13 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     await requestPtoForAlex();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
-    fireEvent.click(await screen.findByRole('button', { name: /^Bailey Chen — RN$/ }));
+    await assignCoverageTo(/^Bailey Chen — RN$/);
 
     fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
     fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
     await requestPtoForAlex();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
-    fireEvent.click(await screen.findByRole('button', { name: /^Casey Patel — RN$/ }));
+    await assignCoverageTo(/^Casey Patel — RN$/);
 
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();

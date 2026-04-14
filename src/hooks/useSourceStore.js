@@ -18,6 +18,7 @@
  *   toggleSource     — (id) => void
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { createId } from '../core/createId.js';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export function useSourceStore(calendarId) {
 
   const addSource = useCallback((partial) => {
     const source = {
-      id:              `src-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id:              createId('src'),
       type:            'ics',
       label:           '',
       color:           '#3b82f6',
