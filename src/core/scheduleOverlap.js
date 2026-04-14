@@ -101,8 +101,7 @@ export function detectShiftConflicts({
  * @returns {object} openShiftEvent
  */
 export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'open-shift' }) {
-  const sourceShiftId = String(shiftEvent._eventId ?? shiftEvent.id ?? '');
-  const id = `open-${sourceShiftId || Date.now()}`;
+  const id = createId(`open-${shiftEvent._eventId ?? shiftEvent.id ?? 'shift'}`);
   return {
     id,
     title:    `Open: ${shiftEvent.title ?? 'Shift'}`,
