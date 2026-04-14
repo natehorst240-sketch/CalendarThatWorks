@@ -1,5 +1,6 @@
 import { normalizeCustomTheme, customThemeToCssVars } from '../core/themeSchema.js';
 import styles from './ThemeCustomizer.module.css';
+import { useMemo, useState } from 'react';
 
 const COLOR_CONTROLS = [
   ['accent', 'Accent'],
@@ -22,6 +23,50 @@ const TOKEN_SLIDERS = [
   ['shadows', 'elevation', 'Shadow', 0, 32, 1, ''],
 ];
 
+const PRESET_THEMES = [
+  {
+    id: 'default',
+    label: 'Default',
+    customTheme: {},
+  },
+  {
+    id: 'midnight',
+    label: 'Midnight',
+    customTheme: {
+      colors: {
+        accent: '#8b5cf6',
+        accentDim: '#2e1065',
+        bg: '#0b1020',
+        surface: '#121a31',
+        surface2: '#1c2744',
+        border: '#30406a',
+        borderDark: '#3f5487',
+        text: '#eff4ff',
+        textMuted: '#a4b2d8',
+      },
+      shadows: { elevation: 18 },
+    },
+  },
+  {
+    id: 'warm',
+    label: 'Warm',
+    customTheme: {
+      colors: {
+        accent: '#ea580c',
+        accentDim: '#fff7ed',
+        bg: '#fffaf5',
+        surface: '#fff1df',
+        surface2: '#ffe7cf',
+        border: '#fed7aa',
+        borderDark: '#fdba74',
+        text: '#4a2a12',
+        textMuted: '#9a6a43',
+      },
+      borders: { radius: 12, radiusSm: 8 },
+    },
+  },
+];
+
 function valueLabel(value, suffix) {
   if (suffix === 'x') return `${Number(value).toFixed(2)}x`;
   if (!suffix) return String(value);
@@ -29,8 +74,11 @@ function valueLabel(value, suffix) {
 }
 
 export default function ThemeCustomizer({ theme, onChange }) {
+  const [draftImport, setDraftImport] = useState('');
+  const [importError, setImportError] = useState('');
   const merged = normalizeCustomTheme(theme);
   const previewVars = customThemeToCssVars(merged);
+  const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
 
   function update(path, value) {
     onChange((config) => {
@@ -47,6 +95,24 @@ export default function ThemeCustomizer({ theme, onChange }) {
         },
       };
     });
+  }
+
+  function applyPreset(preset) {
+    onChange((config) => ({ ...config, customTheme: preset.customTheme }));
+  }
+
+  function applyImport() {
+    try {
+      const parsed = JSON.parse(draftImport);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        setImportError('Theme JSON must be an object.');
+        return;
+      }
+      setImportError('');
+      onChange((config) => ({ ...config, customTheme: parsed }));
+    } catch {
+      setImportError('Could not parse JSON. Check formatting and try again.');
+    }
   }
 
   return (
@@ -85,6 +151,17 @@ export default function ThemeCustomizer({ theme, onChange }) {
         ))}
       </div>
 
+      <div className={styles.presets}>
+        <strong className={styles.blockLabel}>Quick presets</strong>
+        <div className={styles.presetRow}>
+          {PRESET_THEMES.map((preset) => (
+            <button key={preset.id} className={styles.btn} onClick={() => applyPreset(preset)}>
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className={styles.preview} style={previewVars}>
         <div className={styles.previewHeader}>
           <strong>Live Preview</strong>
@@ -101,6 +178,24 @@ export default function ThemeCustomizer({ theme, onChange }) {
 
       <div className={styles.actions}>
         <button className={styles.btn} onClick={() => onChange((c) => ({ ...c, customTheme: {} }))}>Reset to default</button>
+      </div>
+
+      <div className={styles.ioSection}>
+        <strong className={styles.blockLabel}>Export theme JSON</strong>
+        <textarea className={styles.textarea} value={exportJson} readOnly aria-label="Export theme JSON" />
+      </div>
+
+      <div className={styles.ioSection}>
+        <strong className={styles.blockLabel}>Import theme JSON</strong>
+        <textarea
+          className={styles.textarea}
+          value={draftImport}
+          onChange={(e) => setDraftImport(e.target.value)}
+          aria-label="Import theme JSON"
+          placeholder='{"colors":{"accent":"#00bcd4"}}'
+        />
+        {importError && <div className={styles.importError} role="alert">{importError}</div>}
+        <button className={styles.btn} onClick={applyImport}>Apply imported JSON</button>
       </div>
     </div>
   );

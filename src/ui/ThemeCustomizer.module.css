@@ -71,6 +71,35 @@
   display: flex;
   gap: 8px;
 }
+.presets,
+.ioSection {
+  display: grid;
+  gap: 8px;
+}
+.blockLabel {
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  padding: 8px;
+  resize: vertical;
+}
+.importError {
+  color: #b91c1c;
+  font-size: 12px;
+}
 .btn {
   border: 1px solid var(--wc-border);
   background: var(--wc-surface);
