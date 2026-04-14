@@ -13,6 +13,21 @@ const COLOR_CONTROLS = [
   ['textMuted', 'Muted Text'],
 ];
 
+const TOKEN_SLIDERS = [
+  ['typography', 'baseSize', 'Base Font Size', 12, 20, 1, 'px'],
+  ['spacing', 'density', 'Density', 0.8, 1.2, 0.05, 'x'],
+  ['borders', 'radius', 'Radius', 0, 24, 1, 'px'],
+  ['borders', 'radiusSm', 'Small Radius', 0, 20, 1, 'px'],
+  ['borders', 'borderWidth', 'Border Width', 0, 4, 1, 'px'],
+  ['shadows', 'elevation', 'Shadow', 0, 32, 1, ''],
+];
+
+function valueLabel(value, suffix) {
+  if (suffix === 'x') return `${Number(value).toFixed(2)}x`;
+  if (!suffix) return String(value);
+  return `${value}${suffix}`;
+}
+
 export default function ThemeCustomizer({ theme, onChange }) {
   const merged = normalizeCustomTheme(theme);
   const previewVars = customThemeToCssVars(merged);
@@ -55,41 +70,19 @@ export default function ThemeCustomizer({ theme, onChange }) {
           />
         </label>
 
-        <label className={styles.control}>
-          <span>Base Font Size ({merged.typography.baseSize}px)</span>
-          <input
-            type="range"
-            min={12}
-            max={20}
-            step={1}
-            value={merged.typography.baseSize}
-            onChange={(e) => update(['typography', 'baseSize'], Number(e.target.value))}
-          />
-        </label>
-
-        <label className={styles.control}>
-          <span>Radius ({merged.borders.radius}px)</span>
-          <input
-            type="range"
-            min={0}
-            max={24}
-            step={1}
-            value={merged.borders.radius}
-            onChange={(e) => update(['borders', 'radius'], Number(e.target.value))}
-          />
-        </label>
-
-        <label className={styles.control}>
-          <span>Shadow ({merged.shadows.elevation})</span>
-          <input
-            type="range"
-            min={0}
-            max={32}
-            step={1}
-            value={merged.shadows.elevation}
-            onChange={(e) => update(['shadows', 'elevation'], Number(e.target.value))}
-          />
-        </label>
+        {TOKEN_SLIDERS.map(([group, key, label, min, max, step, suffix]) => (
+          <label key={`${group}.${key}`} className={styles.control}>
+            <span>{label} ({valueLabel(merged[group][key], suffix)})</span>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={merged[group][key]}
+              onChange={(e) => update([group, key], Number(e.target.value))}
+            />
+          </label>
+        ))}
       </div>
 
       <div className={styles.preview} style={previewVars}>
