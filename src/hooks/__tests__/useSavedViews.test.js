@@ -197,8 +197,9 @@ describe('useSavedViews', () => {
       });
     });
     const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
-    expect(stored).toHaveLength(1);
-    expect(stored[0].name).toBe('Persisted');
+    expect(stored.version).toBe(2);
+    expect(stored.views).toHaveLength(1);
+    expect(stored.views[0].name).toBe('Persisted');
   });
 
   it('loads existing views from localStorage on init', () => {
@@ -210,10 +211,28 @@ describe('useSavedViews', () => {
         filters:   { categories: ['PTO'], resources: [], sources: [], search: '', dateRange: null },
       },
     ];
-    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(existingViews));
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
+      version: 2,
+      views: existingViews,
+    }));
     const { result } = renderHook(() => useSavedViews(CAL_ID));
     expect(result.current.views).toHaveLength(1);
     expect(result.current.views[0].name).toBe('Stored View');
+  });
+
+  it('migrates old array-only saved views payload', () => {
+    const existingViews = [
+      {
+        id: 'v-old',
+        name: 'Old Shape',
+        createdAt: new Date().toISOString(),
+        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+      },
+    ];
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(existingViews));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result.current.views).toHaveLength(1);
+    expect(result.current.views[0].name).toBe('Old Shape');
   });
 
   it('calendarId switching reloads from correct localStorage key', () => {
@@ -304,5 +323,18 @@ describe('useSavedViews', () => {
     expect(result.current.views[0].name).toBe('Old Profile');
     expect(result.current.views[0].color).toBe('#3b82f6');
     expect(result.current.views[0].view).toBe('week');
+  });
+});
+
+describe('deserializeFilters dateRange validation', () => {
+  it('nulls malformed dateRange objects', () => {
+    const filters = deserializeFilters({
+      categories: [],
+      resources: [],
+      sources: [],
+      search: '',
+      dateRange: { start: 'not-a-date', end: '2026-04-30T00:00:00.000Z' },
+    });
+    expect(filters.dateRange).toBeNull();
   });
 });
