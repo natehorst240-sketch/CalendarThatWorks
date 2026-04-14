@@ -69,13 +69,15 @@ const pillName =
     ? new RegExp(`^${c.label}, ${category}, continues next week$`, 'i')
     : new RegExp(`^${c.label}, ${category}$`, 'i');
 
-const pill = page.getByRole('button', { name: pillName }).first();
-await expect(pill).toBeVisible();
+const monthGrid = page.locator('[role="grid"]').filter({ has: page.locator('[data-date]') }).first();
 
-    const startCell = page.locator(`[data-date="${dateKey(c.start)}"]`).first();
-    const lastCoveredCell = page.locator(`[data-date="${dateKey(c.lastCoveredDay)}"]`).first();
-    const nextDayCell = page.locator(`[data-date="${dateKey(c.nextDay)}"]`).first();
+    const startCell = monthGrid.locator(`[data-date="${dateKey(c.start)}"]`).first();
+    const lastCoveredCell = monthGrid.locator(`[data-date="${dateKey(c.lastCoveredDay)}"]`).first();
+    const nextDayCell = monthGrid.locator(`[data-date="${dateKey(c.nextDay)}"]`).first();
     await expect(startCell).toBeVisible();
+    const weekRow = startCell.locator('xpath=ancestor::div[contains(@class,"weekRow")][1]');
+    const pill = weekRow.getByRole('button', { name: pillName }).first();
+    await expect(pill).toBeVisible();
     await expect(lastCoveredCell).toBeVisible();
     await expect(nextDayCell).toBeVisible();
 
