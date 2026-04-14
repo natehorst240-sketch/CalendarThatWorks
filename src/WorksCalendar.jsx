@@ -498,12 +498,52 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
     const eventId = ev._eventId ?? String(ev.id);
     if (!eventId) return;
+
+    // 1. Mark the shift as covered
     const newMeta = { ...(ev.meta ?? {}), coveredBy: coveringEmployeeId };
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
       () => onEventSave?.(ev),
     );
-  }, [applyEngineOp, onEventSave]);
+
+    // 2. If there is a linked open-shift record, mark it as covered too
+    const openShiftId = ev.meta?.openShiftId;
+    if (openShiftId) {
+      const openShiftEv = expandedEvents.find(e => String(e.id) === String(openShiftId));
+      if (openShiftEv) {
+        const openMeta = {
+          ...(openShiftEv.meta ?? {}),
+          coveredBy: coveringEmployeeId,
+          status:    'covered',
+        };
+        const openId = openShiftEv._eventId ?? String(openShiftEv.id);
+        applyEngineOp(
+          { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
+          () => {},
+        );
+      }
+    }
+
+    // 3. Create a mirrored on-call event on the covering employee's row
+    const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const mirroredEvent = {
+      id:       `cover-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title:    `Covering: ${ev.title ?? 'Shift'}`,
+      start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
+      end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
+      category: onCallCat,
+      resource: coveringEmployeeId,
+      meta: {
+        kind:            'covering-shift',
+        sourceShiftId:   eventId,
+        coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
+      },
+    };
+    applyEngineOp(
+      { type: 'create', event: mirroredEvent, source: 'api' },
+      () => {},
+    );
+  }, [applyEngineOp, onEventSave, expandedEvents, ownerCfg.config?.onCallCategory]);
 
   /**
    * Handle employee action card clicks.
@@ -545,10 +585,27 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
       });
       conflictingEvents.forEach(shiftEv => {
         const openShift = buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
+
+        // Create the open-shift record
         applyEngineOp(
           { type: 'create', event: openShift, source: 'api' },
           () => {},
         );
+
+        // Mark the original shift as needing coverage
+        const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
+        if (shiftId) {
+          const updatedMeta = {
+            ...(shiftEv.meta ?? {}),
+            shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
+            openShiftId: openShift.id,
+            coveredBy:   null,
+          };
+          applyEngineOp(
+            { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
+            () => {},
+          );
+        }
       });
     }
 
