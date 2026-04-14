@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 
-import { WorksCalendar } from '../WorksCalendar.jsx';
+import { WorksCalendar } from '../WorksCalendar.tsx';
 
 describe('WorksCalendar SSR safety', () => {
   it('returns null during SSR render', () => {
