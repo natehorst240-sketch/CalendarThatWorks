@@ -576,12 +576,39 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     } else {
       delete newMeta.shiftStatus;
       delete newMeta.coveredBy;
+      delete newMeta.openShiftId;
     }
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
       () => onEventSave?.(ev),
     );
-  }, [applyEngineOp, onEventSave]);
+
+    if (!status) {
+      const openShiftId = ev.meta?.openShiftId;
+      const linkedOpenShifts = expandedEvents.filter((candidate) => {
+        const candidateId = String(candidate._eventId ?? candidate.id ?? '');
+        const linkedById = openShiftId && candidateId === String(openShiftId);
+        const linkedBySource = candidate.meta?.kind === 'open-shift'
+          && String(candidate.meta?.sourceShiftId ?? '') === String(eventId);
+        return linkedById || linkedBySource;
+      });
+      linkedOpenShifts.forEach((openEv) => {
+        const openId = openEv._eventId ?? String(openEv.id ?? '');
+        if (!openId) return;
+        applyEngineOp({ type: 'delete', id: openId, source: 'api' }, () => {});
+      });
+
+      const mirroredCoverage = expandedEvents.filter(
+        (candidate) => candidate.meta?.kind === 'covering-shift'
+          && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
+      );
+      mirroredCoverage.forEach((coverEv) => {
+        const coverId = coverEv._eventId ?? String(coverEv.id ?? '');
+        if (!coverId) return;
+        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => {});
+      });
+    }
+  }, [applyEngineOp, expandedEvents, onEventSave]);
 
   const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
     const eventId = ev._eventId ?? String(ev.id);
@@ -612,25 +639,42 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       }
     }
 
-    // 3. Create a mirrored on-call event on the covering employee's row
+    const mirroredCoverage = expandedEvents.filter(
+      (candidate) => candidate.meta?.kind === 'covering-shift'
+        && String(candidate.meta?.sourceShiftId ?? '') === String(eventId),
+    );
+    mirroredCoverage.slice(1).forEach((duplicateEv) => {
+      const duplicateId = duplicateEv._eventId ?? String(duplicateEv.id ?? '');
+      if (!duplicateId) return;
+      applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+    });
+
+    // 3. Create or update the mirrored on-call event on the covering employee's row
     const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
-    const mirroredEvent = {
-      id:       `cover-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    const mirroredPatch = {
       title:    `Covering: ${ev.title ?? 'Shift'}`,
       start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
       end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
       category: onCallCat,
       resource: coveringEmployeeId,
       meta: {
-        kind:            'covering-shift',
-        sourceShiftId:   eventId,
+        kind:              'covering-shift',
+        sourceShiftId:     eventId,
         coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
       },
     };
-    applyEngineOp(
-      { type: 'create', event: mirroredEvent, source: 'api' },
-      () => {},
-    );
+    const existingMirror = mirroredCoverage[0];
+    if (existingMirror) {
+      const mirrorId = existingMirror._eventId ?? String(existingMirror.id ?? '');
+      if (mirrorId) {
+        applyEngineOp({ type: 'update', id: mirrorId, patch: mirroredPatch, source: 'api' }, () => {});
+      }
+    } else {
+      applyEngineOp(
+        { type: 'create', event: { ...mirroredPatch, id: `cover-${eventId}` }, source: 'api' },
+        () => {},
+      );
+    }
   }, [applyEngineOp, onEventSave, expandedEvents, ownerCfg.config?.onCallCategory]);
 
   /**
@@ -706,28 +750,55 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         onCallCategory: onCallCat,
       });
       conflictingEvents.forEach(shiftEv => {
-        const openShift = buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
-
-        // Create the open-shift record
-        applyEngineOp(
-          { type: 'create', event: openShift, source: 'api' },
-          () => {},
+        const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
+        if (!shiftId) return;
+        const existingOpenShifts = expandedEvents.filter(
+          (candidate) => candidate.meta?.kind === 'open-shift'
+            && String(candidate.meta?.sourceShiftId ?? '') === String(shiftId),
         );
+        existingOpenShifts.slice(1).forEach((duplicateOpenShift) => {
+          const duplicateId = duplicateOpenShift._eventId ?? String(duplicateOpenShift.id ?? '');
+          if (!duplicateId) return;
+          applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+        });
+
+        const openShiftPatch = {
+          title: `Open: ${shiftEv.title ?? 'Shift'}`,
+          start: shiftEv.start instanceof Date ? shiftEv.start : new Date(shiftEv.start),
+          end: shiftEv.end instanceof Date ? shiftEv.end : new Date(shiftEv.end),
+          resource: null,
+          meta: {
+            ...(existingOpenShifts[0]?.meta ?? {}),
+            kind:               'open-shift',
+            sourceShiftId:      String(shiftId),
+            originalEmployeeId: String(shiftEv.resource ?? shiftEv.employeeId ?? ''),
+            reason:             availEv.kind,
+            coveredBy:          null,
+            status:             'open',
+          },
+        };
+        const openShift = existingOpenShifts[0]
+          ? { ...existingOpenShifts[0], ...openShiftPatch }
+          : buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
+
+        if (existingOpenShifts[0]) {
+          const openId = existingOpenShifts[0]._eventId ?? String(existingOpenShifts[0].id ?? '');
+          if (openId) applyEngineOp({ type: 'update', id: openId, patch: openShiftPatch, source: 'api' }, () => {});
+        } else {
+          applyEngineOp({ type: 'create', event: openShift, source: 'api' }, () => {});
+        }
 
         // Mark the original shift as needing coverage
-        const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
-        if (shiftId) {
-          const updatedMeta = {
-            ...(shiftEv.meta ?? {}),
-            shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
-            openShiftId: openShift.id,
-            coveredBy:   null,
-          };
-          applyEngineOp(
-            { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
-            () => {},
-          );
-        }
+        const updatedMeta = {
+          ...(shiftEv.meta ?? {}),
+          shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
+          openShiftId: openShift.id,
+          coveredBy:   null,
+        };
+        applyEngineOp(
+          { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
+          () => {},
+        );
       });
     }
 
