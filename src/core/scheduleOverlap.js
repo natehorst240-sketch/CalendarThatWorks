@@ -5,6 +5,7 @@ import {
   isShiftOrOnCallEvent,
   SCHEDULE_KINDS,
 } from './scheduleModel.js';
+import { createId } from './createId.js';
 
 /**
  * scheduleOverlap.js — utilities for detecting shift / on-call conflicts
@@ -93,7 +94,7 @@ export function detectShiftConflicts({
  * @returns {object} openShiftEvent
  */
 export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'open-shift' }) {
-  const id = `open-${shiftEvent._eventId ?? shiftEvent.id ?? Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const id = createId(`open-${shiftEvent._eventId ?? shiftEvent.id ?? 'shift'}`);
   return {
     id,
     title:    `Open: ${shiftEvent.title ?? 'Shift'}`,
