@@ -263,6 +263,23 @@
   min-width: 0;
 }
 
+/* When the name cell is interactive (onEmployeeAction is wired) */
+.nameInfoBtn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+.nameInfoBtn:hover,
+.nameInfoBtn:focus-visible {
+  background: var(--wc-accent-light, rgba(59, 130, 246, 0.08));
+  outline: none;
+}
+
 .empName {
   font-size: 13px;
   font-weight: 600;

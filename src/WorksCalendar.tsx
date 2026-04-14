@@ -40,6 +40,9 @@ import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
+import AvailabilityForm        from './ui/AvailabilityForm.jsx';
+import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
+import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
@@ -193,6 +196,9 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     employees   = [],
     onEmployeeAdd,
     onEmployeeDelete,
+    onEmployeeAction,
+    onAvailabilitySave,
+    onScheduleSave,
 
     // ── Validation ──
     blockedWindows,
@@ -355,7 +361,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   );
 
   // ── Derive categories / resources / filtered events ──────────────────────
+  // Categories that belong exclusively to the schedule/employee workflow —
+  // they are managed through the EmployeeActionCard, not the generic EventForm.
+  const SCHEDULE_ONLY_CATS = new Set(['pto', 'PTO', 'unavailable', 'Unavailable', 'open-shift', 'availability', 'Availability']);
+
   const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
+  const eventFormCats = useMemo(
+    () => categories.filter(c => !SCHEDULE_ONLY_CATS.has(c)),
+    [categories],
+  );
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
   const visibleEvents = useMemo(
     () => applyFilters(expandedEvents, cal.filters, schema),
@@ -415,9 +429,13 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
-  const [formEvent,      setFormEvent]      = useState(null);
-  const [importOpen,     setImportOpen]     = useState(false);
-  const [scheduleOpen,   setScheduleOpen]   = useState(false);
+  const [formEvent,        setFormEvent]        = useState(null);
+  const [importOpen,       setImportOpen]       = useState(false);
+  const [scheduleOpen,     setScheduleOpen]     = useState(false);
+  // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date }
+  const [availabilityState, setAvailabilityState] = useState(null);
+  // { emp: { id, name, role? }, start?: Date }
+  const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [remoteTemplates, setRemoteTemplates] = useState([]);
   const [templateError, setTemplateError] = useState('');
@@ -540,12 +558,131 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
     const eventId = ev._eventId ?? String(ev.id);
     if (!eventId) return;
+
+    // 1. Mark the shift as covered
     const newMeta = { ...(ev.meta ?? {}), coveredBy: coveringEmployeeId };
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
       () => onEventSave?.(ev),
     );
-  }, [applyEngineOp, onEventSave]);
+
+    // 2. If there is a linked open-shift record, mark it as covered too
+    const openShiftId = ev.meta?.openShiftId;
+    if (openShiftId) {
+      const openShiftEv = expandedEvents.find(e => String(e.id) === String(openShiftId));
+      if (openShiftEv) {
+        const openMeta = {
+          ...(openShiftEv.meta ?? {}),
+          coveredBy: coveringEmployeeId,
+          status:    'covered',
+        };
+        const openId = openShiftEv._eventId ?? String(openShiftEv.id);
+        applyEngineOp(
+          { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
+          () => {},
+        );
+      }
+    }
+
+    // 3. Create a mirrored on-call event on the covering employee's row
+    const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const mirroredEvent = {
+      id:       `cover-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title:    `Covering: ${ev.title ?? 'Shift'}`,
+      start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
+      end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
+      category: onCallCat,
+      resource: coveringEmployeeId,
+      meta: {
+        kind:            'covering-shift',
+        sourceShiftId:   eventId,
+        coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
+      },
+    };
+    applyEngineOp(
+      { type: 'create', event: mirroredEvent, source: 'api' },
+      () => {},
+    );
+  }, [applyEngineOp, onEventSave, expandedEvents, ownerCfg.config?.onCallCategory]);
+
+  /**
+   * Handle employee action card clicks.
+   * - 'pto' | 'unavailable' | 'availability' → opens AvailabilityForm
+   * - 'schedule' → opens ScheduleEditorForm
+   * All actions also bubble to the external onEmployeeAction prop.
+   */
+  const handleEmployeeAction = useCallback((empId, action) => {
+    const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+    const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
+    if (AVAILABILITY_ACTIONS.has(action)) {
+      setAvailabilityState({ emp, kind: action, start: new Date() });
+    } else if (action === 'schedule') {
+      setScheduleEditorState({ emp, start: new Date() });
+    }
+    onEmployeeAction?.(empId, action);
+  }, [employees, onEmployeeAction]);
+
+  /** Save an availability/PTO event through the engine then notify the host.
+   *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
+   *  unavailable window automatically gets an open-shift event created. */
+  const handleAvailabilitySave = useCallback((availEv) => {
+    // 1. Create the availability event itself
+    applyEngineOp(
+      { type: 'create', event: { ...availEv, id: availEv.id ?? `avail-${Date.now()}` }, source: 'api' },
+      () => onAvailabilitySave?.(availEv),
+    );
+
+    // 2. Detect overlapping shifts and auto-create open-shift records
+    const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
+    if (isLeave) {
+      const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+      const { conflictingEvents } = detectShiftConflicts({
+        employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
+        requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
+        requestEnd:    availEv.end   instanceof Date ? availEv.end   : new Date(availEv.end),
+        allEvents:     expandedEvents,
+        onCallCategory: onCallCat,
+      });
+      conflictingEvents.forEach(shiftEv => {
+        const openShift = buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
+
+        // Create the open-shift record
+        applyEngineOp(
+          { type: 'create', event: openShift, source: 'api' },
+          () => {},
+        );
+
+        // Mark the original shift as needing coverage
+        const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
+        if (shiftId) {
+          const updatedMeta = {
+            ...(shiftEv.meta ?? {}),
+            shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
+            openShiftId: openShift.id,
+            coveredBy:   null,
+          };
+          applyEngineOp(
+            { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
+            () => {},
+          );
+        }
+      });
+    }
+
+    setAvailabilityState(null);
+  }, [applyEngineOp, onAvailabilitySave, expandedEvents, ownerCfg.config?.onCallCategory]);
+
+  /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
+  const handleScheduleEditorSave = useCallback((shiftEvOrArr) => {
+    const events = Array.isArray(shiftEvOrArr) ? shiftEvOrArr : [shiftEvOrArr];
+    events.forEach(ev => {
+      applyEngineOp(
+        { type: 'create', event: { ...ev, id: ev.id ?? `shift-${Date.now()}` }, source: 'api' },
+        () => onScheduleSave?.(ev),
+      );
+    });
+    setScheduleEditorState(null);
+  }, [applyEngineOp, onScheduleSave]);
 
   // All handlers run through applyEngineOp before touching host state.
 
@@ -1079,6 +1216,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
+                  onEmployeeAction={handleEmployeeAction}
                 />
               )}
             </>
@@ -1107,12 +1245,34 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
           <EventForm
             event={formEvent.id ? formEvent : null}
             config={ownerCfg.config}
-            categories={[...categories, ...eventOptions.categories]}
+            categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
             onDelete={(onEventDelete && perms.canDeleteEvent) ? handleEventDelete : null}
             onClose={() => setFormEvent(null)}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
+          />
+        )}
+
+        {/* ── Availability / PTO form ── */}
+        {availabilityState && (
+          <AvailabilityForm
+            emp={availabilityState.emp}
+            kind={availabilityState.kind}
+            initialStart={availabilityState.start}
+            onSave={handleAvailabilitySave}
+            onClose={() => setAvailabilityState(null)}
+          />
+        )}
+
+        {/* ── Schedule editor form ── */}
+        {scheduleEditorState && (
+          <ScheduleEditorForm
+            emp={scheduleEditorState.emp}
+            initialStart={scheduleEditorState.start}
+            onCallCategory={ownerCfg.config?.onCallCategory ?? 'on-call'}
+            onSave={handleScheduleEditorSave}
+            onClose={() => setScheduleEditorState(null)}
           />
         )}
 

@@ -1,0 +1,57 @@
+.card {
+  position: fixed;
+  z-index: 1200;
+  min-width: 180px;
+  background: var(--wc-surface, #fff);
+  border: 1px solid var(--wc-border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--wc-border, #e2e8f0);
+  background: var(--wc-surface-raised, #f8fafc);
+}
+
+.empName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text, #1e293b);
+  white-space: nowrap;
+}
+
+.empRole {
+  font-size: 11px;
+  color: var(--wc-text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.actionBtn {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--wc-text, #1e293b);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.actionBtn:hover,
+.actionBtn:focus-visible {
+  background: var(--wc-accent-light, #eff6ff);
+  outline: none;
+}

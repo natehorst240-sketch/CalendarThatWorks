@@ -1,0 +1,210 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  background: var(--wc-bg, #fff);
+  border-radius: var(--wc-radius, 10px);
+  box-shadow: var(--wc-shadow, 0 8px 32px rgba(0,0,0,0.18));
+  width: 440px;
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slide-up 0.2s ease;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--wc-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--wc-text, #1e293b);
+  margin: 0;
+}
+
+.empName {
+  font-size: 12px;
+  color: var(--wc-text-muted, #64748b);
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted, #64748b);
+  border-radius: 6px;
+  padding: 4px;
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+.closeBtn:hover { background: var(--wc-surface-2, #f1f5f9); color: var(--wc-text, #1e293b); }
+
+.form {
+  overflow-y: auto;
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted, #64748b);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.req {
+  color: var(--wc-danger, #ef4444);
+  margin-left: 2px;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 14px;
+  color: var(--wc-text, #1e293b);
+  background: var(--wc-input-bg, var(--wc-surface, #fff));
+  border: 1px solid var(--wc-border, #e2e8f0);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--wc-accent, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.inputError {
+  border-color: var(--wc-danger, #ef4444);
+}
+
+.error {
+  font-size: 11px;
+  color: var(--wc-danger, #ef4444);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--wc-text, #1e293b);
+  cursor: pointer;
+  user-select: none;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.colorPreview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--wc-surface-raised, #f8fafc);
+  border: 1px solid var(--wc-border, #e2e8f0);
+}
+
+.colorSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.colorLabel {
+  font-size: 12px;
+  color: var(--wc-text-muted, #64748b);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.btnCancel {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text-muted, #64748b);
+  background: var(--wc-surface-2, #f1f5f9);
+  border: 1px solid var(--wc-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.btnCancel:hover { background: var(--wc-border, #e2e8f0); }
+
+.btnSave {
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--wc-accent, #3b82f6);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.btnSave:hover { background: var(--wc-accent-dark, #2563eb); }

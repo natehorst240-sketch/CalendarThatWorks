@@ -26,6 +26,7 @@ import {
   differenceInCalendarDays, startOfDay, addDays, min, max,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import EmployeeActionCard from '../ui/EmployeeActionCard.jsx';
 import styles from './TimelineView.module.css';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -104,12 +105,14 @@ export default function TimelineView({
   onEmployeeDelete,
   onShiftStatusChange,
   onCoverageAssign,
+  onEmployeeAction,
 }) {
   const ctx        = useCalendarContext();
 
   // ── Shift coverage menu state ─────────────────────────────────────────────
   const [shiftMenu, setShiftMenu] = useState(null); // { ev, rect } | null
   const [coverMenu, setCoverMenu] = useState(null); // { ev, rect } | null
+  const [empCard,   setEmpCard]   = useState(null); // { emp, rect } | null
   const shiftMenuRef = useRef(null);
   const coverMenuRef = useRef(null);
 
@@ -523,10 +526,27 @@ export default function TimelineView({
                           : getInitials(emp.name)
                         }
                       </div>
-                      <div className={styles.nameInfo}>
-                        <span className={styles.empName}>{emp.name}</span>
-                        {emp.role && <span className={styles.empRole}>{emp.role}</span>}
-                      </div>
+                      {onEmployeeAction ? (
+                        <button
+                          className={[styles.nameInfo, styles.nameInfoBtn].join(' ')}
+                          onClick={e => {
+                            e.stopPropagation();
+                            const rect = e.currentTarget.closest(`.${styles.nameCell}`)?.getBoundingClientRect()
+                              ?? e.currentTarget.getBoundingClientRect();
+                            setEmpCard({ emp, rect });
+                          }}
+                          aria-label={`Actions for ${emp.name}`}
+                          aria-haspopup="dialog"
+                        >
+                          <span className={styles.empName}>{emp.name}</span>
+                          {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                        </button>
+                      ) : (
+                        <div className={styles.nameInfo}>
+                          <span className={styles.empName}>{emp.name}</span>
+                          {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                        </div>
+                      )}
                       {onEmployeeDelete && (
                         <button
                           className={styles.removeEmpBtn}
@@ -807,6 +827,16 @@ export default function TimelineView({
               ))
           )}
         </div>
+      )}
+
+      {/* ── Employee action card ── */}
+      {empCard && onEmployeeAction && (
+        <EmployeeActionCard
+          emp={empCard.emp}
+          anchorRect={empCard.rect}
+          onAction={action => onEmployeeAction(empCard.emp.id, action)}
+          onClose={() => setEmpCard(null)}
+        />
       )}
     </div>
   );
