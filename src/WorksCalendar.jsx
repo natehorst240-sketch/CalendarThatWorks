@@ -40,6 +40,7 @@ import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import AvailabilityForm        from './ui/AvailabilityForm.jsx';
+import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -141,6 +142,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEmployeeDelete,
     onEmployeeAction,
     onAvailabilitySave,
+    onScheduleSave,
 
     // ── Validation ──
     blockedWindows,
@@ -372,6 +374,8 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date }
   const [availabilityState, setAvailabilityState] = useState(null);
+  // { emp: { id, name, role? }, start?: Date }
+  const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [remoteTemplates, setRemoteTemplates] = useState([]);
   const [templateError, setTemplateError] = useState('');
@@ -501,15 +505,18 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
   }, [applyEngineOp, onEventSave]);
 
   /**
-   * Handle employee action card clicks.  Availability-type actions ('pto',
-   * 'unavailable', 'availability') are intercepted to open the AvailabilityForm
-   * internally; all actions also bubble to the external onEmployeeAction prop.
+   * Handle employee action card clicks.
+   * - 'pto' | 'unavailable' | 'availability' → opens AvailabilityForm
+   * - 'schedule' → opens ScheduleEditorForm
+   * All actions also bubble to the external onEmployeeAction prop.
    */
   const handleEmployeeAction = useCallback((empId, action) => {
+    const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
     if (AVAILABILITY_ACTIONS.has(action)) {
-      const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
       setAvailabilityState({ emp, kind: action, start: new Date() });
+    } else if (action === 'schedule') {
+      setScheduleEditorState({ emp, start: new Date() });
     }
     onEmployeeAction?.(empId, action);
   }, [employees, onEmployeeAction]);
@@ -522,6 +529,18 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     );
     setAvailabilityState(null);
   }, [applyEngineOp, onAvailabilitySave]);
+
+  /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
+  const handleScheduleEditorSave = useCallback((shiftEvOrArr) => {
+    const events = Array.isArray(shiftEvOrArr) ? shiftEvOrArr : [shiftEvOrArr];
+    events.forEach(ev => {
+      applyEngineOp(
+        { type: 'create', event: { ...ev, id: ev.id ?? `shift-${Date.now()}` }, source: 'api' },
+        () => onScheduleSave?.(ev),
+      );
+    });
+    setScheduleEditorState(null);
+  }, [applyEngineOp, onScheduleSave]);
 
   // All handlers run through applyEngineOp before touching host state.
 
@@ -1081,6 +1100,17 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
             initialStart={availabilityState.start}
             onSave={handleAvailabilitySave}
             onClose={() => setAvailabilityState(null)}
+          />
+        )}
+
+        {/* ── Schedule editor form ── */}
+        {scheduleEditorState && (
+          <ScheduleEditorForm
+            emp={scheduleEditorState.emp}
+            initialStart={scheduleEditorState.start}
+            onCallCategory={ownerCfg.config?.onCallCategory ?? 'on-call'}
+            onSave={handleScheduleEditorSave}
+            onClose={() => setScheduleEditorState(null)}
           />
         )}
 
