@@ -189,22 +189,6 @@ export default function TimelineView({
     setAddFormOpen(false);
   }, [addName, addRole, onEmployeeAdd]);
 
-  const openShiftEditorForRow = useCallback((rowEvents, anchorEl) => {
-    if (!onShiftStatusChange || !anchorEl) return;
-    const onCallEvents = rowEvents
-      .filter(ev => ev.category === onCallCategory || ev.meta?.onCall === true)
-      .sort((a, b) => a.start - b.start);
-    if (onCallEvents.length === 0) return;
-
-    const today = startOfDay(currentDate);
-    const preferred = onCallEvents.find(ev => (
-      startOfDay(ev.start) <= today && startOfDay(ev.end) >= today
-    )) ?? onCallEvents[0];
-    const rect = anchorEl.getBoundingClientRect();
-    setCoverMenu(null);
-    setShiftMenu({ ev: preferred, rect });
-  }, [currentDate, onCallCategory, onShiftStatusChange]);
-
   // ── Row source: employees list OR derive from event resources ──────────────
 
   const useEmployees = employees && employees.length > 0;
@@ -500,18 +484,6 @@ export default function TimelineView({
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
                   aria-label={label}
-                  onClick={(e) => {
-                    if (!emp) return;
-                    openShiftEditorForRow(rowEvents, e.currentTarget);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!emp) return;
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      openShiftEditorForRow(rowEvents, e.currentTarget);
-                    }
-                  }}
-                  tabIndex={emp ? 0 : undefined}
                 >
                   {emp ? (
                     /* Employee display: avatar + name + role */

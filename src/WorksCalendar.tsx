@@ -1066,6 +1066,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setFormEvent({ start, end });
   }, [hasAddButton, onDateSelect]);
 
+  // Schedule cell select → route to schedule-specific editor, not generic EventForm.
+  const handleScheduleDateSelect = useCallback((start, end, resourceId) => {
+    if (!hasAddButton) return;
+    onDateSelect?.(start, end, resourceId);
+
+    const emp = employees.find(e => String(e.id) === String(resourceId));
+    if (!emp) return;
+
+    setScheduleEditorState({
+      emp,
+      start: start instanceof Date ? start : new Date(start),
+    });
+  }, [employees, hasAddButton, onDateSelect]);
+
   const sharedViewProps = {
     currentDate:   cal.currentDate,
     events:        visibleEvents,
@@ -1238,7 +1252,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
-                  onDateSelect={handleDateSelect}
+                  onDateSelect={handleScheduleDateSelect}
                   employees={employees}
                   onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
