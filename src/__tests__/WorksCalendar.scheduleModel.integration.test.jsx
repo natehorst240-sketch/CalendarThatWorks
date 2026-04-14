@@ -154,6 +154,41 @@ describe('WorksCalendar schedule model integration', () => {
     });
   });
 
+  it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
+    const apiRef = createRef();
+    const onEventSave = vi.fn();
+    const onEventDelete = vi.fn();
+    render(
+      <WorksCalendar
+        ref={apiRef}
+        employees={employees}
+        events={[baseShift]}
+        onEventSave={onEventSave}
+        onEventDelete={onEventDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+    await assignCoverageTo(/^Bailey Chen — RN$/);
+    fireEvent.click(screen.getByRole('button', { name: 'Set shift availability' }));
+    fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
+
+    await waitFor(() => {
+      expect(onEventSave.mock.calls.length).toBeGreaterThan(0);
+      expect(onEventDelete.mock.calls.length).toBeGreaterThan(0);
+      const savedShiftWithCoverage = onEventSave.mock.calls
+        .map(([payload]) => payload)
+        .find(
+          (payload) => String(payload?.id ?? '') === 'shift-1'
+            && String(payload?.meta?.coveredBy ?? '') === 'emp-2'
+            && String(payload?.meta?.shiftStatus ?? '') === 'pto'
+            && String(payload?.meta?.openShiftId ?? '') !== '',
+        );
+      expect(savedShiftWithCoverage).toBeTruthy();
+    });
+  }, 15000);
+
   it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef();
     render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);

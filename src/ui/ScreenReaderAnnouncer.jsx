@@ -17,7 +17,7 @@
  *   when the text is the same as before).
  */
 
-import { useImperativeHandle, useRef, useState, forwardRef } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react';
 
 const srOnly = {
   position:   'absolute',
@@ -53,6 +53,13 @@ const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) 
 
   const politeTimer    = useRef(null);
   const assertiveTimer = useRef(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    if (politeTimer.current) clearTimeout(politeTimer.current);
+    if (assertiveTimer.current) clearTimeout(assertiveTimer.current);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     /**
@@ -63,6 +70,7 @@ const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) 
       if (politeness === 'assertive') {
         if (assertiveTimer.current) clearTimeout(assertiveTimer.current);
         assertiveTimer.current = setTimeout(() => {
+          if (!mountedRef.current) return;
           setAssertiveSlot(prev => {
             const next = 1 - prev;
             setAssertiveMsgs(m => {
@@ -77,6 +85,7 @@ const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) 
       } else {
         if (politeTimer.current) clearTimeout(politeTimer.current);
         politeTimer.current = setTimeout(() => {
+          if (!mountedRef.current) return;
           setPoliteSlot(prev => {
             const next = 1 - prev;
             setPoliteMsgs(m => {

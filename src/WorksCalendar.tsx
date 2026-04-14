@@ -607,6 +607,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
   }, []);
 
+  const emitEventSave = useCallback((eventId, fallbackEvent = null, fallbackPatch = null) => {
+    const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
+    if (savedPayload) onEventSave?.(savedPayload);
+  }, [getSavedEventPayload, onEventSave]);
+
   const handleShiftStatusChange = useCallback((ev, status) => {
     const eventId = resolveEventId(ev);
     if (!eventId) return;
@@ -617,26 +622,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const newMeta = buildShiftStatusMeta(ev, { status, openShiftId: resolveEventId(primaryOpenShift) });
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
-      () => {
-        const savedPayload = getSavedEventPayload(eventId, ev, { meta: newMeta });
-        if (savedPayload) onEventSave?.(savedPayload);
-      },
+      () => emitEventSave(eventId, ev, { meta: newMeta }),
     );
 
     if (!status) {
       linkedOpenShifts.forEach((openEv) => {
         const openId = resolveEventId(openEv);
         if (!openId) return;
-        applyEngineOp({ type: 'delete', id: openId, source: 'api' }, () => {});
+        applyEngineOp({ type: 'delete', id: openId, source: 'api' }, () => onEventDelete?.(openId));
       });
 
       linkedMirroredCoverage.forEach((coverEv) => {
         const coverId = resolveEventId(coverEv);
         if (!coverId) return;
-        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => {});
+        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => onEventDelete?.(coverId));
       });
     }
-  }, [applyEngineOp, expandedEvents, getSavedEventPayload, onEventSave]);
+  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete]);
 
   const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
     const eventId = resolveEventId(ev);
@@ -651,10 +653,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const newMeta = buildCoverageMeta(ev, normalizedCoveringEmployeeId, resolveEventId(primaryOpenShift));
     applyEngineOp(
       { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
-      () => {
-        const savedPayload = getSavedEventPayload(eventId, ev, { meta: newMeta });
-        if (savedPayload) onEventSave?.(savedPayload);
-      },
+      () => emitEventSave(eventId, ev, { meta: newMeta }),
     );
 
     // 2. If there is a linked open-shift record, mark it as covered too
@@ -663,7 +662,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       duplicateOpenShifts.forEach((duplicateOpenShift) => {
         const duplicateId = resolveEventId(duplicateOpenShift);
         if (!duplicateId) return;
-        applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+        applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
       });
       const openMeta = {
         ...(openShiftEv.meta ?? {}),
@@ -674,7 +673,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       if (openId) {
         applyEngineOp(
           { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
-          () => {},
+          () => emitEventSave(openId, openShiftEv, { meta: openMeta }),
         );
       }
     }
@@ -683,7 +682,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     mirroredCoverage.slice(1).forEach((duplicateEv) => {
       const duplicateId = resolveEventId(duplicateEv);
       if (!duplicateId) return;
-      applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+      applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
     });
 
     // 3. Create or update the mirrored on-call event on the covering employee's row
@@ -704,15 +703,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (existingMirror) {
       const mirrorId = resolveEventId(existingMirror);
       if (mirrorId) {
-        applyEngineOp({ type: 'update', id: mirrorId, patch: mirroredPatch, source: 'api' }, () => {});
+        applyEngineOp(
+          { type: 'update', id: mirrorId, patch: mirroredPatch, source: 'api' },
+          () => emitEventSave(mirrorId, existingMirror, mirroredPatch),
+        );
       }
     } else {
+      const mirrorId = createId('cover');
       applyEngineOp(
-        { type: 'create', event: { ...mirroredPatch, id: createId('cover') }, source: 'api' },
-        () => {},
+        { type: 'create', event: { ...mirroredPatch, id: mirrorId }, source: 'api' },
+        () => emitEventSave(mirrorId, mirroredPatch, { id: mirrorId }),
       );
     }
-  }, [applyEngineOp, getSavedEventPayload, onEventSave, expandedEvents, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.onCallCategory]);
 
   /**
    * Handle employee action card clicks.
@@ -815,7 +818,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         existingOpenShifts.slice(1).forEach((duplicateOpenShift) => {
           const duplicateId = resolveEventId(duplicateOpenShift);
           if (!duplicateId) return;
-          applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => {});
+          applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
         });
 
         const openShiftPatch = buildOpenShiftPatch(existingOpenShifts[0], shiftEv, availEv.kind);
@@ -825,9 +828,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
         if (existingOpenShifts[0]) {
           const openId = resolveEventId(existingOpenShifts[0]);
-          if (openId) applyEngineOp({ type: 'update', id: openId, patch: openShiftPatch, source: 'api' }, () => {});
+          if (openId) {
+            applyEngineOp(
+              { type: 'update', id: openId, patch: openShiftPatch, source: 'api' },
+              () => emitEventSave(openId, existingOpenShifts[0], openShiftPatch),
+            );
+          }
         } else {
-          applyEngineOp({ type: 'create', event: openShift, source: 'api' }, () => {});
+          applyEngineOp(
+            { type: 'create', event: openShift, source: 'api' },
+            () => emitEventSave(openShift.id, openShift),
+          );
         }
 
         // Mark the original shift as needing coverage
@@ -839,13 +850,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         };
         applyEngineOp(
           { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
-          () => {},
+          () => emitEventSave(shiftId, shiftEv, { meta: updatedMeta }),
         );
       });
     }
 
     setAvailabilityState(null);
-  }, [applyEngineOp, getSavedEventPayload, onAvailabilitySave, expandedEvents, ownerCfg.config?.onCallCategory]);
+  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.onCallCategory]);
 
   /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
   const handleScheduleEditorSave = useCallback((shiftEvOrArr) => {
