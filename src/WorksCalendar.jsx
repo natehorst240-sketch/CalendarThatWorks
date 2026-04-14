@@ -20,6 +20,7 @@ import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { usePermissions }     from './hooks/usePermissions.js';
 import { useEventOptions }    from './hooks/useEventOptions.js';
+import { useTouchSwipe }     from './hooks/useTouchSwipe.js';
 import { CalendarContext }    from './core/CalendarContext.js';
 import { normalizeEvents }    from './core/eventModel.js';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
@@ -842,6 +843,15 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     }
   }
 
+  const swipeAreaRef = useRef(null);
+  const swipeNavigationEnabled = cal.view === 'month' || cal.view === 'schedule';
+  useTouchSwipe({
+    targetRef: swipeAreaRef,
+    enabled: swipeNavigationEnabled,
+    onSwipeLeft: () => cal.navigate(1),
+    onSwipeRight: () => cal.navigate(-1),
+  });
+
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
@@ -1012,7 +1022,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
         }
 
         {/* ── View area ── */}
-        <div className={styles.viewArea}>
+        <div ref={swipeAreaRef} className={styles.viewArea}>
           {isEmpty && emptyState ? (
             <div className={styles.emptyStateWrap}>{emptyState}</div>
           ) : (
