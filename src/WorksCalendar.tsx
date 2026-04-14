@@ -101,6 +101,51 @@ function viewRange(view, date, weekStartDay = 0) {
   }
 }
 
+export type WorksCalendarProps = {
+  events?: unknown[];
+  fetchEvents?: (...args: any[]) => Promise<unknown[]>;
+  icalFeeds?: unknown[];
+  onImport?: (events: unknown[]) => void;
+  scheduleTemplates?: unknown[];
+  scheduleTemplateAdapter?: unknown;
+  scheduleInstantiationLimits?: { previewMax?: number; createMax?: number };
+  onScheduleTemplateAnalytics?: (...args: any[]) => void;
+  calendarId?: string;
+  ownerPassword?: string;
+  onConfigSave?: (...args: any[]) => void;
+  devMode?: boolean;
+  notes?: Record<string, unknown>;
+  onNoteSave?: (...args: any[]) => void;
+  onNoteDelete?: (...args: any[]) => void;
+  onEventClick?: (...args: any[]) => void;
+  onEventSave?: (...args: any[]) => void;
+  onEventMove?: (...args: any[]) => void;
+  onEventResize?: (...args: any[]) => void;
+  onEventDelete?: (...args: any[]) => void;
+  onDateSelect?: (...args: any[]) => void;
+  supabaseUrl?: string;
+  supabaseKey?: string;
+  supabaseTable?: string;
+  supabaseFilter?: string;
+  role?: 'admin' | 'user' | 'readonly';
+  employees?: unknown[];
+  onEmployeeAdd?: (...args: any[]) => void;
+  onEmployeeDelete?: (...args: any[]) => void;
+  blockedWindows?: unknown[];
+  theme?: string;
+  colorRules?: unknown[];
+  businessHours?: unknown;
+  renderEvent?: (...args: any[]) => unknown;
+  renderHoverCard?: (...args: any[]) => unknown;
+  renderToolbar?: (...args: any[]) => unknown;
+  renderFilterBar?: (...args: any[]) => unknown;
+  renderSavedViewsBar?: (...args: any[]) => unknown;
+  emptyState?: unknown;
+  filterSchema?: unknown[];
+  showAddButton?: boolean;
+  initialView?: 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+};
+
 export const WorksCalendar = forwardRef(function WorksCalendar(
   {
     // ── Data ──
@@ -174,7 +219,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
 
     // ── Initial view (overrides saved config on first render) ──
     initialView,
-  },
+  }: WorksCalendarProps,
   ref,
 ) {
   // SSR guard: avoid touching browser-only APIs during server rendering.
