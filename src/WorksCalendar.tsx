@@ -123,6 +123,7 @@ export type WorksCalendarProps = {
   filterSchema?: Array<Record<string, unknown>>;
   showAddButton?: boolean;
   initialView?: CalendarView;
+  weekStartDay?: 0 | 1;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -248,6 +249,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Initial view (overrides saved config on first render) ──
     initialView,
+
+    // ── Week start day (prop takes priority over owner config) ──
+    weekStartDay: weekStartDayProp,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -258,7 +262,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
   const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
-  const weekStartDay = ownerCfg.config?.display?.weekStartDay ?? 0;
+  const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
 
   // Honor defaultView from owner config (applied once after config loads)
