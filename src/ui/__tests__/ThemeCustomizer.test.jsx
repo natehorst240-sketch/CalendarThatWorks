@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ThemeCustomizer from '../ThemeCustomizer.jsx';
 
@@ -43,15 +43,37 @@ describe('ThemeCustomizer', () => {
     expect(latest.customTheme.spacing.density).toBe(1.15);
   });
 
-  it('updates font family from dropdown selection', () => {
+  it('updates body font from dropdown selection', () => {
     const { setConfig } = renderWithConfig({});
 
-    fireEvent.change(screen.getByLabelText('Font Family'), {
+    fireEvent.change(screen.getByLabelText('Body Font'), {
       target: { value: "'Roboto', 'Helvetica Neue', Arial, sans-serif" },
     });
 
     const latest = setConfig.mock.calls.at(-1)[0];
     expect(latest.customTheme.typography.fontFamily).toBe("'Roboto', 'Helvetica Neue', Arial, sans-serif");
+  });
+
+
+  it('updates heading and monospace fonts independently', () => {
+    const heading = renderWithConfig({});
+
+    fireEvent.change(screen.getByLabelText('Heading Font'), {
+      target: { value: "Georgia, 'Times New Roman', serif" },
+    });
+
+    const headingLatest = heading.setConfig.mock.calls.at(-1)[0];
+    expect(headingLatest.customTheme.typography.headingFontFamily).toBe("Georgia, 'Times New Roman', serif");
+
+    cleanup();
+
+    const mono = renderWithConfig({});
+    fireEvent.change(screen.getAllByLabelText('Monospace Font')[1], {
+      target: { value: "'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace" },
+    });
+
+    const monoLatest = mono.setConfig.mock.calls.at(-1)[0];
+    expect(monoLatest.customTheme.typography.monoFontFamily).toBe("'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace");
   });
 
   it('resets customTheme to defaults payload', () => {

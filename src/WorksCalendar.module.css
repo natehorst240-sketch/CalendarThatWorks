@@ -1,5 +1,7 @@
 .root {
   --wc-font:        'Inter', system-ui, -apple-system, sans-serif;
+  --wc-font-heading: var(--wc-font);
+  --wc-font-mono:    ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, monospace;
   --wc-accent:      #3b82f6;
   --wc-accent-dim:  #eff6ff;
   --wc-bg:          #ffffff;
@@ -29,6 +31,15 @@
   height: 100%;
   min-height: 400px;
   box-sizing: border-box;
+}
+
+
+.root :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--wc-font-heading);
+}
+
+.root :is(code, pre, kbd, samp) {
+  font-family: var(--wc-font-mono);
 }
 
 /* Dark theme token overrides */

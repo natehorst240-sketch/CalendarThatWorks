@@ -67,7 +67,7 @@ const PRESET_THEMES = [
   },
 ];
 
-const FONT_FAMILY_OPTIONS = [
+const FONT_STACK_OPTIONS = [
   { label: 'Inter (Default)', value: "'Inter', system-ui, -apple-system, sans-serif" },
   { label: 'System UI', value: "system-ui, -apple-system, 'Segoe UI', sans-serif" },
   { label: 'Segoe UI', value: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" },
@@ -77,6 +77,24 @@ const FONT_FAMILY_OPTIONS = [
   { label: 'Nunito', value: "'Nunito', 'Segoe UI', system-ui, sans-serif" },
   { label: 'IBM Plex Sans', value: "'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" },
   { label: 'JetBrains Mono', value: "'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace" },
+];
+
+const FONT_ROLE_CONTROLS = [
+  {
+    key: 'fontFamily',
+    label: 'Body Font',
+    customPlaceholder: "Enter body font stack",
+  },
+  {
+    key: 'headingFontFamily',
+    label: 'Heading Font',
+    customPlaceholder: "Enter heading font stack",
+  },
+  {
+    key: 'monoFontFamily',
+    label: 'Monospace Font',
+    customPlaceholder: "Enter monospace font stack",
+  },
 ];
 
 function valueLabel(value, suffix) {
@@ -130,8 +148,13 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const [importSuccess, setImportSuccess] = useState('');
   const [copyState, setCopyState] = useState('');
   const merged = normalizeCustomTheme(theme);
-  const hasNamedFontOption = FONT_FAMILY_OPTIONS.some((option) => option.value === merged.typography.fontFamily);
-  const selectedFontOption = hasNamedFontOption ? merged.typography.fontFamily : '__custom__';
+  const selectedFontOptionByRole = useMemo(() => Object.fromEntries(
+    FONT_ROLE_CONTROLS.map(({ key }) => {
+      const rawValue = merged.typography[key] ?? merged.typography.fontFamily;
+      const hasNamedFontOption = FONT_STACK_OPTIONS.some((option) => option.value === rawValue);
+      return [key, hasNamedFontOption ? rawValue : '__custom__'];
+    }),
+  ), [merged]);
   const previewVars = customThemeToCssVars(merged);
   const previewStyle = {
     ...previewVars,
@@ -227,28 +250,36 @@ export default function ThemeCustomizer({ theme, onChange }) {
           </label>
         ))}
 
-        <label className={styles.control}>
-          <span>Font Family</span>
-          <select
-            value={selectedFontOption}
-            onChange={(e) => {
-              if (e.target.value !== '__custom__') update(['typography', 'fontFamily'], e.target.value);
-            }}
-          >
-            {FONT_FAMILY_OPTIONS.map((option) => (
-              <option key={option.label} value={option.value}>{option.label}</option>
-            ))}
-            <option value="__custom__">Custom…</option>
-          </select>
-          {selectedFontOption === '__custom__' && (
-            <input
-              type="text"
-              value={merged.typography.fontFamily}
-              onChange={(e) => update(['typography', 'fontFamily'], e.target.value)}
-              placeholder="Enter custom font stack"
-            />
-          )}
-        </label>
+        {FONT_ROLE_CONTROLS.map((role) => {
+          const roleValue = merged.typography[role.key] ?? merged.typography.fontFamily;
+          const selectedFontOption = selectedFontOptionByRole[role.key];
+          return (
+            <label className={styles.control} key={role.key}>
+              <span>{role.label}</span>
+              <select
+                value={selectedFontOption}
+                onChange={(e) => {
+                  if (e.target.value !== '__custom__') update(['typography', role.key], e.target.value);
+                }}
+              >
+                {FONT_STACK_OPTIONS.map((option) => (
+                  <option key={option.label} value={option.value} style={{ fontFamily: option.value }}>
+                    {option.label}
+                  </option>
+                ))}
+                <option value="__custom__">Custom…</option>
+              </select>
+              {selectedFontOption === '__custom__' && (
+                <input
+                  type="text"
+                  value={roleValue}
+                  onChange={(e) => update(['typography', role.key], e.target.value)}
+                  placeholder={role.customPlaceholder}
+                />
+              )}
+            </label>
+          );
+        })}
 
         {TOKEN_SLIDERS.map(([group, key, label, min, max, step, suffix]) => (
           <label key={`${group}.${key}`} className={styles.control}>
