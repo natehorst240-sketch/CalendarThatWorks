@@ -49,7 +49,6 @@ import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
-import { exportToExcel }      from './export/excelExport.js';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
@@ -81,6 +80,14 @@ const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   previewMax: 200,
   createMax: 200,
 };
+let exportToExcelFn = null;
+
+async function exportVisibleEvents(events) {
+  if (!exportToExcelFn) {
+    ({ exportToExcel: exportToExcelFn } = await import('./export/excelExport.js'));
+  }
+  return exportToExcelFn(events);
+}
 
 /** Compute the visible [start, end] range for a given view + date. */
 function viewRange(view, date, weekStartDay = 0) {
@@ -937,7 +944,7 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
                   <Upload size={15} aria-hidden="true" />
                 </button>
               )}
-              <button className={styles.exportBtn} onClick={() => exportToExcel(visibleEvents)} aria-label="Export to Excel">
+              <button className={styles.exportBtn} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
                 <Download size={15} aria-hidden="true" />
               </button>
               {ownerCfg.isOwner && (
