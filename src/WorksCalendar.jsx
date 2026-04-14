@@ -41,6 +41,7 @@ import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import AvailabilityForm        from './ui/AvailabilityForm.jsx';
 import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
+import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -521,14 +522,38 @@ export const WorksCalendar = forwardRef(function WorksCalendar(
     onEmployeeAction?.(empId, action);
   }, [employees, onEmployeeAction]);
 
-  /** Save an availability/PTO event through the engine then notify the host. */
+  /** Save an availability/PTO event through the engine then notify the host.
+   *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
+   *  unavailable window automatically gets an open-shift event created. */
   const handleAvailabilitySave = useCallback((availEv) => {
+    // 1. Create the availability event itself
     applyEngineOp(
       { type: 'create', event: { ...availEv, id: availEv.id ?? `avail-${Date.now()}` }, source: 'api' },
       () => onAvailabilitySave?.(availEv),
     );
+
+    // 2. Detect overlapping shifts and auto-create open-shift records
+    const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
+    if (isLeave) {
+      const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+      const { conflictingEvents } = detectShiftConflicts({
+        employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
+        requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
+        requestEnd:    availEv.end   instanceof Date ? availEv.end   : new Date(availEv.end),
+        allEvents:     expandedEvents,
+        onCallCategory: onCallCat,
+      });
+      conflictingEvents.forEach(shiftEv => {
+        const openShift = buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
+        applyEngineOp(
+          { type: 'create', event: openShift, source: 'api' },
+          () => {},
+        );
+      });
+    }
+
     setAvailabilityState(null);
-  }, [applyEngineOp, onAvailabilitySave]);
+  }, [applyEngineOp, onAvailabilitySave, expandedEvents, ownerCfg.config?.onCallCategory]);
 
   /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
   const handleScheduleEditorSave = useCallback((shiftEvOrArr) => {
