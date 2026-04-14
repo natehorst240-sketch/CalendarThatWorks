@@ -211,6 +211,7 @@ export default function MonthView({
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
+    const display     = ev.meta?._display ?? {};
 
     function handlePillMouseEnter(e) {
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
@@ -251,8 +252,19 @@ export default function MonthView({
 
     return (
       <button key={ev.id}
-        className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
-        style={{ '--ev-color': color }}
+        className={[
+          styles.eventPill,
+          statusClass,
+          isDimmed && styles.dragging,
+          ctx?.editMode && styles.editModePill,
+        ].filter(Boolean).join(' ')}
+        style={{
+          '--ev-color': color,
+          fontWeight: display.bold  ? '700' : undefined,
+          fontSize:   display.large ? '12px' : undefined,
+          minHeight:  display.large ? '26px' : undefined,
+          height:     display.large ? '26px' : undefined,
+        }}
         onClick={e => { e.stopPropagation(); onClick(); }}
         onPointerDown={e => startPillDrag(ev, e)}
         onMouseEnter={handlePillMouseEnter}

@@ -364,6 +364,65 @@
   color: var(--wc-text);
 }
 
+/* Wand / edit-mode toggle button */
+.wandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--wc-radius-sm);
+  background: transparent;
+  border: 1px solid var(--wc-border);
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  transition: all 0.15s;
+}
+.wandBtn:hover {
+  background: var(--wc-surface);
+  border-color: var(--wc-border-dark);
+  color: var(--wc-text);
+}
+.wandBtnActive {
+  background: var(--wc-accent-dim);
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+/* Edit mode: glow ring on the calendar root */
+.root[data-wc-edit-mode] {
+  box-shadow: 0 0 0 2px var(--wc-accent);
+}
+
+/* Edit mode banner */
+.editModeBanner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: var(--wc-accent-dim);
+  color: var(--wc-accent);
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--wc-accent);
+  flex-shrink: 0;
+}
+
+.editModeExit {
+  margin-left: auto;
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.editModeExit:hover { opacity: 0.85; }
+
 /* View area */
 .viewArea {
   flex: 1;

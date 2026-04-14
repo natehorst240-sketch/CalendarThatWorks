@@ -202,6 +202,8 @@
   transition: opacity 0.1s;
 }
 .eventPill:hover { opacity: 0.85; }
+/* In edit mode: subtle dashed outline signals every pill is editable */
+.editModePill { outline: 1.5px dashed rgba(255,255,255,0.55); outline-offset: -2px; cursor: cell; }
 .eventPill.tentative { opacity: 0.65; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,.25) 3px, rgba(255,255,255,.25) 6px); }
 .eventPill.cancelled { opacity: 0.5; text-decoration: line-through; }
 .eventPill.dragging { opacity: 0.3; pointer-events: none; cursor: grabbing; }

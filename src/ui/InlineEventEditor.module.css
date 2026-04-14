@@ -1,0 +1,162 @@
+.panel {
+  position: fixed;
+  z-index: 2000;
+  background: var(--wc-bg);
+  border: 1.5px solid var(--wc-border-dark);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  padding: 12px;
+  width: 252px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--wc-radius-sm);
+  line-height: 1;
+}
+.closeBtn:hover {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+}
+
+/* ── Title input ── */
+.titleInput {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 13px;
+  font-family: var(--wc-font);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.titleInput:focus {
+  border-color: var(--wc-accent);
+  box-shadow: 0 0 0 2px var(--wc-accent-dim);
+}
+
+/* ── Color row ── */
+.colorRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.colorSwatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.colorSwatch:hover {
+  transform: scale(1.18);
+}
+.colorActive {
+  border-color: var(--wc-text);
+  transform: scale(1.15);
+}
+
+/* ── Style toggles ── */
+.styleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.styleBtn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  font-family: inherit;
+}
+.styleBtn:hover {
+  background: var(--wc-surface-2);
+}
+.styleBtnActive {
+  background: var(--wc-accent-dim);
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.styleHint {
+  font-size: 11px;
+  color: var(--wc-text-faint);
+}
+
+/* ── Actions ── */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.saveBtn {
+  flex: 1;
+  padding: 7px;
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.saveBtn:hover { opacity: 0.88; }
+
+.cancelBtn {
+  flex: 1;
+  padding: 7px;
+  background: var(--wc-surface-2);
+  color: var(--wc-text-muted);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.cancelBtn:hover { background: var(--wc-border); }

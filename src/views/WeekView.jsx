@@ -271,6 +271,7 @@ export default function WeekView({
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
+    const display   = ev.meta?._display ?? {};
 
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
@@ -278,8 +279,16 @@ export default function WeekView({
 
     return (
       <div key={ev.id} data-event="1"
-        className={[styles.event, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
-        style={{ top, height, '--ev-color': color, left: `${pctLeft}%`, width: `${pctWidth}%` }}
+        className={[
+          styles.event, statusClass,
+          isDimmed && styles.dragging,
+          ctx?.editMode && styles.editModeEvent,
+        ].filter(Boolean).join(' ')}
+        style={{
+          top, height, '--ev-color': color,
+          left: `${pctLeft}%`, width: `${pctWidth}%`,
+          fontSize: display.large ? '12px' : undefined,
+        }}
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
@@ -291,7 +300,7 @@ export default function WeekView({
           aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles.evTitle}>{ev.title}</span>
+            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>{ev.title}</span>
             <span className={styles.evTime}>{format(ev.start, 'h:mm a')}</span>
           </>
         )}

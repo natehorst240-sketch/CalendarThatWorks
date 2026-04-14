@@ -289,6 +289,8 @@
 }
 .event:hover { filter: brightness(1.1); }
 .event:active { cursor: grabbing; }
+/* In edit mode: dashed outline signals the event is editable */
+.editModeEvent { outline: 1.5px dashed rgba(255,255,255,0.55); outline-offset: -3px; cursor: cell; }
 .event.dragging { opacity: 0.35; pointer-events: none; }
 .event.tentative {
   opacity: 0.65;

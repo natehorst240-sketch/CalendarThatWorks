@@ -10,7 +10,7 @@ import {
   format, startOfMonth, endOfMonth,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Download, Plus, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Plus, Sparkles, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar.js';
 import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
@@ -45,6 +45,7 @@ import AvailabilityForm        from './ui/AvailabilityForm.jsx';
 import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
 import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
 import ValidationAlert          from './ui/ValidationAlert.jsx';
+import InlineEventEditor        from './ui/InlineEventEditor.jsx';
 import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
 import MonthView              from './views/MonthView.jsx';
@@ -465,6 +466,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // { emp: { id, name, role? }, start?: Date }
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
+  const [editMode,         setEditMode]         = useState(false);
+  // { event, x, y } — set when an event is clicked in edit mode
+  const [inlineEditTarget, setInlineEditTarget] = useState(null);
+  // Capture last click coords so InlineEventEditor can position near the pill
+  const lastClickCoordsRef = useRef({ x: 0, y: 0 });
+  const editModeRef = useRef(false);
+  editModeRef.current = editMode;
   const [remoteTemplates, setRemoteTemplates] = useState([]);
   const [templateError, setTemplateError] = useState('');
 
@@ -563,6 +571,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── Callbacks ────────────────────────────────────────────────────────────
   const handleEventClick = useCallback((ev) => {
+    if (editModeRef.current) {
+      setSelectedEvent(null);
+      setInlineEditTarget({
+        event: ev,
+        x: lastClickCoordsRef.current.x,
+        y: lastClickCoordsRef.current.y,
+      });
+      return;
+    }
     setSelectedEvent(ev);
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
@@ -1019,11 +1036,28 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setFormEvent(ev._raw ?? ev);
   }, []);
 
+  /** Save quick display customizations from InlineEventEditor. */
+  const handleInlineSave = useCallback((patch) => {
+    const ev = inlineEditTarget?.event;
+    if (!ev) return;
+    const eventId = ev._eventId ?? String(ev.id);
+    applyEngineOp({
+      type:   'update',
+      id:     eventId,
+      patch:  { title: patch.title, color: patch.color, meta: patch.meta },
+      source: 'inline-edit',
+    }, () => {
+      onEventSave?.({ ...ev, ...patch });
+      setInlineEditTarget(null);
+    });
+  }, [inlineEditTarget, applyEngineOp, onEventSave]);
+
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo(() => ({
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
     permissions: perms,
-  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms]);
+    editMode,
+  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode]);
 
   // ── Toolbar date label ───────────────────────────────────────────────────
   function getDateLabel() {
@@ -1095,7 +1129,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" style={customThemeVars}>
+        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -1139,6 +1173,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
             <div className={styles.actions}>
               {devMode && <span className={styles.devBadge}>Dev</span>}
+              {(ownerCfg.isOwner || devMode) && (
+                <button
+                  className={[styles.wandBtn, editMode && styles.wandBtnActive].filter(Boolean).join(' ')}
+                  onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
+                  aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
+                  title={editMode ? 'Exit edit mode' : 'Customize events'}
+                >
+                  <Sparkles size={15} aria-hidden="true" />
+                </button>
+              )}
               {hasAddButton && (
                 <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
                   <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
@@ -1176,6 +1220,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 />
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── Edit mode banner ── */}
+        {editMode && (
+          <div className={styles.editModeBanner} role="status" aria-live="polite">
+            <Sparkles size={13} aria-hidden="true" />
+            <span>Edit mode — click any event to customize it</span>
+            <button
+              className={styles.editModeExit}
+              onClick={() => { setEditMode(false); setInlineEditTarget(null); }}
+              aria-label="Exit edit mode"
+            >
+              Done
+            </button>
           </div>
         )}
 
@@ -1238,7 +1297,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         }
 
         {/* ── View area ── */}
-        <div ref={swipeAreaRef} className={styles.viewArea}>
+        <div
+          ref={swipeAreaRef}
+          className={styles.viewArea}
+          onClickCapture={editMode ? (e) => {
+            lastClickCoordsRef.current = { x: e.clientX, y: e.clientY };
+          } : undefined}
+        >
           {isEmpty && emptyState ? (
             <div className={styles.emptyStateWrap}>{emptyState}</div>
           ) : (
@@ -1381,6 +1446,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />
         </div>
+
+        {/* ── Inline event editor (edit mode) ── */}
+        {inlineEditTarget && (
+          <InlineEventEditor
+            event={inlineEditTarget.event}
+            x={inlineEditTarget.x}
+            y={inlineEditTarget.y}
+            onSave={handleInlineSave}
+            onClose={() => setInlineEditTarget(null)}
+          />
+        )}
       </CalendarContext.Provider>
     </CalendarErrorBoundary>
   );
