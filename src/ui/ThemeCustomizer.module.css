@@ -99,6 +99,47 @@
   flex-wrap: wrap;
   gap: 10px;
 }
+.contrastList {
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  overflow: hidden;
+}
+.contrastRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 12px;
+}
+.contrastRow + .contrastRow {
+  border-top: 1px solid var(--wc-border);
+}
+.contrastMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.rating {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.rating_good {
+  background: #dcfce7;
+  color: #166534;
+}
+.rating_warn {
+  background: #fef9c3;
+  color: #854d0e;
+}
+.rating_bad {
+  background: #fee2e2;
+  color: #991b1b;
+}
 .radioLabel {
   display: inline-flex;
   align-items: center;

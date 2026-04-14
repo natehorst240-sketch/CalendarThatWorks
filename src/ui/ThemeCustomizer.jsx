@@ -73,6 +73,44 @@ function valueLabel(value, suffix) {
   return `${value}${suffix}`;
 }
 
+function hexToRgb(hex) {
+  const normalized = String(hex || '').trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+  const int = Number.parseInt(normalized, 16);
+  return {
+    r: (int >> 16) & 255,
+    g: (int >> 8) & 255,
+    b: int & 255,
+  };
+}
+
+function relativeLuminance(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const map = [rgb.r, rgb.g, rgb.b].map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * map[0] + 0.7152 * map[1] + 0.0722 * map[2];
+}
+
+function contrastRatio(hexA, hexB) {
+  const lumA = relativeLuminance(hexA);
+  const lumB = relativeLuminance(hexB);
+  if (lumA === null || lumB === null) return null;
+  const lighter = Math.max(lumA, lumB);
+  const darker = Math.min(lumA, lumB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function wcagRating(ratio) {
+  if (ratio === null) return { label: 'Invalid color', tone: 'bad' };
+  if (ratio >= 7) return { label: 'AAA', tone: 'good' };
+  if (ratio >= 4.5) return { label: 'AA', tone: 'good' };
+  if (ratio >= 3) return { label: 'Large text only', tone: 'warn' };
+  return { label: 'Fail', tone: 'bad' };
+}
+
 export default function ThemeCustomizer({ theme, onChange }) {
   const [draftImport, setDraftImport] = useState('');
   const [importError, setImportError] = useState('');
@@ -82,6 +120,20 @@ export default function ThemeCustomizer({ theme, onChange }) {
   const merged = normalizeCustomTheme(theme);
   const previewVars = customThemeToCssVars(merged);
   const exportJson = useMemo(() => JSON.stringify(merged, null, 2), [merged]);
+  const contrastChecks = useMemo(() => ([
+    { id: 'text-on-bg', label: 'Body text on background', fg: merged.colors.text, bg: merged.colors.bg },
+    { id: 'text-on-surface', label: 'Body text on surface', fg: merged.colors.text, bg: merged.colors.surface },
+    { id: 'accent-on-accent-dim', label: 'Accent on accent soft', fg: merged.colors.accent, bg: merged.colors.accentDim },
+    { id: 'muted-on-bg', label: 'Muted text on background', fg: merged.colors.textMuted, bg: merged.colors.bg },
+  ].map((item) => {
+    const ratio = contrastRatio(item.fg, item.bg);
+    const rating = wcagRating(ratio);
+    return {
+      ...item,
+      ratio,
+      rating,
+    };
+  })), [merged]);
 
   function update(path, value) {
     onChange((config) => {
@@ -208,6 +260,23 @@ export default function ThemeCustomizer({ theme, onChange }) {
 
       <div className={styles.actions}>
         <button className={styles.btn} onClick={() => onChange((c) => ({ ...c, customTheme: {} }))}>Reset to default</button>
+      </div>
+
+      <div className={styles.ioSection}>
+        <strong className={styles.blockLabel}>Contrast checks (WCAG)</strong>
+        <div className={styles.contrastList}>
+          {contrastChecks.map((check) => (
+            <div key={check.id} className={styles.contrastRow}>
+              <span>{check.label}</span>
+              <span className={styles.contrastMeta}>
+                <span>{check.ratio ? `${check.ratio.toFixed(2)}:1` : 'n/a'}</span>
+                <span className={[styles.rating, styles[`rating_${check.rating.tone}`]].join(' ')}>
+                  {check.rating.label}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className={styles.ioSection}>

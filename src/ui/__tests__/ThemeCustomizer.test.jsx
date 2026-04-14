@@ -114,4 +114,12 @@ describe('ThemeCustomizer', () => {
     expect(writeText).toHaveBeenCalled();
     expect(await screen.findByText('Copied JSON to clipboard.')).toBeInTheDocument();
   });
+
+  it('renders contrast checks and rating badges', () => {
+    renderWithConfig({});
+
+    expect(screen.getByText('Contrast checks (WCAG)')).toBeInTheDocument();
+    expect(screen.getByText('Body text on background')).toBeInTheDocument();
+    expect(screen.getAllByText(/AAA|AA|Large text only|Fail/).length).toBeGreaterThan(0);
+  });
 });
