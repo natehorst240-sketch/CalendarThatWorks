@@ -33,6 +33,16 @@ WorksCalendar is built for:
 | Scheduling | Manual | PTO → open shift → coverage |
 | Customization | Hard | First-class |
 | Data sources | Single | Adapters + feeds + APIs |
+___
+
+
+## Documentation
+
+- [Docs Overview](./docs/README.md)
+- [Schedule Workflow](./docs/ScheduleWorkflow.md)
+- [Filtering System](./docs/Filtering.md)
+- [Prompt Examples](./docs/Prompts.md)
+
 
 ---
 
@@ -52,6 +62,10 @@ import 'works-calendar/styles/ocean';
 
 
 ⸻
+
+## Example Workflows
+
+See [examples/WORKFLOWS.md](./examples/WORKFLOWS.md)
 
 Real-world workflows
 
