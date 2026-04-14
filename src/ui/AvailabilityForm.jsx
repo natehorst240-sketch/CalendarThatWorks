@@ -66,30 +66,33 @@ function fromInput(str, allDay) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 /**
- * AvailabilityForm — modal for creating PTO / Unavailable / Availability events.
+ * AvailabilityForm — modal for creating PTO/Unavailable and creating or editing Availability events.
  *
  * Props:
  *   emp        { id, name, role? }       — the employee this record is for
  *   kind       'pto' | 'unavailable' | 'availability'  — pre-selected kind
  *   initialStart  Date | null            — pre-filled start (e.g. from timeline click)
+ *   initialEvent  event | null           — optional event to edit (used by Edit Availability)
  *   onSave     (availabilityEvent) => void
  *   onClose    () => void
  */
-export default function AvailabilityForm({ emp, kind: initialKind, initialStart, onSave, onClose }) {
+export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }) {
   const trapRef = useFocusTrap(onClose);
 
   const kind = initialKind ?? 'pto';
   const meta = KIND_META[kind] ?? KIND_META.pto;
+  const isEdit = Boolean(initialEvent?.id);
   const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
 
-  const startDefault = initialStart ?? new Date();
-  const endDefault   = new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
+  const eventStart = initialEvent?.start ?? initialStart;
+  const startDefault = eventStart ?? new Date();
+  const endDefault   = initialEvent?.end ?? new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
 
-  const [allDay, setAllDay] = useState(meta.allDayDefault);
-  const [title,  setTitle]  = useState(meta.defaultTitle);
-  const [start,  setStart]  = useState(toDateInput(startDefault, allDay));
-  const [end,    setEnd]    = useState(toDateInput(endDefault,   allDay));
-  const [notes,  setNotes]  = useState('');
+  const [allDay, setAllDay] = useState(initialEvent?.allDay ?? meta.allDayDefault);
+  const [title,  setTitle]  = useState(initialEvent?.title ?? meta.defaultTitle);
+  const [start,  setStart]  = useState(toDateInput(startDefault, initialEvent?.allDay ?? meta.allDayDefault));
+  const [end,    setEnd]    = useState(toDateInput(endDefault,   initialEvent?.allDay ?? meta.allDayDefault));
+  const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
   const [errors, setErrors] = useState({});
 
   function validate() {
@@ -112,7 +115,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
     const en = fromInput(end, allDay);
 
     onSave({
-      id:         `avail-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id:         initialEvent?.id ?? `avail-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       employeeId: emp.id,
       kind,
       title:      title.trim(),
@@ -122,7 +125,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
       color:      meta.color,
       category:   meta.category,
       resource:   emp.id,
-      meta:       { kind, ...(notes.trim() ? { notes: notes.trim() } : {}) },
+      meta:       { ...(initialEvent?.meta ?? {}), kind, ...(notes.trim() ? { notes: notes.trim() } : {}) },
     });
   }
 
@@ -234,14 +237,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               aria-hidden="true"
             />
             <span className={styles.colorLabel}>
-              Event will be shown in {kindLabel.toLowerCase()} color
+              {isEdit ? 'Changes will keep this event in' : 'Event will be shown in'} {kindLabel.toLowerCase()} color
             </span>
           </div>
 
           {/* Actions */}
           <div className={styles.actions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
-            <button type="submit" className={styles.btnSave}>{intentMeta.submitLabel}</button>
+            <button type="submit" className={styles.btnSave}>{isEdit && kind === 'availability' ? 'Save Availability Changes' : intentMeta.submitLabel}</button>
           </div>
         </form>
       </div>

@@ -460,7 +460,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [formEvent,        setFormEvent]        = useState(null);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
-  // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date }
+  // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
   const [availabilityState, setAvailabilityState] = useState(null);
   // { emp: { id, name, role? }, start?: Date }
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
@@ -643,22 +643,56 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
     if (AVAILABILITY_ACTIONS.has(action)) {
-      setAvailabilityState({ emp, kind: action, start: new Date() });
+      const initialEvent = action === 'availability'
+        ? expandedEvents
+          .filter((ev) => {
+            const evKind = String(ev?.kind ?? ev?.meta?.kind ?? '').toLowerCase();
+            const evCat  = String(ev?.category ?? '').toLowerCase();
+            const resourceId = String(ev?.resource ?? ev?.resourceId ?? ev?.employeeId ?? '');
+            return resourceId === String(empId) && (evKind === 'availability' || evCat === 'availability');
+          })
+          .sort((a, b) => {
+            const aStart = a?.start ? new Date(a.start).getTime() : 0;
+            const bStart = b?.start ? new Date(b.start).getTime() : 0;
+            return bStart - aStart;
+          })
+          .map((ev) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
+        : null;
+      setAvailabilityState({ emp, kind: action, start: new Date(), initialEvent });
     } else if (action === 'schedule') {
       setScheduleEditorState({ emp, start: new Date() });
     }
     onEmployeeAction?.(empId, action);
-  }, [employees, onEmployeeAction]);
+  }, [employees, expandedEvents, onEmployeeAction]);
 
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
    *  unavailable window automatically gets an open-shift event created. */
   const handleAvailabilitySave = useCallback((availEv) => {
-    // 1. Create the availability event itself
-    applyEngineOp(
-      { type: 'create', event: { ...availEv, id: availEv.id ?? `avail-${Date.now()}` }, source: 'api' },
-      () => onAvailabilitySave?.(availEv),
+    const existingAvailability = expandedEvents.find(
+      (ev) => String(ev._eventId ?? ev.id) === String(availEv.id),
     );
+    const saveOp = existingAvailability
+      ? {
+        type: 'update',
+        id: String(existingAvailability._eventId ?? existingAvailability.id),
+        patch: {
+          title: availEv.title,
+          start: availEv.start,
+          end: availEv.end,
+          allDay: availEv.allDay,
+          category: availEv.category,
+          color: availEv.color,
+          resource: availEv.resource,
+          resourceId: availEv.resource,
+          meta: availEv.meta,
+        },
+        source: 'api',
+      }
+      : { type: 'create', event: { ...availEv, id: availEv.id ?? `avail-${Date.now()}` }, source: 'api' };
+
+    // 1. Create or update the availability event itself
+    applyEngineOp(saveOp, () => onAvailabilitySave?.(availEv));
 
     // 2. Detect overlapping shifts and auto-create open-shift records
     const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
@@ -1302,6 +1336,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             emp={availabilityState.emp}
             kind={availabilityState.kind}
             initialStart={availabilityState.start}
+            initialEvent={availabilityState.initialEvent}
             onSave={handleAvailabilitySave}
             onClose={() => setAvailabilityState(null)}
           />

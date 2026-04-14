@@ -53,15 +53,31 @@ describe('WorksCalendar schedule workflow entry points', () => {
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
   });
 
-  it('opens availability-focused form when Edit Availability is selected', async () => {
-    render(<WorksCalendar events={[]} employees={employees} />);
+  it('opens availability-focused edit form when Edit Availability is selected', async () => {
+    render(
+      <WorksCalendar
+        employees={employees}
+        events={[
+          {
+            id: 'avail-1',
+            title: 'Clinic Hours',
+            category: 'availability',
+            resource: 'emp-1',
+            start: new Date('2026-04-01T09:00:00.000Z'),
+            end: new Date('2026-04-01T17:00:00.000Z'),
+            meta: { kind: 'availability' },
+          },
+        ]}
+      />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit Availability' }));
 
     expect(await screen.findByRole('dialog', { name: 'Edit Availability for Alex Rivera' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save Availability' })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Clinic Hours')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Availability Changes' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
   });
 });
