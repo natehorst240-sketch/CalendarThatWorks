@@ -198,8 +198,10 @@
 .activePills {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 8px 6px;
+  gap: 6px;
+  padding: 4px 0 0;
+  width: 100%;
+  order: 99;
 }
 .activePill {
   display: inline-flex;
@@ -208,7 +210,7 @@
   padding: 2px 8px 2px 10px;
   background: var(--wc-accent);
   color: #fff;
-  border-radius: 12px;
+  border-radius: 100px;
   font-size: 11px;
   font-weight: 500;
 }
@@ -230,7 +232,7 @@
   height: 28px;
   padding: 0 8px;
   border: 1px solid var(--wc-border);
-  border-radius: 6px;
+  border-radius: 100px;
   background: var(--wc-surface);
   color: var(--wc-text);
   font-size: 12px;
@@ -242,11 +244,24 @@
 .boolLabel {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: 100px;
+  background: var(--wc-surface);
   font-size: 12px;
   color: var(--wc-text);
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.15s;
+}
+.boolLabel:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+.boolLabelActive {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
 }
 .boolCheck { cursor: pointer; }
 
@@ -254,19 +269,36 @@
 .dateRange {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  position: relative;
 }
 .dateInput {
   height: 28px;
   padding: 0 6px;
   border: 1px solid var(--wc-border);
-  border-radius: 6px;
+  border-radius: 100px;
   background: var(--wc-surface);
   color: var(--wc-text);
   font-size: 12px;
 }
 .dateInput:focus { outline: none; border-color: var(--wc-accent); }
 .dateSep { font-size: 12px; color: var(--wc-text-faint); }
+.fieldLabel {
+  font-size: 11px;
+  color: var(--wc-text-faint);
+  white-space: nowrap;
+}
+.dateClear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-faint);
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.dateClear:hover { color: var(--wc-text); }
 
 /* ── Aa pill hover-title toggle ── */
 .hoverToggle {
@@ -422,7 +454,30 @@
   flex-shrink: 0;
 }
 
+/* ── Focus-visible ── */
+.dropdownBtn:focus-visible,
+.selectInput:focus-visible,
+.dateInput:focus-visible,
+.boolLabel:focus-visible {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: 1px;
+}
+.pillRemove:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+  border-radius: 50%;
+}
+
 @media (max-width: 480px) {
+  .activePills {
+    width: 100%;
+  }
+  .dateRange {
+    flex-wrap: wrap;
+  }
+  .selectInput {
+    max-width: 100%;
+  }
   .dropdownMenu {
     min-width: 220px;
     max-width: min(92vw, 320px);

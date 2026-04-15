@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
-import { isEmptyFilterValue, buildActiveFilterPills } from '../filters/filterState.js';
+import { isEmptyFilterValue, buildActiveFilterPills, clearFilterValue } from '../filters/filterState.js';
 import styles from './FilterBar.module.css';
 
 function formatDateInput(date) {
@@ -185,24 +185,6 @@ export default function FilterBar({
         );
       })}
 
-      {activePills.length > 0 && (
-        <div className={styles.activePills}>
-          {activePills.map((pill, i) => (
-            <span key={`${pill.key}-${i}`} className={styles.activePill}>
-              {pill.fieldLabel}: {pill.displayValue ?? pill.value}
-              <button
-                className={styles.pillRemove}
-                onClick={() => onClear?.(pill.key)}
-                aria-label={`Remove filter ${pill.fieldLabel}`}
-                type="button"
-              >
-                <X size={10} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
       {schema
         .filter(field => field.type === 'text' && !field.hidden)
         .map(field => {
@@ -254,7 +236,10 @@ export default function FilterBar({
       {schema.filter(f => f.type === 'boolean' && !f.hidden).map(field => {
         const value = filters[field.key];
         return (
-          <label key={field.key} className={styles.boolLabel}>
+          <label
+            key={field.key}
+            className={[styles.boolLabel, value && styles.boolLabelActive].filter(Boolean).join(' ')}
+          >
             <input
               type="checkbox"
               className={styles.boolCheck}
@@ -273,6 +258,7 @@ export default function FilterBar({
 
         return (
           <div key={field.key} className={styles.dateRange}>
+            <span className={styles.fieldLabel}>{field.label ?? 'Date'}</span>
             <input
               type="date"
               className={styles.dateInput}
@@ -296,7 +282,7 @@ export default function FilterBar({
             />
             {(startVal || endVal) && (
               <button
-                className={styles.clearSearch}
+                className={styles.dateClear}
                 onClick={() => onChange?.(field.key, null)}
                 aria-label="Clear date range"
                 type="button"
@@ -312,6 +298,36 @@ export default function FilterBar({
         <button className={styles.clearAll} onClick={onClearAll} type="button">
           Clear filters
         </button>
+      )}
+
+      {activePills.length > 0 && (
+        <div className={styles.activePills}>
+          {activePills.map((pill, i) => {
+            const schemaField = schema.find(f => f.key === pill.key);
+            return (
+              <span key={`${pill.key}-${i}`} className={styles.activePill}>
+                {pill.fieldLabel}: {pill.displayValue ?? pill.value}
+                <button
+                  className={styles.pillRemove}
+                  onClick={() => {
+                    const current = filters[pill.key];
+                    if (current instanceof Set) {
+                      const next = new Set(current);
+                      next.delete(pill.value);
+                      onChange?.(pill.key, next.size ? next : clearFilterValue(schemaField));
+                    } else {
+                      onClear?.(pill.key);
+                    }
+                  }}
+                  aria-label={`Remove filter ${pill.fieldLabel}`}
+                  type="button"
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            );
+          })}
+        </div>
       )}
 
       {onPillHoverTitleToggle && (
