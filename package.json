@@ -1,13 +1,15 @@
 {
   "name": "works-calendar",
   "version": "0.1.0",
-  "description": "Drop-in embeddable React calendar with filter pills, hover cards, Excel export, and owner config panel",
+  "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
+  "license": "MIT",
   "type": "module",
-  "types": "./src/index.d.ts",
   "main": "./dist/works-calendar.umd.js",
   "module": "./dist/works-calendar.es.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/works-calendar.es.js",
       "require": "./dist/works-calendar.umd.js"
     },
@@ -21,8 +23,18 @@
     "./themes": "./dist/works-calendar.es.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CalendarThatWorks/works-calendar.git"
+  },
+  "homepage": "https://github.com/CalendarThatWorks/works-calendar#readme",
+  "bugs": {
+    "url": "https://github.com/CalendarThatWorks/works-calendar/issues"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",

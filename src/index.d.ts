@@ -1,6 +1,6 @@
 /**
  * WorksCalendar — TypeScript Declarations
- * Add "types": "./src/index.d.ts" in package.json or use vite-plugin-dts to generate.
+ * Published package types are emitted to "./dist/index.d.ts" during build.
  */
 import type * as React from 'react';
 

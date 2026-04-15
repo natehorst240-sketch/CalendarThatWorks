@@ -1,30 +1,33 @@
-# WorksCalendar Docs
+# WorksCalendar Documentation
 
-## Core Guides
+This index is the canonical docs entrypoint for the package.
 
-- [Schedule Workflow](./ScheduleWorkflow.md)
-- [Filtering System](./Filtering.md)
-- [Prompt Examples](./Prompts.md)
-- [Setup Wizard](./SetupWizard.md)
-- [Advanced Filters](./AdvancedFilters.md)
-- [Data Adapter](./DataAdapter.md)
+## Product guides
 
-## What to read first
+- [Schedule workflow](./ScheduleWorkflow.md)
+- [Filtering system](./Filtering.md)
+- [Advanced filters](./AdvancedFilters.md)
+- [Setup wizard](./SetupWizard.md)
+- [Data adapter](./DataAdapter.md)
 
-### For scheduling workflows
-Read:
-1. Schedule Workflow
-2. Examples README
-3. Shift coverage example
+## Project and contributor docs
 
-### For dashboards and filtered views
-Read:
-1. Filtering System
-2. Advanced Filters
-3. Prompt Examples
+- [Contributing](./Contributing.md)
+- [Release readiness checklist](./release-readiness.md)
+- [Roadmap](./Roadmap.md)
+- [Release notes: v0.1.0 draft](./releases/v0.1.0.md)
 
-### For external integrations
-Read:
-1. Data Adapter
-2. External form examples
-3. Multi-source examples
+## Example references
+
+- [Examples index](../examples/README.md)
+- [Examples workflow matrix](../examples/WORKFLOWS.md)
+- [Microsoft 365 adapter notes](../examples/microsoft-365/README.md)
+
+## Historical implementation notes
+
+These are retained for engineering context and migration history:
+
+- [Recurring schedule implementation plan](./recurring-schedule-implementation-plan.md)
+- [Recurring events engine plan](./recurring-events-engine-plan.md)
+- [Phase 4 migration notes](./schedule-phase4-migration-notes.md)
+- [Generic form + Microsoft 365 roadmap (legacy)](./generic-form-and-m365-roadmap.md)
