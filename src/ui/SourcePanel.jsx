@@ -63,6 +63,7 @@ function ColorDot({ color, size = 12, onClick }) {
 function ToggleSwitch({ checked, onChange, title }) {
   return (
     <label
+      className={styles.toggle}
       style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }}
       title={title}
     >
