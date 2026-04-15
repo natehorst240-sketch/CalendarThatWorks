@@ -1,31 +1,28 @@
 /**
  * Example 8 — Shift Coverage Tracking
  *
- * Demonstrates the built-in shift coverage workflow available in the
- * Schedule (Timeline) view.
+ * Demonstrates the current employee-action-card workflow for shift coverage
+ * in the Schedule (Timeline) view.
  *
  * ── The workflow ──────────────────────────────────────────────────────────────
  *
- *  1. MARK UNAVAILABLE
- *     Each on-call / on-shift event pill has a small ▾ toggle on its right
- *     edge.  Clicking it opens a dropdown with two options:
- *       • 🏖 Mark as PTO
- *       • 🚫 Mark as Unavailable
- *     Once marked, the pill shows a "PTO" or "Unavail." badge and the ▾
- *     turns amber (⚠).  "✕ Clear Status" is added to the dropdown.
+ *  1. OPEN THE EMPLOYEE ACTION CARD
+ *     In Schedule view, click an employee row and choose:
+ *       • Edit Schedule
+ *       • Request PTO
+ *       • Edit Availability
+ *     PTO / availability requests are created from this action card workflow.
  *
- *  2. SHIFT NOT COVERED pill
- *     A pulsing red pill — "⚠ Shift not covered / Available" — appears
- *     below the event bar, spanning the same date range.
+ *  2. SHIFT BECOMES UNCOVERED
+ *     If PTO or unavailable time overlaps an on-call shift, the shift is
+ *     automatically marked as uncovered and shown as an open coverage need.
  *
- *  3. PICK UP THE SHIFT
- *     Clicking the red pill opens a coverage picker popover that lists
- *     all other employees.  Selecting one records coverage.
+ *  3. ASSIGN COVERAGE
+ *     Assign another employee to cover the open shift.
  *
  *  4. SHIFT COVERED
- *     The red pill turns green: "✓ Shift covered by [Name]".
- *     In the covering employee's row a new indigo pill appears for those
- *     same dates: "📞 On call (covering for [Original Name])".
+ *     The original shift updates to show coverage and the covering employee
+ *     receives a mirrored on-call assignment for the same dates.
  *
  * ── How state is stored ───────────────────────────────────────────────────────
  *
@@ -82,7 +79,6 @@ const uid = () => `sc-${_id++}`;
 // ── Seed events ───────────────────────────────────────────────────────────────
 //
 // On-call events use category: 'on-call' (the default onCallCategory value).
-// They get the striped pill style and the ▾ availability toggle automatically.
 //
 // The third event demonstrates a pre-seeded "already marked as PTO + covered"
 // state so you can see the green pill and covering-for pill on first load.
@@ -165,7 +161,21 @@ export function ShiftCoverageTracking() {
   }, []);
 
   return (
-    <div style={{ height: '100%' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        padding: '12px 16px',
+        borderBottom: '1px solid #e2e8f0',
+        background: '#f8fafc',
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+          Try the current workflow
+        </div>
+        <div style={{ fontSize: 12, color: '#475569', marginTop: 4, lineHeight: 1.5 }}>
+          In <strong>Schedule</strong> view, click an employee row to open the action card, then use
+          <strong> Request PTO</strong> or <strong>Edit Availability</strong>. Overlapping on-call shifts
+          become uncovered and can be reassigned.
+        </div>
+      </div>
       <WorksCalendar
         devMode
         calendarId="shift-coverage-example"

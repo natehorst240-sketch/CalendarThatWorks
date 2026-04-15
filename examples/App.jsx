@@ -9,6 +9,7 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { DemoLanding }            from './00-DemoLanding.jsx';
 import { GettingStarted }          from './01-GettingStarted.jsx';
 import { BasicCalendar }           from './02-BasicCalendar.jsx';
 import { WithFilters }             from './03-WithFilters.jsx';
@@ -25,6 +26,13 @@ import { ExternalFormExample }     from './external-form.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
+  {
+    id:    'demo-landing',
+    label: 'Demo Landing',
+    tag:   'Start here',
+    desc:  'Polished entry page for first-time visitors. Jump to schedule, filters, saved views, and docs.',
+    component: DemoLanding,
+  },
   {
     id:    'getting-started',
     label: 'Getting Started',
@@ -194,6 +202,7 @@ function Sidebar({ active, onSelect }) {
 function SourceHint({ id }) {
   const file = {
     'getting-started': '01-GettingStarted.jsx',
+    'demo-landing':    '00-DemoLanding.jsx',
     'basic-calendar':  '02-BasicCalendar.jsx',
     'with-filters':    '03-WithFilters.jsx',
     'timeline':        '04-TimelineScheduler.jsx',
@@ -226,7 +235,7 @@ function SourceHint({ id }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 function App() {
-  const [active, setActive] = useState('getting-started');
+  const [active, setActive] = useState('demo-landing');
   const example = EXAMPLES.find(e => e.id === active);
   const Component = example.component;
 
@@ -237,7 +246,7 @@ function App() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <SourceHint id={active} />
         <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-          <Component />
+          <Component onNavigate={setActive} />
         </div>
       </div>
     </div>

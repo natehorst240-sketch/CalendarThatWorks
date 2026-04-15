@@ -8,6 +8,7 @@ npm run examples
 
 ## Core examples
 
+- `00-DemoLanding.jsx` — polished demo entry page (schedule/filter/saved views/docs)
 - `01-GettingStarted.jsx` — minimum setup
 - `02-BasicCalendar.jsx` — standard calendar configuration
 - `03-WithFilters.jsx` — baseline filter bar usage
@@ -20,6 +21,7 @@ npm run examples
 
 - `setup-wizard.jsx` — owner onboarding wizard flow
 - `advanced-filters.jsx` — nested AND/OR smart-view filter builder
+- `08-ShiftCoverageTracking.jsx` — employee action card + shift coverage workflow
 - `data-adapter-local.jsx` — `DataAdapter` with local storage persistence
 - `data-adapter-microsoft365.jsx` — `DataAdapter` with Microsoft 365 integration
 - `external-form.jsx` — standalone `CalendarExternalForm` intake workflow

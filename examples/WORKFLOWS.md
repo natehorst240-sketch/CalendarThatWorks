@@ -14,6 +14,7 @@ Use these examples:
 What they show:
 - employees as rows
 - schedule/timeline layout
+- employee action card entry point (Edit Schedule / Request PTO / Edit Availability)
 - PTO and unavailable states
 - shift coverage logic
 
@@ -58,13 +59,13 @@ What it shows:
 
 ---
 
-## Important Note
+## Demo entry flow
 
-Some older examples (like shift coverage) still demonstrate legacy UI flows.
+Use this example:
+- `00-DemoLanding.jsx`
 
-The current workflow is:
-- click employee
-- use action card
-- manage schedule / PTO / availability from there
-
-Refer to docs/ScheduleWorkflow.md for the latest behavior.
+What it shows:
+- schedule demo path
+- filter demo path
+- saved views demo path
+- docs/examples handoff links for first-time visitors
