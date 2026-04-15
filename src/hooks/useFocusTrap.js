@@ -31,12 +31,14 @@ const FOCUSABLE_SELECTORS = [
  */
 function isVisible(el) {
   if (el.hidden) return false;
+  if (el.closest('[hidden]')) return false;
   if (el.closest('[aria-hidden="true"]')) return false;
   // Use feature-detect for `inert` with aria-hidden fallback
   if (typeof el.inert === 'boolean' ? el.closest('[inert]') : el.closest('[aria-hidden="true"]')) return false;
   const style = getComputedStyle(el);
   if (style.display === 'none') return false;
   if (style.visibility === 'hidden') return false;
+  if (el.getClientRects().length === 0) return false;
   return true;
 }
 

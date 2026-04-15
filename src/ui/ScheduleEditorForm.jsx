@@ -86,6 +86,7 @@ function buildRrule(preset, startStr) {
  * Props:
  *   emp          { id, name, role? }
  *   initialStart Date | null       — pre-filled start date
+ *   initialEnd   Date | null       — optional pre-filled end date/time
  *   onCallCategory string          — category name for on-call / shift events (default 'on-call')
  *   onSave       (shiftEvent | shiftEvent[]) => void  — may return multiple events for templates
  *   onClose      () => void
@@ -93,6 +94,7 @@ function buildRrule(preset, startStr) {
 export default function ScheduleEditorForm({
   emp,
   initialStart,
+  initialEnd,
   onCallCategory = 'on-call',
   onSave,
   onClose,
@@ -103,7 +105,7 @@ export default function ScheduleEditorForm({
   const [mode, setMode] = useState('onetime');
 
   const defaultStart = initialStart ?? new Date();
-  const defaultEnd   = addHours(defaultStart, 8);
+  const defaultEnd   = initialEnd ?? addHours(defaultStart, 8);
 
   const [start,       setStart]       = useState(toInput(defaultStart, false));
   const [end,         setEnd]         = useState(toInput(defaultEnd,   false));

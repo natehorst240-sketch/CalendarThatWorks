@@ -84,7 +84,7 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
           className={styles.actionBtn}
           onClick={() => handleAction('schedule')}
         >
-          Add Schedule
+          Create Schedule
         </button>
         <button
           className={styles.actionBtn}
@@ -102,7 +102,7 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
           className={styles.actionBtn}
           onClick={() => handleAction('availability')}
         >
-          Edit Availability
+          Set Availability
         </button>
       </div>
     </div>

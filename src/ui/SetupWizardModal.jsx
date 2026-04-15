@@ -202,8 +202,9 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
       </div>
 
       <div className={styles.field}>
-        <label className={styles.fieldLabel}>Theme</label>
-        <div className={styles.themeGrid}>
+        <fieldset className={styles.fieldset}>
+          <legend className={styles.fieldLabel}>Theme</legend>
+          <div className={styles.themeGrid}>
           {THEMES.map(theme => (
             <button
               key={theme.id}
@@ -229,7 +230,8 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
               )}
             </button>
           ))}
-        </div>
+          </div>
+        </fieldset>
       </div>
     </div>
   );
@@ -259,18 +261,22 @@ function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }) {
                 )}
               </div>
               <input
+                id={`swm-photo-${member.id}`}
                 type="file"
                 accept="image/*"
                 className={styles.fileInput}
+                aria-label={`Upload photo for ${member.name || `team member ${member.id}`}`}
                 onChange={(e) => onUpload(member.id, e)}
               />
               <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
             </label>
 
+            <label htmlFor={`swm-member-${member.id}`} className={styles.fieldLabel}>
+              Team member name
+            </label>
             <input
               type="text"
               id={`swm-member-${member.id}`}
-              aria-label={`Name for team member ${member.id}`}
               className={styles.input}
               value={member.name}
               onChange={(e) => onTeamMemberNameChange(member.id, e.target.value)}

@@ -476,7 +476,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
   const [availabilityState, setAvailabilityState] = useState(null);
-  // { emp: { id, name, role? }, start?: Date }
+  // { emp: { id, name, role? }, start?: Date, end?: Date }
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
@@ -1278,6 +1278,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setScheduleEditorState({
       emp,
       start: start instanceof Date ? start : new Date(start),
+      end: end instanceof Date ? end : new Date(end),
     });
   }, [employees, hasAddButton, onDateSelect]);
 
@@ -1350,7 +1351,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   <Sparkles size={15} aria-hidden="true" />
                 </button>
               )}
-              {hasAddButton && (
+              {hasAddButton && cal.view !== 'schedule' && (
                 <button className={styles.addBtn} onClick={() => setFormEvent({})} aria-label="Add new event">
                   <Plus size={14} aria-hidden="true" /><span className={styles.addBtnLabel}> Add Event</span>
                 </button>
@@ -1545,6 +1546,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           <ScheduleEditorForm
             emp={scheduleEditorState.emp}
             initialStart={scheduleEditorState.start}
+            initialEnd={scheduleEditorState.end}
             onCallCategory={ownerCfg.config?.onCallCategory ?? 'on-call'}
             onSave={handleScheduleEditorSave}
             onClose={() => setScheduleEditorState(null)}

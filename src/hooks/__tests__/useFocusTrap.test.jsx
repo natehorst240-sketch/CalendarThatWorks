@@ -72,6 +72,16 @@ describe('useFocusTrap — display:none inputs skipped', () => {
     // auto-focus should land on the visible button, not the hidden one
     expect(screen.getByTestId('visible')).toHaveFocus();
   });
+
+  it('does not auto-focus a visibility:hidden button', () => {
+    render(
+      <Trap>
+        <button style={{ visibility: 'hidden' }} data-testid="hidden-v">Hidden</button>
+        <button data-testid="visible">Visible</button>
+      </Trap>,
+    );
+    expect(screen.getByTestId('visible')).toHaveFocus();
+  });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════

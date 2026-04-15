@@ -235,9 +235,9 @@ export default function AdvancedFilterBuilder({ onSave, categories = [], resourc
       {/* ── Save as Smart View ── */}
       <div className={styles.saveSection}>
         <div className={styles.nameField}>
+          <label htmlFor="afb-view-name" className={styles.srOnly}>Smart View name</label>
           <input
             id="afb-view-name"
-            aria-label="Smart View name"
             className={[styles.input, styles.nameInput, nameError ? styles.inputError : ''].filter(Boolean).join(' ')}
             type="text"
             value={viewName}

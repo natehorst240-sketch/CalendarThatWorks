@@ -263,19 +263,24 @@
   min-width: 0;
 }
 
-/* When the name cell is interactive (onEmployeeAction is wired) */
-.nameInfoBtn {
+/* Primary employee workflow entry point in each row */
+.empEntryBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   background: none;
   border: none;
-  padding: 2px 4px;
-  margin: -2px -4px;
+  padding: 4px 6px;
+  margin: -4px -6px;
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
   transition: background 0.12s;
 }
-.nameInfoBtn:hover,
-.nameInfoBtn:focus-visible {
+.empEntryBtn:hover,
+.empEntryBtn:focus-visible {
   background: var(--wc-accent-light, rgba(59, 130, 246, 0.08));
   outline: none;
 }

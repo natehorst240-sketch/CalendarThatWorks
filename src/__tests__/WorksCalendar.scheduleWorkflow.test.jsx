@@ -16,7 +16,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
 
     expect(await screen.findByRole('menu', { name: 'Actions for Alex Rivera' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add Schedule' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create Schedule' })).toBeInTheDocument();
   });
 
   it('routes empty schedule-cell click to ScheduleEditorForm instead of EventForm', async () => {
@@ -27,6 +27,17 @@ describe('WorksCalendar schedule workflow entry points', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Create schedule for Alex Rivera' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Add event' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Start *')).toHaveValue('2026-04-01T00:00');
+    expect(screen.getByLabelText('End *')).toHaveValue('2026-04-02T00:00');
+  });
+
+  it('hides generic Add Event button in schedule view', async () => {
+    render(<WorksCalendar events={[]} employees={employees} showAddButton />);
+
+    expect(screen.getByRole('button', { name: 'Add new event' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+
+    expect(screen.queryByRole('button', { name: 'Add new event' })).not.toBeInTheDocument();
   });
 
   it('opens PTO-focused form when Request PTO is selected', async () => {
@@ -73,7 +84,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit Availability' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Set Availability' }));
 
     expect(await screen.findByRole('dialog', { name: 'Edit Availability for Alex Rivera' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Clinic Hours')).toBeInTheDocument();

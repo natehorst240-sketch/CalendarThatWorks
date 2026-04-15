@@ -90,7 +90,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const meta = KIND_META[kind] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
   const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
-  const isAllDayLocked = Boolean(intentMeta.allDayLocked && !isEdit);
+  const isAllDayLocked = Boolean(intentMeta.allDayLocked);
   const heading = isEdit && kind === 'availability' ? 'Edit Availability' : intentMeta.heading;
 
   const eventStart = initialEvent?.start ?? initialStart;

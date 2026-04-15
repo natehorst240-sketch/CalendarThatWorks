@@ -494,19 +494,9 @@ export default function TimelineView({
                   {emp ? (
                     /* Employee display: avatar + name + role */
                     <>
-                      <div
-                        className={styles.empAvatar}
-                        style={{ background: color }}
-                        aria-hidden="true"
-                      >
-                        {emp.avatar
-                          ? <img src={emp.avatar} alt="" className={styles.empAvatarImg} />
-                          : getInitials(emp.name)
-                        }
-                      </div>
                       {onEmployeeAction ? (
                         <button
-                          className={[styles.nameInfo, styles.nameInfoBtn].join(' ')}
+                          className={styles.empEntryBtn}
                           onClick={e => {
                             e.stopPropagation();
                             const rect = e.currentTarget.closest(`.${styles.nameCell}`)?.getBoundingClientRect()
@@ -516,21 +506,45 @@ export default function TimelineView({
                           aria-label={`Actions for ${emp.name}`}
                           aria-haspopup="dialog"
                         >
-                          <span className={styles.empName}>{emp.name}</span>
-                          {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                          <div
+                            className={styles.empAvatar}
+                            style={{ background: color }}
+                            aria-hidden="true"
+                          >
+                            {emp.avatar
+                              ? <img src={emp.avatar} alt="" className={styles.empAvatarImg} />
+                              : getInitials(emp.name)
+                            }
+                          </div>
+                          <span className={styles.nameInfo}>
+                            <span className={styles.empName}>{emp.name}</span>
+                            {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                          </span>
                         </button>
                       ) : (
-                        <div className={styles.nameInfo}>
-                          <span className={styles.empName}>{emp.name}</span>
-                          {emp.role && <span className={styles.empRole}>{emp.role}</span>}
-                        </div>
+                        <>
+                          <div
+                            className={styles.empAvatar}
+                            style={{ background: color }}
+                            aria-hidden="true"
+                          >
+                            {emp.avatar
+                              ? <img src={emp.avatar} alt="" className={styles.empAvatarImg} />
+                              : getInitials(emp.name)
+                            }
+                          </div>
+                          <div className={styles.nameInfo}>
+                            <span className={styles.empName}>{emp.name}</span>
+                            {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                          </div>
+                        </>
                       )}
                       {onEmployeeDelete && (
                         <button
                           className={styles.removeEmpBtn}
                           onClick={e => { e.stopPropagation(); onEmployeeDelete(emp.id); }}
-                          title={`Remove ${emp.name}`}
-                          aria-label={`Remove ${emp.name}`}
+                          title={`Quick action: Remove ${emp.name}`}
+                          aria-label={`Quick action: Remove ${emp.name}`}
                         >×</button>
                       )}
                     </>
@@ -766,7 +780,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            🏖 Mark as PTO
+            ⚡ Quick action: Mark as PTO
           </button>
           <button
             className={styles.shiftMenuItem}
@@ -780,7 +794,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            🚫 Mark as Unavailable
+            ⚡ Quick action: Mark as Unavailable
           </button>
           {shiftMenu.ev.meta?.shiftStatus && (
             <>
