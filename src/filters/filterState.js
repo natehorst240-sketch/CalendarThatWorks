@@ -98,3 +98,158 @@ export function buildActiveFilterPills(filters, schema = DEFAULT_FILTER_SCHEMA) 
   }
   return pills;
 }
+
+// ── Filter summary (for saved-view UIs) ───────────────────────────────────────
+
+/**
+ * Build a structured summary of active filters for display in saved-view UIs.
+ *
+ * Returns: Array<{ key, label, type, displayValues: string[] }>
+ *
+ * Handles all field types:
+ *   multi-select  -> list of selected values (with pillLabel / options lookup)
+ *   select        -> single option label (looked up from options list)
+ *   text          -> the search string wrapped in quotes
+ *   date-range    -> formatted start/end dates
+ *   boolean       -> "Yes" / "No"
+ *   custom        -> String(value) fallback
+ *
+ * For keys present in filters but absent from the schema (forward-compat),
+ * falls back to capitalize-key + stringify.
+ *
+ * @param {Record<string, unknown>} filters
+ * @param {import('./filterSchema.js').FilterField[]} schema
+ * @returns {Array<{ key: string, label: string, type: string, displayValues: string[] }>}
+ */
+export function buildFilterSummary(filters, schema = DEFAULT_FILTER_SCHEMA) {
+  if (!filters) return [];
+
+  const fieldMap = new Map();
+  for (const field of schema) {
+    fieldMap.set(field.key, field);
+  }
+
+  const items = [];
+
+  // Walk schema fields first (preserves schema ordering)
+  for (const field of schema) {
+    const value = filters[field.key];
+    if (isSummaryEmpty(value)) continue;
+
+    const displayValues = formatFieldValue(field, value);
+    if (displayValues.length === 0) continue;
+
+    items.push({
+      key:           field.key,
+      label:         field.label,
+      type:          field.type,
+      displayValues,
+    });
+  }
+
+  // Handle keys present in filters but not in schema (forward-compat)
+  for (const [key, value] of Object.entries(filters)) {
+    if (fieldMap.has(key)) continue; // already handled above
+    if (isSummaryEmpty(value)) continue;
+
+    const label = key.charAt(0).toUpperCase() + key.slice(1);
+    const displayValues = Array.isArray(value)
+      ? value.map(v => String(v))
+      : [String(value)];
+
+    items.push({ key, label, type: 'unknown', displayValues });
+  }
+
+  return items;
+}
+
+// ── Internal helpers for buildFilterSummary ────────────────────────────────────
+
+/** Check if a value should be treated as inactive/empty for summary purposes. */
+function isSummaryEmpty(value) {
+  if (value == null || value === '') return true;
+  if (value instanceof Set) return value.size === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  // date-range objects with no start and no end
+  if (typeof value === 'object' && !(value instanceof Date)) {
+    return !value.start && !value.end;
+  }
+  return false;
+}
+
+/**
+ * Look up the display label for a value from a field's options list.
+ * Returns the option label if found, otherwise null.
+ */
+function lookupOptionLabel(field, rawValue) {
+  if (!field.options) return null;
+  const opt = field.options.find(o => o.value === rawValue);
+  return opt ? opt.label : null;
+}
+
+/**
+ * Resolve a single raw value to its display string, respecting
+ * pillLabel > options lookup > String fallback.
+ */
+function resolveDisplayValue(field, rawValue) {
+  if (field.pillLabel) return field.pillLabel(rawValue);
+  const optLabel = lookupOptionLabel(field, rawValue);
+  if (optLabel) return optLabel;
+  return String(rawValue);
+}
+
+/**
+ * Format a date value (Date object or ISO string) as a short readable string.
+ */
+function formatDate(d) {
+  if (!d) return null;
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return String(d);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * Produce the displayValues array for a single field + value pair.
+ * Returns string[] (may be empty if the value is effectively inactive).
+ */
+function formatFieldValue(field, value) {
+  switch (field.type) {
+    case 'multi-select': {
+      const items = value instanceof Set ? [...value] : Array.isArray(value) ? value : [value];
+      return items.map(v => resolveDisplayValue(field, v));
+    }
+
+    case 'select': {
+      return [resolveDisplayValue(field, value)];
+    }
+
+    case 'text': {
+      const str = String(value).trim();
+      return str ? [`"${str}"`] : [];
+    }
+
+    case 'date-range': {
+      // value may be { start, end } with Date objects or ISO strings
+      if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+        const startStr = formatDate(value.start);
+        const endStr   = formatDate(value.end);
+        if (startStr && endStr) return [`${startStr} \u2013 ${endStr}`];
+        if (startStr)           return [`From ${startStr}`];
+        if (endStr)             return [`Until ${endStr}`];
+        return [];
+      }
+      // Single date value (unusual but handle gracefully)
+      const d = formatDate(value);
+      return d ? [d] : [];
+    }
+
+    case 'boolean': {
+      return [value ? 'Yes' : 'No'];
+    }
+
+    default: {
+      // custom or unrecognized type
+      return [String(value)];
+    }
+  }
+}
