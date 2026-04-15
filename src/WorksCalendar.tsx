@@ -278,6 +278,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
+  const effectiveTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'light';
+  const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
+  const configuredEmployees = useMemo(() => {
+    if (Array.isArray(employees) && employees.length > 0) return employees;
+    return ownerCfg.config?.team?.members ?? [];
+  }, [employees, ownerCfg.config?.team?.members]);
 
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
@@ -724,7 +730,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    * All actions also bubble to the external onEmployeeAction prop.
    */
   const handleEmployeeAction = useCallback((empId, actionInput) => {
-    const emp = employees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+    const emp = configuredEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const actionPayload = typeof actionInput === 'string'
       ? { type: actionInput }
       : (actionInput ?? {});
@@ -763,7 +769,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       setScheduleEditorState({ emp, start: new Date() });
     }
     onEmployeeAction?.(empId, actionInput);
-  }, [employees, expandedEvents, onEmployeeAction]);
+  }, [configuredEmployees, expandedEvents, onEmployeeAction]);
 
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
@@ -1272,7 +1278,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
-    const emp = employees.find(e => String(e.id) === String(resourceId));
+    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
     if (!emp) return;
 
     setScheduleEditorState({
@@ -1280,7 +1286,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       start: start instanceof Date ? start : new Date(start),
       end: end instanceof Date ? end : new Date(end),
     });
-  }, [employees, hasAddButton, onDateSelect]);
+  }, [configuredEmployees, hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
     currentDate:   cal.currentDate,
@@ -1297,7 +1303,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
+        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -1323,6 +1329,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
               <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+              <span className={styles.calendarTitle}>{calendarTitle}</span>
               {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
@@ -1489,7 +1496,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   events={visibleEvents}
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
-                  employees={employees}
+                  employees={configuredEmployees}
                   onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
                   onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
                   onShiftStatusChange={handleShiftStatusChange}

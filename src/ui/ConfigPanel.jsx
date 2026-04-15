@@ -98,18 +98,17 @@ export default function ConfigPanel({
 }
 
 function SetupTab({ config, onUpdate }) {
-  const selectedTheme = config.wizardData?.preferredTheme ?? 'corporate';
-  const calendarName = config.wizardData?.calendarName ?? 'My WorksCalendar';
+  const selectedTheme = config.setup?.preferredTheme ?? 'corporate';
+  const calendarName = config.title ?? 'My WorksCalendar';
 
   const setCalendarName = (name) => onUpdate(c => ({
     ...c,
-    wizardData: { ...(c.wizardData ?? {}), calendarName: name },
+    title: name,
   }));
 
   const setPreferredTheme = (themeId) => onUpdate(c => ({
     ...c,
-    wizardData: { ...(c.wizardData ?? {}), preferredTheme: themeId },
-    setupCompleted: true,
+    setup: { ...(c.setup ?? {}), preferredTheme: themeId },
   }));
 
   return (
@@ -162,12 +161,12 @@ function SmartViewsTab({ categories, resources, onSaveView }) {
 }
 
 function TeamTab({ config, onUpdate }) {
-  const teamMembers = config.wizardData?.teamMembers ?? [];
+  const teamMembers = config.team?.members ?? [];
 
   const updateMembers = (nextMembers) => onUpdate(c => ({
     ...c,
-    wizardData: { ...(c.wizardData ?? {}), teamMembers: nextMembers },
-    setupCompleted: true,
+    team: { ...(c.team ?? {}), members: nextMembers },
+    setup: { ...(c.setup ?? {}), completed: true },
   }));
 
   const addMember = () => {

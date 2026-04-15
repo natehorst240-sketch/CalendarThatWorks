@@ -56,11 +56,13 @@ export default function SetupWizardModal({
 
   const handleFinish = () => {
     updateConfig?.({
-      setupCompleted: true,
-      wizardData: {
-        calendarName:   calendarName.trim() || 'My WorksCalendar',
+      title: calendarName.trim() || 'My WorksCalendar',
+      setup: {
         preferredTheme: selectedTheme,
-        teamMembers:    teamMembers.map(({ id, name, color, avatar }) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
+        completed: true,
+      },
+      team: {
+        members: teamMembers.map(({ id, name, color, avatar }) => ({ id, name: name.trim() || 'Teammate', color, avatar })),
       },
     });
     onClose?.();

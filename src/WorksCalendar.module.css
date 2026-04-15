@@ -21,9 +21,10 @@
   --wc-warning:     #f59e0b;
 
   font-family: var(--wc-font);
+  font-size: var(--wc-base-font-size, 14px);
   background: var(--wc-bg);
   color: var(--wc-text);
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   border-radius: var(--wc-radius);
   overflow: hidden;
   display: flex;
@@ -218,8 +219,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--wc-border);
+  padding: calc(10px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
+  border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
   background: var(--wc-bg);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -239,7 +240,7 @@
   height: 32px;
   border-radius: var(--wc-radius-sm);
   background: transparent;
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   cursor: pointer;
   color: var(--wc-text-muted);
   transition: all 0.15s;
@@ -251,11 +252,11 @@
 }
 
 .todayBtn {
-  padding: 0 12px;
+  padding: 0 calc(12px * var(--wc-density, 1));
   height: 32px;
   border-radius: var(--wc-radius-sm);
   background: transparent;
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   font-size: 13px;
   font-weight: 500;
   color: var(--wc-text-muted);
@@ -277,23 +278,31 @@
   white-space: nowrap;
 }
 
+.calendarTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  padding-left: 8px;
+  white-space: nowrap;
+}
+
 /* View switcher */
 .viewGroup {
   display: flex;
   background: var(--wc-surface);
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   border-radius: var(--wc-radius-sm);
   overflow: hidden;
   margin-left: auto;
 }
 
 .viewBtn {
-  padding: 6px 12px;
+  padding: calc(6px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
   font-size: 12px;
   font-weight: 500;
   background: transparent;
   border: none;
-  border-right: 1px solid var(--wc-border);
+  border-right: var(--wc-border-width, 1px) solid var(--wc-border);
   cursor: pointer;
   color: var(--wc-text-muted);
   transition: all 0.15s;
@@ -331,7 +340,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 6px 12px;
+  padding: calc(6px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
   background: var(--wc-accent);
   color: #fff;
   border: none;
@@ -353,7 +362,7 @@
   height: 32px;
   border-radius: var(--wc-radius-sm);
   background: transparent;
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   cursor: pointer;
   color: var(--wc-text-muted);
   transition: all 0.15s;
@@ -373,7 +382,7 @@
   height: 32px;
   border-radius: var(--wc-radius-sm);
   background: transparent;
-  border: 1px solid var(--wc-border);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
   cursor: pointer;
   color: var(--wc-text-muted);
   transition: all 0.15s;
@@ -399,7 +408,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 12px;
+  padding: calc(6px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
   background: var(--wc-accent-dim);
   color: var(--wc-accent);
   font-size: 12px;
@@ -440,7 +449,7 @@
 
 /* Custom toolbar wrapper */
 .customToolbar {
-  border-bottom: 1px solid var(--wc-border);
+  border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
   flex-shrink: 0;
 }
 
@@ -464,7 +473,7 @@
 /* Tablet (≤ 768px): compress toolbar, allow view strip to scroll */
 @media (max-width: 768px) {
   .toolbar {
-    padding: 8px 10px;
+    padding: calc(8px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
     gap: 6px;
     row-gap: 6px;
   }
@@ -489,7 +498,7 @@
   .viewGroup::-webkit-scrollbar { display: none; }
 
   .viewBtn {
-    padding: 6px 10px;
+    padding: calc(6px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
     font-size: 11px;
   }
 
@@ -503,7 +512,7 @@
     display: none;
   }
   .addBtn {
-    padding: 6px 8px;
+    padding: calc(6px * var(--wc-density, 1)) calc(8px * var(--wc-density, 1));
   }
 }
 
@@ -511,7 +520,7 @@
 @media (max-width: 480px) {
   .toolbar {
     flex-wrap: wrap;
-    padding: 8px;
+    padding: calc(8px * var(--wc-density, 1));
     row-gap: 6px;
   }
 
@@ -535,7 +544,7 @@
   .viewBtn {
     flex: 1;
     text-align: center;
-    padding: 5px 6px;
+    padding: calc(5px * var(--wc-density, 1)) calc(6px * var(--wc-density, 1));
     font-size: 11px;
   }
 
@@ -546,6 +555,6 @@
 
   .todayBtn {
     font-size: 12px;
-    padding: 0 8px;
+    padding: 0 calc(8px * var(--wc-density, 1));
   }
 }
