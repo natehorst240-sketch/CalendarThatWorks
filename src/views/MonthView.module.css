@@ -149,6 +149,17 @@
 .cell:hover { background: var(--wc-surface); }
 .cell.dropTarget { background: color-mix(in srgb, var(--wc-accent) 8%, var(--wc-surface)); }
 
+.cellHead {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 6px;
+  min-height: 26px;
+}
+
 .otherMonth { opacity: 0.4; }
 
 .today .dayNum {
@@ -231,28 +242,25 @@
 .eventPill.dragging { opacity: 0.3; pointer-events: none; cursor: grabbing; }
 .eventPill.ghost { opacity: 0.5; pointer-events: none; border: 1px dashed rgba(255,255,255,0.6); }
 
-.morePill {
-  display: flex;
+.moreLink {
+  display: inline-flex;
   align-items: center;
-  width: 100%;
-  min-height: var(--month-pill-h);
-  height: var(--month-pill-h);
-  padding: 0 6px;
-  border-radius: var(--wc-radius-sm);
-  background: transparent;
+  justify-content: flex-end;
+  padding: 0;
+  background: none;
   color: var(--wc-text-muted);
   font-size: 11px;
   font-weight: 500;
-  text-align: left;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
 }
-.morePill:hover { color: var(--wc-accent); }
+.moreLink:hover { color: var(--wc-accent); }
 
 /* ── Popover ── */
 .popover {
   position: fixed;
-  z-index: 9999;
+  z-index: 1000;
   background: var(--wc-bg);
   border: 1px solid var(--wc-border);
   border-radius: var(--wc-radius);
@@ -291,8 +299,7 @@
   .cell { padding: 2px; }
   .dayNum { width: 22px; height: 22px; font-size: 11px; }
   .eventPill { font-size: 10px; padding: 1px 4px; }
-  .morePill  { font-size: 10px; padding: 1px 4px; }
-  .moreLink  { font-size: 10px; padding: 1px 3px; }
+  .moreLink  { font-size: 10px; }
   .dayName   { font-size: 10px; }
   .spanBar   { font-size: 10px; padding: 0 4px; }
 }
@@ -305,7 +312,7 @@
   .dayNum  { width: 18px; height: 18px; font-size: 10px; }
 
   .eventPill { font-size: 10px; padding: 1px 4px; }
-  .morePill  { font-size: 9px; padding: 0 2px; }
-  .moreLink  { font-size: 9px; padding: 0 2px; }
+  .moreLink  { font-size: 9px; }
   .spanBar   { font-size: 10px; padding: 0 3px; }
+  .popover   { width: min(260px, calc(100vw - 16px)) !important; }
 }

@@ -232,13 +232,14 @@ export default function MonthView({
   const getPopoverEvents = useCallback((day) => {
     const dayStart = startOfDay(day);
     const dayKey = format(day, 'yyyy-MM-dd');
-    const spanningEvents = multiDay.filter(ev => dayStart >= startOfDay(ev.start) && dayStart <= displayEndDay(ev));
+    const spanningEvents = multiDay.filter((ev) => dayStart >= startOfDay(ev.start) && dayStart <= displayEndDay(ev));
     const singleEvents = singleByDay.get(dayKey) || [];
     return [...spanningEvents, ...singleEvents];
   }, [multiDay, singleByDay]);
 
   const popoverStyle = useMemo(() => {
     if (!popoverState?.anchorRect) return null;
+
     const viewportW = typeof window === 'undefined' ? 1280 : window.innerWidth;
     const viewportH = typeof window === 'undefined' ? 720 : window.innerHeight;
     const margin = 8;
@@ -246,12 +247,14 @@ export default function MonthView({
     let left = popoverState.anchorRect.left;
     if (left + width > viewportW - margin) left = viewportW - width - margin;
     if (left < margin) left = margin;
+
     const estimatedHeight = 300;
     const shouldOpenUp = popoverState.anchorRect.bottom + estimatedHeight > viewportH - margin;
     let top = shouldOpenUp
       ? popoverState.anchorRect.top - estimatedHeight - 6
       : popoverState.anchorRect.bottom + 6;
     if (top < margin) top = margin;
+
     return {
       left,
       top,
@@ -463,6 +466,7 @@ export default function MonthView({
                           {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
                           {isDropTarget && renderGhostPill()}
                         </div>
+
                       </div>
                     );
                   })}
@@ -544,6 +548,24 @@ export default function MonthView({
     )}
 
     {/* ── Pill hover projection overlay ── */}
+    {popoverState && popoverStyle && (
+      <div
+        id={`wc-popover-${format(popoverState.day, 'yyyy-MM-dd')}`}
+        className={styles.popover}
+        data-month-popover="true"
+        style={popoverStyle}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.popoverHead}>
+          <span>{format(popoverState.day, 'MMMM d')}</span>
+          <button onClick={() => setPopoverState(null)} aria-label="Close expanded day events">×</button>
+        </div>
+        {getPopoverEvents(popoverState.day).map(ev =>
+          renderPill(ev, { onAfterClick: () => setPopoverState(null) }),
+        )}
+      </div>
+    )}
+
     {pillHoverTitle && titleHover && (
       <div
         aria-hidden="true"
