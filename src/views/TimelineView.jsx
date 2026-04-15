@@ -503,6 +503,7 @@ export default function TimelineView({
                               ?? e.currentTarget.getBoundingClientRect();
                             setEmpCard({ emp, rect });
                           }}
+                          title={`Primary workflow: open employee actions for ${emp.name}`}
                           aria-label={`Actions for ${emp.name}`}
                           aria-haspopup="dialog"
                         >
@@ -543,8 +544,8 @@ export default function TimelineView({
                         <button
                           className={styles.removeEmpBtn}
                           onClick={e => { e.stopPropagation(); onEmployeeDelete(emp.id); }}
-                          title={`Quick action: Remove ${emp.name}`}
-                          aria-label={`Quick action: Remove ${emp.name}`}
+                          title={`Secondary action: remove ${emp.name}`}
+                          aria-label={`Remove ${emp.name}`}
                         >×</button>
                       )}
                     </>
@@ -665,7 +666,7 @@ export default function TimelineView({
                               const rect = e.currentTarget.getBoundingClientRect();
                               setShiftMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
                             }}
-                            title="Set shift availability"
+                            title="Shift-only availability shortcut"
                             aria-label="Set shift availability"
                           >
                             {hasStatus ? '⚠' : '▾'}
@@ -780,7 +781,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            ⚡ Quick action: Mark as PTO
+            Shift-only shortcut: Mark PTO
           </button>
           <button
             className={styles.shiftMenuItem}
@@ -794,7 +795,7 @@ export default function TimelineView({
               setShiftMenu(null);
             }}
           >
-            ⚡ Quick action: Mark as Unavailable
+            Shift-only shortcut: Mark Unavailable
           </button>
           {shiftMenu.ev.meta?.shiftStatus && (
             <>
