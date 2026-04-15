@@ -1,7 +1,7 @@
 /**
  * useOwnerConfig.js — Owner authentication + config state.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema.js';
 
 async function sha256(text) {
@@ -15,6 +15,7 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   const [configOpen,    setConfigOpen]    = useState(false);
   const [authError,     setAuthError]     = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const pendingNotifyRef = useRef(false);
 
   const authenticate = useCallback(async (password) => {
     if (!ownerPassword) {
@@ -47,10 +48,16 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
     setConfig(prev => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
       saveConfig(calendarId, next);
-      onConfigSave?.(next);
+      pendingNotifyRef.current = true;
       return next;
     });
-  }, [calendarId, onConfigSave]);
+  }, [calendarId]);
+
+  useEffect(() => {
+    if (!pendingNotifyRef.current) return;
+    pendingNotifyRef.current = false;
+    onConfigSave?.(config);
+  }, [config, onConfigSave]);
 
   const closeConfig = useCallback(() => {
     setConfigOpen(false);

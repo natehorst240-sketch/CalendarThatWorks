@@ -22,7 +22,7 @@ export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
 }) {
-  const [popoverDay,  setPopoverDay]  = useState(null);
+  const [popoverState, setPopoverState] = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(
     () => (typeof window === 'undefined' ? 1024 : window.innerWidth),
@@ -46,6 +46,31 @@ export default function MonthView({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => {
+    if (!popoverState) return undefined;
+
+    function handlePointerDown(e) {
+      if (e.target.closest?.('[data-month-popover], [data-month-more-trigger]')) return;
+      setPopoverState(null);
+    }
+
+    function handleDismiss(e) {
+      if (e.type === 'keydown' && e.key !== 'Escape') return;
+      setPopoverState(null);
+    }
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleDismiss);
+    window.addEventListener('resize', handleDismiss);
+    window.addEventListener('scroll', handleDismiss, true);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleDismiss);
+      window.removeEventListener('resize', handleDismiss);
+      window.removeEventListener('scroll', handleDismiss, true);
+    };
+  }, [popoverState]);
 
   // After focusedDay changes, move DOM focus to the newly-active cell.
   // Skip if the focus change was initiated by a mouse click (pointer
@@ -204,6 +229,40 @@ export default function MonthView({
     };
   }
 
+  const getPopoverEvents = useCallback((day) => {
+    const dayStart = startOfDay(day);
+    const dayKey = format(day, 'yyyy-MM-dd');
+    const spanningEvents = multiDay.filter((ev) => dayStart >= startOfDay(ev.start) && dayStart <= displayEndDay(ev));
+    const singleEvents = singleByDay.get(dayKey) || [];
+    return [...spanningEvents, ...singleEvents];
+  }, [multiDay, singleByDay]);
+
+  const popoverStyle = useMemo(() => {
+    if (!popoverState?.anchorRect) return null;
+
+    const viewportW = typeof window === 'undefined' ? 1280 : window.innerWidth;
+    const viewportH = typeof window === 'undefined' ? 720 : window.innerHeight;
+    const margin = 8;
+    const width = Math.min(280, Math.max(220, popoverState.anchorRect.width + 28));
+    let left = popoverState.anchorRect.left;
+    if (left + width > viewportW - margin) left = viewportW - width - margin;
+    if (left < margin) left = margin;
+
+    const estimatedHeight = 300;
+    const shouldOpenUp = popoverState.anchorRect.bottom + estimatedHeight > viewportH - margin;
+    let top = shouldOpenUp
+      ? popoverState.anchorRect.top - estimatedHeight - 6
+      : popoverState.anchorRect.bottom + 6;
+    if (top < margin) top = margin;
+
+    return {
+      left,
+      top,
+      width,
+      maxHeight: Math.max(160, viewportH - top - margin),
+    };
+  }, [popoverState]);
+
   // ── Renderers ─────────────────────────────────────────────────────────────
   function renderPill(ev, extra = {}, weekIdx = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
@@ -353,7 +412,7 @@ export default function MonthView({
                     const visibleSpLanes = spansOnDay.filter(s => s.lane < MAX_SPANS_VISIBLE).length;
                     const MAX_PILLS     = Math.max(1, 3 - visibleSpLanes);
                     const overflowCount = hiddenSpans + Math.max(0, daySingles.length - MAX_PILLS);
-                    const isPopoverOpen = popoverDay && isSameDay(popoverDay, day);
+                    const isPopoverOpen = popoverState && isSameDay(popoverState.day, day);
                     const popoverId     = `wc-popover-${dayKey}`;
                     const totalEvents   = daySingles.length + spansOnDay.length;
                     const cellLabel     = `${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}${totalEvents > 0 ? `, ${totalEvents} event${totalEvents === 1 ? '' : 's'}` : ''}`;
@@ -382,21 +441,19 @@ export default function MonthView({
                         onKeyDown={e => handleCellKeyDown(e, day)}
                         onPointerEnter={() => handleCellPointerEnter(day)}
                       >
-                        <span className={styles.dayNum}>{format(day, 'd')}</span>
-
-                        {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
-                        <div className={styles.events} style={{ paddingTop: spansHeight }}>
-                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
-                          {isDropTarget && renderGhostPill()}
+                        <div className={styles.cellHead}>
+                          <span className={styles.dayNum}>{format(day, 'd')}</span>
                           {overflowCount > 0 && (
                             <button
-                              className={styles.morePill}
+                              className={styles.moreLink}
+                              data-month-more-trigger="true"
                               aria-label={`${overflowCount} more event${overflowCount === 1 ? '' : 's'} on ${format(day, 'MMMM d')}`}
                               aria-expanded={!!isPopoverOpen}
                               aria-controls={popoverId}
                               onClick={e => {
                                 e.stopPropagation();
-                                setPopoverDay(isPopoverOpen ? null : day);
+                                const anchorRect = e.currentTarget.getBoundingClientRect();
+                                setPopoverState(isPopoverOpen ? null : { day, anchorRect });
                               }}
                             >
                               +{overflowCount} more
@@ -404,17 +461,12 @@ export default function MonthView({
                           )}
                         </div>
 
-                        {isPopoverOpen && (
-                          <div id={popoverId} className={styles.popover} onClick={e => e.stopPropagation()}>
-                            <div className={styles.popoverHead}>
-                              <span>{format(day, 'MMMM d')}</span>
-                              <button onClick={() => setPopoverDay(null)}>×</button>
-                            </div>
-                            {[...spansOnDay.map(s => s.ev), ...daySingles].map(ev =>
-                              renderPill(ev, { onAfterClick: () => setPopoverDay(null) }, wi),
-                            )}
-                          </div>
-                        )}
+                        {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
+                        <div className={styles.events} style={{ paddingTop: spansHeight }}>
+                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
+                          {isDropTarget && renderGhostPill()}
+                        </div>
+
                       </div>
                     );
                   })}
@@ -478,6 +530,24 @@ export default function MonthView({
     </div>
 
     {/* ── Pill hover projection overlay ── */}
+    {popoverState && popoverStyle && (
+      <div
+        id={`wc-popover-${format(popoverState.day, 'yyyy-MM-dd')}`}
+        className={styles.popover}
+        data-month-popover="true"
+        style={popoverStyle}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className={styles.popoverHead}>
+          <span>{format(popoverState.day, 'MMMM d')}</span>
+          <button onClick={() => setPopoverState(null)} aria-label="Close expanded day events">×</button>
+        </div>
+        {getPopoverEvents(popoverState.day).map(ev =>
+          renderPill(ev, { onAfterClick: () => setPopoverState(null) }),
+        )}
+      </div>
+    )}
+
     {pillHoverTitle && titleHover && (
       <div
         aria-hidden="true"
