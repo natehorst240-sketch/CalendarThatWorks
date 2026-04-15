@@ -270,14 +270,14 @@ function TemplateTab({ templates, onCreate, onDelete, error }) {
         <span>Template name</span>
         <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Morning coverage" />
       </label>
-      <label className={styles.formRow}>
+      <div className={styles.formRow}>
         <span>Visibility</span>
         <select className={styles.select} value={visibility} onChange={(e) => setVisibility(e.target.value)}>
           <option value="private">Private</option>
           <option value="team">Team</option>
           <option value="org">Org</option>
         </select>
-      </label>
+      </div>
       <label className={styles.formRow}>
         <span>Default entry title</span>
         <input className={styles.input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Primary shift" />
@@ -444,7 +444,7 @@ function DisplayTab({ config, onUpdate }) {
 
   return (
     <div className={styles.section}>
-      <label className={styles.formRow}>
+      <div className={styles.formRow}>
         <span>Default view</span>
         <select className={styles.select} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
           {['month','week','day','agenda','schedule','timeline'].map(v => (
@@ -453,15 +453,15 @@ function DisplayTab({ config, onUpdate }) {
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className={styles.formRow}>
+      <div className={styles.formRow}>
         <span>Week starts on</span>
         <select className={styles.select} value={d.weekStartDay} onChange={e => set('weekStartDay', +e.target.value)}>
           <option value={0}>Sunday</option>
           <option value={1}>Monday</option>
         </select>
-      </label>
+      </div>
 
       <label className={styles.formRow}>
         <span>Day view start (hour)</span>
