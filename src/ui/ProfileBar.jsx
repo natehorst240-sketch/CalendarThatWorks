@@ -3,6 +3,8 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X } from 'lucide-react';
+import { buildFilterSummary } from '../filters/filterState.js';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
 import styles from './ProfileBar.module.css';
 
 const PROFILE_COLORS = [
@@ -14,6 +16,7 @@ export default function ProfileBar({
   views,
   activeId,
   isDirty,
+  schema = DEFAULT_FILTER_SCHEMA,
   onApply,
   onAdd,
   onResave,
@@ -44,6 +47,7 @@ export default function ProfileBar({
           <ViewChip
             key={savedView.id}
             savedView={savedView}
+            schema={schema}
             isActive={savedView.id === activeId}
             isDirty={isDirty && savedView.id === activeId}
             isManaging={manageId === savedView.id}
@@ -78,7 +82,7 @@ export default function ProfileBar({
 }
 
 /* ─── View Chip ─────────────────────────────────────────────── */
-function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageToggle,
+function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, onManageToggle,
   onResave, onDelete, onRename, onColorChange }) {
 
   const [renaming, setRenaming] = useState(false);
@@ -99,8 +103,11 @@ function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageT
 
   const color = savedView.color ?? '#64748b';
 
-  // Build a summary string for the tooltip
-  const summary = buildSummary(savedView);
+  // Build a summary string for the tooltip using schema-driven formatting
+  const summaryItems = buildFilterSummary(savedView.filters, schema);
+  const summaryParts = summaryItems.map(item => `${item.label}: ${item.displayValues.join(', ')}`);
+  if (savedView.view) summaryParts.push(`View: ${savedView.view}`);
+  const summary = summaryParts.length ? summaryParts.join(' \u00b7 ') : 'No filters applied';
 
   return (
     <div ref={chipRef} className={styles.chipWrap}>
@@ -142,7 +149,7 @@ function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageT
         <div className={styles.managePanel}>
           {/* Filter summary */}
           <div className={styles.summaryBlock}>
-            <FilterSummary savedView={savedView} />
+            <FilterSummary savedView={savedView} schema={schema} />
           </div>
 
           {/* Rename */}
@@ -200,37 +207,25 @@ function ViewChip({ savedView, isActive, isDirty, isManaging, onApply, onManageT
 }
 
 /* ─── Filter Summary (inside manage panel) ─────────────────────── */
-function FilterSummary({ savedView }) {
-  const filters = savedView.filters ?? {};
+function FilterSummary({ savedView, schema }) {
+  const summaryItems = buildFilterSummary(savedView.filters, schema);
 
-  // Collect every non-empty filter entry generically.
-  // Saved filters are always serialized (arrays, not Sets) so we can inspect them directly.
-  const activeEntries = Object.entries(filters).filter(([, v]) => {
-    if (v == null || v === '') return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    return true;
-  });
-
-  if (activeEntries.length === 0 && !savedView.view) {
+  if (summaryItems.length === 0 && !savedView.view) {
     return <p className={styles.summaryNone}>No filters — matches all events</p>;
   }
 
   return (
     <div className={styles.summary}>
-      {activeEntries.map(([key, value]) => {
-        const label = key.charAt(0).toUpperCase() + key.slice(1);
-        return (
-          <div key={key} className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>{label}</span>
-            <span className={styles.summaryTags}>
-              {Array.isArray(value)
-                ? value.map(v => <span key={v} className={styles.tag}>{v}</span>)
-                : <span className={styles.tag}>{String(value)}</span>
-              }
-            </span>
-          </div>
-        );
-      })}
+      {summaryItems.map(item => (
+        <div key={item.key} className={styles.summaryRow}>
+          <span className={styles.summaryLabel}>{item.label}</span>
+          <span className={styles.summaryTags}>
+            {item.displayValues.map((dv, i) => (
+              <span key={`${item.key}-${i}`} className={styles.tag}>{dv}</span>
+            ))}
+          </span>
+        </div>
+      ))}
       {savedView.view && (
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>Pinned view</span>
@@ -297,17 +292,4 @@ function SaveForm({ onSave, onCancel }) {
   );
 }
 
-/* ─── Helpers ─────────────────────────────────────────────────── */
-function buildSummary(savedView) {
-  const filters = savedView.filters ?? {};
-  const parts = [];
-  for (const [key, value] of Object.entries(filters)) {
-    if (value == null || value === '') continue;
-    if (Array.isArray(value) && value.length === 0) continue;
-    const label   = key.charAt(0).toUpperCase() + key.slice(1);
-    const display = Array.isArray(value) ? value.join(', ') : String(value);
-    parts.push(`${label}: ${display}`);
-  }
-  if (savedView.view) parts.push(`View: ${savedView.view}`);
-  return parts.length ? parts.join(' · ') : 'No filters applied';
-}
+

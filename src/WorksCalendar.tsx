@@ -32,7 +32,7 @@ import { validateOperation } from './core/engine/validation/validateOperation.ts
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
 import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
-import { buildActiveFilterPills } from './filters/filterState.js';
+import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
 import HoverCard              from './ui/HoverCard.jsx';
@@ -1419,12 +1419,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
+              schema,
+              buildFilterSummary: (filters) => buildFilterSummary(filters, schema),
             })
           : (
             <ProfileBar
               views={savedViews.views}
               activeId={savedViewActiveId}
               isDirty={savedViewDirty}
+              schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
                 savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null })
