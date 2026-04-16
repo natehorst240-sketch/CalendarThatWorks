@@ -324,6 +324,63 @@ describe('useSavedViews', () => {
     expect(result.current.views[0].color).toBe('#3b82f6');
     expect(result.current.views[0].view).toBe('week');
   });
+
+  it('saveView stores conditions metadata when provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    const conditions = [
+      { field: 'category', operator: 'is', value: 'Work', logic: 'AND' },
+      { field: 'person', operator: 'is', value: 'Alice', logic: 'OR' },
+    ];
+    act(() => {
+      result.current.saveView('Cond View', {
+        categories: new Set(['Work']),
+        resources: new Set(['Alice']),
+        sources: new Set(),
+        search: '',
+        dateRange: null,
+      }, { conditions });
+    });
+    expect(result.current.views).toHaveLength(1);
+    expect(result.current.views[0].conditions).toEqual(conditions);
+  });
+
+  it('conditions survive localStorage round-trip', () => {
+    const conditions = [
+      { field: 'category', operator: 'is', value: 'PTO', logic: 'AND' },
+    ];
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persisted Cond', {
+        categories: new Set(['PTO']),
+        resources: new Set(),
+        sources: new Set(),
+        search: '',
+        dateRange: null,
+      }, { conditions });
+    });
+
+    // Re-mount hook to reload from localStorage
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views).toHaveLength(1);
+    expect(result2.current.views[0].conditions).toEqual(conditions);
+  });
+
+  it('updateView persists conditions', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Update Cond', {
+        categories: new Set(), resources: new Set(), sources: new Set(), search: '', dateRange: null,
+      });
+    });
+    const id = result.current.views[0].id;
+    const newConditions = [
+      { field: 'title', operator: 'contains', value: 'meeting', logic: 'AND' },
+    ];
+    act(() => {
+      result.current.updateView(id, { conditions: newConditions });
+    });
+    expect(result.current.views[0].conditions).toEqual(newConditions);
+  });
 });
 
 describe('deserializeFilters dateRange validation', () => {

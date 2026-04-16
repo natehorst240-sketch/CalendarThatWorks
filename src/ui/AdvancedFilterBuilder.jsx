@@ -22,7 +22,7 @@
  *                                editingId is set
  *   onCancelEdit     () => void — (edit mode) called when user cancels editing
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { createId } from '../core/createId.js';
 import styles from './AdvancedFilterBuilder.module.css';
@@ -103,6 +103,12 @@ export default function AdvancedFilterBuilder({
   const [viewName,   setViewName]   = useState(initialName);
   const [nameError,  setNameError]  = useState('');
   const [saved,      setSaved]      = useState(false);
+  const savedTimerRef = useRef(null);
+
+  // Clear the "Saved!" feedback timeout on unmount to avoid state updates on
+  // an unmounted component (can happen in edit mode when the parent unmounts
+  // the builder immediately after onUpdate).
+  useEffect(() => () => { clearTimeout(savedTimerRef.current); }, []);
 
   // Sync when switching to a different view for editing.
   // The parent uses `key={editingId}` to remount this component when the target
@@ -159,12 +165,14 @@ export default function AdvancedFilterBuilder({
     if (editingId && onUpdate) {
       onUpdate(editingId, name, filters, conditions);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
     } else {
       onSave?.(name, filters, conditions);
       // Reset builder for another view
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
       setViewName('');
       setConditions([makeCondition('AND')]);
     }

@@ -203,6 +203,7 @@ function SmartViewsTab({ categories, resources, onSaveView, savedViews = [], onU
                       className={[styles.svActionBtn, styles.svDanger].join(' ')}
                       onClick={() => { onDeleteView?.(view.id); setConfirmDel(null); if (editingId === view.id) setEditingId(null); }}
                       title="Confirm delete"
+                      aria-label={`Confirm delete ${view.name}`}
                     >
                       <Check size={13} />
                     </button>
@@ -210,6 +211,7 @@ function SmartViewsTab({ categories, resources, onSaveView, savedViews = [], onU
                       className={styles.svActionBtn}
                       onClick={() => setConfirmDel(null)}
                       title="Cancel"
+                      aria-label="Cancel delete"
                     >
                       <X size={13} />
                     </button>

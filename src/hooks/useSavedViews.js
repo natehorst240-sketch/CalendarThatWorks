@@ -29,12 +29,13 @@ function normalizeSavedView(view) {
   if (!view.filters || typeof view.filters !== 'object') return null;
 
   return {
-    id:        view.id,
-    name:      view.name,
-    createdAt: typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
-    color:     view.color ?? null,
-    view:      view.view ?? null,
-    filters:   view.filters,
+    id:         view.id,
+    name:       view.name,
+    createdAt:  typeof view.createdAt === 'string' ? view.createdAt : new Date().toISOString(),
+    color:      view.color ?? null,
+    view:       view.view ?? null,
+    conditions: Array.isArray(view.conditions) ? view.conditions : null,
+    filters:    view.filters,
   };
 }
 
