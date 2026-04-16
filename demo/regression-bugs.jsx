@@ -136,6 +136,7 @@ function App() {
             theme="light"
             showAddButton={true}
             initialView="month"
+            initialDate={today}
           />
         </div>
       </div>
