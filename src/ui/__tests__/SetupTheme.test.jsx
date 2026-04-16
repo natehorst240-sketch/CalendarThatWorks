@@ -156,7 +156,7 @@ describe('THEMES — each entry has a valid customTheme', () => {
       expect(theme.customTheme).toBeDefined();
       expect(theme.customTheme.colors).toBeDefined();
       colorKeys.forEach(key => {
-        expect(theme.customTheme.colors[key]).toMatch(/^#[0-9a-fA-F]{3,8}$/, `${theme.id}.colors.${key} should be a hex color`);
+        expect(theme.customTheme.colors[key]).toMatch(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, `${theme.id}.colors.${key} should be a hex color`);
       });
     });
   });
