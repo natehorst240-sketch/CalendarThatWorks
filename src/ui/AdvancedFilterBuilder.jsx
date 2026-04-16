@@ -105,9 +105,13 @@ export default function AdvancedFilterBuilder({
   const [saved,      setSaved]      = useState(false);
 
   // Sync when switching to a different view for editing.
-  // editingId is the only stable signal that the target view changed;
-  // initialName and initialConditions are derived from it so we
-  // intentionally do not add them to the dependency array.
+  // The parent uses `key={editingId}` to remount this component when the target
+  // view changes, so this effect primarily handles the initial-mount hydration.
+  // `initialName` and `initialConditions` are props derived from `editingId`
+  // (they always change together with it), so listing `editingId` alone is the
+  // correct stable signal. Adding the derived props would cause redundant resets
+  // if the parent ever re-renders with new object/array references but the same
+  // editing target — hence the intentional exclusion below.
   useEffect(() => {
     setViewName(initialName);
     setConditions(
@@ -117,7 +121,7 @@ export default function AdvancedFilterBuilder({
     );
     setNameError('');
     setSaved(false);
-  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps -- initialName/initialConditions are derived from editingId
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
