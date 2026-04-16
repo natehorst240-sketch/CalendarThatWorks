@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Plus, Trash2, Check, Camera } from 'lucide-react';
+import { X, Plus, Trash2, Check, Camera, Pencil } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { serializeFilters } from '../hooks/useSavedViews.js';
 import { THEMES } from '../styles/themes.js';
 import SourcePanel from './SourcePanel.jsx';
 import ThemeCustomizer from './ThemeCustomizer.jsx';
@@ -23,6 +24,7 @@ const TABS = [
 
 export default function ConfigPanel({
   config, categories, resources, onUpdate, onClose, onSaveView,
+  savedViews, onUpdateView, onDeleteView,
   // Source store props (optional — omitted when owner has no source store)
   sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
   scheduleTemplates, onCreateScheduleTemplate, onDeleteScheduleTemplate, scheduleTemplateError,
@@ -88,7 +90,16 @@ export default function ConfigPanel({
               error={scheduleTemplateError}
             />
           )}
-          {tab === 'smartViews'  && <SmartViewsTab categories={categories} resources={resources} onSaveView={onSaveView} />}
+          {tab === 'smartViews'  && (
+            <SmartViewsTab
+              categories={categories}
+              resources={resources}
+              onSaveView={onSaveView}
+              savedViews={savedViews ?? []}
+              onUpdateView={onUpdateView}
+              onDeleteView={onDeleteView}
+            />
+          )}
           {tab === 'team'        && <TeamTab config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
@@ -151,11 +162,91 @@ function SetupTab({ config, onUpdate }) {
   );
 }
 
-function SmartViewsTab({ categories, resources, onSaveView }) {
+function SmartViewsTab({ categories, resources, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
+  const [editingId,   setEditingId]   = useState(null);
+  const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
+
+  const editingView = editingId ? savedViews.find(v => v.id === editingId) : null;
+
+  const handleUpdate = (id, name, filters, conditions) => {
+    onUpdateView?.(id, { name, filters: serializeFilters(filters), conditions });
+    setEditingId(null);
+  };
+
   return (
     <div className={styles.section}>
-      <p className={styles.sectionDesc}>Create Smart Views once categories and people are configured.</p>
-      <AdvancedFilterBuilder categories={categories ?? []} resources={resources ?? []} onSave={onSaveView} />
+      {/* ── Existing views list ── */}
+      {savedViews.length > 0 && (
+        <div className={styles.smartViewList}>
+          <p className={styles.sectionDesc} style={{ marginBottom: 6 }}>Manage existing Smart Views:</p>
+          {savedViews.map(view => (
+            <div
+              key={view.id}
+              className={[styles.smartViewRow, editingId === view.id && styles.smartViewRowEditing].filter(Boolean).join(' ')}
+            >
+              <span className={styles.smartViewName} style={{ '--chip-color': view.color ?? '#64748b' }}>
+                {view.name}
+              </span>
+              <div className={styles.smartViewActions}>
+                <button
+                  className={styles.svActionBtn}
+                  onClick={() => setEditingId(prev => prev === view.id ? null : view.id)}
+                  title="Edit conditions"
+                  aria-label={`Edit ${view.name}`}
+                  aria-pressed={editingId === view.id}
+                >
+                  <Pencil size={13} />
+                </button>
+                {confirmDel === view.id ? (
+                  <>
+                    <button
+                      className={[styles.svActionBtn, styles.svDanger].join(' ')}
+                      onClick={() => { onDeleteView?.(view.id); setConfirmDel(null); if (editingId === view.id) setEditingId(null); }}
+                      title="Confirm delete"
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      className={styles.svActionBtn}
+                      onClick={() => setConfirmDel(null)}
+                      title="Cancel"
+                    >
+                      <X size={13} />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className={[styles.svActionBtn, styles.svDanger].join(' ')}
+                    onClick={() => setConfirmDel(view.id)}
+                    title={`Delete ${view.name}`}
+                    aria-label={`Delete ${view.name}`}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Builder (create or edit) ── */}
+      <p className={styles.sectionDesc}>
+        {editingView
+          ? `Editing conditions for "${editingView.name}"`
+          : 'Create Smart Views once categories and people are configured.'}
+      </p>
+      <AdvancedFilterBuilder
+        key={editingId ?? '__new__'}
+        categories={categories ?? []}
+        resources={resources ?? []}
+        onSave={(name, filters, conditions) => onSaveView?.(name, filters, { conditions })}
+        initialName={editingView?.name ?? ''}
+        initialConditions={editingView?.conditions ?? null}
+        editingId={editingId}
+        onUpdate={handleUpdate}
+        onCancelEdit={() => setEditingId(null)}
+      />
     </div>
   );
 }

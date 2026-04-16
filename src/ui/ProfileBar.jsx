@@ -52,7 +52,7 @@ export default function ProfileBar({
             isDirty={isDirty && savedView.id === activeId}
             isManaging={manageId === savedView.id}
             onApply={() => { onApply(savedView); setManageId(null); setSaveOpen(false); }}
-            onManageToggle={() => setManageId(manageId === savedView.id ? null : savedView.id)}
+            onManageToggle={() => setManageId(prev => prev === savedView.id ? null : savedView.id)}
             onResave={() => { onResave(savedView.id); setManageId(null); }}
             onDelete={() => { onDelete(savedView.id); setManageId(null); }}
             onRename={(name) => { onUpdate(savedView.id, { name }); setManageId(null); }}

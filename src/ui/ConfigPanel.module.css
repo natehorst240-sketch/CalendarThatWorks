@@ -382,6 +382,85 @@
   background: var(--wc-accent);
 }
 
+/* ─── Smart Views management list ──────────────────────────── */
+
+.smartViewList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.smartViewRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  transition: border-color 0.12s;
+}
+
+.smartViewRowEditing {
+  border-color: var(--wc-accent);
+}
+
+.smartViewName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smartViewName::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chip-color, #64748b);
+  flex-shrink: 0;
+}
+
+.smartViewActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.svActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--wc-text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.svActionBtn:hover {
+  color: var(--wc-text);
+  background: var(--wc-border);
+}
+
+.svDanger:hover {
+  color: var(--wc-danger);
+  background: color-mix(in srgb, var(--wc-danger) 10%, transparent);
+}
+
 /* ─── Responsive: bottom sheet on mobile ────────────────────── */
 @media (max-width: 480px) {
   .overlay {

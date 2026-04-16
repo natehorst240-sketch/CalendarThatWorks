@@ -186,14 +186,15 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, { color, view } = {}) => {
+  const saveView = useCallback((name, filters, { color, view, conditions } = {}) => {
     const savedView = {
-      id:        createId('view'),
+      id:         createId('view'),
       name,
-      createdAt: new Date().toISOString(),
-      color:     color ?? null,
-      view:      view ?? null,
-      filters:   serializeFilters(filters),
+      createdAt:  new Date().toISOString(),
+      color:      color ?? null,
+      view:       view ?? null,
+      conditions: conditions ?? null,
+      filters:    serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
     return savedView;

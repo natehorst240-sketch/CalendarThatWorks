@@ -212,6 +212,22 @@
   background: var(--wc-success, #10b981);
 }
 
+.cancelBtn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  border: 1px solid var(--wc-border-dark);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+.cancelBtn:hover { opacity: 0.8; }
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 520px) {
