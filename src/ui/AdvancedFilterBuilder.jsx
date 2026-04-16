@@ -24,6 +24,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Plus, X, Check } from 'lucide-react';
+import { createId } from '../core/createId.js';
 import styles from './AdvancedFilterBuilder.module.css';
 
 // ─── Static config ────────────────────────────────────────────────────────────
@@ -79,7 +80,7 @@ function conditionsToFilters(conditions) {
 }
 
 function makeCondition(logic = 'AND') {
-  return { id: Date.now() + Math.random(), field: 'category', operator: 'is', value: '', logic };
+  return { id: createId('cond'), field: 'category', operator: 'is', value: '', logic };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -96,25 +97,27 @@ export default function AdvancedFilterBuilder({
 }) {
   const [conditions, setConditions] = useState(() =>
     initialConditions && initialConditions.length > 0
-      ? initialConditions.map(c => ({ ...c, id: Date.now() + Math.random() }))
+      ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
       : [makeCondition('AND')]
   );
   const [viewName,   setViewName]   = useState(initialName);
   const [nameError,  setNameError]  = useState('');
   const [saved,      setSaved]      = useState(false);
 
-  // Sync when switching to a different view for editing
+  // Sync when switching to a different view for editing.
+  // editingId is the only stable signal that the target view changed;
+  // initialName and initialConditions are derived from it so we
+  // intentionally do not add them to the dependency array.
   useEffect(() => {
     setViewName(initialName);
     setConditions(
       initialConditions && initialConditions.length > 0
-        ? initialConditions.map(c => ({ ...c, id: Date.now() + Math.random() }))
+        ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
         : [makeCondition('AND')]
     );
     setNameError('');
     setSaved(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId]);
+  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
