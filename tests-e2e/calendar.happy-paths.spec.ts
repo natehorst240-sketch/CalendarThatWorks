@@ -26,6 +26,9 @@ test.describe('WorksCalendar happy paths', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
+    // Demo defaults to schedule view; these tests exercise month-view flows
+    // (drag, add-event toolbar button), so normalize to Month first.
+    await page.getByRole('button', { name: /^Month$/i }).click();
   });
 
   test('month view navigation moves forward and back', async ({ page }) => {

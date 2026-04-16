@@ -285,6 +285,30 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return ownerCfg.config?.team?.members ?? [];
   }, [employees, ownerCfg.config?.team?.members]);
 
+  // Wrap parent employee handlers so edits from ANY surface (timeline add-form
+  // or TeamTab settings) flow both to the consumer's state AND to the owner
+  // config. Keeps TeamTab and the live schedule in sync. See issue #101.
+  const handleEmployeeAddInternal = useCallback((member) => {
+    ownerCfg.updateConfig(c => {
+      const existing = c.team?.members ?? [];
+      if (existing.some(m => String(m.id) === String(member.id))) return c;
+      return {
+        ...c,
+        team: { ...(c.team ?? {}), members: [...existing, member] },
+        setup: { ...(c.setup ?? {}), completed: true },
+      };
+    });
+    onEmployeeAdd?.(member);
+  }, [ownerCfg.updateConfig, onEmployeeAdd]);
+
+  const handleEmployeeDeleteInternal = useCallback((id) => {
+    ownerCfg.updateConfig(c => ({
+      ...c,
+      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter(m => String(m.id) !== String(id)) },
+    }));
+    onEmployeeDelete?.(id);
+  }, [ownerCfg.updateConfig, onEmployeeDelete]);
+
   // Honor defaultView from owner config (applied once after config loads)
   const defaultViewApplied = useRef(false);
   useEffect(() => {
@@ -1497,8 +1521,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
                   employees={configuredEmployees}
-                  onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
-                  onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
+                  onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
@@ -1613,6 +1637,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             savedViews={savedViews.views}
             onUpdateView={savedViews.updateView}
             onDeleteView={handleDeleteView}
+            onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+            onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
             onAddSource={sourceStore.addSource}
