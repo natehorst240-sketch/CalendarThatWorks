@@ -161,7 +161,7 @@ export default function FilterBar({
             >
               <span>{mergedGroupLabels[groupKey] ?? DEFAULT_GROUP_LABELS[groupKey] ?? groupKey}</span>
               {count > 0 && <span className={styles.countBadge}>{count}</span>}
-              <ChevronDown size={14} />
+              <span className={styles.chevronIcon}><ChevronDown size={14} /></span>
             </button>
 
             {openGroup === groupKey && (

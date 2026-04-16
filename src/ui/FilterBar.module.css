@@ -8,43 +8,6 @@
   background: var(--wc-bg);
 }
 
-.pillGroup {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.pill {
-  padding: 4px 10px;
-  border-radius: 100px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid var(--wc-border);
-  background: var(--wc-surface);
-  color: var(--wc-text-muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.pill:hover {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
-}
-.pill.active {
-  background: var(--wc-accent);
-  border-color: var(--wc-accent);
-  color: #fff;
-}
-
-.resource {
-  background: var(--wc-surface-2);
-}
-.resource.active {
-  background: var(--wc-text);
-  border-color: var(--wc-text);
-  color: var(--wc-bg);
-}
-
 .searchWrap {
   position: relative;
   display: flex;
@@ -66,7 +29,7 @@
   color: var(--wc-text);
   outline: none;
   width: 180px;
-  transition: border-color 0.15s, width 0.2s;
+  transition: border-color 0.15s, width 0.15s;
 }
 .search:focus {
   border-color: var(--wc-accent);
@@ -124,12 +87,6 @@
     padding: 6px 8px;
   }
 
-  /* Pills wrap and stay small */
-  .pill {
-    padding: 3px 8px;
-    font-size: 11px;
-  }
-
   /* Search goes full-width on its own line */
   .searchWrap {
     width: 100%;
@@ -149,49 +106,11 @@
   }
 }
 
-/* Source pills */
-.sourcePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px 4px 7px;
-  border-radius: 100px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid var(--wc-border);
-  background: var(--wc-surface);
-  color: var(--wc-text-muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-}
-.sourcePill:hover {
-  border-color: var(--wc-accent);
-  color: var(--wc-text);
-}
-.sourcePill.active {
-  color: #fff;
-  /* background and border-color set via inline style (source color) */
-}
 .sourceDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-}
-.sourceLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sourceType {
-  font-size: 10px;
-  opacity: 0.7;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 /* ── Active filter pills ── */
@@ -199,7 +118,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 4px 0 0;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--wc-border);
+  margin-top: 2px;
   width: 100%;
   order: 99;
 }
@@ -207,7 +128,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px 2px 10px;
+  padding: 3px 8px 3px 10px;
   background: var(--wc-accent);
   color: #fff;
   border-radius: 100px;
@@ -236,6 +157,7 @@
   background: var(--wc-surface);
   color: var(--wc-text);
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
 }
 .selectInput:focus { outline: none; border-color: var(--wc-accent); }
@@ -263,7 +185,7 @@
   border-color: var(--wc-accent);
   color: var(--wc-accent);
 }
-.boolCheck { cursor: pointer; }
+.boolCheck { cursor: pointer; accent-color: var(--wc-accent); }
 
 /* ── Date range ── */
 .dateRange {
@@ -355,6 +277,14 @@
   color: var(--wc-accent);
 }
 
+.chevronIcon {
+  display: inline-flex;
+  transition: transform 0.15s;
+}
+.dropdownBtnOpen .chevronIcon {
+  transform: rotate(180deg);
+}
+
 .countBadge {
   display: inline-flex;
   align-items: center;
@@ -386,8 +316,8 @@
 }
 
 .menuSection + .menuSection {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--wc-border);
 }
 
@@ -397,7 +327,7 @@
   color: var(--wc-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .menuOptions {
@@ -416,6 +346,7 @@
   border: 1px solid transparent;
   background: transparent;
   color: var(--wc-text);
+  font-size: 13px;
   cursor: pointer;
   text-align: left;
 }
@@ -458,7 +389,12 @@
 .dropdownBtn:focus-visible,
 .selectInput:focus-visible,
 .dateInput:focus-visible,
-.boolLabel:focus-visible {
+.boolLabel:focus-visible,
+.search:focus-visible,
+.clearSearch:focus-visible,
+.dateClear:focus-visible,
+.clearAll:focus-visible,
+.hoverToggle:focus-visible {
   outline: 2px solid var(--wc-accent);
   outline-offset: 1px;
 }
