@@ -485,6 +485,10 @@ export interface WorksCalendarProps {
   /** Show the "Add Event" button. Always shown when owner is authenticated. */
   showAddButton?: boolean;
 
+  // ── Grouping ──
+  /** Field name to group rows by in TimelineView and AgendaView. */
+  groupBy?: string;
+
   // ── Imperative handle ──
   ref?: React.Ref<CalendarApi>;
 }

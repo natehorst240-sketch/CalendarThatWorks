@@ -138,6 +138,7 @@ export type WorksCalendarProps = {
   showAddButton?: boolean;
   initialView?: CalendarView;
   weekStartDay?: 0 | 1;
+  groupBy?: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -266,6 +267,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Week start day (prop takes priority over owner config) ──
     weekStartDay: weekStartDayProp,
+
+    // ── Grouping ──
+    groupBy,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -1489,7 +1493,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={groupBy} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
@@ -1502,6 +1506,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
+                  groupBy={groupBy}
                 />
               )}
             </>

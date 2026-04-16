@@ -28,6 +28,8 @@ import {
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import EmployeeActionCard from '../ui/EmployeeActionCard.jsx';
 import styles from './TimelineView.module.css';
+import { useGrouping } from '../hooks/useGrouping.js';
+import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -106,6 +108,7 @@ export default function TimelineView({
   onShiftStatusChange,
   onCoverageAssign,
   onEmployeeAction,
+  groupBy,
 }) {
   const ctx        = useCalendarContext();
 
@@ -275,32 +278,42 @@ export default function TimelineView({
     });
   }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
 
+  // ── Grouping ───────────────────────────────────────────────────────────────
+  const GROUP_HEADER_H = 36;
+  const fieldAccessor = useMemo(
+    () => groupBy ? buildFieldAccessor(groupBy, useEmployees ? 'employee' : 'resource') : null,
+    [groupBy, useEmployees],
+  );
+  const { flatRows, groupOrder, collapsedGroups, toggleGroup, isGrouped } = useGrouping(rows, {
+    groupBy, fieldAccessor, groupHeaderHeight: GROUP_HEADER_H,
+  });
+
   // ── Cumulative row offsets (for absolute positioning + scroll math) ────────
   const rowOffsets = useMemo(() => {
     const offsets = [0];
-    for (const row of rows) offsets.push(offsets[offsets.length - 1] + row.rowH);
+    for (const row of flatRows) offsets.push(offsets[offsets.length - 1] + row.rowH);
     return offsets;
-  }, [rows]);
+  }, [flatRows]);
 
-  const totalBodyH = rowOffsets[rows.length] ?? 0;
+  const totalBodyH = rowOffsets[flatRows.length] ?? 0;
 
   // ── Visible row window ─────────────────────────────────────────────────────
   const [visStart, visEnd] = useMemo(() => {
     const { top, height } = scrollState;
     const viewH = height || 2000;
     let s = 0;
-    let e = rows.length - 1;
-    for (let i = 0; i < rows.length; i++) {
+    let e = flatRows.length - 1;
+    for (let i = 0; i < flatRows.length; i++) {
       if (rowOffsets[i + 1] <= top) s = i + 1;
     }
-    for (let i = rows.length - 1; i >= 0; i--) {
+    for (let i = flatRows.length - 1; i >= 0; i--) {
       if (rowOffsets[i] < top + viewH) { e = i; break; }
     }
     return [
       Math.max(0, s - OVERSCAN_ROWS),
-      Math.min(rows.length - 1, e + OVERSCAN_ROWS),
+      Math.min(flatRows.length - 1, e + OVERSCAN_ROWS),
     ];
-  }, [scrollState, rowOffsets, rows.length]);
+  }, [scrollState, rowOffsets, flatRows.length]);
 
   // ── Keyboard grid navigation ───────────────────────────────────────────────
 
@@ -334,15 +347,27 @@ export default function TimelineView({
   }, [focusedCell, rowOffsets]);
 
   const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
-    const maxRi = rows.length - 1;
+    const maxRi = flatRows.length - 1;
     const maxDi = totalDays - 1;
     let nextRi = ri, nextDi = di;
     let move = false;
     switch (e.key) {
       case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
       case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
-      case 'ArrowUp':    nextRi = Math.max(0, ri - 1);     move = true; break;
-      case 'ArrowDown':  nextRi = Math.min(maxRi, ri + 1); move = true; break;
+      case 'ArrowUp': {
+        nextRi = ri - 1;
+        while (nextRi >= 0 && flatRows[nextRi]?._type === 'groupHeader') nextRi--;
+        nextRi = Math.max(0, nextRi);
+        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
+        move = true; break;
+      }
+      case 'ArrowDown': {
+        nextRi = ri + 1;
+        while (nextRi <= maxRi && flatRows[nextRi]?._type === 'groupHeader') nextRi++;
+        nextRi = Math.min(maxRi, nextRi);
+        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
+        move = true; break;
+      }
       case 'Home':       nextDi = 0;                        move = true; break;
       case 'End':        nextDi = maxDi;                    move = true; break;
       case 'Enter':
@@ -366,7 +391,7 @@ export default function TimelineView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [rows.length, totalDays, onEventClick, onDateSelect, days]);
+  }, [flatRows, totalDays, onEventClick, onDateSelect, days]);
 
   // ── Empty state ────────────────────────────────────────────────────────────
 
@@ -388,7 +413,7 @@ export default function TimelineView({
         style={{ width: NAME_W + totalDays * DAY_W }}
         role="grid"
         aria-label={`Timeline for ${format(currentDate, 'MMMM yyyy')}`}
-        aria-rowcount={rows.length + 1}
+        aria-rowcount={flatRows.length + 1}
         aria-colcount={totalDays + 1}
         ref={gridRef}
       >
@@ -462,8 +487,36 @@ export default function TimelineView({
           role="presentation"
           style={{ position: 'relative', height: totalBodyH }}
         >
-          {rows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
+          {flatRows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
             const rowIdx  = visStart + relIdx;
+
+            // Render group header pseudo-rows
+            if (rowData._type === 'groupHeader') {
+              const topOffset = rowOffsets[rowIdx];
+              return (
+                <div
+                  key={`gh-${rowData.groupKey}`}
+                  className={styles.groupHeaderRow}
+                  style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
+                  role="row"
+                  aria-rowindex={rowIdx + 2}
+                >
+                  <div className={styles.groupHeaderCell} style={{ width: NAME_W + totalDays * DAY_W }}>
+                    <button
+                      className={styles.groupToggleBtn}
+                      onClick={() => toggleGroup(rowData.groupKey)}
+                      aria-expanded={!rowData.collapsed}
+                      aria-label={`${rowData.collapsed ? 'Expand' : 'Collapse'} group ${rowData.groupLabel}`}
+                    >
+                      <span className={styles.groupChevron} data-collapsed={rowData.collapsed || undefined}>&#9656;</span>
+                      <span className={styles.groupLabel}>{rowData.groupLabel}</span>
+                      <span className={styles.groupCount}>{rowData.count}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             const { key, emp, empIdx, resource, events: rowEvents, rowH, baseH, coveringPills, hasStatusPills } = rowData;
             const label = emp ? emp.name : resource;
             const color = emp ? employeeColor(emp, empIdx) : null;
