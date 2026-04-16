@@ -5,8 +5,12 @@
  * between each row, then save the result as a named Smart View.
  *
  * Props:
- *   categories       string[]  — available category values for the value picker
- *   resources        string[]  — available resource/person values
+ *   schema           FilterField[]  — schema driving available fields + operators
+ *                                     (defaults to DEFAULT_FILTER_SCHEMA)
+ *   items            unknown[]      — current event list; passed to field.getOptions()
+ *                                     for dynamic option lists (defaults to [])
+ *   categories       string[]  — kept for backwards-compat; ignored when schema wired
+ *   resources        string[]  — same
  *   onSave           (name, filters, conditions) => void
  *                              — called when user saves; `filters` is a live
  *                                filter-state object (with Sets) ready for
@@ -22,70 +26,24 @@
  *                                editingId is set
  *   onCancelEdit     () => void — (edit mode) called when user cancels editing
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import { createId } from '../core/createId.js';
+import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema.js';
+import { conditionsToFilters } from '../filters/conditionEngine.js';
 import styles from './AdvancedFilterBuilder.module.css';
-
-// ─── Static config ────────────────────────────────────────────────────────────
-
-const FIELD_OPTIONS = [
-  { value: 'category', label: 'Category' },
-  { value: 'person',   label: 'Person'   },
-  { value: 'title',    label: 'Title'    },
-];
-
-const OPERATORS = {
-  category: [
-    { value: 'is',     label: 'is'     },
-    { value: 'is not', label: 'is not' },
-  ],
-  person: [
-    { value: 'is',     label: 'is'     },
-    { value: 'is not', label: 'is not' },
-  ],
-  title: [
-    { value: 'contains',     label: 'contains'        },
-    { value: 'not contains', label: 'does not contain' },
-    { value: 'is',           label: 'is exactly'      },
-  ],
-};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Best-effort translation from visual conditions → standard filter state.
- * The standard engine treats multi-select fields as OR-within, AND-between,
- * which maps well onto most real-world use cases.
- */
-function conditionsToFilters(conditions) {
-  const categories = new Set();
-  const resources  = new Set();
-  let   search     = '';
-
-  for (const cond of conditions) {
-    const val = cond.value?.trim();
-    if (!val) continue;
-
-    if (cond.field === 'category' && cond.operator === 'is') {
-      categories.add(val);
-    } else if (cond.field === 'person' && cond.operator === 'is') {
-      resources.add(val);
-    } else if (cond.field === 'title' && cond.operator === 'contains') {
-      search = val; // last wins for text search
-    }
-  }
-
-  return { categories, resources, sources: new Set(), search, dateRange: null };
-}
-
-function makeCondition(logic = 'AND') {
-  return { id: createId('cond'), field: 'category', operator: 'is', value: '', logic };
+function makeCondition(logic = 'AND', firstFieldKey = 'categories') {
+  return { id: createId('cond'), field: firstFieldKey, operator: 'is', value: '', logic };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AdvancedFilterBuilder({
+  schema = DEFAULT_FILTER_SCHEMA,
+  items = [],
   onSave,
   categories = [],
   resources = [],
@@ -95,10 +53,27 @@ export default function AdvancedFilterBuilder({
   onUpdate,
   onCancelEdit,
 }) {
+  // Exclude date-range fields from the condition builder field list
+  const fieldOptions = useMemo(
+    () => schema.filter(f => f.type !== 'date-range'),
+    [schema]
+  );
+
+  // Operator map keyed by field.key — falls back to defaultOperatorsForType
+  const operatorMap = useMemo(() => {
+    const map = {};
+    for (const f of fieldOptions) {
+      map[f.key] = f.operators ?? defaultOperatorsForType(f.type);
+    }
+    return map;
+  }, [fieldOptions]);
+
+  const firstFieldKey = fieldOptions[0]?.key ?? 'categories';
+
   const [conditions, setConditions] = useState(() =>
     initialConditions && initialConditions.length > 0
       ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
-      : [makeCondition('AND')]
+      : [makeCondition('AND', firstFieldKey)]
   );
   const [viewName,   setViewName]   = useState(initialName);
   const [nameError,  setNameError]  = useState('');
@@ -111,37 +86,30 @@ export default function AdvancedFilterBuilder({
   useEffect(() => () => { clearTimeout(savedTimerRef.current); }, []);
 
   // Sync when switching to a different view for editing.
-  // The parent uses `key={editingId}` to remount this component when the target
-  // view changes, so this effect primarily handles the initial-mount hydration.
-  // `initialName` and `initialConditions` are props derived from `editingId`
-  // (they always change together with it), so listing `editingId` alone is the
-  // correct stable signal. Adding the derived props would cause redundant resets
-  // if the parent ever re-renders with new object/array references but the same
-  // editing target — hence the intentional exclusion below.
   useEffect(() => {
     setViewName(initialName);
     setConditions(
       initialConditions && initialConditions.length > 0
         ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
-        : [makeCondition('AND')]
+        : [makeCondition('AND', firstFieldKey)]
     );
     setNameError('');
     setSaved(false);
-  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps -- initialName/initialConditions are derived from editingId
+  }, [editingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
   const addCondition = (logic) => {
-    setConditions(prev => [...prev, makeCondition(logic)]);
+    setConditions(prev => [...prev, makeCondition(logic, firstFieldKey)]);
   };
 
   const updateCondition = (id, updates) => {
     setConditions(prev => prev.map(c => {
       if (c.id !== id) return c;
       const next = { ...c, ...updates };
-      // Reset operator + value when field type changes
+      // Reset operator + value when field changes
       if (updates.field && updates.field !== c.field) {
-        next.operator = OPERATORS[updates.field]?.[0]?.value ?? 'is';
+        next.operator = operatorMap[updates.field]?.[0]?.value ?? 'is';
         next.value    = '';
       }
       return next;
@@ -161,7 +129,7 @@ export default function AdvancedFilterBuilder({
       return;
     }
     setNameError('');
-    const filters = conditionsToFilters(conditions);
+    const filters = conditionsToFilters(conditions, schema);
     if (editingId && onUpdate) {
       onUpdate(editingId, name, filters, conditions);
       setSaved(true);
@@ -169,21 +137,12 @@ export default function AdvancedFilterBuilder({
       savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
     } else {
       onSave?.(name, filters, conditions);
-      // Reset builder for another view
       setSaved(true);
       clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
       setViewName('');
-      setConditions([makeCondition('AND')]);
+      setConditions([makeCondition('AND', firstFieldKey)]);
     }
-  };
-
-  // ── Value picker: select when options available, text input otherwise ───
-
-  const getOptions = (field) => {
-    if (field === 'category') return categories;
-    if (field === 'person')   return resources;
-    return null;
   };
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -194,7 +153,9 @@ export default function AdvancedFilterBuilder({
       {/* ── Condition rows ── */}
       <div className={styles.conditions}>
         {conditions.map((cond, index) => {
-          const options = getOptions(cond.field);
+          const fieldDef = schema.find(f => f.key === cond.field);
+          const options  = fieldDef?.options
+                        ?? (fieldDef?.getOptions ? fieldDef.getOptions(items) : null);
           return (
             <div key={cond.id} className={styles.conditionWrap}>
 
@@ -222,8 +183,8 @@ export default function AdvancedFilterBuilder({
                   onChange={e => updateCondition(cond.id, { field: e.target.value })}
                   aria-label="Filter field"
                 >
-                  {FIELD_OPTIONS.map(f => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
+                  {fieldOptions.map(f => (
+                    <option key={f.key} value={f.key}>{f.label}</option>
                   ))}
                 </select>
 
@@ -234,7 +195,7 @@ export default function AdvancedFilterBuilder({
                   onChange={e => updateCondition(cond.id, { operator: e.target.value })}
                   aria-label="Filter operator"
                 >
-                  {(OPERATORS[cond.field] ?? []).map(op => (
+                  {(operatorMap[cond.field] ?? []).map(op => (
                     <option key={op.value} value={op.value}>{op.label}</option>
                   ))}
                 </select>
@@ -249,7 +210,7 @@ export default function AdvancedFilterBuilder({
                   >
                     <option value="">Select…</option>
                     {options.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                      <option key={String(opt.value)} value={String(opt.value)}>{opt.label}</option>
                     ))}
                   </select>
                 ) : (

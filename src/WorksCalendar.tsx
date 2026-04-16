@@ -1607,6 +1607,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             config={ownerCfg.config}
             categories={categories}
             resources={resources}
+            schema={schema}
+            items={expandedEvents}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
