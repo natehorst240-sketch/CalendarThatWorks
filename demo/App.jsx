@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { WorksCalendar } from '../src/index.js';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
+import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema.js';
 
 /* ─── Demo profiles ─────────────────────────────────────────────── */
 const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
@@ -16,6 +17,25 @@ const DEMO_PROFILES = [
 ];
 const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
+
+/* ─── Demo config seed ──────────────────────────────────────────── */
+// Pre-seed config with demo-appropriate defaults if it hasn't been set yet.
+// This ensures the calendar title, default view, and theme all reflect the
+// demo context rather than the generic DEFAULT_CONFIG values.
+const storedCfg = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
+if (!storedCfg) {
+  saveConfig(DEMO_CALENDAR_ID, {
+    ...DEFAULT_CONFIG,
+    title: 'IHC Fleet On-Call',
+    setup: { completed: true, preferredTheme: 'corporate' },
+    display: { ...DEFAULT_CONFIG.display, defaultView: 'schedule' },
+  });
+}
+
+// Read the stored (or just-seeded) preferred theme so the ThemePicker
+// starts in sync with whatever the config says.
+const _seedConfig = loadConfig(DEMO_CALENDAR_ID);
+const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'corporate';
 
 /* ─── Employees ─────────────────────────────────────────────────── */
 const INITIAL_EMPLOYEES = [
@@ -231,7 +251,7 @@ function UpdateToast({ onUpdate, onDismiss }) {
 function App() {
   const [events,       setEvents]       = useState(INITIAL_EVENTS);
   const [notes,        setNotes]        = useState({});
-  const [theme,        setTheme]        = useState('light');
+  const [theme,        setTheme]        = useState(INITIAL_THEME);
   const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
@@ -244,6 +264,14 @@ function App() {
   );
 
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
+
+  // When the owner saves config (e.g. changes preferred theme in Settings > Setup),
+  // sync the demo's ThemePicker so both stay in agreement.
+  const handleConfigSave = useCallback((cfg) => {
+    log('Config saved');
+    const newTheme = cfg.setup?.preferredTheme;
+    if (newTheme) setTheme(newTheme);
+  }, []);
 
   const isDark       = THEMES.find(t => t.id === theme)?.dark ?? false;
   const headerBg     = isDark ? '#0f172a' : '#fff';
@@ -322,7 +350,8 @@ function App() {
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            onConfigSave={() => log('Config saved')}
+            initialView="schedule"
+            onConfigSave={handleConfigSave}
             notes={notes}
             onNoteSave={handleNoteSave}
             onNoteDelete={handleNoteDelete}
@@ -350,9 +379,10 @@ function App() {
           </>
         )}
         <span>⚙ Owner pw: <code style={{ background: isDark ? '#1e293b' : '#f1f5f9', padding: '1px 5px', borderRadius: 3 }}>demo1234</code></span>
-        <span>Schedule tab → employee on-call rotation</span>
-        <span>🌙 Striped bars = on-call shifts</span>
-        <span>Click event → hover card + notes</span>
+        <span>Settings → Setup: change calendar title &amp; theme</span>
+        <span>Settings → Display: default view, hours, week start</span>
+        <span>Settings → Theme: live CSS token customizer</span>
+        <span>Striped bars = on-call shifts · Click event → notes</span>
       </div>
 
       {needsRefresh && (
