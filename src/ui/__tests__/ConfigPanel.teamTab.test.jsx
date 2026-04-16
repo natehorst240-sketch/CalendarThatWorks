@@ -32,19 +32,36 @@ function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDel
 }
 
 describe('TeamTab bidirectional sync (issue #101)', () => {
-  it('clicking "Add employee" patches config.team.members', () => {
+  it('committing a new employee (with name) patches config.team.members', () => {
     const { update, getConfig } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    const input = screen.getByPlaceholderText('Employee name');
+    fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     expect(update).toHaveBeenCalledTimes(1);
     expect(getConfig().team.members).toHaveLength(1);
-    expect(getConfig().team.members[0]).toMatchObject({ id: 1, name: '' });
+    expect(getConfig().team.members[0]).toMatchObject({ id: 1, name: 'Nora' });
   });
 
-  it('clicking "Add employee" also emits onEmployeeAdd upstream', () => {
+  it('committing a new employee emits onEmployeeAdd upstream', () => {
     const { add } = renderTab();
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    const input = screen.getByPlaceholderText('Employee name');
+    fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     expect(add).toHaveBeenCalledTimes(1);
-    expect(add.mock.calls[0][0]).toMatchObject({ id: 1 });
+    expect(add.mock.calls[0][0]).toMatchObject({ id: 1, name: 'Nora' });
+  });
+
+  it('blank name does not add a member (prevents ghost rows in schedule)', () => {
+    const { update, add, getConfig } = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    const input = screen.getByPlaceholderText('Employee name');
+    // Submitting without typing should cancel — no add.
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(update).not.toHaveBeenCalled();
+    expect(add).not.toHaveBeenCalled();
+    expect(getConfig().team.members).toHaveLength(0);
   });
 
   it('removing an employee patches config AND emits onEmployeeDelete', () => {
@@ -61,10 +78,12 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     expect(del).toHaveBeenCalledWith(1);
   });
 
-  it('does not emit onEmployeeAdd when callback is omitted', () => {
-    // No onEmployeeAdd supplied → should not throw.
+  it('does not throw when onEmployeeAdd is omitted', () => {
     render(<TeamTab config={{ team: { members: [] } }} onUpdate={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    const input = screen.getByPlaceholderText('Employee name');
+    fireEvent.change(input, { target: { value: 'Nora' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     // If we got here without throwing, the test passes.
     expect(true).toBe(true);
   });
@@ -80,10 +99,15 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
   });
 
   it('auto-assigns incrementing ids when adding multiple employees', () => {
-    const { update, getConfig } = renderTab({
+    const { getConfig } = renderTab({
       initialMembers: [{ id: 5, name: 'Existing', color: '#111', avatar: null }],
     });
     fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    // The pending input is the newly-added one (empty value); filter it out.
+    const inputs = screen.getAllByPlaceholderText('Employee name');
+    const pending = inputs.find(el => el.value === '');
+    fireEvent.change(pending, { target: { value: 'Nora' } });
+    fireEvent.keyDown(pending, { key: 'Enter' });
     expect(getConfig().team.members.map(m => m.id)).toEqual([5, 6]);
   });
 });
