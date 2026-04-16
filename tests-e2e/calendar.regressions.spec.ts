@@ -48,7 +48,9 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    const crossDay = page.getByRole('button', { name: /^Cross-Day Hover Range, Incident$/i }).first();
+    // Use partial match so the selector works even when the event splits
+    // across week rows (aria-label gains ", continues next week" suffix).
+    const crossDay = page.getByRole('button', { name: /Cross-Day Hover Range, Incident/i }).first();
     await expect(crossDay).toBeVisible();
     await crossDay.evaluate((el) => el.click());
 
