@@ -35,6 +35,7 @@ function normalizeSavedView(view) {
     color:      view.color ?? null,
     view:       view.view ?? null,
     conditions: Array.isArray(view.conditions) ? view.conditions : null,
+    groupBy:    typeof view.groupBy === 'string' ? view.groupBy : null,
     filters:    view.filters,
   };
 }
@@ -187,7 +188,7 @@ export function useSavedViews(calendarId) {
     persistViews(calendarId, views);
   }, [calendarId, views]);
 
-  const saveView = useCallback((name, filters, { color, view, conditions } = {}) => {
+  const saveView = useCallback((name, filters, { color, view, conditions, groupBy } = {}) => {
     const savedView = {
       id:         createId('view'),
       name,
@@ -195,6 +196,7 @@ export function useSavedViews(calendarId) {
       color:      color ?? null,
       view:       view ?? null,
       conditions: conditions ?? null,
+      groupBy:    typeof groupBy === 'string' ? groupBy : null,
       filters:    serializeFilters(filters),
     };
     setViews(prev => [...prev, savedView]);
@@ -205,10 +207,15 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName) => {
+  const resaveView = useCallback((id, filters, viewName, groupBy) => {
     setViews(prev => prev.map(v =>
       v.id === id
-        ? { ...v, filters: serializeFilters(filters), view: viewName ?? v.view }
+        ? {
+            ...v,
+            filters: serializeFilters(filters),
+            view:    viewName ?? v.view,
+            ...(groupBy !== undefined ? { groupBy } : {}),
+          }
         : v
     ));
   }, []);

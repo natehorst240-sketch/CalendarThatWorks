@@ -395,3 +395,70 @@ describe('deserializeFilters dateRange validation', () => {
     expect(filters.dateRange).toBeNull();
   });
 });
+
+const EMPTY_FILTERS = {
+  categories: new Set(),
+  resources:  new Set(),
+  sources:    new Set(),
+  search:     '',
+  dateRange:  null,
+};
+
+describe('useSavedViews — groupBy persistence', () => {
+  it('saveView stores groupBy when provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Grouped View', EMPTY_FILTERS, { groupBy: 'department' });
+    });
+    expect(result.current.views[0].groupBy).toBe('department');
+  });
+
+  it('saveView defaults groupBy to null when not provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Plain View', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].groupBy).toBeNull();
+  });
+
+  it('groupBy survives localStorage round-trip', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persisted Group', EMPTY_FILTERS, { groupBy: 'role' });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].groupBy).toBe('role');
+  });
+
+  it('normalizeSavedView strips non-string groupBy values', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Bad Group', EMPTY_FILTERS, { groupBy: 42 });
+    });
+    expect(result.current.views[0].groupBy).toBeNull();
+  });
+
+  it('resaveView updates groupBy when passed', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Resave Test', EMPTY_FILTERS, { groupBy: 'role' });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, 'agenda', 'department');
+    });
+    expect(result.current.views[0].groupBy).toBe('department');
+  });
+
+  it('resaveView preserves existing groupBy when not passed', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Preserve Test', EMPTY_FILTERS, { groupBy: 'role' });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, 'month');
+    });
+    expect(result.current.views[0].groupBy).toBe('role');
+  });
+});
