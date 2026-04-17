@@ -197,7 +197,7 @@ describe('useSavedViews', () => {
       });
     });
     const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
-    expect(stored.version).toBe(2);
+    expect(stored.version).toBe(3);
     expect(stored.views).toHaveLength(1);
     expect(stored.views[0].name).toBe('Persisted');
   });
@@ -460,5 +460,225 @@ describe('useSavedViews — groupBy persistence', () => {
       result.current.resaveView(id, EMPTY_FILTERS, 'month');
     });
     expect(result.current.views[0].groupBy).toBe('role');
+  });
+
+  it('saveView accepts groupBy as string array (multi-level)', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Multi', EMPTY_FILTERS, { groupBy: ['location', 'shift'] });
+    });
+    expect(result.current.views[0].groupBy).toEqual(['location', 'shift']);
+  });
+
+  it('saveView accepts groupBy as GroupConfig array and strips functions', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Configs', EMPTY_FILTERS, {
+        groupBy: [
+          { field: 'location', label: 'Site', showEmpty: false, getKey: () => 'x' },
+          { field: 'shift' },
+        ],
+      });
+    });
+    expect(result.current.views[0].groupBy).toEqual([
+      { field: 'location', label: 'Site', showEmpty: false },
+      { field: 'shift' },
+    ]);
+  });
+
+  it('GroupConfig arrays survive localStorage round-trip', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persist', EMPTY_FILTERS, {
+        groupBy: [{ field: 'location', label: 'Site' }, 'shift'],
+      });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    // Mixed string/object arrays get simplified to string[] when every entry is a string.
+    // The mixed case above preserves object form with strings stripped out — we expect
+    // only the valid objects to survive.
+    expect(result2.current.views[0].groupBy).toEqual([
+      { field: 'location', label: 'Site' },
+    ]);
+  });
+});
+
+// ── Sort persistence ──────────────────────────────────────────────────────────
+
+describe('useSavedViews — sort persistence', () => {
+  it('saveView stores sort array when provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    const sort = [{ field: 'start', direction: 'asc' }, { field: 'priority', direction: 'desc' }];
+    act(() => {
+      result.current.saveView('Sorted', EMPTY_FILTERS, { sort });
+    });
+    expect(result.current.views[0].sort).toEqual(sort);
+  });
+
+  it('saveView defaults sort to null when not provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Unsorted', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].sort).toBeNull();
+  });
+
+  it('saveView strips invalid sort entries', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Mixed', EMPTY_FILTERS, {
+        sort: [
+          { field: 'start', direction: 'asc' },
+          { field: 'bad', direction: 'sideways' },
+          { direction: 'asc' },
+          { field: 'priority', direction: 'desc' },
+        ],
+      });
+    });
+    expect(result.current.views[0].sort).toEqual([
+      { field: 'start', direction: 'asc' },
+      { field: 'priority', direction: 'desc' },
+    ]);
+  });
+
+  it('saveView strips non-serialisable getValue from sort entries', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Fn', EMPTY_FILTERS, {
+        sort: [{ field: 'start', direction: 'asc', getValue: () => 0 }],
+      });
+    });
+    expect(result.current.views[0].sort).toEqual([
+      { field: 'start', direction: 'asc' },
+    ]);
+  });
+
+  it('sort survives localStorage round-trip', () => {
+    const sort = [{ field: 'start', direction: 'asc' }];
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persist sort', EMPTY_FILTERS, { sort });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].sort).toEqual(sort);
+  });
+});
+
+// ── collapsedGroups / showAllGroups ───────────────────────────────────────────
+
+describe('useSavedViews — collapsedGroups + showAllGroups', () => {
+  it('saveView accepts Set<string> and persists as string[]', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Collapsed', EMPTY_FILTERS, {
+        collapsedGroups: new Set(['ICU', 'ER/Night']),
+      });
+    });
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].collapsedGroups).toEqual(expect.arrayContaining(['ICU', 'ER/Night']));
+    expect(Array.isArray(result2.current.views[0].collapsedGroups)).toBe(true);
+  });
+
+  it('saveView treats empty collapsedGroups as null', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Empty', EMPTY_FILTERS, { collapsedGroups: new Set() });
+    });
+    expect(result.current.views[0].collapsedGroups).toBeNull();
+  });
+
+  it('saveView stores showAllGroups as a boolean', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Cross', EMPTY_FILTERS, { showAllGroups: true });
+    });
+    expect(result.current.views[0].showAllGroups).toBe(true);
+  });
+
+  it('saveView defaults showAllGroups to null when not provided', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Default', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].showAllGroups).toBeNull();
+  });
+
+  it('saveView strips non-boolean showAllGroups', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Bad', EMPTY_FILTERS, { showAllGroups: 'yes' });
+    });
+    expect(result.current.views[0].showAllGroups).toBeNull();
+  });
+});
+
+// ── v2 → v3 migration ─────────────────────────────────────────────────────────
+
+describe('useSavedViews — storage v2 → v3 migration', () => {
+  it('loads v2 payloads without dropping entries', () => {
+    const v2 = {
+      version: 2,
+      views: [
+        {
+          id: 'v-legacy',
+          name: 'From v2',
+          createdAt: new Date().toISOString(),
+          groupBy: 'role',
+          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+        },
+      ],
+    };
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(v2));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result.current.views).toHaveLength(1);
+    expect(result.current.views[0].name).toBe('From v2');
+    expect(result.current.views[0].groupBy).toBe('role');
+  });
+
+  it('fills new v3 fields with null when missing from v2 entries', () => {
+    const v2 = {
+      version: 2,
+      views: [
+        {
+          id: 'v-legacy',
+          name: 'From v2',
+          createdAt: new Date().toISOString(),
+          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+        },
+      ],
+    };
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(v2));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result.current.views[0].sort).toBeNull();
+    expect(result.current.views[0].collapsedGroups).toBeNull();
+    expect(result.current.views[0].showAllGroups).toBeNull();
+  });
+
+  it('re-persists loaded v2 data as v3 on the next save', () => {
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
+      version: 2,
+      views: [{
+        id: 'v-legacy',
+        name: 'From v2',
+        createdAt: new Date().toISOString(),
+        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+      }],
+    }));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('New One', EMPTY_FILTERS);
+    });
+    const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
+    expect(stored.version).toBe(3);
+    expect(stored.views).toHaveLength(2);
+  });
+
+  it('rejects a future version it does not know how to read', () => {
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
+      version: 999,
+      views: [{ id: 'x', name: 'Future', createdAt: '', filters: { categories: [] } }],
+    }));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result.current.views).toEqual([]);
   });
 });

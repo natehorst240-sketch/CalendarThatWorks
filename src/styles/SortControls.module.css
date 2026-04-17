@@ -1,0 +1,170 @@
+/* SortControls.module.css
+ * Theme-agnostic styling via --wc-* variables. Consumed by themes
+ * aviation/soft/minimal/corporate/forest/ocean without overrides.
+ */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+}
+
+.clearBtn {
+  background: transparent;
+  border: none;
+  color: var(--wc-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.12s, background-color 0.12s;
+}
+.clearBtn:hover {
+  color: var(--wc-accent);
+  background: var(--wc-surface-muted, var(--wc-surface));
+}
+
+.emptyHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+  font-style: italic;
+}
+
+.rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 6px;
+}
+
+.rowHint {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+  min-width: 32px;
+  flex: none;
+}
+
+.fieldSelect {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+}
+.fieldSelect:focus {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: 1px;
+}
+
+.directionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.directionBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+.directionBtn[data-direction='desc'] {
+  color: var(--wc-accent);
+  border-color: var(--wc-accent);
+}
+
+.removeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: color 0.12s, background-color 0.12s;
+}
+.removeBtn:hover {
+  color: var(--wc-danger, #ef4444);
+  background: var(--wc-surface-muted, var(--wc-surface));
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px dashed var(--wc-border-dark, var(--wc-border));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  align-self: flex-start;
+  transition: color 0.12s, border-color 0.12s;
+}
+.addBtn:hover:not(:disabled) {
+  color: var(--wc-accent);
+  border-color: var(--wc-accent);
+}
+.addBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

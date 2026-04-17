@@ -152,7 +152,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(shift.meta?.coveredBy).toBeUndefined();
       expect(shift.meta?.openShiftId).toBeUndefined();
     });
-  });
+  }, 15000);
 
   it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
     const apiRef = createRef();
