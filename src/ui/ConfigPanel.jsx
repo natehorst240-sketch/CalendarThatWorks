@@ -265,6 +265,15 @@ export function SmartViewsTab({ categories, resources, onSaveView, savedViews = 
 
 export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
   const teamMembers = config.team?.members ?? [];
+  // Pending (unsaved) new member — holds its name until the user commits.
+  // Keeping it local prevents a blank row from appearing in the schedule.
+  const [pendingName, setPendingName] = useState('');
+  const [isAdding,    setIsAdding]    = useState(false);
+  const pendingInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isAdding) pendingInputRef.current?.focus();
+  }, [isAdding]);
 
   const updateMembers = (nextMembers) => onUpdate(c => ({
     ...c,
@@ -272,11 +281,20 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
     setup: { ...(c.setup ?? {}), completed: true },
   }));
 
-  const addMember = () => {
+  const commitPending = () => {
+    const trimmed = pendingName.trim();
+    if (!trimmed) { setIsAdding(false); setPendingName(''); return; }
     const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
-    const newMember = { id: nextId, name: '', color: '#8b5cf6', avatar: null };
+    const newMember = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
     updateMembers([...teamMembers, newMember]);
     onEmployeeAdd?.(newMember);
+    setPendingName('');
+    setIsAdding(false);
+  };
+
+  const cancelPending = () => {
+    setPendingName('');
+    setIsAdding(false);
   };
 
   const updateMember = (id, patch) => {
@@ -327,7 +345,41 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
           </button>
         </div>
       ))}
-      <button className={styles.addFieldBtn} onClick={addMember}><Plus size={13} /> Add employee</button>
+      {isAdding ? (
+        <div className={styles.memberRow}>
+          <div className={styles.avatarPicker}>
+            <div className={styles.avatarFrame}>
+              <div className={styles.avatarFallback} style={{ backgroundColor: '#8b5cf6' }}>
+                {(pendingName.trim()?.[0] ?? '?').toUpperCase()}
+              </div>
+            </div>
+          </div>
+          <input
+            ref={pendingInputRef}
+            className={styles.input}
+            value={pendingName}
+            onChange={(e) => setPendingName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitPending(); }
+              if (e.key === 'Escape') { e.preventDefault(); cancelPending(); }
+            }}
+            onBlur={commitPending}
+            placeholder="Employee name"
+          />
+          <button
+            className={styles.removeBtn}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={commitPending}
+            aria-label="Add employee"
+          >
+            <Check size={13} />
+          </button>
+        </div>
+      ) : (
+        <button className={styles.addFieldBtn} onClick={() => setIsAdding(true)}>
+          <Plus size={13} /> Add employee
+        </button>
+      )}
     </div>
   );
 }

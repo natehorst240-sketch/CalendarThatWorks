@@ -109,15 +109,16 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
   if (savedView.view) summaryParts.push(`View: ${savedView.view}`);
   const summary = summaryParts.length ? summaryParts.join(' \u00b7 ') : 'No filters applied';
 
+  const chipClass = [styles.chip, isDirty && styles.dirty].filter(Boolean).join(' ');
+
   return (
-    <div ref={chipRef} className={styles.chipWrap}>
+    <div
+      ref={chipRef}
+      className={[styles.chipWrap, isActive && styles.chipWrapActive].filter(Boolean).join(' ')}
+      style={{ '--chip-color': color }}
+    >
       <button
-        className={[
-          styles.chip,
-          isActive && styles.active,
-          isDirty  && styles.dirty,
-        ].filter(Boolean).join(' ')}
-        style={{ '--chip-color': color }}
+        className={chipClass}
         onClick={onApply}
         title={summary}
       >
@@ -130,18 +131,17 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
         {savedView.view && (
           <span className={styles.viewTag}>{savedView.view.slice(0,3)}</span>
         )}
+      </button>
 
-        {/* Manage toggle (pencil) */}
-        <span
-          className={styles.manageBtn}
-          onClick={e => { e.stopPropagation(); onManageToggle(); }}
-          role="button"
-          tabIndex={0}
-          aria-label="Manage saved view"
-          onKeyDown={e => e.key === 'Enter' && (e.stopPropagation(), onManageToggle())}
-        >
-          <Pencil size={10} />
-        </span>
+      {/* Manage toggle (pencil) — sibling of chip, not nested, to avoid invalid
+          button-in-button and the associated mobile tap-handling issues. */}
+      <button
+        type="button"
+        className={styles.manageBtn}
+        onClick={e => { e.stopPropagation(); onManageToggle(); }}
+        aria-label="Manage saved view"
+      >
+        <Pencil size={10} />
       </button>
 
       {/* Manage panel */}
