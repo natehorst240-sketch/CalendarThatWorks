@@ -1,3 +1,59 @@
+const UNGROUPED = '(Ungrouped)';
+
+function bucketize(items, accessor) {
+  const map = new Map();
+  for (const item of items) {
+    const val = accessor(item);
+    const key = val != null && val !== '' ? String(val) : UNGROUPED;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(item);
+  }
+  // Insertion order preserved; (Ungrouped) always sorts last.
+  const order = [...map.keys()].sort((a, b) => {
+    if (a === UNGROUPED) return 1;
+    if (b === UNGROUPED) return -1;
+    return 0;
+  });
+  return { map, order };
+}
+
+function emitLevel(items, accessors, level, parentPath, collapsedGroups, groupHeaderHeight, groupOrder, flatRows) {
+  if (level >= accessors.length) {
+    flatRows.push(...items);
+    return;
+  }
+  const { map, order } = bucketize(items, accessors[level]);
+  for (const key of order) {
+    const path = parentPath ? `${parentPath}/${key}` : key;
+    groupOrder.push(path);
+    const bucket = map.get(key);
+    const collapsed = collapsedGroups.has(path);
+    // Total member count = count of leaf rows under this group, recursively.
+    const count = bucket.length;
+    flatRows.push({
+      _type: 'groupHeader',
+      groupKey: path,
+      groupLabel: key,
+      depth: level,
+      collapsed,
+      rowH: groupHeaderHeight,
+      count,
+    });
+    if (!collapsed) {
+      emitLevel(bucket, accessors, level + 1, path, collapsedGroups, groupHeaderHeight, groupOrder, flatRows);
+    }
+  }
+}
+
+/**
+ * Flattens rows into a mixed-type list ready for virtualised rendering.
+ * Supports single-level grouping (fieldAccessor is a fn) or multi-level
+ * grouping (fieldAccessor is an array of fns, one per level).
+ *
+ * Returned flatRows interleave `_type: 'groupHeader'` pseudo-rows with
+ * the input rows. Header rows carry `depth` (0 = top-level) and a
+ * slash-joined `groupKey` path for collapse-state addressing.
+ */
 export function groupRows(rows, options = {}) {
   const {
     groupBy,
@@ -10,37 +66,13 @@ export function groupRows(rows, options = {}) {
     return { flatRows: rows, groupOrder: [] };
   }
 
-  const groupMap = new Map();
-  for (const row of rows) {
-    const val = fieldAccessor(row);
-    const key = val != null && val !== '' ? String(val) : '(Ungrouped)';
-    if (!groupMap.has(key)) groupMap.set(key, []);
-    groupMap.get(key).push(row);
+  const accessors = Array.isArray(fieldAccessor) ? fieldAccessor : [fieldAccessor];
+  if (accessors.length === 0) {
+    return { flatRows: rows, groupOrder: [] };
   }
-
-  // Insertion order preserved; (Ungrouped) sorted last
-  const groupOrder = [...groupMap.keys()].sort((a, b) => {
-    if (a === '(Ungrouped)') return 1;
-    if (b === '(Ungrouped)') return -1;
-    return 0;
-  });
 
   const flatRows = [];
-  for (const groupKey of groupOrder) {
-    const members = groupMap.get(groupKey);
-    const collapsed = collapsedGroups.has(groupKey);
-    flatRows.push({
-      _type: 'groupHeader',
-      groupKey,
-      groupLabel: groupKey,
-      collapsed,
-      rowH: groupHeaderHeight,
-      count: members.length,
-    });
-    if (!collapsed) {
-      flatRows.push(...members);
-    }
-  }
-
+  const groupOrder = [];
+  emitLevel(rows, accessors, 0, '', collapsedGroups, groupHeaderHeight, groupOrder, flatRows);
   return { flatRows, groupOrder };
 }

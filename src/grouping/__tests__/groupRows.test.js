@@ -66,4 +66,72 @@ describe('groupRows', () => {
     expect(groupOrder[0]).toBe('Nurse');
     expect(groupOrder[1]).toBe('Doctor');
   });
+
+  describe('multi-level (array of accessors)', () => {
+    const nestedRows = [
+      { id: 1, emp: { role: 'Nurse',  shift: 'Day'   } },
+      { id: 2, emp: { role: 'Nurse',  shift: 'Day'   } },
+      { id: 3, emp: { role: 'Nurse',  shift: 'Night' } },
+      { id: 4, emp: { role: 'Doctor', shift: 'Day'   } },
+      { id: 5, emp: { role: 'Doctor', shift: 'Night' } },
+    ];
+    const roleAcc  = (r) => r.emp.role;
+    const shiftAcc = (r) => r.emp.shift;
+
+    it('produces nested headers with depth metadata', () => {
+      const { flatRows, groupOrder } = groupRows(nestedRows, {
+        groupBy: ['role', 'shift'],
+        fieldAccessor: [roleAcc, shiftAcc],
+      });
+      const headers = flatRows.filter(r => r._type === 'groupHeader');
+      // 2 top-level (Nurse, Doctor) + 4 second-level (Nurse/Day, Nurse/Night, Doctor/Day, Doctor/Night)
+      expect(headers).toHaveLength(6);
+      const depths = headers.map(h => h.depth);
+      expect(depths).toEqual([0, 1, 1, 0, 1, 1]);
+      // groupOrder contains every path in traversal order
+      expect(groupOrder).toContain('Nurse');
+      expect(groupOrder).toContain('Nurse/Day');
+      expect(groupOrder).toContain('Nurse/Night');
+      expect(groupOrder).toContain('Doctor/Day');
+    });
+
+    it('collapsing a top-level path hides every descendant level', () => {
+      const { flatRows } = groupRows(nestedRows, {
+        groupBy: ['role', 'shift'],
+        fieldAccessor: [roleAcc, shiftAcc],
+        collapsedGroups: new Set(['Nurse']),
+      });
+      // No Nurse sub-headers, no Nurse rows
+      expect(flatRows.find(r => r.groupKey === 'Nurse/Day')).toBeUndefined();
+      expect(flatRows.find(r => !r._type && r.emp.role === 'Nurse')).toBeUndefined();
+      // Doctor tree intact
+      expect(flatRows.find(r => r.groupKey === 'Doctor/Day')).toBeDefined();
+      expect(flatRows.filter(r => !r._type && r.emp.role === 'Doctor')).toHaveLength(2);
+    });
+
+    it('collapsing a nested path hides only its bucket', () => {
+      const { flatRows } = groupRows(nestedRows, {
+        groupBy: ['role', 'shift'],
+        fieldAccessor: [roleAcc, shiftAcc],
+        collapsedGroups: new Set(['Nurse/Day']),
+      });
+      // Nurse/Day header present (collapsed) but its rows hidden
+      const dayHeader = flatRows.find(r => r.groupKey === 'Nurse/Day');
+      expect(dayHeader.collapsed).toBe(true);
+      expect(flatRows.filter(r => !r._type && r.emp.role === 'Nurse' && r.emp.shift === 'Day')).toHaveLength(0);
+      // Nurse/Night unaffected — 1 row
+      expect(flatRows.filter(r => !r._type && r.emp.role === 'Nurse' && r.emp.shift === 'Night')).toHaveLength(1);
+    });
+
+    it('parent header count reports leaf-row totals, not direct children', () => {
+      const { flatRows } = groupRows(nestedRows, {
+        groupBy: ['role', 'shift'],
+        fieldAccessor: [roleAcc, shiftAcc],
+      });
+      const nurseHeader = flatRows.find(r => r.groupKey === 'Nurse');
+      expect(nurseHeader.count).toBe(3); // Day: 2 + Night: 1
+      const doctorHeader = flatRows.find(r => r.groupKey === 'Doctor');
+      expect(doctorHeader.count).toBe(2);
+    });
+  });
 });

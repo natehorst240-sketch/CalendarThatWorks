@@ -71,6 +71,58 @@ describe('TimelineView grouping', () => {
     expect(screen.getByRole('rowheader', { name: 'Bob Smith' })).toBeInTheDocument();
   });
 
+  it('supports multi-level groupBy arrays with nested headers', () => {
+    const multiEmployees = [
+      { id: 'a', name: 'Alice', role: 'Nurse',  shift: 'Day'   },
+      { id: 'b', name: 'Bob',   role: 'Nurse',  shift: 'Day'   },
+      { id: 'c', name: 'Carol', role: 'Nurse',  shift: 'Night' },
+      { id: 'd', name: 'Dan',   role: 'Doctor', shift: 'Day'   },
+    ];
+    render(
+      <CalendarContext.Provider value={null}>
+        <TimelineView
+          currentDate={currentDate}
+          events={[]}
+          employees={multiEmployees}
+          onEventClick={vi.fn()}
+          groupBy={['role', 'shift']}
+        />
+      </CalendarContext.Provider>,
+    );
+    // Top-level role headers
+    expect(screen.getByRole('button', { name: /Collapse group Nurse/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collapse group Doctor/i })).toBeInTheDocument();
+    // Nested shift headers — 'Day' appears under both Nurse and Doctor
+    expect(screen.getAllByRole('button', { name: /Collapse group Day/i }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('button', { name: /Collapse group Night/i })).toBeInTheDocument();
+  });
+
+  it('collapsing a parent group hides its nested headers and members', () => {
+    const multiEmployees = [
+      { id: 'a', name: 'Alice', role: 'Nurse',  shift: 'Day'   },
+      { id: 'b', name: 'Bob',   role: 'Nurse',  shift: 'Night' },
+      { id: 'c', name: 'Dan',   role: 'Doctor', shift: 'Day'   },
+    ];
+    render(
+      <CalendarContext.Provider value={null}>
+        <TimelineView
+          currentDate={currentDate}
+          events={[]}
+          employees={multiEmployees}
+          onEventClick={vi.fn()}
+          groupBy={['role', 'shift']}
+        />
+      </CalendarContext.Provider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Collapse group Nurse/i }));
+    // Nurse's nested shift headers gone
+    expect(screen.queryByRole('button', { name: /Collapse group Night/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('rowheader', { name: 'Alice' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('rowheader', { name: 'Bob' })).not.toBeInTheDocument();
+    // Doctor side unaffected
+    expect(screen.getByRole('rowheader', { name: 'Dan' })).toBeInTheDocument();
+  });
+
   it('renders no group headers when groupBy is not set (backward compat)', () => {
     renderTimeline();
     expect(

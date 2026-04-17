@@ -494,6 +494,8 @@ export default function TimelineView({
             // Render group header pseudo-rows
             if (rowData._type === 'groupHeader') {
               const topOffset = rowOffsets[rowIdx];
+              const depth = rowData.depth ?? 0;
+              const indent = depth * 16; // matches GroupHeader's INDENT_PX_PER_LEVEL
               return (
                 <div
                   key={`gh-${rowData.groupKey}`}
@@ -501,10 +503,13 @@ export default function TimelineView({
                   style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
                   role="row"
                   aria-rowindex={rowIdx + 2}
+                  aria-level={depth + 1}
+                  data-depth={depth}
                 >
                   <div className={styles.groupHeaderCell} style={{ width: NAME_W + totalDays * DAY_W }}>
                     <button
                       className={styles.groupToggleBtn}
+                      style={{ paddingLeft: 8 + indent }}
                       onClick={() => toggleGroup(rowData.groupKey)}
                       aria-expanded={!rowData.collapsed}
                       aria-label={`${rowData.collapsed ? 'Expand' : 'Collapse'} group ${rowData.groupLabel}`}

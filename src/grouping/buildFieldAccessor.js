@@ -1,4 +1,4 @@
-export function buildFieldAccessor(fieldName, mode) {
+function buildSingleAccessor(fieldName, mode) {
   if (mode === 'employee') {
     return (row) => {
       const val = row.emp?.[fieldName];
@@ -15,4 +15,16 @@ export function buildFieldAccessor(fieldName, mode) {
     if (val != null) return val;
     return firstEvent.meta?.[fieldName] ?? null;
   };
+}
+
+/**
+ * Accepts a single field name OR an array of field names.
+ *   "role"                 → single accessor fn
+ *   ["role", "shift"]      → array of accessor fns (one per grouping level)
+ */
+export function buildFieldAccessor(fieldName, mode) {
+  if (Array.isArray(fieldName)) {
+    return fieldName.map(f => buildSingleAccessor(f, mode));
+  }
+  return buildSingleAccessor(fieldName, mode);
 }
