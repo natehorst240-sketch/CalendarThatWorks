@@ -268,3 +268,17 @@
     to   { transform: translateY(0);    opacity: 1; }
   }
 }
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .close {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+  .editBtn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+}

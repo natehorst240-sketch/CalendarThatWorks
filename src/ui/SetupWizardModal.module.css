@@ -553,3 +553,18 @@
     flex-direction: row;
   }
 }
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .closeBtn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .backBtn,
+  .nextBtn,
+  .finishBtn {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
+}

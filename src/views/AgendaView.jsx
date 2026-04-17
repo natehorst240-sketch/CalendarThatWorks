@@ -5,6 +5,7 @@ import {
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
+import { useTouchDnd } from '../hooks/useTouchDnd.js';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
 
@@ -87,8 +88,30 @@ export default function AgendaView({
     return patch;
   }, []);
 
+  // Touch-drag pathway (mobile).  Mirrors the HTML5 DnD branch above using
+  // long-press + elementFromPoint hit-testing.  See useTouchDnd.
+  const bindTouchDnd = useTouchDnd({
+    enabled: !!onEventGroupChange,
+    dropAttr: 'data-wc-drop',
+    onStart: ({ ev, nativePath }) => { dragRef.current = { ev, nativePath }; },
+    onOver:  (dropEl) => {
+      const path = dropEl?.getAttribute('data-wc-drop') ?? null;
+      setDropTargetPath(prev => (prev === path ? prev : path));
+    },
+    onDrop:  (dropEl, { ev, nativePath, dayTree, dayKey }) => {
+      dragRef.current = null;
+      setDropTargetPath(null);
+      if (!dropEl || !onEventGroupChange) return;
+      const targetPath = dropEl.getAttribute('data-wc-drop');
+      if (!targetPath || targetPath === nativePath) return;
+      const patch = resolveDropPatch(dayTree, targetPath, dayKey);
+      if (patch) onEventGroupChange(ev, patch);
+    },
+    onCancel: () => { dragRef.current = null; setDropTargetPath(null); },
+  });
+
   function renderEventItem(ev, opts = {}) {
-    const { crossGroup = false, sourceLabel = null, nativePath = null } = opts;
+    const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
     const color = resolveColor(ev, ctx?.colorRules);
     const onClick = () => onEventClick?.(ev);
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
@@ -115,6 +138,9 @@ export default function AgendaView({
         }
       : undefined;
     const onDragEnd = dndEnabled ? () => { dragRef.current = null; setDropTargetPath(null); } : undefined;
+    const onTouchStart = dndEnabled
+      ? (e) => bindTouchDnd(e, { ev, nativePath, dayTree, dayKey })
+      : undefined;
 
     if (ctx?.renderEvent) {
       const custom = ctx.renderEvent(ev, { view: 'agenda', isCompact: true, onClick, color });
@@ -127,6 +153,7 @@ export default function AgendaView({
             draggable={dndEnabled || undefined}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onTouchStart={onTouchStart}
             onClick={onClick}
           >
             {custom}
@@ -143,6 +170,7 @@ export default function AgendaView({
         draggable={dndEnabled || undefined}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onTouchStart={onTouchStart}
         onClick={onClick}
         aria-label={crossGroup && sourceLabel ? `${ev.title} (from ${sourceLabel})` : undefined}
       >
@@ -195,15 +223,18 @@ export default function AgendaView({
 
     // When showAllGroups is on, a leaf bucket renders every leaf event that
     // exists in this day's tree — with non-matching events marked crossGroup.
+    const dayKey = path.split('/')[0];
     const renderedEvents = (() => {
       if (!isLeaf) return null;
-      if (!showAllGroups) return group.events.map(ev => renderEventItem(ev, { nativePath: path }));
+      if (!showAllGroups) return group.events.map(ev => renderEventItem(ev, { nativePath: path, dayTree, dayKey }));
       return allLeafEvents.map(({ ev, nativePath, nativeLabel }) => {
         const isNative = nativePath === path;
         return renderEventItem(ev, {
           crossGroup: !isNative,
           sourceLabel: isNative ? null : nativeLabel,
           nativePath,
+          dayTree,
+          dayKey,
         });
       });
     })();
@@ -231,7 +262,6 @@ export default function AgendaView({
           setDropTargetPath(null);
           if (!drag) return;
           if (drag.nativePath === path) return;
-          const dayKey = path.split('/')[0];
           const patch = resolveDropPatch(dayTree, path, dayKey);
           if (!patch) return;
           onEventGroupChange(drag.ev, patch);
@@ -246,6 +276,7 @@ export default function AgendaView({
         className={className}
         role="group"
         data-drop-target={isDropTarget || undefined}
+        data-wc-drop={dndEnabled ? path : undefined}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}

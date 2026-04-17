@@ -30,6 +30,7 @@ import EmployeeActionCard from '../ui/EmployeeActionCard.jsx';
 import styles from './TimelineView.module.css';
 import { useGrouping } from '../hooks/useGrouping.js';
 import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
+import { useTouchDnd } from '../hooks/useTouchDnd.js';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -163,6 +164,34 @@ export default function TimelineView({
   // onDrop can skip same-row drops.
   const dragRef = useRef(null);
   const [dropTargetKey, setDropTargetKey] = useState(null);
+
+  // Touch-drag pathway (mobile).  Mirrors the HTML5 DnD branch using long-press
+  // + elementFromPoint hit-testing.  Drop targets are rows with `data-wc-drop`.
+  const bindTouchDnd = useTouchDnd({
+    enabled: !!onEventGroupChange,
+    dropAttr: 'data-wc-drop',
+    onStart: ({ ev, sourceRowKey }) => { dragRef.current = { ev, sourceRowKey }; },
+    onOver:  (dropEl) => {
+      const key = dropEl?.getAttribute('data-wc-drop') ?? null;
+      setDropTargetKey(prev => (prev === key ? prev : key));
+    },
+    onDrop:  (dropEl, { ev, sourceRowKey }) => {
+      dragRef.current = null;
+      setDropTargetKey(null);
+      if (!dropEl || !onEventGroupChange) return;
+      const targetKey = dropEl.getAttribute('data-wc-drop');
+      if (!targetKey || targetKey === sourceRowKey) return;
+      // Row key is either the employee id (when `employees` is provided) or
+      // the resource string.  `(Unassigned)` maps to null to clear the field.
+      const isEmployeeRow = (employees ?? []).some(e => e.id === targetKey);
+      const patch = { resource: isEmployeeRow
+        ? targetKey
+        : (targetKey === '(Unassigned)' ? null : targetKey),
+      };
+      onEventGroupChange(ev, patch);
+    },
+    onCancel: () => { dragRef.current = null; setDropTargetKey(null); },
+  });
 
   // ── Virtualization: track scroll position + viewport size ─────────────────
   // Default height is large so that tests (clientHeight = 0) see all rows.
@@ -584,6 +613,7 @@ export default function TimelineView({
                 role="row"
                 aria-rowindex={rowIdx + 2}
                 data-drop-target={isDropTarget || undefined}
+                data-wc-drop={rowDndEnabled ? key : undefined}
                 onDragOver={onRowDragOver}
                 onDragLeave={onRowDragLeave}
                 onDrop={onRowDrop}
@@ -736,6 +766,9 @@ export default function TimelineView({
                     const onEvDragEnd = evDndEnabled
                       ? () => { dragRef.current = null; setDropTargetKey(null); }
                       : undefined;
+                    const onEvTouchStart = evDndEnabled
+                      ? (e) => bindTouchDnd(e, { ev, sourceRowKey: key })
+                      : undefined;
 
                     if (ctx?.renderEvent) {
                       const custom = ctx.renderEvent(ev, {
@@ -751,6 +784,7 @@ export default function TimelineView({
                             draggable={evDndEnabled || undefined}
                             onDragStart={onEvDragStart}
                             onDragEnd={onEvDragEnd}
+                            onTouchStart={onEvTouchStart}
                             onClick={onClick}
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
                           >
@@ -775,6 +809,7 @@ export default function TimelineView({
                             draggable={evDndEnabled || undefined}
                             onDragStart={onEvDragStart}
                             onDragEnd={onEvDragEnd}
+                            onTouchStart={onEvTouchStart}
                             onClick={onClick}
                             aria-label={ariaLabel}
                           >
@@ -811,6 +846,7 @@ export default function TimelineView({
                         draggable={evDndEnabled || undefined}
                         onDragStart={onEvDragStart}
                         onDragEnd={onEvDragEnd}
+                        onTouchStart={onEvTouchStart}
                         onClick={onClick}
                         aria-label={ariaLabel}
                       >

@@ -167,3 +167,17 @@
 }
 .importBtn:hover:not(:disabled) { opacity: 0.88; }
 .importBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .closeBtn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .cancelBtn,
+  .importBtn {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
+}

@@ -132,6 +132,9 @@
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
+  /* Touch: claim the pointer for move/resize so the browser doesn't steal
+     it for vertical scroll.  The grid around the event stays pannable. */
+  touch-action: none;
 }
 .event:hover { filter: brightness(1.1); }
 .event:active { cursor: grabbing; }
@@ -157,6 +160,7 @@
   height: 10px;
   cursor: ns-resize;
   border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
+  touch-action: none;
 }
 .resizeHandle::after {
   content: '';
@@ -176,6 +180,7 @@
   cursor: ns-resize;
   border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
   z-index: 2;
+  touch-action: none;
 }
 .resizeHandleTop::after {
   content: '';
@@ -219,4 +224,35 @@
   }
   .evTitle { font-size: 12px; }
   .evTime  { font-size: 10px; }
+}
+
+/* Touch devices: expand the resize handle hit area. */
+@media (pointer: coarse) {
+  .resizeHandle {
+    height: 18px;
+  }
+  .resizeHandle::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+  }
+  .resizeHandleTop {
+    height: 16px;
+  }
+  .resizeHandleTop::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+  }
+  .allDayPill {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
 }

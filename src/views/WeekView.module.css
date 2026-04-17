@@ -88,6 +88,7 @@
   box-sizing: border-box;
   transition: filter 0.1s;
   z-index: 2;
+  touch-action: none;
 }
 .allDaySpan:hover { filter: brightness(1.1); }
 .allDaySpan.continuesBefore { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 3px; left: 0 !important; }
@@ -292,6 +293,9 @@
 /* In edit mode: dashed outline signals the event is editable */
 .editModeEvent { outline: 1.5px dashed rgba(255,255,255,0.55); outline-offset: -3px; cursor: cell; }
 .event.dragging { opacity: 0.35; pointer-events: none; }
+/* Touch: claim the pointer for move/resize so the browser doesn't steal it
+   for vertical scroll.  The grid around the event stays pannable. */
+.event { touch-action: none; }
 .event.tentative {
   opacity: 0.65;
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,.2) 4px, rgba(255,255,255,.2) 8px);
@@ -317,6 +321,7 @@
   cursor: ns-resize;
   border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
   z-index: 2;
+  touch-action: none;
 }
 .resizeHandle::after {
   content: '';
@@ -336,6 +341,7 @@
   cursor: ns-resize;
   border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
   z-index: 2;
+  touch-action: none;
 }
 .resizeHandleTop::after {
   content: '';
@@ -393,4 +399,36 @@
   .headerRow { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; }
   .allDayRow { grid-template-columns: 40px 1fr; }
   .grid { grid-template-columns: 40px repeat(7, 88px); min-width: max-content; overflow-y: visible; }
+}
+
+/* Touch devices: expand the resize handle visual + hit area.
+ * 5px is unreachable with a fingertip; bump to 14px visual with a further 8px
+ * upward hit area via pseudo-element so the event body still gets the rest. */
+@media (pointer: coarse) {
+  .resizeHandle {
+    height: 14px;
+  }
+  .resizeHandle::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .resizeHandleTop {
+    height: 14px;
+  }
+  .resizeHandleTop::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .allDaySpan {
+    min-height: 28px;
+    font-size: 12px;
+  }
 }

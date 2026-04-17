@@ -7,6 +7,8 @@
   box-shadow: var(--wc-shadow);
   padding: 12px;
   width: 252px;
+  /* Clamp to viewport so the panel never overflows on narrow screens. */
+  max-width: calc(100vw - 16px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -160,3 +162,26 @@
   transition: background 0.15s;
 }
 .cancelBtn:hover { background: var(--wc-border); }
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .closeBtn {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 8px;
+  }
+  .styleBtn {
+    width: 40px;
+    height: 40px;
+  }
+  .colorSwatch {
+    width: 32px;
+    height: 32px;
+  }
+  .saveBtn,
+  .cancelBtn {
+    min-height: 40px;
+    padding: 10px;
+    font-size: 13px;
+  }
+}
