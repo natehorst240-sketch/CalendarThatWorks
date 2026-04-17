@@ -307,3 +307,36 @@ describe('AssetsView — keyboard navigation', () => {
     expect(typeof resourceId).toBe('string');
   });
 });
+
+describe('AssetsView — a11y', () => {
+  it('mounts a polite live region for screen readers', () => {
+    renderAssets();
+    const announcer = screen.getByTestId('assets-announcer');
+    expect(announcer).toHaveAttribute('role', 'status');
+    expect(announcer).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('announces zoom changes', () => {
+    const onZoomChange = vi.fn();
+    renderAssets({ zoomLevel: 'month', onZoomChange });
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom to Week' }));
+    expect(screen.getByTestId('assets-announcer').textContent).toMatch(/Zoom: Week/);
+  });
+
+  it('announces when audit drawer opens and closes', () => {
+    renderAssets();
+    fireEvent.click(screen.getByRole('button', { name: /Maintenance \(denied\)/ }));
+    expect(screen.getByTestId('assets-announcer').textContent).toMatch(/Audit history opened for Maintenance/);
+    fireEvent.click(screen.getByRole('button', { name: /Close audit history/ }));
+    expect(screen.getByTestId('assets-announcer').textContent).toMatch(/Audit history closed/);
+  });
+
+  it('returns focus to the opener pill after closing the drawer', async () => {
+    renderAssets();
+    const pill = screen.getByRole('button', { name: /Maintenance \(denied\)/ });
+    fireEvent.click(pill);
+    fireEvent.click(screen.getByRole('button', { name: /Close audit history/ }));
+    await new Promise(r => requestAnimationFrame(r));
+    expect(document.activeElement).toBe(pill);
+  });
+});

@@ -67,6 +67,10 @@
   justify-content: center;
 }
 .closeBtn:hover { background: var(--wc-surface-alt, #f1f5f9); }
+.closeBtn:focus-visible {
+  outline: 2px solid var(--wc-accent, #2563eb);
+  outline-offset: 2px;
+}
 
 .body {
   flex: 1;

@@ -150,6 +150,36 @@ export default function AssetsView({
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState(null);
+  const [announcement, setAnnouncement] = useState('');
+  const drawerOpenerRef = useRef(null);
+
+  const announce = useCallback((msg) => {
+    // Appending a zero-width space forces a diff so screen readers re-read
+    // even when the same message fires twice in a row.
+    setAnnouncement(prev => (prev === msg ? msg + '\u200b' : msg));
+  }, []);
+
+  const openAudit = useCallback((ev, opener) => {
+    drawerOpenerRef.current = opener ?? null;
+    setAuditEvent(ev);
+    announce(`Audit history opened for ${ev.title}`);
+  }, [announce]);
+
+  const closeAudit = useCallback(() => {
+    setAuditEvent(null);
+    announce('Audit history closed');
+    const opener = drawerOpenerRef.current;
+    if (opener && typeof opener.focus === 'function') {
+      requestAnimationFrame(() => opener.focus());
+    }
+    drawerOpenerRef.current = null;
+  }, [announce]);
+
+  const handleZoomChange = useCallback((next) => {
+    if (!onZoomChange) return;
+    onZoomChange(next);
+    announce(`Zoom: ${ZOOM_LABELS[next] ?? next}`);
+  }, [onZoomChange, announce]);
 
   const activeZoom = ZOOM_PX_PER_DAY[zoomLevel] ? zoomLevel : 'month';
   const pxPerDay   = ZOOM_PX_PER_DAY[activeZoom];
@@ -320,7 +350,7 @@ export default function AssetsView({
         const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
         if (hit) {
           const hitStage = getApprovalStage(hit);
-          if (AUDIT_STAGES.has(hitStage)) setAuditEvent(hit);
+          if (AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
           else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
@@ -335,7 +365,7 @@ export default function AssetsView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [flatRows, totalDays, onEventClick, onDateSelect, days]);
+  }, [flatRows, totalDays, onEventClick, onDateSelect, days, openAudit]);
 
   // ── Empty state ────────────────────────────────────────────────────────────
   if (rows.length === 0) {
@@ -386,7 +416,7 @@ export default function AssetsView({
                   ].filter(Boolean).join(' ')}
                   aria-pressed={z === activeZoom}
                   aria-label={`Zoom to ${ZOOM_LABELS[z]}`}
-                  onClick={() => onZoomChange?.(z)}
+                  onClick={() => handleZoomChange(z)}
                   disabled={!onZoomChange}
                 >
                   {ZOOM_LABELS[z][0]}
@@ -553,8 +583,8 @@ export default function AssetsView({
                     const width   = Math.max(dayColW - 4, (ev._dayEnd - ev._dayStart + 1) * dayColW - 4);
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
                     const stage       = getApprovalStage(ev);
-                    const onClick = () => {
-                      if (AUDIT_STAGES.has(stage)) setAuditEvent(ev);
+                    const onClick = (e) => {
+                      if (AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
                       else onEventClick?.(ev);
                     };
                     const prefix      = approvalPrefix(stage);
@@ -598,7 +628,16 @@ export default function AssetsView({
           })}
         </div>
       </div>
-      <AuditDrawer event={auditEvent} onClose={() => setAuditEvent(null)} />
+      <AuditDrawer event={auditEvent} onClose={closeAudit} />
+      <div
+        className={styles.srOnly}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="assets-announcer"
+      >
+        {announcement}
+      </div>
     </div>
   );
 }

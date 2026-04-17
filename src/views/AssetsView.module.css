@@ -96,6 +96,11 @@
   cursor: default;
 }
 
+.zoomBtn:focus-visible {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: 1px;
+}
+
 .zoomBtnActive,
 .zoomBtnActive:hover {
   background: var(--wc-accent, #0066cc);
@@ -356,6 +361,25 @@
   filter: brightness(1.12);
   box-shadow: var(--wc-shadow-sm);
   z-index: 6;
+}
+
+.event:focus-visible {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: 2px;
+  z-index: 7;
+}
+
+/* ── Screen reader only live region ─────────────────────────────── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .evTitle {
