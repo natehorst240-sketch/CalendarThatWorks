@@ -109,6 +109,7 @@ export default function TimelineView({
   onCoverageAssign,
   onEmployeeAction,
   groupBy,
+  sort,
 }) {
   const ctx        = useCalendarContext();
 

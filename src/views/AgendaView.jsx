@@ -6,7 +6,7 @@ import {
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './AgendaView.module.css';
 
-export default function AgendaView({ currentDate, events, onEventClick, groupBy }) {
+export default function AgendaView({ currentDate, events, onEventClick, groupBy, sort }) {
   const ctx = useCalendarContext();
 
   const days = useMemo(() => {

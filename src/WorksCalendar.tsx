@@ -18,6 +18,8 @@ import { useFetchEvents }     from './hooks/useFetchEvents.js';
 import { useSourceStore }      from './hooks/useSourceStore.js';
 import { useSourceAggregator } from './hooks/useSourceAggregator.js';
 import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
+import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
+import type { SortConfig } from './types/grouping.ts';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
 import { usePermissions }     from './hooks/usePermissions.js';
 import { useEventOptions }    from './hooks/useEventOptions.js';
@@ -138,7 +140,8 @@ export type WorksCalendarProps = {
   showAddButton?: boolean;
   initialView?: CalendarView;
   weekStartDay?: 0 | 1;
-  groupBy?: string;
+  groupBy?: GroupByInput;
+  sort?: SortConfig | SortConfig[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -270,6 +273,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Grouping ──
     groupBy,
+    sort,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -345,22 +349,30 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
 
-  // ── Active groupBy (controlled by prop; overridden when a saved view is applied) ──
-  const [activeGroupBy, setActiveGroupBy] = useState<string | null>(groupBy ?? null);
+  // ── Active groupBy / sort (controlled by props; overridden when a saved view is applied) ──
+  const [activeGroupBy, setActiveGroupBy] = useState<GroupByInput | null>(groupBy ?? null);
   useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
 
-  // Mark dirty when filters/view/groupBy change after a saved view was applied
+  const normalizeSortProp = (s: SortConfig | SortConfig[] | null | undefined): SortConfig[] | null => {
+    if (!s) return null;
+    return Array.isArray(s) ? s : [s];
+  };
+  const [activeSort, setActiveSort] = useState<SortConfig[] | null>(normalizeSortProp(sort));
+  useEffect(() => setActiveSort(normalizeSortProp(sort)), [sort]);
+
+  // Mark dirty when filters/view/groupBy/sort change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
     setActiveGroupBy(savedView.groupBy ?? null);
+    setActiveSort(Array.isArray(savedView.sort) ? savedView.sort : null);
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -1341,6 +1353,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     config:        ownerCfg.config,
     weekStartDay,
     pillHoverTitle,
+    groupBy:       activeGroupBy,
+    sort:          activeSort,
   };
 
   return (
@@ -1463,9 +1477,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1480,9 +1494,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy })
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, activeSort)}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1532,7 +1546,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={activeGroupBy} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} groupBy={activeGroupBy} sort={activeSort} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
@@ -1546,6 +1560,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
+                  sort={activeSort}
                 />
               )}
             </>
