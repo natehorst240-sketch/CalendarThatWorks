@@ -276,6 +276,9 @@
   color: var(--wc-text);
   padding-left: 8px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .calendarTitle {
@@ -284,6 +287,9 @@
   color: var(--wc-text-muted);
   padding-left: 8px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* View switcher */

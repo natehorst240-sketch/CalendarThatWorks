@@ -7,6 +7,8 @@
   box-shadow: var(--wc-shadow);
   padding: 12px;
   width: 252px;
+  /* Clamp to viewport so the panel never overflows on narrow screens. */
+  max-width: calc(100vw - 16px);
   display: flex;
   flex-direction: column;
   gap: 10px;
