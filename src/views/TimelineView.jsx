@@ -28,8 +28,7 @@ import {
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import EmployeeActionCard from '../ui/EmployeeActionCard.jsx';
 import styles from './TimelineView.module.css';
-import { useGrouping } from '../hooks/useGrouping.js';
-import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
+import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd.js';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
@@ -317,14 +316,74 @@ export default function TimelineView({
   }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
 
   // ── Grouping ───────────────────────────────────────────────────────────────
+  // Routes through the TS event-level engine (buildGroupTree). TimelineView
+  // rows are employees/resources, so we synthesize one pseudo-event per row
+  // carrying the row's source fields; the engine buckets by those fields and
+  // we walk the resulting tree to emit the legacy flatRows shape consumed by
+  // the render path below.
   const GROUP_HEADER_H = 36;
-  const fieldAccessor = useMemo(
-    () => groupBy ? buildFieldAccessor(groupBy, useEmployees ? 'employee' : 'resource') : null,
-    [groupBy, useEmployees],
+  const isGrouped = groupBy != null && (
+    (typeof groupBy === 'string' && groupBy.length > 0)
+    || (Array.isArray(groupBy) && groupBy.length > 0)
   );
-  const { flatRows, groupOrder, collapsedGroups, toggleGroup, isGrouped } = useGrouping(rows, {
-    groupBy, fieldAccessor, groupHeaderHeight: GROUP_HEADER_H,
-  });
+
+  const pseudoEvents = useMemo(() => {
+    if (!isGrouped) return [];
+    return rows.map(row => {
+      const base = useEmployees ? (row.emp || {}) : (row.events?.[0] || {});
+      return { ...base, meta: base.meta || {}, __row: row };
+    });
+  }, [isGrouped, rows, useEmployees]);
+
+  const groupTree = useMemo(() => {
+    if (!isGrouped) return [];
+    return buildGroupTree(pseudoEvents, groupBy);
+  }, [isGrouped, pseudoEvents, groupBy]);
+
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const toggleGroup = useCallback((path) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  const { flatRows, groupOrder } = useMemo(() => {
+    if (!isGrouped || rows.length === 0 || groupTree.length === 0) {
+      return { flatRows: rows, groupOrder: [] };
+    }
+    const out = [];
+    const order = [];
+    const countLeaves = (node) => {
+      if (node.children.length === 0) return node.events.length;
+      let s = 0;
+      for (const c of node.children) s += countLeaves(c);
+      return s;
+    };
+    const walk = (nodes, parentPath) => {
+      for (const node of nodes) {
+        const path = parentPath ? `${parentPath}/${node.key}` : node.key;
+        order.push(path);
+        const collapsed = collapsedGroups.has(path);
+        out.push({
+          _type:      'groupHeader',
+          groupKey:   path,
+          groupLabel: node.label,
+          depth:      node.depth,
+          collapsed,
+          rowH:       GROUP_HEADER_H,
+          count:      countLeaves(node),
+        });
+        if (collapsed) continue;
+        if (node.children.length > 0) walk(node.children, path);
+        else for (const ev of node.events) out.push(ev.__row);
+      }
+    };
+    walk(groupTree, '');
+    return { flatRows: out, groupOrder: order };
+  }, [isGrouped, rows, groupTree, collapsedGroups]);
 
   // ── Cumulative row offsets (for absolute positioning + scroll math) ────────
   const rowOffsets = useMemo(() => {
