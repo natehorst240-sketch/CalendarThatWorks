@@ -174,7 +174,7 @@ function SetupTab({ config, onUpdate }) {
   );
 }
 
-export function SmartViewsTab({ categories, resources, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
+export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
   const [editingId,   setEditingId]   = useState(null);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
 
