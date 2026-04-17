@@ -392,19 +392,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
 
-  // ── Assets view: zoom level + location provider ──
+  // ── Assets view: zoom level + collapse state + location provider ──
   const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+  const [activeAssetsCollapsed, setActiveAssetsCollapsed] = useState<Set<string>>(
+    () => new Set(),
+  );
   const effectiveLocationProvider = useMemo<LocationProvider>(
     () => locationProvider ?? createManualLocationProvider(),
     [locationProvider],
   );
 
-  // Mark dirty when filters/view/groupBy/sort/showAllGroups change after a saved view was applied
-  // Use a ref to skip the first effect run immediately after applying
+  // Mark dirty when filters/view/groupBy/sort/showAllGroups/assets-state change
+  // after a saved view was applied. A ref skips the first run that fires
+  // synchronously after handleApplyView seeds state from the saved view.
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
@@ -413,6 +417,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setActiveGroupBy(savedView.groupBy ?? null);
     setActiveSort(Array.isArray(savedView.sort) ? savedView.sort : null);
     setActiveShowAllGroups(!!savedView.showAllGroups);
+    if (savedView.zoomLevel) setActiveAssetsZoom(savedView.zoomLevel);
+    setActiveAssetsCollapsed(
+      Array.isArray(savedView.collapsedGroups)
+        ? new Set(savedView.collapsedGroups)
+        : new Set(),
+    );
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -1538,9 +1548,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups }),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed }),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1555,9 +1565,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups })
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups })}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1635,6 +1645,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}
+                  collapsedGroups={activeAssetsCollapsed}
+                  onCollapsedGroupsChange={setActiveAssetsCollapsed}
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
                 />
