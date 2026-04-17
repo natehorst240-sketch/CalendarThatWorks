@@ -1,7 +1,11 @@
-import { StrictMode, useState, useCallback } from 'react';
+import { StrictMode, useState, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
-import { WorksCalendar } from '../src/index.js';
+import {
+  WorksCalendar,
+  DEFAULT_CATEGORIES,
+  createManualLocationProvider,
+} from '../src/index.js';
 import { THEMES } from '../src/styles/themes.js';
 import { saveProfiles } from '../src/core/profileStore.js';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema.js';
@@ -137,6 +141,48 @@ const INITIAL_EVENTS = [
   ...REGULAR_EVENTS,
 ];
 
+/* ─── Fleet dataset (for the Assets view) ──────────────────────────
+ *
+ * The Engineering dataset wires employee IDs into `event.resource`,
+ * which means the Assets view derives its rows from employees. To
+ * preview the Assets view with its intended aircraft-as-resources
+ * model, switch the dataset toggle in the header to "Fleet". This
+ * swaps the entire event/employee set with aircraft registrations
+ * and fleet-oriented events (training, maintenance, charters).
+ *
+ * Note: this is a demo-time workaround. The production fix is a
+ * first-class `assets` prop on WorksCalendar (tracking: #134/9).
+ */
+const AIRCRAFT_RESOURCES = [
+  { id: 'N121AB', name: 'N121AB', group: 'West',    meta: { model: 'Citation CJ3',  location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N505CD', name: 'N505CD', group: 'West',    meta: { model: 'Phenom 300',    location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
+  { id: 'N88QR',  name: 'N88QR',  group: 'Central', meta: { model: 'King Air 350',  location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N733XY', name: 'N733XY', group: 'Central', meta: { model: 'Challenger 350',location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N901JT', name: 'N901JT', group: 'East',    meta: { model: 'Gulfstream G280', location: { text: 'KJFK', status: 'live', asOf: new Date().toISOString() } } },
+  { id: 'N245LM', name: 'N245LM', group: 'East',    meta: { model: 'Pilatus PC-24', location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
+];
+
+const FLEET_EVENTS = [
+  { id: 'f1',  title: 'Recurrent training',   start: d(0, 9),   end: dEnd(0, 9, 6),  category: 'training',    resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
+  { id: 'f2',  title: 'VIP lift to KTEB',     start: d(2, 6),   end: dEnd(2, 6, 8),  category: 'pr',          resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
+  { id: 'f3',  title: 'A-check',              start: d(5),      end: dEnd(8),        category: 'maintenance', resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West',  approvalStage: { stage: 'approved', updatedAt: d(-1) } }, allDay: true },
+  { id: 'f4',  title: 'Charter: Aspen',       start: d(3, 10),  end: dEnd(4, 16),    category: 'pr',          resource: 'N88QR',  meta: { sublabel: 'King Air 350',  region: 'Central' } },
+  { id: 'f5',  title: 'Brake inspection',     start: d(1),      end: dEnd(1),        category: 'maintenance', resource: 'N88QR',  meta: { sublabel: 'King Air 350',  region: 'Central', approvalStage: { stage: 'finalized', updatedAt: d(-2) } }, allDay: true },
+  { id: 'f6',  title: 'Type rating',          start: d(6, 9),   end: dEnd(6, 9, 6),  category: 'training',    resource: 'N733XY', meta: { sublabel: 'Challenger 350', region: 'Central' } },
+  { id: 'f7',  title: 'Avionics upgrade',     start: d(9),      end: dEnd(12),       category: 'maintenance', resource: 'N733XY', meta: { sublabel: 'Challenger 350', region: 'Central', approvalStage: { stage: 'pending_higher', updatedAt: d(-1) } }, allDay: true },
+  { id: 'f8',  title: 'Charter: Cabo',        start: d(4, 8),   end: dEnd(6, 18),    category: 'pr',          resource: 'N901JT', meta: { sublabel: 'Gulfstream G280', region: 'East' } },
+  { id: 'f9',  title: 'Coverage block',       start: d(7, 7),   end: dEnd(7, 7, 10), category: 'coverage',    resource: 'N901JT', meta: { sublabel: 'Gulfstream G280', region: 'East' } },
+  { id: 'f10', title: 'Dispatch ferry',       start: d(2, 14),  end: dEnd(2, 14, 4), category: 'pr',          resource: 'N245LM', meta: { sublabel: 'Pilatus PC-24', region: 'East',  approvalStage: { stage: 'requested', updatedAt: d(-1) } } },
+  { id: 'f11', title: 'Paint refresh',        start: d(10),     end: dEnd(15),       category: 'maintenance', resource: 'N245LM', meta: { sublabel: 'Pilatus PC-24', region: 'East',  approvalStage: { stage: 'denied', updatedAt: d(-1), history: [{ action: 'deny', at: d(-1), actor: 'chief-pilot', tier: 2, reason: 'Conflicts with higher-priority dispatch.' }] } }, allDay: true },
+  { id: 'f12', title: 'SIM session',          start: d(11, 9),  end: dEnd(11, 9, 4), category: 'training',    resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West' } },
+];
+
+const FLEET_CATEGORIES_CONFIG = {
+  categories: DEFAULT_CATEGORIES,
+  pillStyle: 'hue',
+  defaultCategoryId: 'other',
+};
+
 /* ─── Theme picker ──────────────────────────────────────────────── */
 function ThemePicker({ current, onChange }) {
   const [open, setOpen] = useState(false);
@@ -249,12 +295,19 @@ function UpdateToast({ onUpdate, onDismiss }) {
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
+  const [dataset,      setDataset]      = useState('engineering'); // 'engineering' | 'fleet'
   const [events,       setEvents]       = useState(INITIAL_EVENTS);
+  const [fleetEvents,  setFleetEvents]  = useState(FLEET_EVENTS);
   const [notes,        setNotes]        = useState({});
   const [theme,        setTheme]        = useState(INITIAL_THEME);
   const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
+
+  const fleetLocationProvider = useMemo(
+    () => createManualLocationProvider({ resources: AIRCRAFT_RESOURCES }),
+    [],
+  );
 
   const [updateSW] = useState(() =>
     registerSW({
@@ -279,18 +332,20 @@ function App() {
   const pageBg       = isDark ? '#060d1a' : '#f1f5f9';
 
   const handleEventSave = useCallback((ev) => {
-    setEvents(prev => {
+    const setter = dataset === 'fleet' ? setFleetEvents : setEvents;
+    setter(prev => {
       const idx = prev.findIndex(e => e.id === ev.id);
       if (idx >= 0) { const next = [...prev]; next[idx] = ev; return next; }
       return [...prev, { ...ev, id: `demo-${Date.now()}` }];
     });
     log(`Saved: ${ev.title}`);
-  }, []);
+  }, [dataset]);
 
   const handleEventDelete = useCallback((id) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
+    const setter = dataset === 'fleet' ? setFleetEvents : setEvents;
+    setter(prev => prev.filter(e => e.id !== id));
     log(`Deleted: ${id}`);
-  }, []);
+  }, [dataset]);
 
   const handleNoteSave = useCallback((note) => {
     setNotes(prev => ({ ...prev, [note.eventId]: { id: `note-${note.eventId}`, ...note } }));
@@ -336,6 +391,41 @@ function App() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            role="group"
+            aria-label="Dataset"
+            style={{
+              display: 'flex', gap: 0, padding: 2,
+              background: isDark ? '#1e293b' : '#f1f5f9',
+              border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+              borderRadius: 8, fontSize: 12, fontWeight: 600,
+            }}
+          >
+            {[
+              { id: 'engineering', label: 'Engineering' },
+              { id: 'fleet',       label: 'Fleet'       },
+            ].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => setDataset(opt.id)}
+                aria-pressed={dataset === opt.id}
+                style={{
+                  padding: '4px 10px', border: 'none', borderRadius: 6,
+                  cursor: 'pointer',
+                  background: dataset === opt.id
+                    ? (isDark ? '#334155' : '#fff')
+                    : 'transparent',
+                  color: dataset === opt.id
+                    ? (isDark ? '#f1f5f9' : '#0f172a')
+                    : (isDark ? '#94a3b8' : '#64748b'),
+                  boxShadow: dataset === opt.id ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
+                }}
+                title={opt.id === 'fleet' ? 'Show aircraft on the Assets view' : 'Show employee schedule'}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <ThemePicker current={theme} onChange={setTheme} />
         </div>
       </header>
@@ -344,13 +434,14 @@ function App() {
       <div style={{ flex: 1, padding: 'clamp(8px, 3vw, 20px)', minHeight: 0 }}>
         <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
-            events={events}
-            employees={employees}
+            key={dataset}
+            events={dataset === 'fleet' ? fleetEvents : events}
+            employees={dataset === 'fleet' ? [] : employees}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
-            calendarId={DEMO_CALENDAR_ID}
+            calendarId={dataset === 'fleet' ? `${DEMO_CALENDAR_ID}-fleet` : DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            initialView="schedule"
+            initialView={dataset === 'fleet' ? 'assets' : 'schedule'}
             onConfigSave={handleConfigSave}
             notes={notes}
             onNoteSave={handleNoteSave}
@@ -360,6 +451,8 @@ function App() {
             onEventClick={ev => log(`Clicked: ${ev.title}`)}
             theme={theme}
             showAddButton={true}
+            categoriesConfig={dataset === 'fleet' ? FLEET_CATEGORIES_CONFIG : undefined}
+            locationProvider={dataset === 'fleet' ? fleetLocationProvider : undefined}
           />
         </div>
       </div>
