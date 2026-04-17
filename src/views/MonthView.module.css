@@ -233,6 +233,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   transition: opacity 0.1s;
+  /* Touch: claim the pointer for move so the browser doesn't fire tap
+     through to a date-cell pointer-down. */
+  touch-action: none;
 }
 .eventPill:hover { opacity: 0.85; }
 /* In edit mode: subtle dashed outline signals every pill is editable */

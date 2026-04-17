@@ -132,6 +132,9 @@
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
+  /* Touch: claim the pointer for move/resize so the browser doesn't steal
+     it for vertical scroll.  The grid around the event stays pannable. */
+  touch-action: none;
 }
 .event:hover { filter: brightness(1.1); }
 .event:active { cursor: grabbing; }
@@ -157,6 +160,7 @@
   height: 10px;
   cursor: ns-resize;
   border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
+  touch-action: none;
 }
 .resizeHandle::after {
   content: '';
@@ -176,6 +180,7 @@
   cursor: ns-resize;
   border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
   z-index: 2;
+  touch-action: none;
 }
 .resizeHandleTop::after {
   content: '';
