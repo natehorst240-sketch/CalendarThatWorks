@@ -88,6 +88,22 @@ export type EngineOperation =
       readonly scope?: RecurringEditScope;
       readonly occurrenceDate?: Date;
       readonly source?: OperationSource;
+    }
+  | {
+      /**
+       * Change one or more grouping fields on an existing event (e.g. drop
+       * an event into a different employee row, category bucket, etc.).
+       *
+       * Distinguished from 'update' so domain validators can reject invalid
+       * reassignments (e.g. role-based access rules) via the dedicated
+       * group-change validation hook.
+       */
+      readonly type: 'group-change';
+      readonly id: string;
+      readonly patch: Partial<Omit<EngineEvent, 'id' | 'start' | 'end'>>;
+      readonly scope?: RecurringEditScope;
+      readonly occurrenceDate?: Date;
+      readonly source?: OperationSource;
     };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

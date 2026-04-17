@@ -157,6 +157,7 @@ function opAnnouncement(op) {
     case 'delete': return 'Event deleted.';
     case 'move':   return 'Event moved.';
     case 'resize': return 'Event resized.';
+    case 'group-change': return 'Event reassigned.';
     default:       return 'Change applied.';
   }
 }
@@ -1078,13 +1079,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (!patch || typeof patch !== 'object') return;
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
-    if (onEventGroupChange) {
-      onEventGroupChange(ev, patch);
-      return;
-    }
     applyEngineOp(
-      { type: 'update', id, patch, source: 'api' },
-      () => emitEventSave(id, raw, patch),
+      { type: 'group-change', id, patch, source: 'drag' },
+      () => {
+        if (onEventGroupChange) onEventGroupChange(ev, patch);
+        else emitEventSave(id, raw, patch);
+      },
     );
   }, [applyEngineOp, emitEventSave, onEventGroupChange]);
 
@@ -1583,6 +1583,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
+                  onEventGroupChange={handleEventGroupChange}
                   onDateSelect={handleScheduleDateSelect}
                   employees={configuredEmployees}
                   onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}

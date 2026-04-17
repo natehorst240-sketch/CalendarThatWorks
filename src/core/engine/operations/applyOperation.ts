@@ -90,6 +90,7 @@ function computeChanges(
     case 'delete':  return applyDelete(op, events, eventList);
     case 'move':    return applyMove(op, events, eventList);
     case 'resize':  return applyResize(op, events, eventList);
+    case 'group-change': return applyGroupChange(op, events);
     default: {
       const _x: never = op;
       return [];
@@ -203,6 +204,19 @@ function applyMove(
   }
 
   const after: EngineEvent = { ...existing, start: op.newStart, end: op.newEnd };
+  return [{ type: 'updated', id: op.id, before: existing, after }];
+}
+
+// ─── Group-change ─────────────────────────────────────────────────────────────
+
+function applyGroupChange(
+  op: Extract<EngineOperation, { type: 'group-change' }>,
+  events: ReadonlyMap<string, EngineEvent>,
+): EventChange[] {
+  const existing = events.get(op.id);
+  if (!existing) return [];
+  // Patch shape forbids id/start/end at the type level, so spreading is safe.
+  const after: EngineEvent = { ...existing, ...op.patch, id: op.id };
   return [{ type: 'updated', id: op.id, before: existing, after }];
 }
 

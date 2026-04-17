@@ -100,6 +100,7 @@ export default function TimelineView({
   currentDate,
   events,
   onEventClick,
+  onEventGroupChange,
   onDateSelect,
   employees = [],
   onCallCategory = 'on-call',
@@ -155,6 +156,13 @@ export default function TimelineView({
   const lastKeyNavCell = useRef(false);
   const gridRef        = useRef(null); // ref on .inner (for querySelector)
   const wrapRef        = useRef(null); // ref on .wrap (scroll container)
+
+  // ── DnD: drag an event from one row to another to reassign it. ────────────
+  // The drag source is the <button> around an event; the drop target is the
+  // owning row.  dragRef carries { ev, sourceRowKey } across handler calls so
+  // onDrop can skip same-row drops.
+  const dragRef = useRef(null);
+  const [dropTargetKey, setDropTargetKey] = useState(null);
 
   // ── Virtualization: track scroll position + viewport size ─────────────────
   // Default height is large so that tests (clientHeight = 0) see all rows.
@@ -528,10 +536,43 @@ export default function TimelineView({
             const color = emp ? employeeColor(emp, empIdx) : null;
             const topOffset = rowOffsets[rowIdx];
 
+            // Drop-target wiring: only active when a consumer wires
+            // onEventGroupChange.  The row owns both the visual highlight
+            // and the drop handler.
+            const rowDndEnabled = !!onEventGroupChange;
+            const isDropTarget  = rowDndEnabled && dropTargetKey === key;
+            const rowClassName  = [styles.row, isDropTarget && styles.dropTarget].filter(Boolean).join(' ');
+
+            const onRowDragOver = rowDndEnabled
+              ? (e) => {
+                  if (!dragRef.current) return;
+                  e.preventDefault();
+                  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+                  if (dropTargetKey !== key) setDropTargetKey(key);
+                }
+              : undefined;
+            const onRowDragLeave = rowDndEnabled
+              ? () => { if (dropTargetKey === key) setDropTargetKey(null); }
+              : undefined;
+            const onRowDrop = rowDndEnabled
+              ? (e) => {
+                  e.preventDefault();
+                  const drag = dragRef.current;
+                  dragRef.current = null;
+                  setDropTargetKey(null);
+                  if (!drag || drag.sourceRowKey === key) return;
+                  // Reassign the event to this row.  When rows are employees,
+                  // key is the employee id; when rows are resource-derived,
+                  // key is the resource string itself.
+                  const patch = { resource: emp ? emp.id : (resource === '(Unassigned)' ? null : resource) };
+                  onEventGroupChange(drag.ev, patch);
+                }
+              : undefined;
+
             return (
               <div
                 key={key}
-                className={styles.row}
+                className={rowClassName}
                 style={{
                   position: 'absolute',
                   top:      topOffset,
@@ -542,6 +583,10 @@ export default function TimelineView({
                 }}
                 role="row"
                 aria-rowindex={rowIdx + 2}
+                data-drop-target={isDropTarget || undefined}
+                onDragOver={onRowDragOver}
+                onDragLeave={onRowDragLeave}
+                onDrop={onRowDrop}
               >
                 {/* Sticky name / employee cell — row header */}
                 <div
@@ -675,6 +720,23 @@ export default function TimelineView({
                       : ev.status === 'tentative' ? styles.tentative : '';
                     const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
+                    // Event-level DnD: each event button is a drag source when
+                    // onEventGroupChange is wired.  On-call/coverage toggles
+                    // stay draggable too — dragging is separate from clicking.
+                    const evDndEnabled = rowDndEnabled;
+                    const onEvDragStart = evDndEnabled
+                      ? (e) => {
+                          dragRef.current = { ev, sourceRowKey: key };
+                          if (e.dataTransfer) {
+                            e.dataTransfer.effectAllowed = 'move';
+                            try { e.dataTransfer.setData('text/plain', String(ev.id)); } catch {}
+                          }
+                        }
+                      : undefined;
+                    const onEvDragEnd = evDndEnabled
+                      ? () => { dragRef.current = null; setDropTargetKey(null); }
+                      : undefined;
+
                     if (ctx?.renderEvent) {
                       const custom = ctx.renderEvent(ev, {
                         view: 'timeline', isCompact: true, onClick, color: evColor,
@@ -686,6 +748,9 @@ export default function TimelineView({
                             className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
                             style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                             role="button" tabIndex={0} aria-label={ariaLabel}
+                            draggable={evDndEnabled || undefined}
+                            onDragStart={onEvDragStart}
+                            onDragEnd={onEvDragEnd}
                             onClick={onClick}
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
                           >
@@ -707,6 +772,9 @@ export default function TimelineView({
                           <button
                             className={[styles.event, styles.eventFill, styles.onCall, statusClass].filter(Boolean).join(' ')}
                             style={{ '--ev-color': evColor }}
+                            draggable={evDndEnabled || undefined}
+                            onDragStart={onEvDragStart}
+                            onDragEnd={onEvDragEnd}
                             onClick={onClick}
                             aria-label={ariaLabel}
                           >
@@ -740,6 +808,9 @@ export default function TimelineView({
                         key={ev.id}
                         className={[styles.event, isOnCall && styles.onCall, statusClass].filter(Boolean).join(' ')}
                         style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
+                        draggable={evDndEnabled || undefined}
+                        onDragStart={onEvDragStart}
+                        onDragEnd={onEvDragEnd}
                         onClick={onClick}
                         aria-label={ariaLabel}
                       >

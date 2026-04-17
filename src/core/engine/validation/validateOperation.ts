@@ -53,6 +53,11 @@ export function validateOperation(
   ctx: OperationContext,
   events: readonly EngineEvent[],
 ): ValidationResult {
+  // Group-field mutations run a dedicated validator chain from ctx.
+  if (op.type === 'group-change') {
+    return validateGroupChange(op, ctx, events);
+  }
+
   // Only time-changing operations need time-based validation
   if (op.type !== 'create' && op.type !== 'move' && op.type !== 'resize') {
     return VALID_RESULT;
@@ -78,6 +83,37 @@ export function validateOperation(
   // Run all rules with the full event list in context
   const ctxWithEvents: OperationContext = { ...ctx, events };
   const violations = RULES.map(r => r(change, ctxWithEvents)).filter(Boolean) as Violation[];
+
+  if (!violations.length) return VALID_RESULT;
+
+  const hasHard = violations.some(v => v.severity === 'hard');
+  const hasSoft = violations.some(v => v.severity === 'soft');
+
+  return {
+    allowed:        !hasHard,
+    severity:       hasHard ? 'hard' : hasSoft ? 'soft' : 'none',
+    violations,
+    suggestedPatch: null,
+  };
+}
+
+// ─── Group-change validation ─────────────────────────────────────────────────
+
+function validateGroupChange(
+  op: Extract<EngineOperation, { type: 'group-change' }>,
+  ctx: OperationContext,
+  events: readonly EngineEvent[],
+): ValidationResult {
+  const existing = events.find(e => e.id === op.id);
+  if (!existing) return VALID_RESULT;
+
+  const rules = ctx.groupChangeValidators ?? [];
+  if (!rules.length) return VALID_RESULT;
+
+  const change = { event: existing, patch: op.patch as Readonly<Record<string, unknown>> };
+  const violations = rules
+    .map(r => r(change, ctx))
+    .filter(Boolean) as Violation[];
 
   if (!violations.length) return VALID_RESULT;
 
