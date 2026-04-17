@@ -129,15 +129,60 @@ export interface SavedView {
   color: string | null;
   /** Optional pinned calendar view (e.g. 'month', 'week'). */
   view: string | null;
+  /** Optional row grouping field for TimelineView / AgendaView. */
+  groupBy: string | null;
   filters: Record<string, unknown>;
 }
 
 export declare function useSavedViews(calendarId: string): {
   views: SavedView[];
-  saveView: (name: string, filters: object, opts?: { color?: string; view?: string }) => SavedView;
+  saveView: (name: string, filters: object, opts?: { color?: string; view?: string; groupBy?: string }) => SavedView;
   updateView: (id: string, patch: Partial<SavedView>) => void;
-  resaveView: (id: string, filters: object, viewName?: string) => void;
+  resaveView: (id: string, filters: object, viewName?: string, groupBy?: string) => void;
   deleteView: (id: string) => void;
+};
+
+// ─── Grouping ──────────────────────────────────────────────────────────────────
+
+export interface GroupHeaderRow {
+  _type: 'groupHeader';
+  groupKey: string;
+  groupLabel: string;
+  collapsed: boolean;
+  rowH: number;
+  count: number;
+}
+
+export declare function groupRows(
+  rows: unknown[],
+  options?: {
+    groupBy?: string;
+    fieldAccessor?: (row: unknown) => string | null;
+    collapsedGroups?: Set<string>;
+    groupHeaderHeight?: number;
+  },
+): { flatRows: unknown[]; groupOrder: string[] };
+
+export declare function buildFieldAccessor(
+  fieldName: string,
+  mode: 'employee' | 'resource',
+): (row: unknown) => string | null;
+
+export declare function useGrouping(
+  rows: unknown[],
+  options?: {
+    groupBy?: string;
+    fieldAccessor?: (row: unknown) => string | null;
+    groupHeaderHeight?: number;
+  },
+): {
+  flatRows: unknown[];
+  groupOrder: string[];
+  collapsedGroups: Set<string>;
+  toggleGroup: (key: string) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
+  isGrouped: boolean;
 };
 
 // ─── Filter schema ─────────────────────────────────────────────────────────────
@@ -484,6 +529,10 @@ export interface WorksCalendarProps {
   // ── UI toggles ──
   /** Show the "Add Event" button. Always shown when owner is authenticated. */
   showAddButton?: boolean;
+
+  // ── Grouping ──
+  /** Field name to group rows by in TimelineView and AgendaView. */
+  groupBy?: string;
 
   // ── Imperative handle ──
   ref?: React.Ref<CalendarApi>;

@@ -158,3 +158,19 @@
     display: none; /* redundant on mobile — month visible in header */
   }
 }
+
+/* ── Secondary (sub-group) headers ──────────────────────────── */
+.subGroup {
+  margin-bottom: 4px;
+}
+
+.subGroupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wc-text-muted, var(--wc-text));
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--wc-border);
+  margin-bottom: 6px;
+}

@@ -33,3 +33,6 @@ export { useDrag }                        from './hooks/useDrag.js';
 export { useFeedEvents }                  from './hooks/useFeedEvents.js';
 export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout.js';
 export { validateChange }                 from './core/validator.js';
+export { groupRows }                      from './grouping/groupRows.js';
+export { buildFieldAccessor }             from './grouping/buildFieldAccessor.js';
+export { useGrouping }                    from './hooks/useGrouping.js';

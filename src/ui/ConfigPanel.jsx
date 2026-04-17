@@ -23,7 +23,7 @@ const TABS = [
 ];
 
 export default function ConfigPanel({
-  config, categories, resources, onUpdate, onClose, onSaveView,
+  config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
   savedViews, onUpdateView, onDeleteView,
   // Source store props (optional — omitted when owner has no source store)
   sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
@@ -97,6 +97,8 @@ export default function ConfigPanel({
             <SmartViewsTab
               categories={categories}
               resources={resources}
+              schema={schema}
+              items={items}
               onSaveView={onSaveView}
               savedViews={savedViews ?? []}
               onUpdateView={onUpdateView}
@@ -250,6 +252,8 @@ export function SmartViewsTab({ categories, resources, onSaveView, savedViews = 
       </p>
       <AdvancedFilterBuilder
         key={editingId ?? '__new__'}
+        schema={schema}
+        items={items}
         categories={categories ?? []}
         resources={resources ?? []}
         onSave={(name, filters, conditions) => onSaveView?.(name, filters, { conditions })}
