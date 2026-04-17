@@ -66,6 +66,8 @@ import WeekView               from './views/WeekView.jsx';
 import DayView                from './views/DayView.jsx';
 import AgendaView             from './views/AgendaView.jsx';
 import TimelineView           from './views/TimelineView.jsx';
+import AssetsView             from './views/AssetsView.jsx';
+import type { AssetsZoomLevel } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
@@ -189,38 +191,6 @@ function viewRange(view, date, weekStartDay = 0) {
   }
 }
 
-/**
- * Placeholder shown on the Assets tab during Sprint 1. Replaced by the
- * real AssetsView in Phase 1 Sprint 2. Keeps the tab clickable so routing
- * + saved-view persistence can be QA'd without the full view.
- */
-function AssetsPlaceholder() {
-  return (
-    <div
-      role="status"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        minHeight: 320,
-        padding: '2rem',
-        textAlign: 'center',
-        color: 'var(--text-muted, #6b7280)',
-        fontSize: 14,
-      }}
-    >
-      <div>
-        <strong style={{ display: 'block', marginBottom: 8, fontSize: 16 }}>
-          Assets view — under construction
-        </strong>
-        Scheduled for Phase&nbsp;1 Sprint&nbsp;2. See{' '}
-        <code>docs/assets-tab-phase1-sprint-plan.md</code>.
-      </div>
-    </div>
-  );
-}
-
 export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
   {
     // ── Data ──
@@ -303,6 +273,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Grouping ──
     groupBy,
+
+    // ── Assets view ──
+    locationProvider,
+    categoriesConfig,
+    onConflictCheck,
+    onApprovalAction,
+    renderAssetLocation,
+    renderConflictBody,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -382,18 +360,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeGroupBy, setActiveGroupBy] = useState<string | null>(groupBy ?? null);
   useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
 
-  // Mark dirty when filters/view/groupBy change after a saved view was applied
+  // ── Assets view zoom (persisted on SavedView.zoomLevel) ──
+  const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+
+  // Mark dirty when filters/view/groupBy/zoom change after a saved view was applied
   // Use a ref to skip the first effect run immediately after applying
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeAssetsZoom]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
     setActiveGroupBy(savedView.groupBy ?? null);
+    if (savedView.zoomLevel) setActiveAssetsZoom(savedView.zoomLevel);
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -1496,9 +1478,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, {
+                groupBy: activeGroupBy,
+                zoomLevel: cal.view === 'assets' ? activeAssetsZoom : undefined,
+                ...opts,
+              }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy),
+              resaveView:  (id) => savedViews.resaveView(
+                id, cal.filters, cal.view, activeGroupBy,
+                cal.view === 'assets' ? { zoomLevel: activeAssetsZoom } : {},
+              ),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
@@ -1513,9 +1502,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy })
+                savedViews.saveView(name, cal.filters, {
+                  color,
+                  view: pinView ? cal.view : null,
+                  groupBy: activeGroupBy,
+                  zoomLevel: cal.view === 'assets' ? activeAssetsZoom : undefined,
+                })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy)}
+              onResave={(id) => savedViews.resaveView(
+                id, cal.filters, cal.view, activeGroupBy,
+                cal.view === 'assets' ? { zoomLevel: activeAssetsZoom } : {},
+              )}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
             />
@@ -1581,7 +1578,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   groupBy={activeGroupBy}
                 />
               )}
-              {cal.view === 'assets'   && <AssetsPlaceholder />}
+              {cal.view === 'assets'   && (
+                <AssetsView
+                  currentDate={cal.currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  onDateSelect={handleScheduleDateSelect}
+                  groupBy={activeGroupBy}
+                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  zoomLevel={activeAssetsZoom}
+                  onZoomChange={setActiveAssetsZoom}
+                  renderAssetLocation={renderAssetLocation}
+                />
+              )}
             </>
           )}
         </div>
