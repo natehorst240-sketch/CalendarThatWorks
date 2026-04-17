@@ -335,15 +335,18 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
 
-  // Honor defaultView from owner config (applied once after config loads)
+  // Honor defaultView from owner config (applied once after config loads).
+  // Explicit initialView prop takes precedence — hosts that opt into a
+  // specific startup view shouldn't be overridden by DEFAULT_CONFIG's 'month'.
   const defaultViewApplied = useRef(false);
   useEffect(() => {
+    if (initialView) return;
     const defaultView = ownerCfg.config?.display?.defaultView;
     if (defaultView && !defaultViewApplied.current) {
       defaultViewApplied.current = true;
       cal.setView(defaultView);
     }
-  }, [ownerCfg.config?.display?.defaultView]);
+  }, [ownerCfg.config?.display?.defaultView, initialView]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);

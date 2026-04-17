@@ -23,6 +23,7 @@ import { SetupWizardExample }      from './setup-wizard.jsx';
 import { AdvancedFiltersExample }  from './advanced-filters.jsx';
 import { LocalDataAdapterExample } from './data-adapter-local.jsx';
 import { ExternalFormExample }     from './external-form.jsx';
+import { AssetsDemoExample }       from './assets-demo.jsx';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [
@@ -123,6 +124,13 @@ const EXAMPLES = [
     tag:   'PTO · coverage · on-call',
     desc:  'Mark on-call shifts as PTO or Unavailable, pick up uncovered shifts, and track who is covering for whom.',
     component: ShiftCoverageTracking,
+  },
+  {
+    id:    'assets-demo',
+    label: 'Assets (Gantt) Demo',
+    tag:   '20 resources · 200 requests',
+    desc:  '5-state approval workflow, ManualLocationProvider banner, category hue, zoom Day/Week/Month/Quarter, and denied/pending pills that open the audit drawer.',
+    component: AssetsDemoExample,
   },
 ];
 
