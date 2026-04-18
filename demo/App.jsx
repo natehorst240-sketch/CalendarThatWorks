@@ -143,15 +143,9 @@ const INITIAL_EVENTS = [
 
 /* ─── Fleet dataset (for the Assets view) ──────────────────────────
  *
- * The Engineering dataset wires employee IDs into `event.resource`,
- * which means the Assets view derives its rows from employees. To
- * preview the Assets view with its intended aircraft-as-resources
- * model, switch the dataset toggle in the header to "Fleet". This
- * swaps the entire event/employee set with aircraft registrations
- * and fleet-oriented events (training, maintenance, charters).
- *
- * Note: this is a demo-time workaround. The production fix is a
- * first-class `assets` prop on WorksCalendar (tracking: #134/9).
+ * Fleet mode intentionally uses first-class assets so the demo mirrors
+ * production behavior in WorksCalendar (asset labels/groups + editable
+ * asset registry in Settings → Assets).
  */
 const AIRCRAFT_RESOURCES = [
   { id: 'N121AB', name: 'N121AB', group: 'West',    meta: { model: 'Citation CJ3',  location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
@@ -161,6 +155,12 @@ const AIRCRAFT_RESOURCES = [
   { id: 'N901JT', name: 'N901JT', group: 'East',    meta: { model: 'Gulfstream G280', location: { text: 'KJFK', status: 'live', asOf: new Date().toISOString() } } },
   { id: 'N245LM', name: 'N245LM', group: 'East',    meta: { model: 'Pilatus PC-24', location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
 ];
+const FLEET_ASSETS = AIRCRAFT_RESOURCES.map((aircraft) => ({
+  id: aircraft.id,
+  label: aircraft.name,
+  group: aircraft.group,
+  meta: aircraft.meta,
+}));
 
 const FLEET_EVENTS = [
   { id: 'f1',  title: 'Recurrent training',   start: d(0, 9),   end: dEnd(0, 9, 6),  category: 'training',    resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
@@ -437,6 +437,7 @@ function App() {
             key={dataset}
             events={dataset === 'fleet' ? fleetEvents : events}
             employees={dataset === 'fleet' ? [] : employees}
+            assets={dataset === 'fleet' ? FLEET_ASSETS : undefined}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={dataset === 'fleet' ? `${DEMO_CALENDAR_ID}-fleet` : DEMO_CALENDAR_ID}
