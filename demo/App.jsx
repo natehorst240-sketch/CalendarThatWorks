@@ -385,7 +385,7 @@ function App() {
 
       {/* ── Calendar ── */}
       <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
-        <div style={{ height: '100vh', maxWidth: 1400, margin: '0 auto' }}>
+        <div style={{ height: '100%', width: '100%' }}>
           <WorksCalendar
             events={events}
             employees={employees}
