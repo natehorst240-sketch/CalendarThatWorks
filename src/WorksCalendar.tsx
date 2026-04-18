@@ -518,16 +518,24 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
   }
 
+  // True when allNormalized is about to change because we called onEventSave.
+  // Prevents the sync effect from wiping the undo stack we just recorded.
+  const engineMutationPendingRef = useRef(false);
+
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
   useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
-  // Clear undo history on a full reload so stale entries can't reference
-  // events that no longer exist.
+  // Skip clear() when the change was triggered by our own onEventSave so the
+  // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
     engineRef.current.setEvents(fromLegacyEvents(allNormalized));
-    undoManagerRef.current.clear();
+    if (engineMutationPendingRef.current) {
+      engineMutationPendingRef.current = false;
+    } else {
+      undoManagerRef.current.clear();
+    }
   }, [allNormalized]);
 
   // ── Expand recurring events within the visible range (via engine) ────────
@@ -605,6 +613,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // State has changed — record the pre-mutation snapshot.
       undoMgr.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
+      engineMutationPendingRef.current = true;
       onAccepted();
 
     } else if (result.status === 'pending-confirmation') {
@@ -618,6 +627,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
             undoMgr.record(preSnap, op.type);
             announcerRef.current?.announce(opAnnouncement(op));
+            engineMutationPendingRef.current = true;
             onAccepted();
           }
         },
