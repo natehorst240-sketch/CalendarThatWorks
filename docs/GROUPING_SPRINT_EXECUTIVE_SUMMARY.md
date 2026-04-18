@@ -1,7 +1,7 @@
 # Sprint Review: Infinite Grouping, Filtering & Sorting
 
-**Date:** 2026-04-16 (initial review) · **Updated:** 2026-04-18 (Phase A delivery)
-**Status:** ✅ Phase A shipped — original scope reshaped; see **Delivery Update** at bottom.
+**Date:** 2026-04-16 (initial review) · **Updated:** 2026-04-18 (Phase A+B delivery)
+**Status:** ✅ Phases A + B shipped — original scope reshaped; see **Delivery Update** at bottom.
 **Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
 
 > **If you only read one thing, skip to the [Delivery Update](#delivery-update--2026-04-sprint) section.** The body below is preserved as the original pre-implementation risk analysis. It correctly flagged that the 5-day scope was unrealistic; the sprint reshaped into phased delivery (A/B) under GitHub issue #134.
@@ -297,16 +297,29 @@ not the default path.**
   expands a collapsed header, or on an already-expanded header descends
   to the first child cell; ← on an already-collapsed header is a no-op.
 
-### Phase B — queued
+### Phase B — shipped (this sprint)
 
-| Ticket | Summary |
-|--------|---------|
-| #134-14 | Approvals tab in ConfigPanel — policy, tiers, rules, labels + v3→v4 schema migration |
-| #134-13 | Conflict check + ConflictModal (owner-defined rules in `src/core/conflictEngine.ts`) |
-| #134-12 | Schema-driven RequestForm, owner-configurable |
-| #134-15 | Inline approval actions on pills, driven by policy/tier config |
-| #134-16 | Integration matrix: approval policy × conflict rules × request schema |
-| #134-8  | Docs pass — Approvals config section (pairs with Ticket 14) |
+| Ticket | Summary | Ships as |
+|--------|---------|----------|
+| #134-14 | Approvals tab in ConfigPanel — policy, tiers, rules, labels + v3→v4 schema migration | `0ececa2` |
+| #134-13 | Conflict check + ConflictModal (owner-defined rules in `src/core/conflictEngine.ts`) | `ae345ba` |
+| #134-12 | Schema-driven RequestForm, owner-configurable | `69ee3e6` |
+| #134-15 | Inline approval actions on pills, driven by policy/tier config | `9a97f83` |
+| #134-16 | Integration matrix: approval policy × conflict rules × request schema | `76e851f` |
+| #134-8  | Docs pass — Phase B owner-config section (pairs with Tickets 12/13/14/15) | (this commit) |
+
+**Net effect for operators:**
+- Approvals, conflicts, and the request-form schema are all editable from
+  ConfigPanel tabs and persist through `useOwnerConfig`. No host-code change
+  is required to change who can approve from a stage, which conflict rules
+  block a save, or what fields the request form displays.
+- Calendar emits `onApprovalAction(event, action)` — host persists the new
+  stage + audit history, calendar re-renders with the updated event. The
+  calendar never mutates `meta.approvalStage` itself, keeping the storage
+  story unchanged.
+- Schema version bumped to 4; the migration is additive (mergeDeep folds
+  in the new default blocks), so previously-persisted v3 calendars load
+  untouched and the new tabs appear with defaults.
 
 ### What the original risk table got right vs. wrong
 

@@ -270,3 +270,89 @@ calendar. Changes flow through `useOwnerConfig.updateConfig`, so saved-view
 pins, group counts, and row order all refresh live. `openConfigToTab(tabId)`
 is the recommended deep-link API; it validates that the requested tab id
 exists in `TABS` before applying.
+
+---
+
+## Phase B — owner-configurable workflow blocks
+
+Phase B extends owner config with three data-driven workflow systems. All
+three ship disabled (or with safe minimal defaults) and read exclusively
+from the owner-config blob — no host redeploy required to tune them.
+
+### Schema version
+
+`config.schemaVersion = 4`. Migration from v3 is purely additive: the
+`mergeDeep` call in `loadConfig` stamps the new default blocks onto any
+older stored config, so previously-persisted calendars see the new tabs
+without losing state.
+
+### 1. Request form (ticket #134-12)
+
+Shape: `config.requestForm.fields: Array<{ key, label, type, required?, placeholder?, options? }>`.
+
+Supported `type` values: `text`, `textarea`, `number`, `date`, `datetime`,
+`select`, `checkbox`. For `select`, `options` is a comma-separated string
+(e.g. `"one, two, three"`); first rendered option is an empty placeholder.
+
+`RequestForm` emits `{ values }` on submit. Required fields (including
+required-truthy checkboxes) gate submission; host-level validators remain
+the escape hatch via `onSubmit` rejection. Owners edit the schema from
+ConfigPanel → Request Form (CRUD + move up/down).
+
+### 2. Conflict engine (ticket #134-13)
+
+Shape: `config.conflicts: { enabled: boolean, rules: ConflictRule[] }`.
+
+Supported rule types:
+
+| `type`              | Parameters                              | Behavior                                     |
+| ------------------- | --------------------------------------- | -------------------------------------------- |
+| `resource-overlap`  | `ignoreCategories?: string[]`           | Flag any event on the same resource whose `[start, end)` intersects the proposed event. |
+| `category-mutex`    | `categories: string[]`                  | Flag overlap on same resource when both events' categories are in the listed set.       |
+| `min-rest`          | `minutes: number`                       | Flag same-resource back-to-back events closer than `minutes` apart.                     |
+
+Each rule carries `severity?: 'soft' \| 'hard'` (default `hard`). The
+engine returns `{ violations, severity, allowed }` — `allowed` is `true`
+for `'soft'`/`'none'`, `false` for `'hard'`. Host apps gate their save
+path on `allowed`; `ConflictModal` presents violations and a
+Proceed/Cancel pair, enabling Proceed only for soft severity.
+
+Overlap semantics are half-open: touching endpoints (A ends at T, B
+starts at T) do **not** count as overlapping.
+
+### 3. Approvals policy (ticket #134-14, #134-15)
+
+Shape:
+
+```ts
+config.approvals = {
+  enabled: boolean,
+  tiers: Array<{ id, label, requires: 'any' | 'all', roles: string[] }>,
+  rules: {
+    [stage in 'requested' | 'approved' | 'finalized' | 'pending_higher' | 'denied']:
+      { allow: Array<'approve' | 'deny' | 'finalize' | 'revoke'>, prefix: string }
+  },
+  labels: { approve, deny, finalize, revoke },
+}
+```
+
+- **`rules[stage].allow`** drives which buttons `ApprovalActionMenu`
+  renders for that stage (both the pill caret popover in AssetsView and
+  the inline menu in AuditDrawer). Empty `allow` hides the caret.
+- **`rules[stage].prefix`** rides on the left of the pill label, e.g.
+  `Req · Flight 202`.
+- **`labels`** supplies the button copy, letting owners rename
+  `Approve`/`Deny`/etc. to match their organization's vocabulary.
+- **`tiers[].requires`** determines quorum: `any` promotes on the first
+  approver action, `all` waits for every listed role.
+
+The calendar emits `onApprovalAction(event, action)`; the host mutates
+`event.meta.approvalStage.stage` + appends to `.history`, then echoes
+the updated event back. The calendar never writes stage state itself.
+
+### Cross-cutting
+
+`src/__tests__/phaseB.integration.test.jsx` pins the end-to-end glue
+(RequestForm → conflictEngine → ConflictModal → persist + pill menu)
+so any future refactor that breaks the contract between these three
+systems fails loudly.
