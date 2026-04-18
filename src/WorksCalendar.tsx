@@ -1701,6 +1701,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
                   sort={activeSort}
+                  roles={ownerCfg.config?.team?.roles ?? []}
+                  bases={ownerCfg.config?.team?.bases ?? []}
                 />
               )}
               {cal.view === 'assets'   && (

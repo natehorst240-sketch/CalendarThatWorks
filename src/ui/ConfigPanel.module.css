@@ -377,6 +377,13 @@
   gap: 8px;
 }
 
+.memberBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
 .memberRow {
   display: flex;
   align-items: center;
@@ -385,6 +392,41 @@
   background: var(--wc-surface);
   border-radius: var(--wc-radius-sm);
   border: 1px solid var(--wc-border);
+}
+
+.memberMeta {
+  display: flex;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-top: none;
+  border-radius: 0 0 var(--wc-radius-sm) var(--wc-radius-sm);
+}
+
+.memberMeta .select {
+  flex: 1;
+  font-size: 12px;
+}
+
+.inlineAddRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.inlineAddRow .input {
+  flex: 1;
+}
+
+.fieldGroupLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text-muted, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 8px 0 4px;
 }
 
 .avatarPicker {
