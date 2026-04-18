@@ -270,12 +270,17 @@ export default function AssetsView({
   const wrapRef        = useRef(null);
 
   // ── Virtualization ─────────────────────────────────────────────────────────
-  const [scrollState, setScrollState] = useState({ top: 0, height: 2000 });
+  const [scrollState, setScrollState] = useState({ top: 0, height: 2000, left: 0, width: 1200 });
 
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const update = () => setScrollState({ top: el.scrollTop, height: el.clientHeight || 2000 });
+    const update = () => setScrollState({
+      top:    el.scrollTop,
+      height: el.clientHeight || 2000,
+      left:   el.scrollLeft,
+      width:  el.clientWidth  || 1200,
+    });
     update();
     el.addEventListener('scroll', update, { passive: true });
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
@@ -534,17 +539,37 @@ export default function AssetsView({
     const viewH = height || 2000;
     let s = 0;
     let e = flatRows.length - 1;
-    for (let i = 0; i < flatRows.length; i++) {
-      if (rowOffsets[i + 1] <= top) s = i + 1;
+    // Binary search for first visible row
+    let lo = 0, hi = flatRows.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (rowOffsets[mid + 1] <= top) { s = mid + 1; lo = mid + 1; } else hi = mid - 1;
     }
-    for (let i = flatRows.length - 1; i >= 0; i--) {
-      if (rowOffsets[i] < top + viewH) { e = i; break; }
+    // Binary search for last visible row
+    lo = 0; hi = flatRows.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (rowOffsets[mid] < top + viewH) { e = mid; lo = mid + 1; } else hi = mid - 1;
     }
     return [
       Math.max(0, s - OVERSCAN_ROWS),
       Math.min(flatRows.length - 1, e + OVERSCAN_ROWS),
     ];
   }, [scrollState, rowOffsets, flatRows.length]);
+
+  // Horizontal column virtualization: only render day columns in the viewport.
+  const OVERSCAN_COLS = 2;
+  const [visColStart, visColEnd] = useMemo(() => {
+    const { left, width } = scrollState;
+    // The sticky name column (NAME_W px) is always visible; content starts after it.
+    const contentLeft = Math.max(0, left - NAME_W);
+    const s = Math.floor(contentLeft / pxPerDay);
+    const e = Math.ceil((left + width - NAME_W) / pxPerDay);
+    return [
+      Math.max(0, s - OVERSCAN_COLS),
+      Math.min(totalDays - 1, e + OVERSCAN_COLS),
+    ];
+  }, [scrollState, pxPerDay, totalDays]);
 
   // ── Keyboard handler ───────────────────────────────────────────────────────
 
@@ -761,28 +786,35 @@ export default function AssetsView({
               ))}
             </div>
           </div>
-          <div className={styles.dayHeads} role="presentation">
-            {days.map((day, di) => (
-              <div
-                key={format(day, 'yyyy-MM-dd')}
-                role="columnheader"
-                aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
-                aria-colindex={di + 2}
-                className={[
-                  styles.dayHead,
-                  isToday(day)   && styles.todayHead,
-                  isWeekend(day) && styles.weekendHead,
-                ].filter(Boolean).join(' ')}
-                style={{ width: dayColW, minWidth: dayColW }}
-              >
-                {showDayNum && (
-                  <span className={styles.dayNum} aria-hidden="true">{format(day, 'd')}</span>
-                )}
-                {showDayAbbr && (
-                  <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
-                )}
-              </div>
-            ))}
+          <div
+            className={styles.dayHeads}
+            role="presentation"
+            style={{ position: 'relative', width: totalDays * dayColW, flexShrink: 0 }}
+          >
+            {days.slice(visColStart, visColEnd + 1).map((day, relDi) => {
+              const di = visColStart + relDi;
+              return (
+                <div
+                  key={format(day, 'yyyy-MM-dd')}
+                  role="columnheader"
+                  aria-label={`${format(day, 'EEEE, MMMM d')}${isToday(day) ? ', today' : ''}`}
+                  aria-colindex={di + 2}
+                  className={[
+                    styles.dayHead,
+                    isToday(day)   && styles.todayHead,
+                    isWeekend(day) && styles.weekendHead,
+                  ].filter(Boolean).join(' ')}
+                  style={{ position: 'absolute', left: di * dayColW, width: dayColW }}
+                >
+                  {showDayNum && (
+                    <span className={styles.dayNum} aria-hidden="true">{format(day, 'd')}</span>
+                  )}
+                  {showDayAbbr && (
+                    <span className={styles.dayAbbr} aria-hidden="true">{format(day, 'EEE')}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -885,19 +917,23 @@ export default function AssetsView({
                   style={{ width: totalDays * dayColW, height: rowH, position: 'relative' }}
                   role="presentation"
                 >
-                  {days.map((day, di) => (
-                    <div
-                      key={di}
-                      className={[
-                        styles.dayCol,
-                        isToday(day)   && styles.todayCol,
-                        isWeekend(day) && styles.weekendCol,
-                      ].filter(Boolean).join(' ')}
-                      style={{ left: di * dayColW, width: dayColW, height: rowH }}
-                    />
-                  ))}
+                  {days.slice(visColStart, visColEnd + 1).map((day, relDi) => {
+                    const di = visColStart + relDi;
+                    return (
+                      <div
+                        key={di}
+                        className={[
+                          styles.dayCol,
+                          isToday(day)   && styles.todayCol,
+                          isWeekend(day) && styles.weekendCol,
+                        ].filter(Boolean).join(' ')}
+                        style={{ left: di * dayColW, width: dayColW, height: rowH }}
+                      />
+                    );
+                  })}
 
-                  {days.map((day, di) => {
+                  {days.slice(visColStart, visColEnd + 1).map((day, relDi) => {
+                    const di = visColStart + relDi;
                     const isFocused  = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
                     const resourceId = resource;
                     const cellHasEvent = rowEvents.some(ev => ev._dayStart <= di && ev._dayEnd >= di);
