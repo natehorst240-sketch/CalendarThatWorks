@@ -53,16 +53,24 @@ function buildRRuleFromPreset(preset, startValue) {
  * @param {object|null}           config      Owner config (eventFields, etc.).
  */
 export function useEventDraftState(event, categories, config) {
-  const [values, setValues] = useState(() => ({
-    title:    event?.title    ?? '',
-    start:    toDatetimeLocal(event?.start ?? new Date()),
-    end:      toDatetimeLocal(event?.end   ?? new Date()),
-    allDay:   event?.allDay   ?? false,
-    category: event?.category ?? categories[0] ?? '',
-    resource: event?.resource ?? '',
-    color:    event?.color    ?? '',
-    meta:     event?.meta     ?? {},
-  }));
+  const [values, setValues] = useState(() => {
+    const startDate = event?.start ? new Date(event.start) : new Date();
+    // If the caller didn't supply an end, default to a 1-hour event so the
+    // new event has a non-zero duration out of the box.
+    const endDate = event?.end
+      ? new Date(event.end)
+      : new Date(startDate.getTime() + 60 * 60 * 1000);
+    return {
+      title:    event?.title    ?? '',
+      start:    toDatetimeLocal(startDate),
+      end:      toDatetimeLocal(endDate),
+      allDay:   event?.allDay   ?? false,
+      category: event?.category ?? categories[0] ?? '',
+      resource: event?.resource ?? '',
+      color:    event?.color    ?? '',
+      meta:     event?.meta     ?? {},
+    };
+  });
   const [templateId,        setTemplateId]        = useState('none');
   const [recurrencePreset,  setRecurrencePreset]  = useState(() => inferPresetFromRRule(event?.rrule ?? null));
   const [customRrule,       setCustomRrule]       = useState(() => (

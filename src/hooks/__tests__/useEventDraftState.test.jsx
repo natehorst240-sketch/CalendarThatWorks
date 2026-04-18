@@ -50,6 +50,33 @@ describe('useEventDraftState — initial state', () => {
     expect(result.current.allCats).toContain('A');
     expect(result.current.allCats).toContain('B');
   });
+
+  it('defaults end to start + 1h when no event is supplied', () => {
+    const { result } = renderHook(() => useEventDraftState(null, ['Ops'], { eventFields: {} }));
+    const start = new Date(result.current.values.start);
+    const end = new Date(result.current.values.end);
+    expect(end.getTime() - start.getTime()).toBe(60 * 60 * 1000);
+  });
+
+  it('defaults end to start + 1h when event has start but no end', () => {
+    const event = { title: '', start: START };
+    const { result } = renderHook(() => useEventDraftState(event, ['Ops'], { eventFields: {} }));
+    const start = new Date(result.current.values.start);
+    const end = new Date(result.current.values.end);
+    expect(end.getTime() - start.getTime()).toBe(60 * 60 * 1000);
+  });
+
+  it('preserves the event\'s end when both start and end are supplied', () => {
+    const event = {
+      title: '',
+      start: new Date('2026-04-14T09:00:00'),
+      end:   new Date('2026-04-14T11:30:00'),
+    };
+    const { result } = renderHook(() => useEventDraftState(event, ['Ops'], { eventFields: {} }));
+    const start = new Date(result.current.values.start);
+    const end = new Date(result.current.values.end);
+    expect(end.getTime() - start.getTime()).toBe(2.5 * 60 * 60 * 1000);
+  });
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
