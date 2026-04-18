@@ -1377,7 +1377,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
-    setFormEvent(ev._raw ?? ev);
+    let formEv = ev._raw ?? ev;
+    // Recurring occurrences carry rrule:null — look up the series master so the
+    // EventForm shows the correct repeat cadence and preserves it on save.
+    if (ev._recurring && ev._eventId) {
+      const master = engineRef.current?.state?.events?.get(ev._eventId);
+      if (master?.rrule) {
+        formEv = { ...formEv, rrule: master.rrule };
+      }
+    }
+    setFormEvent(formEv);
   }, []);
 
   /** Save quick display customizations from InlineEventEditor. */
@@ -1692,6 +1701,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEmployeeAction={handleEmployeeAction}
                   groupBy={activeGroupBy}
                   sort={activeSort}
+                  roles={ownerCfg.config?.team?.roles ?? []}
+                  bases={ownerCfg.config?.team?.bases ?? []}
                 />
               )}
               {cal.view === 'assets'   && (

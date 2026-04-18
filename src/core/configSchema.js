@@ -53,6 +53,10 @@ export const DEFAULT_CONFIG = {
 
   team: {
     members: [],
+    // Predefined role labels — used as dropdown options when adding/editing employees.
+    roles: ['Team Lead', 'DevOps / SRE', 'Software Engineer', 'Site Reliability'],
+    // Named locations (bases/buildings/regions). Shape: { id: string, name: string }
+    bases: [],
   },
 
   // Hover card field visibility

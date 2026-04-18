@@ -111,6 +111,8 @@ export default function TimelineView({
   onEmployeeAction,
   groupBy,
   sort,
+  roles = [],
+  bases = [],
 }) {
   const ctx        = useCalendarContext();
 
@@ -142,7 +144,11 @@ export default function TimelineView({
   const [addFormOpen, setAddFormOpen]   = useState(false);
   const [addName,     setAddName]       = useState('');
   const [addRole,     setAddRole]       = useState('');
+  const [addBase,     setAddBase]       = useState('');
   const nameInputRef                    = useRef(null);
+
+  // ── Base filter ───────────────────────────────────────────────────────────
+  const [baseFilter, setBaseFilter]     = useState('');
   const monthStart = startOfMonth(currentDate);
   const monthEnd   = endOfMonth(currentDate);
   const days       = useMemo(
@@ -229,13 +235,25 @@ export default function TimelineView({
   const submitAddForm = useCallback(() => {
     const trimmed = addName.trim();
     if (!trimmed) return;
-    onEmployeeAdd?.({ id: `emp-${Date.now()}`, name: trimmed, role: addRole.trim() || undefined });
+    onEmployeeAdd?.({
+      id:   `emp-${Date.now()}`,
+      name: trimmed,
+      role: addRole || undefined,
+      base: addBase || undefined,
+    });
     setAddName('');
     setAddRole('');
+    setAddBase('');
     setAddFormOpen(false);
-  }, [addName, addRole, onEmployeeAdd]);
+  }, [addName, addRole, addBase, onEmployeeAdd]);
 
   // ── Row source: employees list OR derive from event resources ──────────────
+
+  // When a base filter is active, show only employees assigned to that base.
+  const displayEmployees = useMemo(() => {
+    if (!baseFilter || !employees?.length) return employees;
+    return employees.filter(e => String(e.base ?? '') === baseFilter);
+  }, [employees, baseFilter]);
 
   const useEmployees = employees && employees.length > 0;
 
@@ -260,12 +278,9 @@ export default function TimelineView({
         if (!isOnCallEv || !ev.meta?.shiftStatus || !ev.meta?.coveredBy) return;
         const coverId = String(ev.meta.coveredBy);
         if (!coveringMap.has(coverId)) coveringMap.set(coverId, []);
-        const origEmp = employees.find(e => e.id === (ev.resource ?? ''));
-        const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
-        const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
-        const clampedStart = max([startOfDay(reqStart), monthStart]);
-        // reqEnd is exclusive [start, end) — subtract 1 day to get the inclusive last day
-        const clampedEnd   = min([addDays(startOfDay(reqEnd), -1), monthEnd]);
+        const origEmp = displayEmployees.find(e => e.id === (ev.resource ?? ''));
+        const clampedStart = max([startOfDay(ev.start), monthStart]);
+        const clampedEnd   = min([startOfDay(ev.end),   monthEnd]);
         if (clampedStart > clampedEnd) return;
         const ds = differenceInCalendarDays(clampedStart, monthStart);
         const de = differenceInCalendarDays(clampedEnd,   monthStart);
@@ -279,7 +294,7 @@ export default function TimelineView({
     }
 
     if (useEmployees) {
-      return employees.map((emp, idx) => {
+      return displayEmployees.map((emp, idx) => {
         const eventsForRow = events.filter(e => (e.resource ?? '') === emp.id);
         const { events: laned, laneCount } = assignLanes(eventsForRow, monthStart, monthEnd);
 
@@ -316,7 +331,7 @@ export default function TimelineView({
         rowH, baseH: rowH, coveringPills: [], hasStatusPills: false,
       };
     });
-  }, [useEmployees, employees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
+  }, [useEmployees, displayEmployees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
 
   // ── Grouping ───────────────────────────────────────────────────────────────
   // Routes through the TS event-level engine (buildGroupTree). TimelineView
@@ -546,13 +561,34 @@ export default function TimelineView({
                   onChange={e => setAddName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') submitAddForm(); if (e.key === 'Escape') setAddFormOpen(false); }}
                 />
-                <input
-                  className={styles.addPersonInput}
-                  placeholder="Role (optional)"
-                  value={addRole}
-                  onChange={e => setAddRole(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') submitAddForm(); if (e.key === 'Escape') setAddFormOpen(false); }}
-                />
+                {roles.length > 0 ? (
+                  <select
+                    className={styles.addPersonInput}
+                    value={addRole}
+                    onChange={e => setAddRole(e.target.value)}
+                  >
+                    <option value="">— select role —</option>
+                    {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    className={styles.addPersonInput}
+                    placeholder="Role"
+                    value={addRole}
+                    onChange={e => setAddRole(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') submitAddForm(); if (e.key === 'Escape') setAddFormOpen(false); }}
+                  />
+                )}
+                {bases.length > 0 && (
+                  <select
+                    className={styles.addPersonInput}
+                    value={addBase}
+                    onChange={e => setAddBase(e.target.value)}
+                  >
+                    <option value="">— no base —</option>
+                    {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                )}
                 <div className={styles.addPersonActions}>
                   <button className={styles.addPersonSave} onClick={submitAddForm}>Add</button>
                   <button className={styles.addPersonCancel} onClick={() => setAddFormOpen(false)}>Cancel</button>
@@ -580,6 +616,23 @@ export default function TimelineView({
             ))}
           </div>
         </div>
+
+        {/* ── Base filter bar ── */}
+        {bases.length > 0 && (
+          <div className={styles.baseFilterBar} role="toolbar" aria-label="Filter by base">
+            <button
+              className={[styles.baseFilterBtn, !baseFilter && styles.baseFilterActive].filter(Boolean).join(' ')}
+              onClick={() => setBaseFilter('')}
+            >All</button>
+            {bases.map(b => (
+              <button
+                key={b.id}
+                className={[styles.baseFilterBtn, baseFilter === b.id && styles.baseFilterActive].filter(Boolean).join(' ')}
+                onClick={() => setBaseFilter(prev => prev === b.id ? '' : b.id)}
+              >{b.name}</button>
+            ))}
+          </div>
+        )}
 
         {/* ── Body (virtualized rows) ── */}
         <div
@@ -716,6 +769,10 @@ export default function TimelineView({
                           <span className={styles.nameInfo}>
                             <span className={styles.empName}>{emp.name}</span>
                             {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                            {emp.base && !baseFilter && (() => {
+                              const b = bases.find(x => x.id === emp.base);
+                              return b ? <span className={styles.empBase}>{b.name}</span> : null;
+                            })()}
                           </span>
                         </button>
                       ) : (
@@ -733,6 +790,10 @@ export default function TimelineView({
                           <div className={styles.nameInfo}>
                             <span className={styles.empName}>{emp.name}</span>
                             {emp.role && <span className={styles.empRole}>{emp.role}</span>}
+                            {emp.base && !baseFilter && (() => {
+                              const b = bases.find(x => x.id === emp.base);
+                              return b ? <span className={styles.empBase}>{b.name}</span> : null;
+                            })()}
                           </div>
                         </>
                       )}

@@ -79,6 +79,16 @@ function App() {
       resource: 'emp-alpha',
       color: '#0ea5e9',
     },
+    {
+      id: 'recurring-pen-1',
+      title: 'Repeating Pencil Test',
+      start: at(today, 0, 10, 0).toISOString(),
+      end: at(today, 0, 11, 0).toISOString(),
+      category: 'Meeting',
+      resource: 'emp-alpha',
+      color: '#10b981',
+      rrule: 'FREQ=WEEKLY;BYDAY=' + ['SU','MO','TU','WE','TH','FR','SA'][today.getDay()],
+    },
   ]), [today]);
 
   const [events, setEvents] = useState(initialEvents);

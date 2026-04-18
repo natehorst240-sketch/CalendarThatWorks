@@ -365,22 +365,64 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
 
 export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
   const teamMembers = config.team?.members ?? [];
-  // Pending (unsaved) new member — holds its name until the user commits.
-  // Keeping it local prevents a blank row from appearing in the schedule.
+  const roles       = config.team?.roles   ?? [];
+  const bases       = config.team?.bases   ?? [];
+
+  // ── Pending new member ──────────────────────────────────────────────────────
   const [pendingName, setPendingName] = useState('');
   const [isAdding,    setIsAdding]    = useState(false);
   const pendingInputRef = useRef(null);
+
+  // ── Role management ─────────────────────────────────────────────────────────
+  const [newRole, setNewRole] = useState('');
+
+  // ── Base management ─────────────────────────────────────────────────────────
+  const [newBaseName, setNewBaseName] = useState('');
 
   useEffect(() => {
     if (isAdding) pendingInputRef.current?.focus();
   }, [isAdding]);
 
-  const updateMembers = (nextMembers) => onUpdate(c => ({
+  const updateTeam = (patch) => onUpdate(c => ({
     ...c,
-    team: { ...(c.team ?? {}), members: nextMembers },
+    team: { ...(c.team ?? {}), ...patch },
     setup: { ...(c.setup ?? {}), completed: true },
   }));
 
+  const updateMembers = (nextMembers) => updateTeam({ members: nextMembers });
+
+  // ── Role helpers ────────────────────────────────────────────────────────────
+  const addRole = () => {
+    const trimmed = newRole.trim();
+    if (!trimmed || roles.includes(trimmed)) return;
+    updateTeam({ roles: [...roles, trimmed] });
+    setNewRole('');
+  };
+
+  const removeRole = (r) => {
+    updateTeam({ roles: roles.filter(x => x !== r) });
+  };
+
+  // ── Base helpers ────────────────────────────────────────────────────────────
+  const addBase = () => {
+    const trimmed = newBaseName.trim();
+    if (!trimmed) return;
+    const id = `base-${Date.now()}`;
+    updateTeam({ bases: [...bases, { id, name: trimmed }] });
+    setNewBaseName('');
+  };
+
+  const removeBase = (id) => {
+    updateTeam({ bases: bases.filter(b => b.id !== id) });
+    // clear any members assigned to the removed base
+    updateMembers(teamMembers.map(m => m.base === id ? { ...m, base: undefined } : m));
+  };
+
+  const renameBase = (id, name) => {
+    updateTeam({ bases: bases.map(b => b.id === id ? { ...b, name } : b) });
+  };
+
+  // ── Member helpers ──────────────────────────────────────────────────────────
   const commitPending = () => {
     const trimmed = pendingName.trim();
     if (!trimmed) { setIsAdding(false); setPendingName(''); return; }
@@ -418,31 +460,111 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }) {
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionDesc}>Add employee photos after your categories and Smart Views are in place.</p>
-      {teamMembers.map((member) => (
-        <div key={member.id} className={styles.memberRow}>
-          <label className={styles.avatarPicker}>
-            <div className={styles.avatarFrame}>
-              {member.avatar ? (
-                <img src={member.avatar} alt={`${member.name || 'Employee'} avatar`} className={styles.avatarImg} />
-              ) : (
-                <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
-                  {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
-                </div>
-              )}
-            </div>
-            <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleProfileUpload(member.id, e)} />
-            <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
-          </label>
-          <input
-            className={styles.input}
-            value={member.name ?? ''}
-            onChange={(e) => updateMember(member.id, { name: e.target.value })}
-            placeholder="Employee name"
-          />
-          <button className={styles.removeBtn} onClick={() => removeMember(member.id)} aria-label={`Remove ${member.name || 'employee'}`}>
+
+      {/* ── Roles ── */}
+      <p className={styles.fieldGroupLabel}>Roles</p>
+      <p className={styles.sectionDesc}>Define the role labels available when adding employees.</p>
+      {roles.map((r) => (
+        <div key={r} className={styles.fieldRow}>
+          <span className={styles.fieldLabel}>{r}</span>
+          <button className={styles.removeBtn} onClick={() => removeRole(r)} aria-label={`Remove role ${r}`}>
             <Trash2 size={13} />
           </button>
+        </div>
+      ))}
+      <div className={styles.inlineAddRow}>
+        <input
+          className={styles.input}
+          value={newRole}
+          onChange={e => setNewRole(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRole(); } }}
+          placeholder="New role label"
+        />
+        <button className={styles.addFieldBtn} style={{ marginTop: 0 }} onClick={addRole}>
+          <Plus size={13} /> Add
+        </button>
+      </div>
+
+      {/* ── Bases / Locations ── */}
+      <p className={styles.fieldGroupLabel} style={{ marginTop: 16 }}>Bases / Locations</p>
+      <p className={styles.sectionDesc}>Define bases, buildings, or regions. Employees can be assigned to one and the schedule can be filtered by base.</p>
+      {bases.map((b) => (
+        <div key={b.id} className={styles.fieldRow}>
+          <input
+            className={styles.input}
+            value={b.name}
+            onChange={e => renameBase(b.id, e.target.value)}
+            placeholder="Base name"
+          />
+          <button className={styles.removeBtn} onClick={() => removeBase(b.id)} aria-label={`Remove base ${b.name}`}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+      <div className={styles.inlineAddRow}>
+        <input
+          className={styles.input}
+          value={newBaseName}
+          onChange={e => setNewBaseName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBase(); } }}
+          placeholder="New base name"
+        />
+        <button className={styles.addFieldBtn} style={{ marginTop: 0 }} onClick={addBase}>
+          <Plus size={13} /> Add
+        </button>
+      </div>
+
+      {/* ── Employees ── */}
+      <p className={styles.fieldGroupLabel} style={{ marginTop: 16 }}>Employees</p>
+      <p className={styles.sectionDesc}>Add employee photos after your categories and Smart Views are in place.</p>
+      {teamMembers.map((member) => (
+        <div key={member.id} className={styles.memberBlock}>
+          <div className={styles.memberRow}>
+            <label className={styles.avatarPicker}>
+              <div className={styles.avatarFrame}>
+                {member.avatar ? (
+                  <img src={member.avatar} alt={`${member.name || 'Employee'} avatar`} className={styles.avatarImg} />
+                ) : (
+                  <div className={styles.avatarFallback} style={{ backgroundColor: member.color }}>
+                    {(member.name?.trim()?.[0] ?? '?').toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <input type="file" accept="image/*" className={styles.fileInput} onChange={(e) => handleProfileUpload(member.id, e)} />
+              <span className={styles.avatarBadge}><Camera size={11} /> Photo</span>
+            </label>
+            <input
+              className={styles.input}
+              value={member.name ?? ''}
+              onChange={(e) => updateMember(member.id, { name: e.target.value })}
+              placeholder="Employee name"
+            />
+            <button className={styles.removeBtn} onClick={() => removeMember(member.id)} aria-label={`Remove ${member.name || 'employee'}`}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+          <div className={styles.memberMeta}>
+            <select
+              className={styles.select}
+              value={member.role ?? ''}
+              onChange={e => updateMember(member.id, { role: e.target.value || undefined })}
+              aria-label="Role"
+            >
+              <option value="">— select role —</option>
+              {roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {bases.length > 0 && (
+              <select
+                className={styles.select}
+                value={member.base ?? ''}
+                onChange={e => updateMember(member.id, { base: e.target.value || undefined })}
+                aria-label="Base"
+              >
+                <option value="">— no base —</option>
+                {bases.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+          </div>
         </div>
       ))}
       {isAdding ? (

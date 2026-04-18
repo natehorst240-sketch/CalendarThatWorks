@@ -347,7 +347,7 @@ function App() {
     setEvents(prev => {
       const idx = prev.findIndex(e => e.id === ev.id);
       if (idx >= 0) { const next = [...prev]; next[idx] = ev; return next; }
-      return [...prev, { ...ev, id: `demo-${Date.now()}` }];
+      return [...prev, ev];
     });
     log(`Saved: ${ev.title}`);
   }, []);
@@ -405,6 +405,8 @@ function App() {
             onNoteDelete={handleNoteDelete}
             onEventSave={handleEventSave}
             onEventDelete={handleEventDelete}
+            onScheduleSave={handleEventSave}
+            onAvailabilitySave={handleEventSave}
             onEventClick={ev => log(`Clicked: ${ev.title}`)}
             theme={theme}
             showAddButton={true}
