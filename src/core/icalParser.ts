@@ -61,7 +61,7 @@ function parseDuration(dur) {
 
 /** Parse RRULE string "FREQ=WEEKLY;BYDAY=MO,WE" → plain object. */
 function parseRRule(str) {
-  const rule = {};
+  const rule: Record<string, string> = {};
   str.split(';').forEach(part => {
     const eq = part.indexOf('=');
     if (eq > 0) rule[part.slice(0, eq)] = part.slice(eq + 1);
@@ -138,7 +138,7 @@ function getCandidatesForPeriod(period, freq, byDays, byMonthDays, byMonths, dts
     return [new Date(period)];
   }
 
-  const hms = [dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds()];
+  const hms: [number, number, number] = [dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds()];
 
   if (freq === 'WEEKLY' && byDays) {
     // Expand all matching weekdays in the same week as `period`
@@ -265,7 +265,7 @@ function isDateOnly(props, key) { return (props[key]?.params ?? '').includes('VA
  * @param {Date}   [options.rangeEnd]   - End of expansion window   (default: 2 years from now)
  * @returns {import('../index.d.ts').WorksCalendarEvent[]}
  */
-export function parseICS(text, options = {}) {
+export function parseICS(text, options: { rangeStart?: Date; rangeEnd?: Date } = {}) {
   const today = new Date();
   const rangeStart = options.rangeStart ?? new Date(today.getFullYear() - 1, 0, 1);
   const rangeEnd   = options.rangeEnd   ?? new Date(today.getFullYear() + 2, 11, 31);
@@ -331,7 +331,7 @@ function parseVEvent(lines, rangeStart, rangeEnd) {
   if (statusRaw === 'TENTATIVE') status = 'tentative';
   if (statusRaw === 'CANCELLED') status = 'cancelled';
 
-  const meta = {};
+  const meta: Record<string, string> = {};
   if (desc)     meta.description = desc.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\\\/g, '\\');
   if (location) meta.location    = location;
 

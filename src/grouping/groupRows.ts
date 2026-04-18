@@ -54,11 +54,16 @@ function emitLevel(items, accessors, level, parentPath, collapsedGroups, groupHe
  * the input rows. Header rows carry `depth` (0 = top-level) and a
  * slash-joined `groupKey` path for collapse-state addressing.
  */
-export function groupRows(rows, options = {}) {
+export function groupRows(rows, options: {
+  groupBy?: unknown
+  fieldAccessor?: unknown
+  collapsedGroups?: Set<string>
+  groupHeaderHeight?: number
+} = {}) {
   const {
     groupBy,
     fieldAccessor,
-    collapsedGroups = new Set(),
+    collapsedGroups = new Set<string>(),
     groupHeaderHeight = 36,
   } = options;
 

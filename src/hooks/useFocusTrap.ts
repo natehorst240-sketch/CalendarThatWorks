@@ -104,8 +104,8 @@ export function useFocusTrap(onEscape, active = true) {
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
       // Restore focus when the dialog unmounts.
-      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
-        previouslyFocused.focus();
+      if (previouslyFocused && typeof (previouslyFocused as HTMLElement).focus === 'function') {
+        (previouslyFocused as HTMLElement).focus();
       }
     };
   }, [active]);

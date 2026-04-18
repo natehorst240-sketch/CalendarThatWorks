@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 
 /** Compute the visible [start, end] range for a given view + date. */
-function visibleRange(view, currentDate, weekStartDay = 0) {
+function visibleRange(view, currentDate, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   switch (view) {
     case 'week':
       return {
@@ -36,7 +36,7 @@ function visibleRange(view, currentDate, weekStartDay = 0) {
   }
 }
 
-export function useFetchEvents(fetchEvents, view, currentDate, weekStartDay = 0) {
+export function useFetchEvents(fetchEvents, view, currentDate, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   const [fetchedEvents, setFetchedEvents] = useState([]);
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState(null);

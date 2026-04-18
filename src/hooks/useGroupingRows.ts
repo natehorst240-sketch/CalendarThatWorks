@@ -1,9 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { groupRows } from '../grouping/groupRows.js';
 
-export function useGrouping(rows, options = {}) {
+export function useGrouping(rows, options: {
+  groupBy?: unknown
+  fieldAccessor?: unknown
+  groupHeaderHeight?: number
+} = {}) {
   const { groupBy, fieldAccessor, groupHeaderHeight = 36 } = options;
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
 
   const { flatRows, groupOrder } = useMemo(() => {
     if (!groupBy) return { flatRows: rows, groupOrder: [] };

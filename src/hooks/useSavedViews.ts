@@ -42,7 +42,7 @@ function sanitizeGroupBy(value) {
   const objects = value
     .filter(item => item && typeof item === 'object' && typeof item.field === 'string' && item.field)
     .map(item => {
-      const out = { field: item.field };
+      const out: { field: any; label?: string; showEmpty?: boolean } = { field: item.field };
       if (typeof item.label === 'string') out.label = item.label;
       if (typeof item.showEmpty === 'boolean') out.showEmpty = item.showEmpty;
       return out;
@@ -264,6 +264,16 @@ export function useSavedViews(calendarId) {
     zoomLevel,
     collapsedGroups,
     showAllGroups,
+  }: {
+    color?: any
+    view?: any
+    conditions?: any
+    groupBy?: any
+    sort?: any
+    sortBy?: any
+    zoomLevel?: any
+    collapsedGroups?: any
+    showAllGroups?: any
   } = {}) => {
     const savedView = {
       id:              createId('view'),
@@ -288,7 +298,13 @@ export function useSavedViews(calendarId) {
     setViews(prev => prev.map(v => v.id === id ? { ...v, ...patch } : v));
   }, []);
 
-  const resaveView = useCallback((id, filters, viewName, groupBy, opts = {}) => {
+  const resaveView = useCallback((id, filters, viewName, groupBy, opts: {
+    sort?: any
+    showAllGroups?: any
+    sortBy?: any
+    zoomLevel?: any
+    collapsedGroups?: any
+  } = {}) => {
     const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups } = opts || {};
     setViews(prev => prev.map(v =>
       v.id === id

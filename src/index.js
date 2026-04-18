@@ -35,6 +35,6 @@ export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout.js';
 export { validateChange }                 from './core/validator.js';
 export { groupRows }                      from './grouping/groupRows.js';
 export { buildFieldAccessor }             from './grouping/buildFieldAccessor.js';
-export { useGrouping }                    from './hooks/useGrouping.js';
+export { useGrouping }                    from './hooks/useGroupingRows.ts';
 export { createManualLocationProvider }   from './providers/ManualLocationProvider.ts';
 export { DEFAULT_CATEGORIES }             from './types/assets.ts';

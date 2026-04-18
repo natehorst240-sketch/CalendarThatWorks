@@ -4,7 +4,7 @@
  * Prefers crypto.randomUUID() when available and falls back to
  * crypto.getRandomValues() for environments that do not expose randomUUID.
  */
-export function createId(prefix = 'id') {
+export function createId(prefix = 'id'): string {
   const scopedPrefix = prefix ? `${prefix}-` : '';
 
   if (typeof globalThis.crypto?.randomUUID === 'function') {

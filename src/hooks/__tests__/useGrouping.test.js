@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useGrouping } from '../useGrouping.js';
+import { useGrouping } from '../useGroupingRows.ts';
 
 const rows = [
   { id: 1, emp: { role: 'Nurse' } },

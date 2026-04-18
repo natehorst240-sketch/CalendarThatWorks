@@ -51,7 +51,7 @@ export function useSyncedCalendar({
   adapter,
   start,
   end,
-  conflictResolution = 'server-wins',
+  conflictResolution = 'server-wins' as any,
   onConflict,
   onError,
   maxRetries,

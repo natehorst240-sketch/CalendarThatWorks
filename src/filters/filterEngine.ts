@@ -94,15 +94,15 @@ function _matchSearch(item, query) {
 // ── Option extractors ─────────────────────────────────────────────────────────
 
 /** Extract unique sorted categories from an event list. */
-export function getCategories(events) {
-  const set = new Set();
+export function getCategories(events): string[] {
+  const set = new Set<string>();
   events.forEach(e => { if (e.category) set.add(e.category); });
   return [...set].sort();
 }
 
 /** Extract unique sorted resources from an event list. */
-export function getResources(events) {
-  const set = new Set();
+export function getResources(events): string[] {
+  const set = new Set<string>();
   events.forEach(e => { if (e.resource) set.add(e.resource); });
   return [...set].sort();
 }

@@ -20,9 +20,9 @@
  *   any          + not_contains → accumulate into { __not: true, values: Set }
  *   unknown field/operator    → skipped gracefully
  */
-export function conditionsToFilters(conditions, schema) {
-  const schemaMap = new Map(schema.map(f => [f.key, f]))
-  const result = {}
+export function conditionsToFilters(conditions, schema: Array<{ key: string; type: string }>) {
+  const schemaMap = new Map<string, { key: string; type: string }>(schema.map(f => [f.key, f]))
+  const result: Record<string, any> = {}
 
   for (const cond of conditions) {
     const raw = cond.value

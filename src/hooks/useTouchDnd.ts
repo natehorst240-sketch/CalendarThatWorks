@@ -28,6 +28,16 @@ export function useTouchDnd({
   onOver,
   onDrop,
   onCancel,
+}: {
+  enabled?: boolean
+  longPressMs?: number
+  moveThreshold?: number
+  dropAttr?: string
+  vibrateMs?: number
+  onStart?: (payload: any) => unknown
+  onOver?: (el: Element | null, payload: any) => void
+  onDrop?: (el: Element | null, payload: any) => void
+  onCancel?: (payload: any) => void
 } = {}) {
   const stateRef = useRef(null);
 
@@ -51,7 +61,18 @@ export function useTouchDnd({
     if (!touches || touches.length !== 1) return;
     const touch = touches[0];
 
-    const s = {
+    const s: {
+      payload: any
+      startX: number
+      startY: number
+      dragging: boolean
+      overEl: Element | null
+      prevUserSelect: string | null
+      timer: ReturnType<typeof setTimeout> | null
+      handleMove?: (evt: TouchEvent) => void
+      handleEnd?: (evt: TouchEvent) => void
+      handleCancel?: () => void
+    } = {
       payload,
       startX: touch.clientX,
       startY: touch.clientY,

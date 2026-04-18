@@ -46,8 +46,8 @@ export function clearFilterValue(field) {
  * @param {import('./filterSchema.js').FilterField[]} schema
  * @returns {Record<string, unknown>}
  */
-export function createInitialFilters(schema = DEFAULT_FILTER_SCHEMA) {
-  const filters = {};
+export function createInitialFilters(schema = DEFAULT_FILTER_SCHEMA): Record<string, unknown> {
+  const filters: Record<string, unknown> = {};
   for (const field of schema) {
     filters[field.key] = clearFilterValue(field);
   }

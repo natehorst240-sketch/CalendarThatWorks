@@ -140,7 +140,7 @@ export function useEventDraftState(event, categories, config) {
   }
 
   function validate() {
-    const errs = {};
+    const errs: Record<string, string> = {};
     if (!values.title.trim()) errs.title = 'Title is required';
     if (!values.start) errs.start = 'Start date is required';
     if (!values.end) errs.end = 'End date is required';

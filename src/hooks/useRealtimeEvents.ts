@@ -26,7 +26,7 @@ export function useRealtimeEvents({ supabaseClient, table, filter }) {
     setStatus('connecting');
 
     const chanName = `wc-rt-${table}-${filter ?? 'all'}`;
-    const pgFilter = { event: '*', schema: 'public', table };
+    const pgFilter: { event: string; schema: string; table: any; filter?: any } = { event: '*', schema: 'public', table };
     if (filter) pgFilter.filter = filter;
 
     const channel = supabaseClient

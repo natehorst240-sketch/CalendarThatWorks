@@ -47,7 +47,7 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
 
   const toggleCategory = useCallback((cat) => {
     setFilters(f => {
-      const next = new Set(f.categories);
+      const next = new Set((f as any).categories);
       next.has(cat) ? next.delete(cat) : next.add(cat);
       return { ...f, categories: next };
     });
@@ -55,7 +55,7 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
 
   const toggleResource = useCallback((res) => {
     setFilters(f => {
-      const next = new Set(f.resources);
+      const next = new Set((f as any).resources);
       next.has(res) ? next.delete(res) : next.add(res);
       return { ...f, resources: next };
     });
@@ -63,7 +63,7 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
 
   const toggleSourceFilter = useCallback((id) => {
     setFilters(f => {
-      const next = new Set(f.sources);
+      const next = new Set((f as any).sources);
       next.has(id) ? next.delete(id) : next.add(id);
       return { ...f, sources: next };
     });

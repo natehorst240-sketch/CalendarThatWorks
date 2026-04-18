@@ -134,8 +134,8 @@ const RULES = [
  * @param {{ events?: object[], businessHours?: object, blockedWindows?: object[] }} context
  * @returns {{ allowed: boolean, severity: 'none'|'soft'|'hard', violations: object[], suggestedChange: null }}
  */
-export function validateChange(change, context = {}) {
-  const violations = RULES.map(r => r(change, context)).filter(Boolean);
+export function validateChange(change, context: { events?: any[]; businessHours?: any; blockedWindows?: any[] } = {}) {
+  const violations = RULES.map(r => r(change, context as any)).filter(Boolean);
   const hasHard    = violations.some(v => v.severity === 'hard');
   const hasSoft    = violations.some(v => v.severity === 'soft');
   return {
