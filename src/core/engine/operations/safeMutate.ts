@@ -43,7 +43,7 @@ export function safeMutate(
       return { result, events: next.events, rolledBack: false };
     }
 
-    if (rollbackOnError) rollbackTransaction(tx, events);
+    if (rollbackOnError) rollbackTransaction(tx);
 
     return {
       result,
@@ -51,7 +51,7 @@ export function safeMutate(
       rolledBack: rollbackOnError,
     };
   } catch (cause) {
-    if (rollbackOnError) rollbackTransaction(tx, events);
+    if (rollbackOnError) rollbackTransaction(tx);
 
     opts.onError?.(
       toStructuredError({

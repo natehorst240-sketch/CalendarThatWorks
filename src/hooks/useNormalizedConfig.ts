@@ -4,9 +4,8 @@ import type { GroupConfig } from '../types/grouping.ts'
 /** All accepted forms for the groupBy prop. */
 export type GroupByInput =
   | string
-  | string[]
   | GroupConfig
-  | GroupConfig[]
+  | Array<string | GroupConfig>
   | null
   | undefined
 

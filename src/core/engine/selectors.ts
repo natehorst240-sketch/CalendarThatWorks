@@ -56,7 +56,7 @@ export function selectCategories(state: CalendarState): string[] {
 export function selectResources(state: CalendarState): string[] {
   const res = new Set<string>();
   for (const ev of state.events.values()) {
-    if (ev.resource) res.add(ev.resource);
+    if (ev.resourceId) res.add(ev.resourceId);
   }
   return Array.from(res).sort();
 }
@@ -90,7 +90,7 @@ export function selectFilteredEvents(state: CalendarState): EngineEvent[] {
   return selectAllEvents(state).filter(ev => {
     if (needle && !ev.title.toLowerCase().includes(needle)) return false;
     if (categories.size > 0 && (!ev.category || !categories.has(ev.category))) return false;
-    if (resources.size > 0 && (!ev.resource || !resources.has(ev.resource))) return false;
+    if (resources.size > 0 && (!ev.resourceId || !resources.has(ev.resourceId))) return false;
     return true;
   });
 }

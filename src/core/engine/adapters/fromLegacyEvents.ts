@@ -93,6 +93,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     color:         raw.color ?? null,
     rrule:         hasRrule ? raw.rrule! : null,
     exdates:       toExdates(raw.exdates),
+    constraints:   [],
     meta:          raw.meta ?? {},
   };
 }

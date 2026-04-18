@@ -15,10 +15,10 @@ function extractKey(event: NormalizedEvent, config: GroupConfig): string {
     const k = config.getKey(event)
     return k !== null && k !== undefined && k !== '' ? k : '(Ungrouped)'
   }
-  const direct = (event as Record<string, unknown>)[config.field]
+  const direct = (event as unknown as Record<string, unknown>)[config.field]
   if (direct !== null && direct !== undefined && direct !== '')
     return String(direct)
-  const meta = (event.meta as Record<string, unknown>)?.[config.field]
+  const meta = (event.meta as Record<string, unknown> | undefined)?.[config.field]
   if (meta !== null && meta !== undefined && meta !== '') return String(meta)
   return '(Ungrouped)'
 }

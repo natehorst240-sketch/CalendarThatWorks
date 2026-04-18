@@ -15,7 +15,7 @@ import {
   type ConflictRule,
 } from '../conflictEngine.js';
 
-const day = (d: number, h = 9) => new Date(2026, 3, d, h);
+const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
 
 const base: ConflictEvent = {
   id: 'proposed',

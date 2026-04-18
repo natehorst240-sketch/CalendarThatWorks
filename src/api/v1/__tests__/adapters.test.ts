@@ -350,7 +350,7 @@ describe('SupabaseAdapter.loadRange', () => {
     const a = new SupabaseAdapter({
       client: sb,
       table: 'events',
-      fromRow: row => ({ ...row as CalendarEventV1, title: 'mapped' }),
+      fromRow: row => ({ ...(row as unknown as CalendarEventV1), title: 'mapped' }),
     });
     const result = await a.loadRange(S, E);
     expect(result[0].title).toBe('mapped');

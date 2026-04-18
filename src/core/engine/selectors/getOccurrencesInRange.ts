@@ -46,7 +46,7 @@ export function getOccurrencesInRange(
   const eventList: EngineEvent[] =
     events instanceof Map
       ? Array.from(events.values())
-      : Array.from(events);
+      : Array.from(events as readonly EngineEvent[]);
 
   const filtered = opts.filter
     ? applyFilter(eventList, opts.filter)

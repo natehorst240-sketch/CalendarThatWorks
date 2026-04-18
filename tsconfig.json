@@ -19,11 +19,17 @@
   "include": [
     "src",
     "demo",
-    "examples",
     "vite.config.ts",
     "vite.demo.config.ts",
     "vite.examples.config.ts",
     "vitest.config.ts"
   ],
-  "exclude": ["node_modules", "dist", "dist-demo", "dist-examples"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-demo",
+    "dist-examples",
+    "examples"
+  ]
 }
+

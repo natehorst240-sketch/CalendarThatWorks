@@ -34,7 +34,7 @@ import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLega
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver } from './filters/filterSchema.js';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema.js';
 import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
@@ -109,7 +109,12 @@ export type WorksCalendarProps = {
   icalFeeds?: Array<Record<string, unknown>>;
   onImport?: (events: WorksCalendarEvent[]) => void;
   scheduleTemplates?: Array<Record<string, unknown>>;
-  scheduleTemplateAdapter?: Record<string, unknown>;
+  scheduleTemplateAdapter?: {
+    listScheduleTemplates?: () => Promise<unknown>;
+    createScheduleTemplate?: (template: unknown) => Promise<unknown>;
+    deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
+    [key: string]: unknown;
+  };
   scheduleInstantiationLimits?: ScheduleInstantiationLimits;
   onScheduleTemplateAnalytics?: (payload: Record<string, unknown>) => void;
   calendarId?: string;
@@ -125,7 +130,7 @@ export type WorksCalendarProps = {
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
   onEventGroupChange?: (event: WorksCalendarEvent, patch: Record<string, unknown>) => void;
-  onDateSelect?: (start: Date, end: Date) => void;
+  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
@@ -134,6 +139,9 @@ export type WorksCalendarProps = {
   employees?: Array<Record<string, unknown>>;
   onEmployeeAdd?: (...args: unknown[]) => void;
   onEmployeeDelete?: (...args: unknown[]) => void;
+  onEmployeeAction?: (...args: unknown[]) => void;
+  onAvailabilitySave?: (...args: unknown[]) => void;
+  onScheduleSave?: (...args: unknown[]) => void;
   blockedWindows?: Array<Record<string, unknown>>;
   theme?: string;
   colorRules?: Array<Record<string, unknown>>;
@@ -144,7 +152,7 @@ export type WorksCalendarProps = {
   renderFilterBar?: (...args: unknown[]) => ReactNode;
   renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
   emptyState?: ReactNode;
-  filterSchema?: Array<Record<string, unknown>>;
+  filterSchema?: FilterField[];
   showAddButton?: boolean;
   initialView?: CalendarView;
   weekStartDay?: 0 | 1;
@@ -202,7 +210,7 @@ async function exportVisibleEvents(events) {
 }
 
 /** Compute the visible [start, end] range for a given view + date. */
-function viewRange(view, date, weekStartDay = 0) {
+function viewRange(view, date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   switch (view) {
     case 'week':
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
@@ -554,7 +562,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const resolvedAssetRequestCategories = useMemo(() => {
     if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
     const cfg = categoriesConfig ?? ownerCfg.config?.categoriesConfig;
-    const defs = Array.isArray(cfg?.categories) ? cfg.categories : [];
+    const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{
+      id: string
+      label?: string
+      color?: string
+    }>;
     const byId = new Map(defs.map(d => [d.id, d]));
     return assetRequestCategories.map(id => {
       const def = byId.get(id);
@@ -1331,7 +1343,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         meta: ev.meta ?? {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
-      const op = { type: 'create', event: previewEvent };
+      const op = { type: 'create' as const, event: previewEvent };
       const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
       if (validation.violations.length > 0) {
         conflicts.push({
@@ -1499,7 +1511,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
+        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -1746,6 +1758,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 onNoteSave={onNoteSave}
                 onNoteDelete={onNoteDelete}
                 onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
+                anchor={null}
                 resolveResourceLabel={resolveResourceLabel}
               />
             )
@@ -1771,6 +1784,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             assets={effectiveAssets}
             categories={resolvedAssetRequestCategories}
             initialStart={cal.currentDate}
+            initialAssetId={undefined}
             onSubmit={(payload) => {
               handleEventSave(payload);
               setAssetRequestOpen(false);

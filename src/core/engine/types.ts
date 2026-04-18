@@ -7,21 +7,11 @@
 
 // ─── Event ────────────────────────────────────────────────────────────────────
 
-export interface EngineEvent {
-  /** Stable unique identifier (string or numeric string). */
-  readonly id: string;
-  readonly title: string;
-  readonly start: Date;
-  readonly end: Date;
-  /** When true, times are ignored; end is exclusive (iCal convention). */
-  readonly allDay?: boolean;
-  readonly category?: string;
-  /** Opaque resource key (room, person, equipment, …). */
-  readonly resource?: string;
-  readonly color?: string;
-  /** Any extra fields the host application attaches. */
-  readonly [key: string]: unknown;
-}
+// Canonical EngineEvent lives in ./schema/eventSchema. Re-exported here so
+// existing callers that import from engine/types.ts keep working while all
+// engine code agrees on a single event shape.
+export type { EngineEvent } from './schema/eventSchema.js';
+import type { EngineEvent } from './schema/eventSchema.js';
 
 // ─── Filter / View state ──────────────────────────────────────────────────────
 

@@ -3,9 +3,9 @@ import type { SortConfig } from '../types/grouping.ts'
 
 function extractValue(event: NormalizedEvent, config: SortConfig): unknown {
   if (config.getValue) return config.getValue(event)
-  const direct = (event as Record<string, unknown>)[config.field]
+  const direct = (event as unknown as Record<string, unknown>)[config.field]
   if (direct !== undefined && direct !== null) return direct
-  return (event.meta as Record<string, unknown>)?.[config.field] ?? null
+  return (event.meta as Record<string, unknown> | undefined)?.[config.field] ?? null
 }
 
 function compareValues(a: unknown, b: unknown, direction: 'asc' | 'desc'): number {
