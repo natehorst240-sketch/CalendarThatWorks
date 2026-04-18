@@ -381,31 +381,11 @@ function App() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
-
-      {/* ── Header ── */}
-      <header style={{
-        background: headerBg, borderBottom: `1px solid ${headerBorder}`,
-        padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12,
-        flexShrink: 0, flexWrap: 'wrap',
-      }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: isDark ? '#f1f5f9' : '#0f172a' }}>
-            WorksCalendar
-          </h1>
-          <p style={{ margin: 0, fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>
-            People on Schedule · Aircraft on Assets — Demo
-          </p>
-        </div>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <ThemePicker current={theme} onChange={setTheme} />
-        </div>
-      </header>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
 
       {/* ── Calendar ── */}
-      <div style={{ flex: 1, padding: 'clamp(8px, 3vw, 20px)', minHeight: 0 }}>
-        <div style={{ height: 'max(400px, calc(100vh - 148px))', maxWidth: 1400, margin: '0 auto' }}>
+      <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
+        <div style={{ height: '100vh', maxWidth: 1400, margin: '0 auto' }}>
           <WorksCalendar
             events={events}
             employees={employees}
@@ -431,26 +411,6 @@ function App() {
         </div>
       </div>
 
-      {/* ── Footer ── */}
-      <div style={{
-        background: headerBg, borderTop: `1px solid ${headerBorder}`,
-        padding: '6px 20px', display: 'flex', gap: 20, flexWrap: 'wrap',
-        fontSize: 11, color: isDark ? '#475569' : '#94a3b8', flexShrink: 0,
-        alignItems: 'center',
-      }}>
-        {eventLog.length > 0 && (
-          <>
-            <strong style={{ color: isDark ? '#94a3b8' : '#64748b' }}>Log:</strong>
-            {eventLog.slice(0, 4).map((m, i) => <span key={i}>{m}</span>)}
-            <span style={{ marginLeft: 'auto' }} />
-          </>
-        )}
-        <span>⚙ Owner pw: <code style={{ background: isDark ? '#1e293b' : '#f1f5f9', padding: '1px 5px', borderRadius: 3 }}>demo1234</code></span>
-        <span>Settings → Setup: change calendar title &amp; theme</span>
-        <span>Settings → Display: default view, hours, week start</span>
-        <span>Settings → Theme: live CSS token customizer</span>
-        <span>Striped bars = on-call shifts · Click event → notes</span>
-      </div>
 
       {needsRefresh && (
         <UpdateToast
