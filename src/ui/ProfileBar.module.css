@@ -87,11 +87,13 @@
   color: #fff;
 }
 
-.chip.dirty {
+/* Dashed border on the wrapper is the strongest visual cue that the
+   chip is out-of-sync with the live filters. */
+.chipWrapDirty {
   border-style: dashed;
 }
 
-/* When the pencil is not visible, the chip takes the full rounded shape. */
+/* When no pencil sibling exists, the chip alone takes the full pill shape. */
 .chipWrap:not(:hover):not(.chipWrapActive) .chip {
   padding-right: 10px;
   border-radius: 100px;
@@ -101,32 +103,41 @@
 
 .chipName { flex: 1; }
 
+.dirtyTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
 .dirtyDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
-  opacity: 0.7;
+  opacity: 0.85;
   flex-shrink: 0;
 }
 
-.viewTag {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.7;
-  background: rgba(0,0,0,0.12);
-  border-radius: 3px;
-  padding: 0 3px;
+.dirtyText {
+  font-size: 10px;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+.viewIcon {
   flex-shrink: 0;
+  opacity: 0.7;
 }
 
 /* Manage toggle (pencil icon — sibling of .chip inside .chipWrap).
-   Hidden by default; shown when the chip is hovered or active so users
-   can reliably tap it on mobile without nested-button issues. */
+   The component mounts this only when the chip is hovered, active, or
+   actively being managed, so no CSS visibility gate is needed. */
 .manageBtn {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0 8px 0 4px;
@@ -141,8 +152,6 @@
   font-family: inherit;
 }
 .manageBtn:hover { opacity: 1; }
-.chipWrap:hover .manageBtn,
-.chipWrapActive .manageBtn { display: inline-flex; }
 .chipWrapActive .manageBtn { color: #fff; }
 
 /* ─── Manage panel (popover below chip) ──────────────────────── */
@@ -245,6 +254,48 @@
 .manageLine.danger:hover {
   background: color-mix(in srgb, var(--wc-danger) 10%, transparent);
   color: var(--wc-danger);
+}
+
+/* Inline two-step delete confirm. Replaces the danger button row when
+   the user clicks Delete; commits on Yes, dismisses on Cancel. */
+.confirmRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  flex-wrap: wrap;
+}
+.confirmText {
+  font-size: 12px;
+  color: var(--wc-text);
+  flex: 1;
+  min-width: 0;
+}
+.confirmBtn {
+  padding: 4px 10px;
+  border-radius: var(--wc-radius-sm);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--wc-surface);
+  color: var(--wc-text-muted);
+  border: 1px solid var(--wc-border);
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.confirmBtn:hover {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+}
+.confirmYes {
+  background: var(--wc-danger);
+  color: #fff;
+  border-color: var(--wc-danger);
+}
+.confirmYes:hover {
+  background: color-mix(in srgb, var(--wc-danger) 85%, black);
+  color: #fff;
+  border-color: var(--wc-danger);
 }
 
 .renameRow {

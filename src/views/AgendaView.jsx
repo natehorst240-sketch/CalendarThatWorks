@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
-  format, isSameDay, isToday,
+  format, isSameDay, isToday, startOfDay,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { displayEndDay } from '../core/layout.js';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd.js';
 import GroupHeader from '../ui/GroupHeader.tsx';
@@ -31,10 +32,19 @@ export default function AgendaView({
   // keep the historical start-time ordering per day.
   const hasSort = Array.isArray(sort) ? sort.length > 0 : !!sort;
 
+  // Multi-day events should appear on every day they cover, not just their
+  // start day (#148). displayEndDay handles iCal's exclusive DTEND convention
+  // and the midnight-boundary edge case used by MonthView. Clamp the end so
+  // zero-duration all-day events (start === end) still render on their start day.
   const grouped = useMemo(() => {
     return days
       .map(day => {
-        const dayEvents = events.filter(e => isSameDay(e.start, day));
+        const dayMs = day.getTime();
+        const dayEvents = events.filter(e => {
+          const startMs = startOfDay(e.start).getTime();
+          const endMs   = Math.max(displayEndDay(e).getTime(), startMs);
+          return dayMs >= startMs && dayMs <= endMs;
+        });
         return {
           day,
           events: hasSort
@@ -113,6 +123,10 @@ export default function AgendaView({
   function renderEventItem(ev, opts = {}) {
     const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
     const color = resolveColor(ev, ctx?.colorRules);
+    const evStartDay = startOfDay(ev.start);
+    const rawEndDay  = displayEndDay(ev);
+    const evEndDay   = rawEndDay < evStartDay ? evStartDay : rawEndDay;
+    const isMultiDay = !isSameDay(evStartDay, evEndDay);
     const onClick = () => onEventClick?.(ev);
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
@@ -178,10 +192,16 @@ export default function AgendaView({
         <div className={styles.evBody}>
           <span className={styles.evTitle}>{ev.title}</span>
           <div className={styles.evMeta}>
-            {!ev.allDay && (
+            {!ev.allDay && !isMultiDay && (
               <span>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
             )}
-            {ev.allDay && <span>All day</span>}
+            {!ev.allDay && isMultiDay && (
+              <span>{format(ev.start, 'MMM d, h:mm a')} → {format(ev.end, 'MMM d, h:mm a')}</span>
+            )}
+            {ev.allDay && !isMultiDay && <span>All day</span>}
+            {ev.allDay && isMultiDay && (
+              <span>All day · {format(evStartDay, 'MMM d')} → {format(evEndDay, 'MMM d')}</span>
+            )}
             {ev.category && <span className={styles.cat}>{ev.category}</span>}
             {ev.resource && <span>{ev.resource}</span>}
             {crossGroup && sourceLabel && (

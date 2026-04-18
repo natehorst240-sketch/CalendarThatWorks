@@ -2,7 +2,10 @@
  * ProfileBar.jsx — Saved-view chips with add/rename/delete/resave.
  */
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X } from 'lucide-react';
+import {
+  Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X,
+  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
+} from 'lucide-react';
 import { buildFilterSummary } from '../filters/filterState.js';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
 import styles from './ProfileBar.module.css';
@@ -11,6 +14,15 @@ const PROFILE_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
+
+const VIEW_ICON_MAP = {
+  month:    { Icon: CalendarDays,  label: 'Month view' },
+  week:     { Icon: Columns3,      label: 'Week view' },
+  day:      { Icon: Calendar,      label: 'Day view' },
+  agenda:   { Icon: List,          label: 'Agenda view' },
+  schedule: { Icon: CalendarRange, label: 'Schedule view' },
+  assets:   { Icon: Boxes,         label: 'Assets view' },
+};
 
 export default function ProfileBar({
   views,
@@ -87,6 +99,8 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
 
   const [renaming, setRenaming] = useState(false);
   const [nameVal, setNameVal]   = useState(savedView.name);
+  const [isHovered, setIsHovered] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const chipRef = useRef(null);
 
   // Close manage panel on outside click
@@ -101,6 +115,9 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
     return () => document.removeEventListener('mousedown', handler);
   }, [isManaging, onManageToggle]);
 
+  // Reset confirm-delete when manage panel closes
+  useEffect(() => { if (!isManaging) setConfirmDelete(false); }, [isManaging]);
+
   const color = savedView.color ?? '#64748b';
 
   // Build a summary string for the tooltip using schema-driven formatting
@@ -110,12 +127,26 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
   const summary = summaryParts.length ? summaryParts.join(' \u00b7 ') : 'No filters applied';
 
   const chipClass = [styles.chip, isDirty && styles.dirty].filter(Boolean).join(' ');
+  const wrapClass = [
+    styles.chipWrap,
+    isActive && styles.chipWrapActive,
+    isDirty && styles.chipWrapDirty,
+  ].filter(Boolean).join(' ');
+
+  // Pencil is mounted only when its visual is meaningful — fixes the
+  // hidden-button querySelector / focus-order trap that previously kept
+  // the DOM button present even when invisible.
+  const showPencil = isHovered || isActive || isManaging;
+
+  const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
   return (
     <div
       ref={chipRef}
-      className={[styles.chipWrap, isActive && styles.chipWrapActive].filter(Boolean).join(' ')}
+      className={wrapClass}
       style={{ '--chip-color': color }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <button
         className={chipClass}
@@ -127,22 +158,33 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
           : <Bookmark size={12} className={styles.chipIcon} />
         }
         <span className={styles.chipName}>{savedView.name}</span>
-        {isDirty && <span className={styles.dirtyDot} title="Filters changed since saved" />}
-        {savedView.view && (
-          <span className={styles.viewTag} aria-hidden="true">{savedView.view.slice(0,3)}</span>
+        {isDirty && (
+          <span className={styles.dirtyTag} title="Filters changed since saved">
+            <span className={styles.dirtyDot} />
+            <span className={styles.dirtyText}>unsaved</span>
+          </span>
+        )}
+        {viewIcon && (
+          <viewIcon.Icon
+            size={11}
+            className={styles.viewIcon}
+            aria-hidden="true"
+          />
         )}
       </button>
 
-      {/* Manage toggle (pencil) — sibling of chip, not nested, to avoid invalid
-          button-in-button and the associated mobile tap-handling issues. */}
-      <button
-        type="button"
-        className={styles.manageBtn}
-        onClick={e => { e.stopPropagation(); onManageToggle(); }}
-        aria-label="Manage saved view"
-      >
-        <Pencil size={10} />
-      </button>
+      {/* Manage toggle (pencil) — only mounted when chip is hovered/active/managing
+          so screen readers and keyboard users don't traverse a hidden button. */}
+      {showPencil && (
+        <button
+          type="button"
+          className={styles.manageBtn}
+          onClick={e => { e.stopPropagation(); onManageToggle(); }}
+          aria-label="Manage saved view"
+        >
+          <Pencil size={10} />
+        </button>
+      )}
 
       {/* Manage panel */}
       {isManaging && (
@@ -196,10 +238,32 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
             <RefreshCw size={12} /> Update with current filters
           </button>
 
-          {/* Delete */}
-          <button className={[styles.manageLine, styles.danger].join(' ')} onClick={onDelete}>
-            <Trash2 size={12} /> Delete saved view
-          </button>
+          {/* Delete with two-step inline confirm */}
+          {confirmDelete ? (
+            <div className={styles.confirmRow} role="alertdialog" aria-label="Confirm delete">
+              <span className={styles.confirmText}>Delete saved view?</span>
+              <button
+                className={[styles.confirmBtn, styles.confirmYes].join(' ')}
+                onClick={onDelete}
+                autoFocus
+              >
+                Yes, delete
+              </button>
+              <button
+                className={styles.confirmBtn}
+                onClick={() => setConfirmDelete(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              className={[styles.manageLine, styles.danger].join(' ')}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 size={12} /> Delete saved view
+            </button>
+          )}
         </div>
       )}
     </div>

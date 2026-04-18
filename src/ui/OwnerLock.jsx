@@ -1,24 +1,24 @@
 import { useState } from 'react';
-import { Settings, Eye, EyeOff } from 'lucide-react';
+import { Settings } from 'lucide-react';
+import OwnerLoginModal from './OwnerLoginModal.jsx';
 import styles from './OwnerLock.module.css';
 
 export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthenticate, onOpen }) {
-  const [show, setShow] = useState(false);
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   function handleGearClick() {
     if (isOwner) {
       onOpen();
     } else {
-      setShow(s => !s);
+      setShowLogin(true);
     }
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  function handleAuthenticate(password) {
     onAuthenticate(password);
-    setPassword('');
+    // The modal stays mounted while the parent decides whether the password
+    // was valid. When isOwner flips true, the parent unmounts us; otherwise
+    // authError surfaces inside the modal.
   }
 
   return (
@@ -26,35 +26,19 @@ export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthent
       <button
         className={styles.gear}
         onClick={handleGearClick}
-        aria-label={isOwner ? 'Open settings' : 'Owner login'}
-        title={isOwner ? 'Settings' : 'Owner access'}
+        aria-label={isOwner ? 'Open settings' : 'Owner settings'}
+        title={isOwner ? 'Settings' : 'Owner settings'}
       >
         <Settings size={16} />
       </button>
 
-      {show && !isOwner && (
-        <div className={styles.prompt}>
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <label className={styles.label}>Owner password</label>
-            <div className={styles.inputRow}>
-              <input
-                type={showPw ? 'text' : 'password'}
-                className={styles.input}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Enter password…"
-                autoFocus
-              />
-              <button type="button" className={styles.togglePw} onClick={() => setShowPw(p => !p)} tabIndex={-1}>
-                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-            {authError && <span className={styles.error}>{authError}</span>}
-            <button type="submit" className={styles.submit} disabled={isAuthLoading}>
-              {isAuthLoading ? 'Checking…' : 'Unlock'}
-            </button>
-          </form>
-        </div>
+      {showLogin && !isOwner && (
+        <OwnerLoginModal
+          authError={authError}
+          isAuthLoading={isAuthLoading}
+          onAuthenticate={handleAuthenticate}
+          onClose={() => setShowLogin(false)}
+        />
       )}
     </div>
   );

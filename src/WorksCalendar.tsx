@@ -34,12 +34,14 @@ import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLega
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver } from './filters/filterSchema.js';
 import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
 import HoverCard              from './ui/HoverCard.jsx';
 import OwnerLock              from './ui/OwnerLock.jsx';
+import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay.jsx';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
@@ -309,8 +311,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   if (typeof window === 'undefined') return null;
 
   // ── View / date / filter state ───────────────────────────────────────────
-  const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
-  const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
@@ -330,6 +330,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.team?.members]);
+
+  // Resolve resource ids (e.g. "emp-sarah") to human-readable labels
+  // (e.g. "Sarah Chen") using merged employees + assets directory.
+  const effectiveAssets = assets ?? ownerCfg.config?.assets;
+  const resolveResourceLabel = useMemo(
+    () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
+    [configuredEmployees, effectiveAssets],
+  );
+
+  // When no custom schema is supplied, build the default schema with the
+  // live resolver so People-filter options render names instead of ids.
+  const schema = useMemo(
+    () => filterSchema
+      ?? buildDefaultFilterSchema({ employees: configuredEmployees, assets: effectiveAssets }),
+    [filterSchema, configuredEmployees, effectiveAssets],
+  );
+  const cal = useCalendar([], initialView ?? 'month', schema);
 
   // Wrap parent employee handlers so edits from ANY surface (timeline add-form
   // or TeamTab settings) flow both to the consumer's state AND to the owner
@@ -599,6 +616,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
+  const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
   const [inlineEditTarget, setInlineEditTarget] = useState(null);
   // Capture last click coords so InlineEventEditor can position near the pill
@@ -1387,6 +1405,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onSwipeRight: () => cal.navigate(-1),
   });
 
+  useKeyboardShortcuts({
+    setView: cal.setView,
+    navigate: cal.navigate,
+    goToToday: cal.goToToday,
+    openHelp: () => setHelpOpen(true),
+  });
+
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
@@ -1400,18 +1425,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [hasAddButton, onDateSelect]);
 
   // Schedule cell select → route to schedule-specific editor, not generic EventForm.
+  // When the dropped cell isn't a known employee (no resource match), fall back
+  // to the generic EventForm so the user still has a way to create an event.
   const handleScheduleDateSelect = useCallback((start, end, resourceId) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
-    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
-    if (!emp) return;
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate = end instanceof Date ? end : new Date(end);
 
-    setScheduleEditorState({
-      emp,
-      start: start instanceof Date ? start : new Date(start),
-      end: end instanceof Date ? end : new Date(end),
-    });
+    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
+    if (!emp) {
+      setFormEvent({ start: startDate, end: endDate, resource: resourceId });
+      return;
+    }
+
+    setScheduleEditorState({ emp, start: startDate, end: endDate });
   }, [configuredEmployees, hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
@@ -1646,7 +1675,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
-                  assets={assets ?? ownerCfg.config?.assets}
+                  assets={effectiveAssets}
+                  resolveResourceLabel={resolveResourceLabel}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}
                   collapsedGroups={activeAssetsCollapsed}
@@ -1675,6 +1705,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 onNoteSave={onNoteSave}
                 onNoteDelete={onNoteDelete}
                 onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
+                resolveResourceLabel={resolveResourceLabel}
               />
             )
         )}
@@ -1784,6 +1815,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             scheduleTemplateError={templateError}
           />
         )}
+
+        {/* ── Keyboard shortcuts cheat sheet ── */}
+        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />

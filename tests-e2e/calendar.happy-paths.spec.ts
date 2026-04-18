@@ -96,7 +96,7 @@ test.describe('WorksCalendar happy paths', () => {
     // Authenticate as owner (demo password is "demo1234").
     // On success, useOwnerConfig.authenticate() calls setConfigOpen(true) so
     // the Settings dialog opens automatically — no need to click the gear button.
-    await page.getByLabel('Owner login').click();
+    await page.getByLabel('Owner settings').click();
     await page.getByPlaceholder(/Enter password/i).fill('demo1234');
     await page.getByRole('button', { name: /Unlock/i }).click();
 

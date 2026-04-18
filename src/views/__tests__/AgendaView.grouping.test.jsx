@@ -324,4 +324,79 @@ describe('AgendaView grouping', () => {
     expect(titles[0].textContent).toBe('Early');
     expect(titles[1].textContent).toBe('Late');
   });
+
+  describe('multi-day rendering (#148)', () => {
+    it('renders a multi-day timed event on every covered day', () => {
+      const start = new Date(2026, 3, 7, 10, 0);  // April 7, 10:00 AM
+      const end   = new Date(2026, 3, 9, 16, 30); // April 9, 4:30 PM
+      const multiDay = [
+        { id: 'm1', title: 'Conference', start, end },
+      ];
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={multiDay}
+            onEventClick={vi.fn()}
+          />
+        </CalendarContext.Provider>,
+      );
+      // Should appear on April 7, 8, and 9 → three button instances.
+      expect(screen.getAllByText('Conference')).toHaveLength(3);
+    });
+
+    it('multi-day timed event meta string spans full start → end', () => {
+      const start = new Date(2026, 3, 7, 10, 0);
+      const end   = new Date(2026, 3, 9, 16, 30);
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={[{ id: 'm1', title: 'Conference', start, end }]}
+            onEventClick={vi.fn()}
+          />
+        </CalendarContext.Provider>,
+      );
+      const metas = screen.getAllByText(/Apr 7, 10:00 AM → Apr 9, 4:30 PM/);
+      expect(metas.length).toBeGreaterThan(0);
+    });
+
+    it('multi-day all-day event meta string shows day span', () => {
+      // iCal exclusive DTEND: a 3-day all-day spans Apr 7 → 9 with end=Apr 10 00:00.
+      const start = new Date(2026, 3, 7);
+      const end   = new Date(2026, 3, 10);
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={[{ id: 'm2', title: 'Vacation', start, end, allDay: true }]}
+            onEventClick={vi.fn()}
+          />
+        </CalendarContext.Provider>,
+      );
+      // Renders on each covered day (Apr 7, 8, 9) with the same all-day meta.
+      expect(screen.getAllByText('Vacation')).toHaveLength(3);
+      const metas = screen.getAllByText(/All day · Apr 7 → Apr 9/);
+      expect(metas.length).toBeGreaterThan(0);
+    });
+
+    it('single-day event still renders on only one day with the simple meta', () => {
+      const day = new Date(2026, 3, 5, 9, 0);
+      const oneDay = [
+        { id: 's1', title: 'Standup', start: day, end: new Date(2026, 3, 5, 9, 30) },
+      ];
+      render(
+        <CalendarContext.Provider value={null}>
+          <AgendaView
+            currentDate={currentDate}
+            events={oneDay}
+            onEventClick={vi.fn()}
+          />
+        </CalendarContext.Provider>,
+      );
+      expect(screen.getAllByText('Standup')).toHaveLength(1);
+      // Simple "h:mm a – h:mm a" form without arrow/date.
+      expect(screen.getByText(/9:00 AM – 9:30 AM/)).toBeInTheDocument();
+    });
+  });
 });

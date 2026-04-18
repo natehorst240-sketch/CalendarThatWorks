@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import {
   FIELD_TYPES,
   APPROVAL_STAGE_IDS,
@@ -33,6 +33,22 @@ const TABS = [
   { id: 'access',      label: 'Access' },
 ];
 
+// Tabs are presented in a vertical sidebar grouped into 4 accordion
+// sections. The grouping is purely an IA wrapper — tab ids are preserved so
+// deep-links (initialTab="assets") and tests targeting role="tab" still work.
+const SECTIONS = [
+  { id: 'appearance', label: 'Appearance', tabs: ['setup', 'theme', 'display', 'hoverCard'] },
+  { id: 'data',       label: 'Data',       tabs: ['eventFields', 'categories', 'assets', 'team', 'feeds'] },
+  { id: 'workflows',  label: 'Workflows',  tabs: ['templates', 'smartViews', 'approvals', 'conflicts', 'requestForm'] },
+  { id: 'access',     label: 'Access',     tabs: ['access'] },
+];
+
+function sectionContaining(tabId) {
+  return SECTIONS.find(s => s.tabs.includes(tabId))?.id ?? SECTIONS[0].id;
+}
+
+const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
+
 export default function ConfigPanel({
   config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
   savedViews, onUpdateView, onDeleteView,
@@ -50,6 +66,9 @@ export default function ConfigPanel({
   const [tab, setTab] = useState(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
   );
+  // Open the section containing the active tab; allow others to be expanded
+  // independently. Re-keys when `tab` changes so deep-links auto-expand.
+  const [openSections, setOpenSections] = useState(() => ({ [sectionContaining(tab)]: true }));
   const trapRef = useFocusTrap(onClose);
   const tabRefs = useRef({});
 
@@ -59,6 +78,12 @@ export default function ConfigPanel({
     }
   }, [initialTab]);
 
+  // Auto-expand the section that owns the active tab whenever it changes.
+  useEffect(() => {
+    const sid = sectionContaining(tab);
+    setOpenSections(prev => (prev[sid] ? prev : { ...prev, [sid]: true }));
+  }, [tab]);
+
   useEffect(() => {
     tabRefs.current[tab]?.scrollIntoView({
       block: 'nearest',
@@ -66,6 +91,12 @@ export default function ConfigPanel({
       behavior: 'smooth',
     });
   }, [tab]);
+
+  function toggleSection(sid) {
+    setOpenSections(prev => ({ ...prev, [sid]: !prev[sid] }));
+  }
+
+  const activeTabLabel = useMemo(() => TAB_BY_ID[tab]?.label ?? '', [tab]);
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -77,22 +108,58 @@ export default function ConfigPanel({
           </button>
         </div>
 
-        <div className={styles.tabBar} role="tablist" aria-label="Calendar settings sections">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              ref={(node) => {
-                if (node) tabRefs.current[t.id] = node;
-              }}
-              className={[styles.tab, tab === t.id && styles.activeTab].filter(Boolean).join(' ')}
-              onClick={() => setTab(t.id)}
-              role="tab"
-              aria-selected={tab === t.id}
-            >{t.label}</button>
-          ))}
-        </div>
+        <div className={styles.layout}>
+          <nav className={styles.sidebar} aria-label="Calendar settings sections">
+            {SECTIONS.map(section => {
+              const isOpen = !!openSections[section.id];
+              const headerId = `cfg-section-${section.id}-header`;
+              const panelId  = `cfg-section-${section.id}-panel`;
+              return (
+                <div key={section.id} className={styles.sectionGroup}>
+                  <button
+                    type="button"
+                    id={headerId}
+                    className={styles.sectionHeader}
+                    onClick={() => toggleSection(section.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                  >
+                    <ChevronDown
+                      size={14}
+                      className={[styles.chevron, isOpen && styles.chevronOpen].filter(Boolean).join(' ')}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.sectionLabel}>{section.label}</span>
+                  </button>
+                  {isOpen && (
+                    <div
+                      id={panelId}
+                      role="tablist"
+                      aria-labelledby={headerId}
+                      className={styles.sectionTabs}
+                    >
+                      {section.tabs.map(tabId => {
+                        const t = TAB_BY_ID[tabId];
+                        if (!t) return null;
+                        return (
+                          <button
+                            key={t.id}
+                            ref={(node) => { if (node) tabRefs.current[t.id] = node; }}
+                            className={[styles.tab, tab === t.id && styles.activeTab].filter(Boolean).join(' ')}
+                            onClick={() => setTab(t.id)}
+                            role="tab"
+                            aria-selected={tab === t.id}
+                          >{t.label}</button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
 
-        <div className={styles.body}>
+          <div className={styles.body} aria-label={activeTabLabel}>
           {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
@@ -142,6 +209,7 @@ export default function ConfigPanel({
           {tab === 'conflicts'   && <ConflictsTab   config={config} onUpdate={onUpdate} />}
           {tab === 'requestForm' && <RequestFormTab config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 {
   "name": "works-calendar",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
