@@ -369,7 +369,7 @@
   border-radius: 5px;
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 65%, #000);
   cursor: pointer;
   text-align: left;
   overflow: hidden;
@@ -568,7 +568,7 @@
   font-weight: 600;
   overflow: hidden;
   white-space: nowrap;
-  border: none;
+  border: 1px solid color-mix(in srgb, currentColor 30%, #000);
   text-align: left;
   z-index: 4;
   box-sizing: border-box;
