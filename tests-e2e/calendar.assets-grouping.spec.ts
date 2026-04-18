@@ -70,8 +70,8 @@ test.describe('WorksCalendar Assets view', () => {
     await expect(page.getByTestId('works-calendar')).toBeVisible();
 
     // ProfileBar chip for our seeded view should be visible. The chip's
-    // accessible name is just the view.name — the 3-letter viewTag span is
-    // marked aria-hidden since it's a visual affordance, not content.
+    // accessible name is just the view.name — the view-type icon next to
+    // it carries an aria-label but isn't part of the chip's button name.
     const chip = page.getByRole('button', { name: 'Assets Day Zoom' });
     await expect(chip).toBeVisible();
     await chip.click();
