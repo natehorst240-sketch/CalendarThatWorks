@@ -56,6 +56,8 @@ Example catalogs:
 - [Schedule workflow guide](./docs/ScheduleWorkflow.md)
 - [Filtering system](./docs/Filtering.md)
 - [Data adapter guide](./docs/DataAdapter.md)
+- [Google Calendar setup](./docs/GoogleCalendarSetup.md)
+- [Microsoft 365 setup](./docs/Microsoft365Setup.md)
 - [Contributing](./docs/Contributing.md)
 
 ## Theming

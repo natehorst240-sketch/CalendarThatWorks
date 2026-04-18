@@ -10,6 +10,11 @@ This index is the canonical docs entrypoint for the package.
 - [Setup wizard](./SetupWizard.md)
 - [Data adapter](./DataAdapter.md)
 
+## Provider setup guides
+
+- [Google Calendar setup](./GoogleCalendarSetup.md)
+- [Microsoft 365 setup](./Microsoft365Setup.md)
+
 ## Project and contributor docs
 
 - [Contributing](./Contributing.md)

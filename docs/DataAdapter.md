@@ -30,7 +30,11 @@ const adapter = createLocalStorageDataAdapter({ key: 'my-calendar:events' });
 
 ## Microsoft 365 adapter
 
-See `examples/microsoft-365/` for an adapter implementation that demonstrates Graph API submission patterns.
+See `examples/microsoft-365/` for an adapter implementation that demonstrates Graph API submission patterns. For the full OAuth + MSAL walkthrough, see the [Microsoft 365 setup guide](./Microsoft365Setup.md).
+
+## Google Calendar adapter
+
+See the [Google Calendar setup guide](./GoogleCalendarSetup.md) for the OAuth flow, scope configuration, and a minimal adapter that posts to the Calendar v3 API.
 
 ## Recommended production additions
 
