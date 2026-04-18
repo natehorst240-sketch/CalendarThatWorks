@@ -3,7 +3,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import {
-  Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X,
+  Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X, Settings2,
   CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
 } from 'lucide-react';
 import { buildFilterSummary } from '../filters/filterState.js';
@@ -34,6 +34,7 @@ export default function ProfileBar({
   onResave,
   onUpdate,
   onDelete,
+  onEditConditions,
 }) {
   const [saveOpen,    setSaveOpen]    = useState(false);
   const [manageId,    setManageId]    = useState(null); // which view is being managed
@@ -69,6 +70,7 @@ export default function ProfileBar({
             onDelete={() => { onDelete(savedView.id); setManageId(null); }}
             onRename={(name) => { onUpdate(savedView.id, { name }); setManageId(null); }}
             onColorChange={(color) => onUpdate(savedView.id, { color })}
+            onEditConditions={onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
           />
         ))}
 
@@ -95,7 +97,7 @@ export default function ProfileBar({
 
 /* ─── View Chip ─────────────────────────────────────────────── */
 function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, onManageToggle,
-  onResave, onDelete, onRename, onColorChange }) {
+  onResave, onDelete, onRename, onColorChange, onEditConditions }) {
 
   const [renaming, setRenaming] = useState(false);
   const [nameVal, setNameVal]   = useState(savedView.name);
@@ -232,6 +234,13 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
               />
             ))}
           </div>
+
+          {/* Edit conditions in Settings */}
+          {onEditConditions && (
+            <button className={styles.manageLine} onClick={onEditConditions}>
+              <Settings2 size={12} /> Edit conditions
+            </button>
+          )}
 
           {/* Resave current filters */}
           <button className={styles.manageLine} onClick={onResave}>

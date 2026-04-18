@@ -14,6 +14,7 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   const [isOwner,       setIsOwner]       = useState(devMode);
   const [configOpen,    setConfigOpen]    = useState(false);
   const [configInitialTab, setConfigInitialTab] = useState(null);
+  const [smartViewEditId, setSmartViewEditId] = useState(null);
   const [authError,     setAuthError]     = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const pendingNotifyRef = useRef(false);
@@ -74,8 +75,9 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   // Deep-link helper: open ConfigPanel focused on a specific tab id. Used by
   // view toolbars (e.g. AssetsView's "Edit assets") so owners can jump
   // straight to the relevant registry without hunting through tabs.
-  const openConfigToTab = useCallback((tabId) => {
+  const openConfigToTab = useCallback((tabId, opts = {}) => {
     setConfigInitialTab(tabId ?? null);
+    setSmartViewEditId(opts.smartViewEditId ?? null);
     setConfigOpen(true);
   }, []);
 
@@ -84,6 +86,7 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
     isOwner,
     configOpen, setConfigOpen,
     configInitialTab,
+    smartViewEditId,
     authError,
     isAuthLoading,
     authenticate,

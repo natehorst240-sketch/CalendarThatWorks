@@ -62,6 +62,8 @@ export default function ConfigPanel({
   // the prop changes so consecutive deep-links (e.g. two clicks of "Edit
   // assets" with a different target each time) land on the right tab.
   initialTab,
+  // When set, SmartViewsTab opens immediately in edit mode for this view id.
+  initialSmartViewEditId,
 }) {
   const [tab, setTab] = useState(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
@@ -195,6 +197,7 @@ export default function ConfigPanel({
               savedViews={savedViews ?? []}
               onUpdateView={onUpdateView}
               onDeleteView={onDeleteView}
+              initialEditingId={initialSmartViewEditId}
             />
           )}
           {tab === 'team'        && (
@@ -270,8 +273,8 @@ function SetupTab({ config, onUpdate }) {
   );
 }
 
-export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView }) {
-  const [editingId,   setEditingId]   = useState(null);
+export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView, initialEditingId }) {
+  const [editingId,   setEditingId]   = useState(initialEditingId ?? null);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
 
   const editingView = editingId ? savedViews.find(v => v.id === editingId) : null;

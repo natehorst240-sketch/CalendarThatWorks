@@ -1676,6 +1676,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
+              onEditConditions={ownerCfg.isOwner ? (id) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
             />
           )
         }
@@ -1888,6 +1889,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             schema={schema}
             items={expandedEvents}
             initialTab={ownerCfg.configInitialTab}
+            initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
