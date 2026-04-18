@@ -98,11 +98,12 @@ test.describe('WorksCalendar happy paths', () => {
     await page.getByPlaceholder(/Enter password/i).fill('demo1234');
     await page.getByRole('button', { name: /Unlock/i }).click();
 
-    // Wait for authentication to complete and the login form to close
-    await expect(page.getByRole('button', { name: /Unlock/i })).not.toBeVisible();
+    // Wait for authentication to complete by checking the gear button's aria-label has changed
+    const gearButton = page.getByRole('button', { name: 'Open settings' });
+    await expect(gearButton).toBeVisible();
 
     // Now open the Settings panel
-    await page.getByLabel('Open settings').click();
+    await gearButton.click();
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
 
     // The Setup tab should be active by default, click the Ocean theme
