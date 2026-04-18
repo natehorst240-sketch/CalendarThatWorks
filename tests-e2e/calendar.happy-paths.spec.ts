@@ -92,10 +92,18 @@ test.describe('WorksCalendar happy paths', () => {
     await expect(page.getByRole('button', { name: /Happy Path Recurring Event/i }).first()).toBeVisible();
   });
 
-  test('can switch theme from demo theme picker', async ({ page }) => {
-    await page.getByTitle('Change theme').click();
+  test('can switch theme via Settings > Setup', async ({ page }) => {
+    // Open the Settings panel
+    await page.getByLabel('Open settings').click();
+    await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
+
+    // The Setup tab should be active by default, click the Ocean theme
     await page.getByRole('button', { name: /Ocean/i }).click();
 
+    // Close the settings panel
+    await page.getByLabel('Close settings').click();
+
+    // Verify the theme was applied
     await expect(page.getByTestId('works-calendar')).toHaveAttribute('data-wc-theme', 'ocean');
   });
 
