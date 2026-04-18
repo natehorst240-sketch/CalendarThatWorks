@@ -103,6 +103,20 @@ export const DEFAULT_CONFIG = {
   // Shape: { id: string, label: string, group?: string, meta?: object }
   assets: [],
 
+  // Owner-configurable conflict rules (ticket #134-13). Runs via
+  // src/core/conflictEngine.ts before an event write. Rules are data, not
+  // code — owners add / tune them from ConfigPanel → Conflicts without
+  // touching host-app JS. Host callbacks remain the escape hatch.
+  //
+  // Shape per rule: { id, type, severity?, ...params }. See conflictEngine
+  // for the `ConflictRule` union; supported types are 'resource-overlap',
+  // 'category-mutex', and 'min-rest'. Default config ships no rules so the
+  // engine is a no-op until the owner enables + configures one.
+  conflicts: {
+    enabled: false,
+    rules: [],
+  },
+
   // Owner-configurable approval workflow (ticket #134-14). The runtime
   // machinery (AssetsView pill prefixes, AuditDrawer menus, inline approve
   // actions added later in #134-15) reads this block. `enabled: false`

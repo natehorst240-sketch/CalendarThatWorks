@@ -5,6 +5,7 @@ import {
   APPROVAL_STAGE_IDS,
   APPROVAL_ACTIONS,
 } from '../core/configSchema.js';
+import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import { serializeFilters } from '../hooks/useSavedViews.js';
@@ -27,6 +28,7 @@ const TABS = [
   { id: 'smartViews',  label: 'Smart Views' },
   { id: 'team',        label: 'Employees' },
   { id: 'approvals',   label: 'Approvals' },
+  { id: 'conflicts',   label: 'Conflicts' },
   { id: 'access',      label: 'Access' },
 ];
 
@@ -136,6 +138,7 @@ export default function ConfigPanel({
             />
           )}
           {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'conflicts'   && <ConflictsTab   config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
@@ -1219,6 +1222,145 @@ export function ApprovalsTab({ config, onUpdate }) {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ----- Conflicts tab ----- */
+/**
+ * Owner-editable conflict rule registry. Writes to `config.conflicts.rules`;
+ * src/core/conflictEngine.ts consumes the rules to evaluate a proposed
+ * event before it's written, returning Violation[] that ConflictModal
+ * surfaces to the user. Rules are pure data so the whole workflow can be
+ * re-tuned without a host-app redeploy.
+ *
+ * Supported types (see conflictEngine.ts for the full union):
+ *   resource-overlap — same resource in an overlapping window → violation.
+ *   category-mutex   — listed categories cannot coexist on one resource.
+ *   min-rest         — minimum gap (in minutes) between same-resource events.
+ */
+export function ConflictsTab({ config, onUpdate }) {
+  const conflicts = config.conflicts ?? {};
+  const enabled   = !!conflicts.enabled;
+  const rules     = Array.isArray(conflicts.rules) ? conflicts.rules : [];
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    conflicts: { ...(c.conflicts ?? {}), ...next },
+  }));
+
+  const writeRules = (next) => patch({ rules: next });
+
+  const addRule = () => {
+    const n = rules.length + 1;
+    writeRules([
+      ...rules,
+      { id: `rule-${n}`, type: 'resource-overlap', severity: 'hard' },
+    ]);
+  };
+
+  const updateRule = (idx, delta) => {
+    writeRules(rules.map((r, i) => (i === idx ? { ...r, ...delta } : r)));
+  };
+
+  const removeRule = (idx) => writeRules(rules.filter((_, i) => i !== idx));
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Conflict rules run before an event write. The engine returns
+        violations; the ConflictModal surfaces them. While disabled, no
+        rule runs and writes proceed silently.
+      </p>
+
+      <label className={styles.toggle}>
+        <span>Enable conflict checks</span>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => patch({ enabled: e.target.checked })}
+          aria-label="Enable conflict checks"
+        />
+        <span className={styles.toggleTrack} />
+      </label>
+
+      {rules.map((rule, i) => (
+        <div key={rule.id + ':' + i} className={styles.fieldRow} data-rule-id={rule.id}>
+          <input
+            className={styles.input}
+            value={rule.id}
+            onChange={e => updateRule(i, { id: e.target.value.trim() || rule.id })}
+            placeholder="id"
+            aria-label={`Id for rule ${rule.id}`}
+          />
+          <select
+            className={styles.select}
+            value={rule.type}
+            onChange={e => updateRule(i, { type: e.target.value })}
+            aria-label={`Type for rule ${rule.id}`}
+          >
+            {CONFLICT_RULE_TYPES.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            className={styles.select}
+            value={rule.severity ?? 'hard'}
+            onChange={e => updateRule(i, { severity: e.target.value })}
+            aria-label={`Severity for rule ${rule.id}`}
+          >
+            <option value="hard">hard</option>
+            <option value="soft">soft</option>
+          </select>
+
+          {rule.type === 'category-mutex' && (
+            <input
+              className={styles.input}
+              value={Array.isArray(rule.categories) ? rule.categories.join(', ') : ''}
+              onChange={e => updateRule(i, {
+                categories: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+              })}
+              placeholder="categories (comma-separated)"
+              aria-label={`Categories for rule ${rule.id}`}
+            />
+          )}
+
+          {rule.type === 'min-rest' && (
+            <input
+              type="number"
+              min={0}
+              className={styles.input}
+              style={{ width: 88 }}
+              value={rule.minutes ?? 0}
+              onChange={e => updateRule(i, { minutes: Math.max(0, Number(e.target.value) || 0) })}
+              placeholder="minutes"
+              aria-label={`Minutes for rule ${rule.id}`}
+            />
+          )}
+
+          {rule.type === 'resource-overlap' && (
+            <input
+              className={styles.input}
+              value={Array.isArray(rule.ignoreCategories) ? rule.ignoreCategories.join(', ') : ''}
+              onChange={e => updateRule(i, {
+                ignoreCategories: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+              })}
+              placeholder="ignore categories"
+              aria-label={`Ignore categories for rule ${rule.id}`}
+            />
+          )}
+
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeRule(i)}
+            aria-label={`Remove rule ${rule.id}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addRule}>
+        <Plus size={13} /> Add rule
+      </button>
     </div>
   );
 }
