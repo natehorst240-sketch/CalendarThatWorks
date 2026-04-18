@@ -22,11 +22,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
+    html, body, #root { height: 100%; }
     body {
       margin: 0;
       font-family: 'Inter', system-ui, sans-serif;
       background: #f1f5f9;
       color: #0f172a;
+    }
+    /* Let the calendar sit flush with the viewport edges in the demo. */
+    #root > div > [data-testid="works-calendar"] {
+      border: none;
+      border-radius: 0;
     }
   </style>
 </head>
