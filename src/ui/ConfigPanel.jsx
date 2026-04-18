@@ -976,7 +976,7 @@ export function AssetsTab({ config, onUpdate }) {
     const n = assets.length + 1;
     writeAssets([
       ...assets,
-      { id: `asset-${n}`, label: `Asset ${n}`, group: '', meta: {} },
+      { _key: `${Date.now()}-${n}`, id: `asset-${n}`, label: `Asset ${n}`, group: '', meta: {} },
     ]);
   };
 
@@ -1010,52 +1010,64 @@ export function AssetsTab({ config, onUpdate }) {
       </p>
 
       {assets.map((asset, i) => (
-        <div key={asset.id + ':' + i} className={styles.fieldRow} data-asset-id={asset.id}>
-          <input
-            className={styles.input}
-            value={asset.label ?? ''}
-            onChange={e => updateAsset(i, { label: e.target.value })}
-            placeholder="Label"
-            aria-label={`Label for ${asset.id}`}
-          />
-          <input
-            className={styles.input}
-            value={asset.id}
-            onChange={e => updateAsset(i, { id: e.target.value.trim() || asset.id })}
-            placeholder="id"
-            aria-label={`Id for ${asset.label || asset.id}`}
-          />
-          <input
-            className={styles.input}
-            value={asset.group ?? ''}
-            onChange={e => updateAsset(i, { group: e.target.value })}
-            placeholder="Group"
-            aria-label={`Group for ${asset.label || asset.id}`}
-          />
-          <input
-            className={styles.input}
-            value={asset.meta?.sublabel ?? ''}
-            onChange={e => updateAssetMeta(i, { sublabel: e.target.value })}
-            placeholder="Sublabel"
-            aria-label={`Sublabel for ${asset.label || asset.id}`}
-          />
-          <button
-            className={styles.removeBtn}
-            onClick={() => moveAsset(i, -1)}
-            disabled={i === 0}
-            aria-label={`Move ${asset.label || asset.id} up`}
-          ><ArrowUp size={13} /></button>
-          <button
-            className={styles.removeBtn}
-            onClick={() => moveAsset(i, 1)}
-            disabled={i === assets.length - 1}
-            aria-label={`Move ${asset.label || asset.id} down`}
-          ><ArrowDown size={13} /></button>
-          <button
-            className={styles.removeBtn}
-            onClick={() => removeAsset(i)}
-            aria-label={`Remove ${asset.label || asset.id}`}
-          ><Trash2 size={13} /></button>
+        <div key={asset._key ?? i} className={styles.assetRow} data-asset-id={asset.id}>
+          <div className={styles.assetFields}>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Label</span>
+              <input
+                className={styles.input}
+                value={asset.label ?? ''}
+                onChange={e => updateAsset(i, { label: e.target.value })}
+                aria-label={`Label for ${asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>ID</span>
+              <input
+                className={styles.input}
+                value={asset.id}
+                onChange={e => updateAsset(i, { id: e.target.value.trim() || asset.id })}
+                aria-label={`Id for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Group</span>
+              <input
+                className={styles.input}
+                value={asset.group ?? ''}
+                onChange={e => updateAsset(i, { group: e.target.value })}
+                aria-label={`Group for ${asset.label || asset.id}`}
+              />
+            </div>
+            <div className={styles.assetField}>
+              <span className={styles.assetFieldLabel}>Sublabel</span>
+              <input
+                className={styles.input}
+                value={asset.meta?.sublabel ?? ''}
+                onChange={e => updateAssetMeta(i, { sublabel: e.target.value })}
+                aria-label={`Sublabel for ${asset.label || asset.id}`}
+              />
+            </div>
+          </div>
+          <div className={styles.assetActions}>
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveAsset(i, -1)}
+              disabled={i === 0}
+              aria-label={`Move ${asset.label || asset.id} up`}
+            ><ArrowUp size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveAsset(i, 1)}
+              disabled={i === assets.length - 1}
+              aria-label={`Move ${asset.label || asset.id} down`}
+            ><ArrowDown size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => removeAsset(i)}
+              aria-label={`Remove ${asset.label || asset.id}`}
+            ><Trash2 size={13} /></button>
+          </div>
         </div>
       ))}
 
