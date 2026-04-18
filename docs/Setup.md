@@ -15,6 +15,7 @@ Work through it top to bottom. Every step is optional after Step 1 — pick only
 5. [Add your team (optional)](#5-add-your-team-optional)
 6. [Turn on team scheduling (optional)](#6-turn-on-team-scheduling-optional)
 7. [Track things, not just people (optional)](#7-track-things-not-just-people-optional)
+7.5. [Propose → review → approve / deny (optional)](#75-turn-on-propose--review--approve--deny-for-assets-optional)
 8. [Pick a theme](#8-pick-a-theme)
 9. [Let outsiders book time (optional)](#9-let-outsiders-book-time-optional)
 10. [Turn on the setup wizard (optional)](#10-turn-on-the-setup-wizard-optional)
@@ -114,15 +115,19 @@ Your API decides the database. Postgres, MySQL, Mongo, Firebase — anything tha
 3. Install the client: `npm install @supabase/supabase-js`.
 4. Use the Supabase adapter — see `src/api/v1/adapters/SupabaseAdapter.ts` for the wiring pattern.
 
-### 3d. Google Calendar
+### 3d. Sync with your company's email / calendar provider
 
-Full walkthrough: **[Google Calendar setup](./GoogleCalendarSetup.md)**. ~20 minutes, mostly clicking around Google Cloud Console once.
+Your work calendar almost certainly lives inside your company email account. Pick the one that matches your work email address:
 
-### 3e. Microsoft 365 / Outlook
+| Your work email ends in… | Your provider is | Follow |
+| --- | --- | --- |
+| `@gmail.com` or a Google Workspace domain | Google Workspace | [Google Calendar setup](./GoogleCalendarSetup.md) |
+| `@outlook.com`, `@hotmail.com`, or any Microsoft 365 domain | Microsoft 365 / Outlook | [Microsoft 365 setup](./Microsoft365Setup.md) |
+| Something else (Zoho, FastMail, Proton…) | Use their iCal feed | [Section 3e](#3e-ical--ics-feed-read-only) |
 
-Full walkthrough: **[Microsoft 365 setup](./Microsoft365Setup.md)**. ~20 minutes, mostly registering an app in Entra (Azure AD).
+Each provider guide is ~20 minutes the first time: register an app, pick a scope, paste two env vars. Once connected, events you create in WorksCalendar appear in Gmail / Outlook / every synced phone automatically, and vice-versa.
 
-### 3f. iCal / .ics feed (read-only)
+### 3e. iCal / .ics feed (read-only)
 
 Perfect for pulling in a school calendar, sports schedule, or public holidays.
 
@@ -131,7 +136,7 @@ import { ICSAdapter } from 'works-calendar/api/v1/adapters/ICSAdapter';
 const adapter = new ICSAdapter({ url: 'https://example.com/holidays.ics' });
 ```
 
-### 3g. Excel import/export
+### 3f. Excel import/export
 
 Install the optional dep:
 
@@ -202,6 +207,141 @@ const assets = [
 ```
 
 Assets get their own row in timeline and assets views, with horizontal virtualization so dozens of rows stay snappy.
+
+## 7.5. Turn on propose → review → approve / deny for assets (optional)
+
+Use this when someone has to **sign off** before a booking is real: the mechanic asking for Truck 2, the nurse requesting the meeting room, the intern reserving the loaner laptop.
+
+### The stages
+
+Every request moves through this state machine:
+
+```
+requested  ─approve─▶  approved  ─finalize─▶  finalized
+    │                     │                        │
+    │                     ├─revoke─▶  (back to requested)
+    ├─deny─▶  denied                              ─revoke─▶  (back to approved)
+    │
+    └─(if tier 2 needed)─▶  pending_higher  ─approve/deny─▶ …
+```
+
+Plain English:
+
+- **requested** — someone just submitted it. Shows a `Req` pill on the asset row.
+- **approved** — a supervisor said yes. Shows the event with no prefix.
+- **finalized** — locked in, the schedule is official. Shows a `Final` pill.
+- **pending_higher** — tier-1 approved but it needs a director too.
+- **denied** — rejected. Shows a `Denied` pill.
+
+### 1. Turn on the feature
+
+In your WorksCalendar, pass a list of categories that should go through approval, and turn on the approvals block in config:
+
+```jsx
+<WorksCalendar
+  assets={assets}
+  assetRequestCategories={['vehicle', 'room', 'equipment']}
+  initialView="assets"
+  calendarId="team-alpha"
+  ownerPassword={import.meta.env.VITE_OWNER_PASSWORD}
+/>
+```
+
+Then as the owner, open the config panel → **Approvals** tab and flip `enabled` on. (Same tab lets you edit everything below without writing code.)
+
+### 2. Decide who approves what
+
+The owner config has a `tiers` array. The defaults are two tiers:
+
+```js
+approvals: {
+  enabled: true,
+  tiers: [
+    { id: 'tier-1', label: 'Supervisor', requires: 'any', roles: ['supervisor'] },
+    { id: 'tier-2', label: 'Director',   requires: 'all', roles: ['director'] },
+  ],
+}
+```
+
+- `requires: 'any'` — one person on that tier is enough.
+- `requires: 'all'` — every listed role must approve before it moves on.
+- One-tier setup? Delete tier-2. Three-tier? Add a tier-3.
+
+### 3. Decide what buttons appear at each stage
+
+Each stage has an `allow` list — those are the buttons approvers see:
+
+```js
+rules: {
+  requested:      { allow: ['approve', 'deny'],       prefix: 'Req' },
+  pending_higher: { allow: ['approve', 'deny'],       prefix: 'Pend' },
+  approved:       { allow: ['finalize', 'revoke'],    prefix: '' },
+  finalized:      { allow: ['revoke'],                prefix: 'Final' },
+  denied:         { allow: ['revoke'],                prefix: 'Denied' },
+}
+```
+
+Remove an action to hide the button. Change a `prefix` to change what shows on the pill.
+
+### 4. Rename the buttons (optional)
+
+Not every team says "Approve." Use the labels map:
+
+```js
+labels: {
+  approve:  'Sign off',
+  deny:     'Reject',
+  finalize: 'Lock in',
+  revoke:   'Undo',
+}
+```
+
+### 5. What your users see
+
+**The requester (proposer):** clicks **Request Asset** on the assets tab, fills in the form, submits. Their request shows up with a `Req` pill.
+
+**The reviewer (approver):** clicks the caret next to any pill. A popover appears with exactly the buttons you allowed for that stage. One click moves the request forward or back.
+
+**The audit trail:** every stage change is stamped with who did it and when. Open the Audit drawer on any event to see the full history — who requested, who approved, when it was finalized.
+
+### 6. How to persist stage changes
+
+The calendar never mutates approval stage on its own. When a button is clicked, WorksCalendar fires `onApprovalAction(eventId, action)`. Your handler:
+
+1. Writes the new `meta.approvalStage = { stage, updatedAt, actorId }` on the event.
+2. Appends a history entry.
+3. Saves via the same path as a normal edit (`onEventSave` or your adapter).
+
+Here's a minimal handler:
+
+```js
+async function handleApprovalAction(eventId, action) {
+  const event = await loadEvent(eventId);
+  const nextStage = advanceStage(event.meta.approvalStage?.stage, action);
+  const updated = {
+    ...event,
+    meta: {
+      ...event.meta,
+      approvalStage: { stage: nextStage, updatedAt: new Date().toISOString(), actorId: me.id },
+      approvalHistory: [
+        ...(event.meta.approvalHistory ?? []),
+        { action, stage: nextStage, actorId: me.id, at: new Date().toISOString() },
+      ],
+    },
+  };
+  await saveEvent(updated);
+}
+```
+
+### Common patterns
+
+| You want… | Do this |
+| --- | --- |
+| A one-step approval (no director tier) | Keep only `tier-1`; remove `pending_higher` from `allow` lists |
+| Anyone on the team can approve | Leave `roles: []` — any authenticated user counts |
+| Require two supervisors | `tier-1` with `requires: 'all'` and two roles listed |
+| Hide denied items from the main view | Saved view with filter `approvalStage != 'denied'` |
+| Only the owner can finalize | Remove `finalize` from `approved.allow` and handle it through a custom owner action |
 
 ## 8. Pick a theme
 
