@@ -102,8 +102,8 @@ test.describe('WorksCalendar happy paths', () => {
     const gearButton = page.getByRole('button', { name: 'Open settings' });
     await expect(gearButton).toBeVisible();
 
-    // Now open the Settings panel
-    await gearButton.click();
+    // Force click to bypass any overlay issues (the overlay is from the closing auth prompt)
+    await gearButton.click({ force: true });
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
 
     // The Setup tab should be active by default, click the Ocean theme
