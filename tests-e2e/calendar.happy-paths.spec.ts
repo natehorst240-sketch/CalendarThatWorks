@@ -92,10 +92,27 @@ test.describe('WorksCalendar happy paths', () => {
     await expect(page.getByRole('button', { name: /Happy Path Recurring Event/i }).first()).toBeVisible();
   });
 
-  test('can switch theme from demo theme picker', async ({ page }) => {
-    await page.getByTitle('Change theme').click();
+  test('can switch theme via Settings > Setup', async ({ page }) => {
+    // First authenticate as owner (demo password is "demo1234")
+    await page.getByLabel('Owner login').click();
+    await page.getByPlaceholder(/Enter password/i).fill('demo1234');
+    await page.getByRole('button', { name: /Unlock/i }).click();
+
+    // Wait for authentication to complete by checking the gear button's aria-label has changed
+    const gearButton = page.getByRole('button', { name: 'Open settings' });
+    await expect(gearButton).toBeVisible();
+
+    // Force click to bypass any overlay issues (the overlay is from the closing auth prompt)
+    await gearButton.click({ force: true });
+    await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
+
+    // The Setup tab should be active by default, click the Ocean theme
     await page.getByRole('button', { name: /Ocean/i }).click();
 
+    // Close the settings panel
+    await page.getByLabel('Close settings').click();
+
+    // Verify the theme was applied
     await expect(page.getByTestId('works-calendar')).toHaveAttribute('data-wc-theme', 'ocean');
   });
 
