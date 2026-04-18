@@ -93,7 +93,12 @@ test.describe('WorksCalendar happy paths', () => {
   });
 
   test('can switch theme via Settings > Setup', async ({ page }) => {
-    // Open the Settings panel
+    // First authenticate as owner (demo password is "demo1234")
+    await page.getByLabel('Owner login').click();
+    await page.getByPlaceholder(/Enter password/i).fill('demo1234');
+    await page.getByRole('button', { name: /Unlock/i }).click();
+
+    // Now open the Settings panel
     await page.getByLabel('Open settings').click();
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible();
 
