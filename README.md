@@ -11,6 +11,10 @@ WorksCalendar is an embeddable React calendar focused on **real scheduling workf
 - Themeable UI with optional packaged themes
 - Data adapter pattern for backend-agnostic integrations
 
+## New here? Start with the [Setup guide](./docs/Setup.md)
+
+Plain-language walkthrough from `npm install` to a working, connected calendar — pick only the steps you need.
+
 ## Installation
 
 ```bash
@@ -52,6 +56,7 @@ Example catalogs:
 
 ## Documentation
 
+- [Setup guide](./docs/Setup.md) — start here
 - [Docs index](./docs/README.md)
 - [Schedule workflow guide](./docs/ScheduleWorkflow.md)
 - [Filtering system](./docs/Filtering.md)

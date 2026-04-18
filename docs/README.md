@@ -2,6 +2,10 @@
 
 This index is the canonical docs entrypoint for the package.
 
+## Start here
+
+- [Setup guide](./Setup.md) — install to live calendar in 10 minutes
+
 ## Product guides
 
 - [Schedule workflow](./ScheduleWorkflow.md)
