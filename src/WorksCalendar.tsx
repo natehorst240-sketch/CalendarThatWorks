@@ -1425,18 +1425,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [hasAddButton, onDateSelect]);
 
   // Schedule cell select → route to schedule-specific editor, not generic EventForm.
+  // When the dropped cell isn't a known employee (no resource match), fall back
+  // to the generic EventForm so the user still has a way to create an event.
   const handleScheduleDateSelect = useCallback((start, end, resourceId) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
-    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
-    if (!emp) return;
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate = end instanceof Date ? end : new Date(end);
 
-    setScheduleEditorState({
-      emp,
-      start: start instanceof Date ? start : new Date(start),
-      end: end instanceof Date ? end : new Date(end),
-    });
+    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
+    if (!emp) {
+      setFormEvent({ start: startDate, end: endDate, resource: resourceId });
+      return;
+    }
+
+    setScheduleEditorState({ emp, start: startDate, end: endDate });
   }, [configuredEmployees, hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
