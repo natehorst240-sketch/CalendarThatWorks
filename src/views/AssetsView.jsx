@@ -184,6 +184,7 @@ export default function AssetsView({
   onEditAssets,
   approvalsConfig,
   onApprovalAction,
+  resolveResourceLabel,
 }) {
   const ctx = useCalendarContext();
 
@@ -418,7 +419,9 @@ export default function AssetsView({
       ?? firstWithMeta?.meta?.sublabel
       ?? registryEntry?.meta?.sublabel
       ?? null;
-    const label = registryEntry?.label ?? resource;
+    const label = registryEntry?.label
+      ?? (resource !== '(Unassigned)' ? resolveResourceLabel?.(resource) : null)
+      ?? resource;
     return {
       _type: 'assetRow',
       key: resource,
@@ -429,7 +432,7 @@ export default function AssetsView({
       laneCount,
       rowH,
     };
-  }, [monthStart.toISOString(), monthEnd.toISOString(), assetRegistry, assetById]);
+  }, [monthStart.toISOString(), monthEnd.toISOString(), assetRegistry, assetById, resolveResourceLabel]);
 
   const sortResourceKeys = useCallback((keys) => {
     return [...keys].sort((a, b) => {

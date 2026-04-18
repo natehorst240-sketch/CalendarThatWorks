@@ -34,7 +34,7 @@ import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLega
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver } from './filters/filterSchema.js';
 import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState.js';
 import FilterBar              from './ui/FilterBar.jsx';
 import ProfileBar             from './ui/ProfileBar.jsx';
@@ -309,8 +309,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   if (typeof window === 'undefined') return null;
 
   // ── View / date / filter state ───────────────────────────────────────────
-  const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
-  const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
@@ -330,6 +328,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.team?.members]);
+
+  // Resolve resource ids (e.g. "emp-sarah") to human-readable labels
+  // (e.g. "Sarah Chen") using merged employees + assets directory.
+  const effectiveAssets = assets ?? ownerCfg.config?.assets;
+  const resolveResourceLabel = useMemo(
+    () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
+    [configuredEmployees, effectiveAssets],
+  );
+
+  // When no custom schema is supplied, build the default schema with the
+  // live resolver so People-filter options render names instead of ids.
+  const schema = useMemo(
+    () => filterSchema
+      ?? buildDefaultFilterSchema({ employees: configuredEmployees, assets: effectiveAssets }),
+    [filterSchema, configuredEmployees, effectiveAssets],
+  );
+  const cal = useCalendar([], initialView ?? 'month', schema);
 
   // Wrap parent employee handlers so edits from ANY surface (timeline add-form
   // or TeamTab settings) flow both to the consumer's state AND to the owner
@@ -1646,7 +1661,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
-                  assets={assets ?? ownerCfg.config?.assets}
+                  assets={effectiveAssets}
+                  resolveResourceLabel={resolveResourceLabel}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}
                   collapsedGroups={activeAssetsCollapsed}
@@ -1675,6 +1691,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 onNoteSave={onNoteSave}
                 onNoteDelete={onNoteDelete}
                 onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
+                resolveResourceLabel={resolveResourceLabel}
               />
             )
         )}
