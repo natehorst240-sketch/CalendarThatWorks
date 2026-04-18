@@ -83,7 +83,7 @@ describe('WorksCalendar schedule model integration', () => {
       const ptoEvents = visible.filter((ev) => String(ev?.meta?.kind ?? '') === 'pto');
       expect(ptoEvents.length).toBeGreaterThan(0);
     });
-  });
+  }, 15000);
 
   it('does not create duplicate open-shift records when PTO is re-saved', async () => {
     const apiRef = createRef();

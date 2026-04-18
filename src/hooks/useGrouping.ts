@@ -131,8 +131,9 @@ export type UseGroupingEngineResult = {
  * When groupBy is unset the hook is a pass-through: groups is [] and ungrouped
  * holds all events, so rendering code can rely on a single code path.
  *
- * Named useGroupingEngine to coexist with the row-based useGrouping (JS) used
- * by TimelineView until Sprint 4 migrates that view to this API.
+ * Named useGroupingEngine to coexist with the row-based useGrouping (JS),
+ * which is retained only for external consumers of the package API; all
+ * bundled views (Agenda, Assets, Timeline) now route through buildGroupTree.
  */
 export function useGroupingEngine(
   options: UseGroupingEngineOptions,

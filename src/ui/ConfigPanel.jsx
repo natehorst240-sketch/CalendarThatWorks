@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Plus, Trash2, Check, Camera, Pencil } from 'lucide-react';
-import { FIELD_TYPES } from '../core/configSchema.js';
+import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown } from 'lucide-react';
+import {
+  FIELD_TYPES,
+  APPROVAL_STAGE_IDS,
+  APPROVAL_ACTIONS,
+} from '../core/configSchema.js';
+import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
 import { serializeFilters } from '../hooks/useSavedViews.js';
@@ -15,12 +20,16 @@ const TABS = [
   { id: 'hoverCard',   label: 'Hover Card' },
   { id: 'eventFields', label: 'Event Fields' },
   { id: 'categories',  label: 'Categories' },
+  { id: 'assets',      label: 'Assets' },
   { id: 'display',     label: 'Display' },
   { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
   { id: 'templates',   label: 'Templates' },
   { id: 'smartViews',  label: 'Smart Views' },
   { id: 'team',        label: 'Employees' },
+  { id: 'approvals',   label: 'Approvals' },
+  { id: 'conflicts',   label: 'Conflicts' },
+  { id: 'requestForm', label: 'Request Form' },
   { id: 'access',      label: 'Access' },
 ];
 
@@ -33,10 +42,22 @@ export default function ConfigPanel({
   // Team-tab hooks: when provided, TeamTab emits add/delete upstream so the
   // parent's employees prop can stay in sync with config-side edits.
   onEmployeeAdd, onEmployeeDelete,
+  // Deep-link: open ConfigPanel focused on a specific tab. Re-applied when
+  // the prop changes so consecutive deep-links (e.g. two clicks of "Edit
+  // assets" with a different target each time) land on the right tab.
+  initialTab,
 }) {
-  const [tab, setTab] = useState('setup');
+  const [tab, setTab] = useState(() =>
+    initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
+  );
   const trapRef = useFocusTrap(onClose);
   const tabRefs = useRef({});
+
+  useEffect(() => {
+    if (initialTab && TABS.some(t => t.id === initialTab)) {
+      setTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     tabRefs.current[tab]?.scrollIntoView({
@@ -76,6 +97,7 @@ export default function ConfigPanel({
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'assets'      && <AssetsTab       config={config} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
           {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
@@ -116,6 +138,9 @@ export default function ConfigPanel({
               onEmployeeDelete={onEmployeeDelete}
             />
           )}
+          {tab === 'approvals'   && <ApprovalsTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'conflicts'   && <ConflictsTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'requestForm' && <RequestFormTab config={config} onUpdate={onUpdate} />}
           {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
         </div>
       </div>
@@ -737,6 +762,120 @@ export function CategoriesTab({ config, onUpdate }) {
   );
 }
 
+/* ----- Assets tab ----- */
+/**
+ * Owner-editable asset registry. Persists to config.assets; WorksCalendar
+ * threads `props.assets ?? config.assets` into AssetsView. An empty array
+ * preserves the legacy event.resource-derived behavior so the tab is
+ * strictly additive — existing calendars keep rendering unchanged until the
+ * owner adds at least one asset.
+ *
+ * Each entry: { id, label, group?, meta: { sublabel? } }
+ *   id     — matched against event.resource; stable key, not user-facing.
+ *   label  — display name rendered in the AssetsView rowheader.
+ *   group  — optional group bucket (e.g. "CJ3", "West"); surfaces in
+ *            groupBy dropdowns added by ticket 10.
+ *   meta   — free-form; sublabel appears under label in the asset cell.
+ */
+export function AssetsTab({ config, onUpdate }) {
+  const assets = Array.isArray(config.assets) ? config.assets : [];
+
+  const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
+
+  const addAsset = () => {
+    const n = assets.length + 1;
+    writeAssets([
+      ...assets,
+      { id: `asset-${n}`, label: `Asset ${n}`, group: '', meta: {} },
+    ]);
+  };
+
+  const updateAsset = (idx, patch) => {
+    writeAssets(assets.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+  };
+
+  const updateAssetMeta = (idx, metaPatch) => {
+    writeAssets(assets.map((a, i) => (
+      i === idx ? { ...a, meta: { ...(a.meta ?? {}), ...metaPatch } } : a
+    )));
+  };
+
+  const removeAsset = (idx) => writeAssets(assets.filter((_, i) => i !== idx));
+
+  const moveAsset = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= assets.length) return;
+    const next = [...assets];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeAssets(next);
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Register the assets that appear as rows in the Assets view. Rows
+        follow this order; leave empty to fall back to deriving rows from
+        <code> event.resource</code> values.
+      </p>
+
+      {assets.map((asset, i) => (
+        <div key={asset.id + ':' + i} className={styles.fieldRow} data-asset-id={asset.id}>
+          <input
+            className={styles.input}
+            value={asset.label ?? ''}
+            onChange={e => updateAsset(i, { label: e.target.value })}
+            placeholder="Label"
+            aria-label={`Label for ${asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.id}
+            onChange={e => updateAsset(i, { id: e.target.value.trim() || asset.id })}
+            placeholder="id"
+            aria-label={`Id for ${asset.label || asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.group ?? ''}
+            onChange={e => updateAsset(i, { group: e.target.value })}
+            placeholder="Group"
+            aria-label={`Group for ${asset.label || asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.meta?.sublabel ?? ''}
+            onChange={e => updateAssetMeta(i, { sublabel: e.target.value })}
+            placeholder="Sublabel"
+            aria-label={`Sublabel for ${asset.label || asset.id}`}
+          />
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveAsset(i, -1)}
+            disabled={i === 0}
+            aria-label={`Move ${asset.label || asset.id} up`}
+          ><ArrowUp size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveAsset(i, 1)}
+            disabled={i === assets.length - 1}
+            aria-label={`Move ${asset.label || asset.id} down`}
+          ><ArrowDown size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeAsset(i)}
+            aria-label={`Remove ${asset.label || asset.id}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addAsset}>
+        <Plus size={13} /> Add asset
+      </button>
+    </div>
+  );
+}
+
 /* ----- Display tab ----- */
 function DisplayTab({ config, onUpdate }) {
   const d = config.display;
@@ -864,6 +1003,502 @@ function DisplayTab({ config, onUpdate }) {
           />
         </label>
       </div>
+    </div>
+  );
+}
+
+/* ----- Approvals tab ----- */
+const STAGE_LABELS = {
+  requested:      'Requested',
+  approved:       'Approved',
+  finalized:      'Finalized',
+  pending_higher: 'Pending higher tier',
+  denied:         'Denied',
+};
+
+/**
+ * Owner-editable approval policy. Writes to `config.approvals`; runtime
+ * surfaces (AssetsView pill prefixes, AuditDrawer menus, #134-15 inline
+ * actions) read from the same block so a calendar owner can tune the
+ * workflow — add/rename tiers, restrict actions per stage, change pill
+ * copy — without redeploying the host app.
+ *
+ * Shape notes:
+ *   approvals.enabled — master off switch; false keeps the whole UX silent.
+ *   approvals.tiers[] — ordered; `requires: 'any' | 'all'` controls the
+ *                       quorum rule for promotion out of that tier.
+ *   approvals.rules   — per-stage `{ allow: ApprovalAction[], prefix }`.
+ *   approvals.labels  — per-action button copy shown to approvers.
+ */
+export function ApprovalsTab({ config, onUpdate }) {
+  const approvals = config.approvals ?? {};
+  const enabled   = !!approvals.enabled;
+  const tiers     = Array.isArray(approvals.tiers) ? approvals.tiers : [];
+  const rules     = approvals.rules ?? {};
+  const labels    = approvals.labels ?? {};
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    approvals: { ...(c.approvals ?? {}), ...next },
+  }));
+
+  const writeTiers = (next) => patch({ tiers: next });
+  const writeRules = (next) => patch({ rules: next });
+  const writeLabels = (next) => patch({ labels: next });
+
+  const addTier = () => {
+    const n = tiers.length + 1;
+    writeTiers([...tiers, { id: `tier-${n}`, label: `Tier ${n}`, requires: 'any', roles: [] }]);
+  };
+
+  const updateTier = (idx, delta) => {
+    writeTiers(tiers.map((t, i) => (i === idx ? { ...t, ...delta } : t)));
+  };
+
+  const removeTier = (idx) => writeTiers(tiers.filter((_, i) => i !== idx));
+
+  const moveTier = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= tiers.length) return;
+    const next = [...tiers];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeTiers(next);
+  };
+
+  const toggleAction = (stage, action) => {
+    const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+    const allow = stageRule.allow ?? [];
+    const next  = allow.includes(action)
+      ? allow.filter(a => a !== action)
+      : [...allow, action];
+    writeRules({ ...rules, [stage]: { ...stageRule, allow: next } });
+  };
+
+  const setStagePrefix = (stage, prefix) => {
+    const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+    writeRules({ ...rules, [stage]: { ...stageRule, prefix } });
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Configure the approval workflow applied to events with
+        <code> meta.approvalStage</code>. While disabled, approval pills render
+        as plain category pills and no inline actions appear.
+      </p>
+
+      <label className={styles.toggle}>
+        <span>Enable approvals workflow</span>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => patch({ enabled: e.target.checked })}
+          aria-label="Enable approvals workflow"
+        />
+        <span className={styles.toggleTrack} />
+      </label>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Tiers are evaluated in order. <code>requires: any</code> promotes on
+          the first approver action; <code>all</code> waits for every listed
+          role to sign off.
+        </p>
+
+        {tiers.map((tier, i) => (
+          <div key={tier.id + ':' + i} className={styles.fieldRow} data-tier-id={tier.id}>
+            <input
+              className={styles.input}
+              value={tier.label ?? ''}
+              onChange={e => updateTier(i, { label: e.target.value })}
+              placeholder="Label"
+              aria-label={`Label for ${tier.id}`}
+            />
+            <input
+              className={styles.input}
+              value={tier.id}
+              onChange={e => updateTier(i, { id: e.target.value.trim() || tier.id })}
+              placeholder="id"
+              aria-label={`Id for ${tier.label || tier.id}`}
+            />
+            <select
+              className={styles.select}
+              value={tier.requires ?? 'any'}
+              onChange={e => updateTier(i, { requires: e.target.value })}
+              aria-label={`Quorum for ${tier.label || tier.id}`}
+            >
+              <option value="any">Any approver</option>
+              <option value="all">All approvers</option>
+            </select>
+            <input
+              className={styles.input}
+              value={(tier.roles ?? []).join(', ')}
+              onChange={e => updateTier(i, {
+                roles: e.target.value.split(',').map(r => r.trim()).filter(Boolean),
+              })}
+              placeholder="Roles (comma-separated)"
+              aria-label={`Roles for ${tier.label || tier.id}`}
+            />
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveTier(i, -1)}
+              disabled={i === 0}
+              aria-label={`Move ${tier.label || tier.id} up`}
+            ><ArrowUp size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => moveTier(i, 1)}
+              disabled={i === tiers.length - 1}
+              aria-label={`Move ${tier.label || tier.id} down`}
+            ><ArrowDown size={13} /></button>
+            <button
+              className={styles.removeBtn}
+              onClick={() => removeTier(i)}
+              aria-label={`Remove ${tier.label || tier.id}`}
+            ><Trash2 size={13} /></button>
+          </div>
+        ))}
+
+        <button className={styles.addFieldBtn} onClick={addTier}>
+          <Plus size={13} /> Add tier
+        </button>
+      </div>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Per-stage rules. The prefix rides on the left of the pill label
+          (e.g. <code>Req · Flight 202</code>); leave blank for no prefix.
+        </p>
+
+        {APPROVAL_STAGE_IDS.map(stage => {
+          const stageRule = rules[stage] ?? { allow: [], prefix: '' };
+          return (
+            <div key={stage} className={styles.fieldRow} data-stage-id={stage}>
+              <span style={{ minWidth: 120, fontWeight: 600 }}>
+                {STAGE_LABELS[stage] ?? stage}
+              </span>
+              <input
+                className={styles.input}
+                value={stageRule.prefix ?? ''}
+                onChange={e => setStagePrefix(stage, e.target.value)}
+                placeholder="Prefix"
+                aria-label={`Prefix for ${stage}`}
+                style={{ maxWidth: 120 }}
+              />
+              {APPROVAL_ACTIONS.map(action => {
+                const checked = (stageRule.allow ?? []).includes(action);
+                return (
+                  <label key={action} className={styles.reqLabel}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleAction(stage, action)}
+                      aria-label={`Allow ${action} on ${stage}`}
+                    />
+                    {action}
+                  </label>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={styles.section} style={{ paddingTop: 12 }}>
+        <p className={styles.sectionDesc}>
+          Button copy shown to approvers in the audit drawer and inline pill
+          menu. Rename these to match your organisation's vocabulary.
+        </p>
+
+        {APPROVAL_ACTIONS.map(action => (
+          <label key={action} className={styles.formRow}>
+            <span>{action.charAt(0).toUpperCase() + action.slice(1)} label</span>
+            <input
+              className={styles.input}
+              value={labels[action] ?? ''}
+              onChange={e => writeLabels({ ...labels, [action]: e.target.value })}
+              placeholder={action}
+              aria-label={`${action} button label`}
+            />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ----- Request Form tab ----- */
+const REQUEST_FIELD_TYPES = [
+  { value: 'text',     label: 'Text' },
+  { value: 'textarea', label: 'Textarea' },
+  { value: 'number',   label: 'Number' },
+  { value: 'date',     label: 'Date' },
+  { value: 'datetime', label: 'Datetime' },
+  { value: 'select',   label: 'Select' },
+  { value: 'checkbox', label: 'Checkbox' },
+];
+
+/**
+ * Owner-editable RequestForm schema. Writes to `config.requestForm.fields`;
+ * src/ui/RequestForm.jsx renders one input per entry. Field types match
+ * the RequestForm renderer's built-in handlers — adding a new type means
+ * updating both sides.
+ */
+export function RequestFormTab({ config, onUpdate }) {
+  const schema = config.requestForm ?? {};
+  const fields = Array.isArray(schema.fields) ? schema.fields : [];
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    requestForm: { ...(c.requestForm ?? {}), ...next },
+  }));
+
+  const writeFields = (next) => patch({ fields: next });
+
+  const addField = () => {
+    const n = fields.length + 1;
+    writeFields([
+      ...fields,
+      { key: `field-${n}`, label: `Field ${n}`, type: 'text', required: false },
+    ]);
+  };
+
+  const updateField = (idx, delta) =>
+    writeFields(fields.map((f, i) => (i === idx ? { ...f, ...delta } : f)));
+
+  const removeField = (idx) => writeFields(fields.filter((_, i) => i !== idx));
+
+  const moveField = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= fields.length) return;
+    const next = [...fields];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeFields(next);
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Fields rendered by the request form (src/ui/RequestForm.jsx).
+        Changes apply to every open request form on next render — no host
+        redeploy required.
+      </p>
+
+      {fields.map((field, i) => (
+        <div key={field.key + ':' + i} className={styles.fieldRow} data-field-key={field.key}>
+          <input
+            className={styles.input}
+            value={field.label ?? ''}
+            onChange={e => updateField(i, { label: e.target.value })}
+            placeholder="Label"
+            aria-label={`Label for ${field.key}`}
+          />
+          <input
+            className={styles.input}
+            value={field.key}
+            onChange={e => updateField(i, { key: e.target.value.trim() || field.key })}
+            placeholder="key"
+            aria-label={`Key for ${field.label || field.key}`}
+          />
+          <select
+            className={styles.select}
+            value={field.type}
+            onChange={e => updateField(i, { type: e.target.value })}
+            aria-label={`Type for ${field.label || field.key}`}
+          >
+            {REQUEST_FIELD_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {field.type === 'select' && (
+            <input
+              className={styles.input}
+              value={field.options ?? ''}
+              onChange={e => updateField(i, { options: e.target.value })}
+              placeholder="Option 1, Option 2, …"
+              aria-label={`Options for ${field.label || field.key}`}
+            />
+          )}
+          <input
+            className={styles.input}
+            value={field.placeholder ?? ''}
+            onChange={e => updateField(i, { placeholder: e.target.value })}
+            placeholder="Placeholder"
+            aria-label={`Placeholder for ${field.label || field.key}`}
+          />
+          <label className={styles.reqLabel}>
+            <input
+              type="checkbox"
+              checked={!!field.required}
+              onChange={e => updateField(i, { required: e.target.checked })}
+              aria-label={`Required for ${field.label || field.key}`}
+            />
+            Required
+          </label>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveField(i, -1)}
+            disabled={i === 0}
+            aria-label={`Move ${field.label || field.key} up`}
+          ><ArrowUp size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveField(i, 1)}
+            disabled={i === fields.length - 1}
+            aria-label={`Move ${field.label || field.key} down`}
+          ><ArrowDown size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeField(i)}
+            aria-label={`Remove ${field.label || field.key}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addField}>
+        <Plus size={13} /> Add field
+      </button>
+    </div>
+  );
+}
+
+/* ----- Conflicts tab ----- */
+/**
+ * Owner-editable conflict rule registry. Writes to `config.conflicts.rules`;
+ * src/core/conflictEngine.ts consumes the rules to evaluate a proposed
+ * event before it's written, returning Violation[] that ConflictModal
+ * surfaces to the user. Rules are pure data so the whole workflow can be
+ * re-tuned without a host-app redeploy.
+ *
+ * Supported types (see conflictEngine.ts for the full union):
+ *   resource-overlap — same resource in an overlapping window → violation.
+ *   category-mutex   — listed categories cannot coexist on one resource.
+ *   min-rest         — minimum gap (in minutes) between same-resource events.
+ */
+export function ConflictsTab({ config, onUpdate }) {
+  const conflicts = config.conflicts ?? {};
+  const enabled   = !!conflicts.enabled;
+  const rules     = Array.isArray(conflicts.rules) ? conflicts.rules : [];
+
+  const patch = (next) => onUpdate(c => ({
+    ...c,
+    conflicts: { ...(c.conflicts ?? {}), ...next },
+  }));
+
+  const writeRules = (next) => patch({ rules: next });
+
+  const addRule = () => {
+    const n = rules.length + 1;
+    writeRules([
+      ...rules,
+      { id: `rule-${n}`, type: 'resource-overlap', severity: 'hard' },
+    ]);
+  };
+
+  const updateRule = (idx, delta) => {
+    writeRules(rules.map((r, i) => (i === idx ? { ...r, ...delta } : r)));
+  };
+
+  const removeRule = (idx) => writeRules(rules.filter((_, i) => i !== idx));
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Conflict rules run before an event write. The engine returns
+        violations; the ConflictModal surfaces them. While disabled, no
+        rule runs and writes proceed silently.
+      </p>
+
+      <label className={styles.toggle}>
+        <span>Enable conflict checks</span>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => patch({ enabled: e.target.checked })}
+          aria-label="Enable conflict checks"
+        />
+        <span className={styles.toggleTrack} />
+      </label>
+
+      {rules.map((rule, i) => (
+        <div key={rule.id + ':' + i} className={styles.fieldRow} data-rule-id={rule.id}>
+          <input
+            className={styles.input}
+            value={rule.id}
+            onChange={e => updateRule(i, { id: e.target.value.trim() || rule.id })}
+            placeholder="id"
+            aria-label={`Id for rule ${rule.id}`}
+          />
+          <select
+            className={styles.select}
+            value={rule.type}
+            onChange={e => updateRule(i, { type: e.target.value })}
+            aria-label={`Type for rule ${rule.id}`}
+          >
+            {CONFLICT_RULE_TYPES.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            className={styles.select}
+            value={rule.severity ?? 'hard'}
+            onChange={e => updateRule(i, { severity: e.target.value })}
+            aria-label={`Severity for rule ${rule.id}`}
+          >
+            <option value="hard">hard</option>
+            <option value="soft">soft</option>
+          </select>
+
+          {rule.type === 'category-mutex' && (
+            <input
+              className={styles.input}
+              value={Array.isArray(rule.categories) ? rule.categories.join(', ') : ''}
+              onChange={e => updateRule(i, {
+                categories: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+              })}
+              placeholder="categories (comma-separated)"
+              aria-label={`Categories for rule ${rule.id}`}
+            />
+          )}
+
+          {rule.type === 'min-rest' && (
+            <input
+              type="number"
+              min={0}
+              className={styles.input}
+              style={{ width: 88 }}
+              value={rule.minutes ?? 0}
+              onChange={e => updateRule(i, { minutes: Math.max(0, Number(e.target.value) || 0) })}
+              placeholder="minutes"
+              aria-label={`Minutes for rule ${rule.id}`}
+            />
+          )}
+
+          {rule.type === 'resource-overlap' && (
+            <input
+              className={styles.input}
+              value={Array.isArray(rule.ignoreCategories) ? rule.ignoreCategories.join(', ') : ''}
+              onChange={e => updateRule(i, {
+                ignoreCategories: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+              })}
+              placeholder="ignore categories"
+              aria-label={`Ignore categories for rule ${rule.id}`}
+            />
+          )}
+
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeRule(i)}
+            aria-label={`Remove rule ${rule.id}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addRule}>
+        <Plus size={13} /> Add rule
+      </button>
     </div>
   );
 }

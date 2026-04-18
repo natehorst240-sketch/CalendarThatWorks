@@ -16,6 +16,13 @@ export type GroupHeaderProps = {
   fieldLabel?: string
   className?: string
   id?: string
+  /**
+   * Cross-row arrow-key hook used by views that interleave headers with data
+   * rows (Assets, Timeline). The header handles Enter/Space internally (toggle
+   * collapse); when this prop is provided the parent gets the chance to move
+   * focus across rows or to drive collapse/expand via ← / →.
+   */
+  onArrowKey?: (key: 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight') => void
 }
 
 const INDENT_PX_PER_LEVEL = 16
@@ -31,11 +38,24 @@ export default function GroupHeader({
   fieldLabel,
   className,
   id,
+  onArrowKey,
 }: GroupHeaderProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       onToggle()
+      return
+    }
+    if (
+      event.key === 'ArrowUp' ||
+      event.key === 'ArrowDown' ||
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight'
+    ) {
+      if (onArrowKey) {
+        event.preventDefault()
+        onArrowKey(event.key)
+      }
     }
   }
 

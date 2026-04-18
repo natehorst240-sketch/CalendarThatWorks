@@ -822,3 +822,52 @@ describe('useSavedViews — zoomLevel persistence', () => {
     expect(result.current.views[0].zoomLevel).toBe('month');
   });
 });
+
+describe('useSavedViews — resaveView collapsedGroups persistence', () => {
+  it('resaveView updates collapsedGroups via opts', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Cg', EMPTY_FILTERS, { collapsedGroups: new Set(['A']) });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, undefined, undefined, {
+        collapsedGroups: new Set(['B', 'C']),
+      });
+    });
+    expect(result.current.views[0].collapsedGroups).toEqual(
+      expect.arrayContaining(['B', 'C']),
+    );
+    expect(result.current.views[0].collapsedGroups).not.toContain('A');
+  });
+
+  it('resaveView preserves collapsedGroups when opts.collapsedGroups is omitted', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Cg preserve', EMPTY_FILTERS, {
+        collapsedGroups: new Set(['keep']),
+      });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, 'agenda', 'department');
+    });
+    expect(result.current.views[0].collapsedGroups).toEqual(['keep']);
+  });
+
+  it('resaveView clears collapsedGroups when given an empty Set', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Cg clear', EMPTY_FILTERS, {
+        collapsedGroups: new Set(['X']),
+      });
+    });
+    const id = result.current.views[0].id;
+    act(() => {
+      result.current.resaveView(id, EMPTY_FILTERS, undefined, undefined, {
+        collapsedGroups: new Set(),
+      });
+    });
+    expect(result.current.views[0].collapsedGroups).toBeNull();
+  });
+});

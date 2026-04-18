@@ -9,6 +9,7 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import styles from './AuditDrawer.module.css';
+import ApprovalActionMenu from '../ui/ApprovalActionMenu.jsx';
 
 /**
  * Formats an ISO timestamp as a locale-aware date + time string. Returns the
@@ -34,7 +35,7 @@ const ACTION_LABELS = {
   finalize:  'Finalized',
 };
 
-export default function AuditDrawer({ event, onClose }) {
+export default function AuditDrawer({ event, onClose, approvalsConfig, onAction }) {
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -69,6 +70,14 @@ export default function AuditDrawer({ event, onClose }) {
               <span className={styles.stageTag} data-stage={stageData.stage}>
                 {stageData.stage.replace('_', ' ')}
               </span>
+            )}
+            {stageData?.stage && typeof onAction === 'function' && (
+              <ApprovalActionMenu
+                stage={stageData.stage}
+                approvalsConfig={approvalsConfig}
+                onAction={onAction}
+                variant="inline"
+              />
             )}
           </div>
           <button

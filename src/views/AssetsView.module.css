@@ -14,6 +14,63 @@
   position: relative;
 }
 
+/* ── On-page toolbar (Group by / Sort by / Edit assets) ────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbarLabel {
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.toolbarSelect {
+  font: inherit;
+  padding: 3px 6px;
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+}
+
+.toolbarSpacer {
+  flex: 1;
+}
+
+.toolbarBtn {
+  font: inherit;
+  padding: 4px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  cursor: pointer;
+}
+
+.toolbarBtn:hover:not(:disabled) {
+  background: var(--wc-surface);
+}
+
+.toolbarBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .inner {
   display: flex;
   flex-direction: column;
@@ -491,6 +548,32 @@
 
 .event.cancelled .evTitle {
   text-decoration: line-through;
+}
+
+/* ── Approval action caret (ticket #134-15) ─────────────────────── */
+/* Small trigger button overlaid on the right edge of the pill. It
+   opens the inline approval action menu; pill-click retains its
+   existing behavior (audit drawer for denied/pending, edit otherwise). */
+.stageCaret {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  border: 0;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #fff;
+  cursor: pointer;
+  z-index: 6;
+}
+
+.stageCaret:hover,
+.stageCaret:focus-visible {
+  background: rgba(0, 0, 0, 0.45);
+  outline: none;
 }
 
 /* ── Empty state ────────────────────────────────────────────────── */

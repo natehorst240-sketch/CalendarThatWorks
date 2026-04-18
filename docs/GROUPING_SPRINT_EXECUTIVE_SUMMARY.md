@@ -1,8 +1,10 @@
 # Sprint Review: Infinite Grouping, Filtering & Sorting
 
-**Date:** 2026-04-16
-**Status:** ⚠️ NOT RECOMMENDED AS PROPOSED
+**Date:** 2026-04-16 (initial review) · **Updated:** 2026-04-18 (Phase A+B delivery)
+**Status:** ✅ Phases A + B shipped — original scope reshaped; see **Delivery Update** at bottom.
 **Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
+
+> **If you only read one thing, skip to the [Delivery Update](#delivery-update--2026-04-sprint) section.** The body below is preserved as the original pre-implementation risk analysis. It correctly flagged that the 5-day scope was unrealistic; the sprint reshaped into phased delivery (A/B) under GitHub issue #134.
 
 ---
 
@@ -256,3 +258,88 @@ The calendar is a valuable product. Let's build grouping features properly, not 
 **Reviewed by:** Claude Code Agent
 **Full Analysis:** [INFINITE_GROUPING_VIABILITY_ANALYSIS.md](./INFINITE_GROUPING_VIABILITY_ANALYSIS.md)
 **Next Steps:** Stakeholder review + scope decision
+
+---
+
+## Delivery Update — 2026-04 Sprint
+
+**Tracking issue:** [#134 — Sprint: Close the Grouping Plan A gap](https://github.com/natehorst240-sketch/calendarthatworks/issues/134)
+
+The original 5-day "infinite grouping" ambition was correctly flagged above as
+infeasible. Work landed in two phases instead, with a strict owner-config-first
+principle: **every new UX surface must be tunable from ConfigPanel and persisted
+to owner config with zero host-app redeploy. Host callbacks are escape hatches,
+not the default path.**
+
+### Phase A — shipped (this sprint)
+
+| Ticket | Summary | Ships as |
+|--------|---------|----------|
+| #134-1 | Swap TimelineView grouping onto the TS `buildGroupTree` engine | `f1ecbba` |
+| #134-2 | Persist `zoomLevel` + `collapsedGroups` in saved-views schema v3 | `832cffb` |
+| #134-3 | AssetsView grouping via `useGroupingEngine` + `GroupHeader` | `c94539c` |
+| #134-9 | First-class `assets[]` registry + ConfigPanel **Assets** tab | `e004c49` |
+| #134-10 | On-page AssetsView toolbar — GroupBy / SortBy / "Edit assets" deep-link | `f045433` |
+| #134-4 | Cross-group keyboard navigation (↑/↓ rows + headers, ←/→ tree) | `ceb6854` |
+| #134-5 | Integration matrix: filter × sort × group (17 specs) | `dcb37e7` |
+| #134-6 | Playwright E2E: Assets grid + zoom + saved-view round-trip | `56b3e85` |
+
+**Net effect for operators (owners):**
+- Assets tab in ConfigPanel edits the registry in place, persists via
+  `useOwnerConfig`, no redeploy, no host code change.
+- AssetsView toolbar deep-links to that tab via the new
+  `useOwnerConfig.openConfigToTab('assets')` helper; `ConfigPanel` accepts
+  `initialTab` reactively (re-applies on prop change).
+- Saved views round-trip `zoomLevel` + `collapsedGroups`, so chips reproduce
+  the exact Gantt state a user pinned — proven by the E2E round-trip spec.
+- Keyboard contract matches WAI-ARIA tree conventions: ↑/↓ traverse headers
+  and data rows without skipping; ← collapses an expanded header; →
+  expands a collapsed header, or on an already-expanded header descends
+  to the first child cell; ← on an already-collapsed header is a no-op.
+
+### Phase B — shipped (this sprint)
+
+| Ticket | Summary | Ships as |
+|--------|---------|----------|
+| #134-14 | Approvals tab in ConfigPanel — policy, tiers, rules, labels + v3→v4 schema migration | `0ececa2` |
+| #134-13 | Conflict check + ConflictModal (owner-defined rules in `src/core/conflictEngine.ts`) | `ae345ba` |
+| #134-12 | Schema-driven RequestForm, owner-configurable | `69ee3e6` |
+| #134-15 | Inline approval actions on pills, driven by policy/tier config | `9a97f83` |
+| #134-16 | Integration matrix: approval policy × conflict rules × request schema | `76e851f` |
+| #134-8  | Docs pass — Phase B owner-config section (pairs with Tickets 12/13/14/15) | (this commit) |
+
+**Net effect for operators:**
+- Approvals, conflicts, and the request-form schema are all editable from
+  ConfigPanel tabs and persist through `useOwnerConfig`. No host-code change
+  is required to change who can approve from a stage, which conflict rules
+  block a save, or what fields the request form displays.
+- Calendar emits `onApprovalAction(event, action)` — host persists the new
+  stage + audit history, calendar re-renders with the updated event. The
+  calendar never mutates `meta.approvalStage` itself, keeping the storage
+  story unchanged.
+- Schema version bumped to 4; the migration is additive (mergeDeep folds
+  in the new default blocks), so previously-persisted v3 calendars load
+  untouched and the new tabs appear with defaults.
+
+### What the original risk table got right vs. wrong
+
+| Original risk | Outcome |
+|---------------|---------|
+| Timeline (5 days → weeks) | ✅ Right. Phase A alone took a full sprint; Phase B still queued. |
+| All five views touched | ⚠️ Partly. Scope narrowed to Assets + Timeline — Month/Week/Day correctly left flat. |
+| Performance unknowns | ✅ Mitigated. `groupRows()` budget held at p95 < 0.5ms for 2000ev × 3-level (see `perf-baselines.json`). |
+| Testing scope underestimated | ✅ Addressed. Integration matrix (17 specs) + keyboard spec (7) + E2E (3) added this sprint. |
+| 5-level nesting untested | ↩️ Parked. Phase A covers 1–2 levels; deeper nesting deferred until a real use case appears. |
+
+### Where to look for the work
+
+- **API surface:** [`GROUPING_API.md`](./GROUPING_API.md) — now includes the
+  AssetsView / Assets tab section covering the `assets[]` prop shape, the
+  ConfigPanel deep-link, and the cross-group keyboard contract.
+- **Engine:** `src/grouping/groupRows.ts`, `src/hooks/useGrouping.ts`,
+  `src/core/sortEngine.ts`, `src/filters/filterEngine.js`.
+- **View:** `src/views/AssetsView.jsx`, `src/ui/GroupHeader.tsx`.
+- **Owner config:** `src/hooks/useOwnerConfig.js`, `src/ui/ConfigPanel.jsx`.
+- **Tests:** `src/views/__tests__/AssetsView.*.test.jsx`,
+  `src/__tests__/groupingFilteringSorting.integration.test.js`,
+  `tests-e2e/calendar.assets-grouping.spec.ts`.

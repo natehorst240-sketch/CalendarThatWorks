@@ -199,14 +199,16 @@ describe('AssetsView — category hue', () => {
 });
 
 describe('AssetsView — grouping', () => {
-  it('renders group headers when groupBy is set', () => {
+  it('renders GroupHeader treeitems when groupBy is set', () => {
     renderAssets({ groupBy: 'category' });
-    expect(screen.getByRole('button', { name: /Collapse group training/i })).toBeInTheDocument();
+    const items = screen.getAllByRole('treeitem');
+    const labels = items.map(i => i.getAttribute('aria-label'));
+    expect(labels.some(l => l?.startsWith('category: training'))).toBe(true);
   });
 
   it('renders no group headers when groupBy is undefined', () => {
     renderAssets();
-    expect(screen.queryByRole('button', { name: /Collapse group/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('treeitem')).not.toBeInTheDocument();
   });
 });
 

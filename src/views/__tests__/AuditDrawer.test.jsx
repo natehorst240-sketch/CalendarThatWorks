@@ -104,3 +104,66 @@ describe('AuditDrawer — close behaviour', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Inline approval actions (ticket #134-15): the drawer hosts the same
+ * ApprovalActionMenu as the pill caret, driven by config.approvals.rules.
+ */
+describe('AuditDrawer — inline approval actions', () => {
+  const approvalsConfig = {
+    enabled: true,
+    rules: {
+      denied: { allow: ['revoke'], prefix: 'Denied' },
+    },
+    labels: { revoke: 'Undo' },
+  };
+
+  it('renders action buttons when approvalsConfig + onAction are wired', () => {
+    render(
+      <AuditDrawer
+        event={deniedEvent}
+        onClose={vi.fn()}
+        approvalsConfig={approvalsConfig}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('menuitem', { name: 'Undo' })).toBeInTheDocument();
+  });
+
+  it('omits actions when approvals.enabled=false', () => {
+    render(
+      <AuditDrawer
+        event={deniedEvent}
+        onClose={vi.fn()}
+        approvalsConfig={{ ...approvalsConfig, enabled: false }}
+        onAction={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+  });
+
+  it('omits actions when onAction is missing', () => {
+    render(
+      <AuditDrawer
+        event={deniedEvent}
+        onClose={vi.fn()}
+        approvalsConfig={approvalsConfig}
+      />,
+    );
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+  });
+
+  it('clicking an action fires onAction with the action id', () => {
+    const onAction = vi.fn();
+    render(
+      <AuditDrawer
+        event={deniedEvent}
+        onClose={vi.fn()}
+        approvalsConfig={approvalsConfig}
+        onAction={onAction}
+      />,
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Undo' }));
+    expect(onAction).toHaveBeenCalledWith('revoke');
+  });
+});

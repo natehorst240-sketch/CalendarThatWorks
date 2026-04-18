@@ -25,11 +25,12 @@ import {
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
 import styles from './AssetsView.module.css';
-import { useGrouping } from '../hooks/useGrouping.js';
-import { buildFieldAccessor } from '../grouping/buildFieldAccessor.js';
+import { buildGroupTree } from '../hooks/useGrouping.ts';
+import GroupHeader from '../ui/GroupHeader.tsx';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import AuditDrawer from './AuditDrawer.jsx';
+import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu.jsx';
 
 const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 
@@ -171,17 +172,50 @@ export default function AssetsView({
   onEventClick,
   onDateSelect,
   groupBy,
+  onGroupByChange,
   categoriesConfig,
   zoomLevel = 'month',
   onZoomChange,
   locationProvider,
   renderAssetLocation,
+  collapsedGroups: collapsedGroupsProp,
+  onCollapsedGroupsChange,
+  assets,
+  onEditAssets,
+  approvalsConfig,
+  onApprovalAction,
 }) {
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   const drawerOpenerRef = useRef(null);
+  const [approvalMenu, setApprovalMenu] = useState(null);
+  const approvalMenuOpenerRef = useRef(null);
+
+  const openApprovalMenu = useCallback((ev, stage, trigger) => {
+    const rect = trigger?.getBoundingClientRect?.();
+    approvalMenuOpenerRef.current = trigger ?? null;
+    setApprovalMenu({
+      event: ev,
+      stage,
+      anchorRect: rect ? { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right } : null,
+    });
+  }, []);
+
+  const closeApprovalMenu = useCallback(() => {
+    setApprovalMenu(null);
+    const opener = approvalMenuOpenerRef.current;
+    if (opener && typeof opener.focus === 'function') {
+      requestAnimationFrame(() => opener.focus());
+    }
+    approvalMenuOpenerRef.current = null;
+  }, []);
+
+  const handleApprovalActionInternal = useCallback((action) => {
+    if (!approvalMenu) return;
+    onApprovalAction?.(approvalMenu.event, action);
+  }, [approvalMenu, onApprovalAction]);
 
   const announce = useCallback((msg) => {
     // Appending a zero-width space forces a diff so screen readers re-read
@@ -252,8 +286,72 @@ export default function AssetsView({
     };
   }, []);
 
-  // ── Row source: derive asset rows from event.resource ──────────────────────
+  // ── Row source ──
+  // When `assets` is provided (first-class registry from owner config),
+  // rows come from the registry in its declared order. Any event.resource
+  // value not present in the registry falls into an "(Unassigned)" row.
+  // When `assets` is absent/empty, preserve the legacy behavior: derive
+  // rows from the distinct event.resource values alphabetically.
+  const assetRegistry = useMemo(() => {
+    return Array.isArray(assets) && assets.length > 0 ? assets : null;
+  }, [assets]);
+
+  // id → { label, meta, group } lookup for rendering.
+  const assetById = useMemo(() => {
+    const map = new Map();
+    if (assetRegistry) {
+      for (const a of assetRegistry) {
+        if (a && typeof a.id === 'string' && a.id) map.set(a.id, a);
+      }
+    }
+    return map;
+  }, [assetRegistry]);
+
+  // Toolbar sort order. "registry" preserves declared order (default when a
+  // registry is present); "label" / "group" / "lastEvent" resort the rows
+  // without mutating the registry itself.
+  const [sortMode, setSortMode] = useState('registry');
+
+  // Most recent event end-date per resource (used by the "Last event date"
+  // sort). Missing resources sort to the bottom.
+  const lastEventByResource = useMemo(() => {
+    const map = new Map();
+    for (const e of events) {
+      const key = e.resource ?? '(Unassigned)';
+      const ts = e.end instanceof Date ? e.end.getTime() : 0;
+      const prev = map.get(key);
+      if (prev === undefined || ts > prev) map.set(key, ts);
+    }
+    return map;
+  }, [events]);
+
+  const applySort = useCallback((ids) => {
+    if (sortMode === 'registry' || !assetRegistry) return ids;
+    const byId = assetById;
+    const labelOf = (id) => byId.get(id)?.label ?? id;
+    const groupOf = (id) => byId.get(id)?.group ?? '';
+    const lastOf  = (id) => lastEventByResource.get(id) ?? -Infinity;
+    const copy = [...ids];
+    copy.sort((a, b) => {
+      // Always keep "(Unassigned)" at the end.
+      if (a === '(Unassigned)') return 1;
+      if (b === '(Unassigned)') return -1;
+      if (sortMode === 'label')     return labelOf(a).localeCompare(labelOf(b));
+      if (sortMode === 'group')     return groupOf(a).localeCompare(groupOf(b)) || labelOf(a).localeCompare(labelOf(b));
+      if (sortMode === 'lastEvent') return lastOf(b) - lastOf(a);
+      return 0;
+    });
+    return copy;
+  }, [sortMode, assetRegistry, assetById, lastEventByResource]);
+
   const resourceList = useMemo(() => {
+    if (assetRegistry) {
+      const ordered = assetRegistry.map(a => a.id);
+      const orderedSet = new Set(ordered);
+      const hasOrphan = events.some(e => !orderedSet.has(e.resource ?? '(Unassigned)'));
+      const base = hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
+      return applySort(base);
+    }
     const set = new Set();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
     return [...set].sort((a, b) => {
@@ -261,40 +359,166 @@ export default function AssetsView({
       if (b === '(Unassigned)') return -1;
       return a.localeCompare(b);
     });
-  }, [events]);
+  }, [assetRegistry, events, applySort]);
+
+  // GroupBy options exposed by the toolbar: fixed asset fields + every
+  // distinct `meta.*` key seen across the registry. Empty-string value
+  // maps to "no grouping".
+  const groupByOptions = useMemo(() => {
+    const opts = [{ value: '', label: 'None' }];
+    if (!assetRegistry) return opts;
+    opts.push({ value: 'group', label: 'Group' });
+    const metaKeys = new Set();
+    for (const a of assetRegistry) {
+      if (a?.meta && typeof a.meta === 'object') {
+        for (const k of Object.keys(a.meta)) metaKeys.add(k);
+      }
+    }
+    for (const k of [...metaKeys].sort()) {
+      opts.push({ value: `meta.${k}`, label: `Meta: ${k}` });
+    }
+    return opts;
+  }, [assetRegistry]);
+
+  const currentGroupByValue = typeof groupBy === 'string' ? groupBy : '';
+  const showToolbar = Boolean(assetRegistry) || Boolean(onEditAssets);
 
   // ── Live locations (via LocationProvider) ──────────────────────────────────
   const locations = useResourceLocations(resourceList, locationProvider);
 
-  const rows = useMemo(() => resourceList.map(resource => {
-    const resEvents = events.filter(e => (e.resource ?? '(Unassigned)') === resource);
+  /**
+   * Build one asset row for `resource` given a scoped `subsetEvents`.
+   * Row height is computed from the laned events so rows stay tight when
+   * most events are filtered into a different group bucket.
+   */
+  const buildAssetRow = useCallback((resource, subsetEvents) => {
+    // "(Unassigned)" bucket catches any event whose resource isn't in the
+    // registry (or is missing entirely). Registry rows keep exact-id match.
+    const matchesRow = assetRegistry
+      ? (e) => {
+          const r = e.resource ?? '(Unassigned)';
+          if (resource === '(Unassigned)') return !assetById.has(r);
+          return r === resource;
+        }
+      : (e) => (e.resource ?? '(Unassigned)') === resource;
+    const resEvents = subsetEvents.filter(matchesRow);
     const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
     const rowH = Math.max(
       laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
       ROW_PAD * 2 + LANE_H + 16,
     );
-    // Sublabel: first event with meta.assetSublabel / meta.sublabel wins.
     const firstWithMeta = resEvents.find(e => e.meta?.assetSublabel || e.meta?.sublabel);
-    const sublabel = firstWithMeta?.meta?.assetSublabel ?? firstWithMeta?.meta?.sublabel ?? null;
+    const registryEntry = assetById.get(resource) ?? null;
+    const sublabel = firstWithMeta?.meta?.assetSublabel
+      ?? firstWithMeta?.meta?.sublabel
+      ?? registryEntry?.meta?.sublabel
+      ?? null;
+    const label = registryEntry?.label ?? resource;
     return {
+      _type: 'assetRow',
       key: resource,
       resource,
+      label,
       sublabel,
       events: laned,
       laneCount,
       rowH,
     };
-  }), [resourceList, events, monthStart.toISOString(), monthEnd.toISOString()]);
+  }, [monthStart.toISOString(), monthEnd.toISOString(), assetRegistry, assetById]);
 
-  // ── Grouping ───────────────────────────────────────────────────────────────
+  const sortResourceKeys = useCallback((keys) => {
+    return [...keys].sort((a, b) => {
+      if (a === '(Unassigned)') return 1;
+      if (b === '(Unassigned)') return -1;
+      return a.localeCompare(b);
+    });
+  }, []);
+
+  // ── Grouping (TS engine) ───────────────────────────────────────────────────
   const GROUP_HEADER_H = 36;
-  const fieldAccessor = useMemo(
-    () => groupBy ? buildFieldAccessor(groupBy, 'resource') : null,
-    [groupBy],
+
+  const isGrouped = groupBy != null && (
+    typeof groupBy === 'string' ? true : Array.isArray(groupBy) ? groupBy.length > 0 : true
   );
-  const { flatRows, toggleGroup } = useGrouping(rows, {
-    groupBy, fieldAccessor, groupHeaderHeight: GROUP_HEADER_H,
-  });
+
+  const groupTree = useMemo(() => {
+    if (!isGrouped) return null;
+    return buildGroupTree(events, groupBy);
+  }, [isGrouped, events, groupBy]);
+
+  // Collapse state — controlled via props when provided, otherwise local.
+  const [collapsedLocal, setCollapsedLocal] = useState(() => new Set());
+  const collapsedControlled = collapsedGroupsProp instanceof Set
+    ? collapsedGroupsProp
+    : (Array.isArray(collapsedGroupsProp) ? new Set(collapsedGroupsProp) : null);
+  const collapsedGroups = collapsedControlled ?? collapsedLocal;
+
+  const toggleGroup = useCallback((path) => {
+    if (collapsedControlled && onCollapsedGroupsChange) {
+      const next = new Set(collapsedControlled);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      onCollapsedGroupsChange(next);
+      return;
+    }
+    setCollapsedLocal(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      if (onCollapsedGroupsChange) onCollapsedGroupsChange(next);
+      return next;
+    });
+  }, [collapsedControlled, onCollapsedGroupsChange]);
+
+  // Count every leaf event reachable under a group (respecting nested trees).
+  const countEvents = useCallback((node) => {
+    if (!node.children || node.children.length === 0) return node.events.length;
+    return node.children.reduce((sum, c) => sum + countEvents(c), 0);
+  }, []);
+
+  // Flat list of rows for virtualization: interleaves groupHeader pseudo-rows
+  // with asset rows scoped to the leaf group's events.
+  const flatRows = useMemo(() => {
+    if (!groupTree) {
+      return resourceList.map(r => buildAssetRow(r, events));
+    }
+    const out = [];
+    const walk = (nodes, parentPath) => {
+      nodes.forEach((node, i) => {
+        const path = parentPath ? `${parentPath}/${node.key}` : node.key;
+        const collapsed = collapsedGroups.has(path);
+        out.push({
+          _type: 'groupHeader',
+          groupPath: path,
+          groupLabel: node.label,
+          field: node.field,
+          depth: node.depth,
+          collapsed,
+          count: countEvents(node),
+          posInSet: i + 1,
+          setSize: nodes.length,
+          rowH: GROUP_HEADER_H,
+        });
+        if (collapsed) return;
+        if (node.children && node.children.length > 0) {
+          walk(node.children, path);
+        } else {
+          // Leaf: build one asset row per distinct resource in this bucket.
+          const leafResources = new Set();
+          for (const ev of node.events) {
+            leafResources.add(ev.resource ?? '(Unassigned)');
+          }
+          for (const resource of sortResourceKeys(leafResources)) {
+            const row = buildAssetRow(resource, node.events);
+            // Disambiguate keys when an asset appears in multiple groups.
+            out.push({ ...row, key: `${path}::${resource}`, groupPath: path });
+          }
+        }
+      });
+    };
+    walk(groupTree, '');
+    return out;
+  }, [groupTree, collapsedGroups, events, resourceList, buildAssetRow, countEvents, sortResourceKeys]);
 
   // ── Cumulative row offsets ─────────────────────────────────────────────────
   const rowOffsets = useMemo(() => {
@@ -340,15 +564,19 @@ export default function AssetsView({
       }
     }
 
+    const isHeader = flatRows[rowIdx]?._type === 'groupHeader';
+    const selector = isHeader
+      ? `#assets-gh-${rowIdx}`
+      : `[data-cell="${rowIdx}-${dayIdx}"]`;
     const tryFocus = () => {
-      const el = gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
+      const el = gridRef.current?.querySelector(selector);
       el?.focus({ preventScroll: false });
     };
     tryFocus();
-    if (!gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`)) {
+    if (!gridRef.current?.querySelector(selector)) {
       requestAnimationFrame(tryFocus);
     }
-  }, [focusedCell, rowOffsets]);
+  }, [focusedCell, rowOffsets, flatRows]);
 
   const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
     const maxRi = flatRows.length - 1;
@@ -358,20 +586,8 @@ export default function AssetsView({
     switch (e.key) {
       case 'ArrowLeft':  nextDi = Math.max(0, di - 1);     move = true; break;
       case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
-      case 'ArrowUp': {
-        nextRi = ri - 1;
-        while (nextRi >= 0 && flatRows[nextRi]?._type === 'groupHeader') nextRi--;
-        nextRi = Math.max(0, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
-        move = true; break;
-      }
-      case 'ArrowDown': {
-        nextRi = ri + 1;
-        while (nextRi <= maxRi && flatRows[nextRi]?._type === 'groupHeader') nextRi++;
-        nextRi = Math.min(maxRi, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
-        move = true; break;
-      }
+      case 'ArrowUp':    nextRi = Math.max(0, ri - 1);     move = true; break;
+      case 'ArrowDown':  nextRi = Math.min(maxRi, ri + 1); move = true; break;
       case 'Home': nextDi = 0;     move = true; break;
       case 'End':  nextDi = maxDi; move = true; break;
       case 'Enter':
@@ -395,14 +611,104 @@ export default function AssetsView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [flatRows, totalDays, onEventClick, onDateSelect, days, openAudit]);
+  }, [flatRows.length, totalDays, onEventClick, onDateSelect, days, openAudit]);
+
+  /**
+   * Header-row keyboard handling:
+   *   ArrowUp / ArrowDown — traverse to the previous / next row (header or
+   *     data). Preserves `dayIdx` so landing back on a data cell keeps the
+   *     column.
+   *   ArrowLeft  — if the group is expanded, collapse it; otherwise no-op.
+   *   ArrowRight — if the group is collapsed, expand it; otherwise move to
+   *     the first child row so the tree pattern flows naturally.
+   */
+  const handleHeaderArrowKey = useCallback((rowIdx, key) => {
+    const row = flatRows[rowIdx];
+    if (!row || row._type !== 'groupHeader') return;
+    const maxRi = flatRows.length - 1;
+    if (key === 'ArrowUp') {
+      if (rowIdx <= 0) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx - 1, dayIdx: prev.dayIdx }));
+      return;
+    }
+    if (key === 'ArrowDown') {
+      if (rowIdx >= maxRi) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx + 1, dayIdx: prev.dayIdx }));
+      return;
+    }
+    if (key === 'ArrowLeft') {
+      if (!row.collapsed) toggleGroup(row.groupPath);
+      return;
+    }
+    if (key === 'ArrowRight') {
+      if (row.collapsed) { toggleGroup(row.groupPath); return; }
+      if (rowIdx >= maxRi) return;
+      lastKeyNavCell.current = true;
+      setFocusedCell(prev => ({ rowIdx: rowIdx + 1, dayIdx: prev.dayIdx }));
+    }
+  }, [flatRows, toggleGroup]);
+
+  // ── Toolbar (declared above the empty-state branch so owners can still
+  // reach the Edit-assets deep-link when the registry has no rows yet) ──
+  const toolbarNode = showToolbar && (
+    <div className={styles.toolbar} role="toolbar" aria-label="Assets view controls">
+      <div className={styles.toolbarGroup}>
+        <label className={styles.toolbarLabel} htmlFor="assets-group-by">Group by</label>
+        <select
+          id="assets-group-by"
+          className={styles.toolbarSelect}
+          value={currentGroupByValue}
+          onChange={(e) => onGroupByChange?.(e.target.value || null)}
+          disabled={!onGroupByChange || groupByOptions.length <= 1}
+        >
+          {groupByOptions.map(o => (
+            <option key={o.value || '__none'} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className={styles.toolbarGroup}>
+        <label className={styles.toolbarLabel} htmlFor="assets-sort-by">Sort by</label>
+        <select
+          id="assets-sort-by"
+          className={styles.toolbarSelect}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value)}
+          disabled={!assetRegistry}
+        >
+          <option value="registry">Registry order</option>
+          <option value="label">Label</option>
+          <option value="group">Group</option>
+          <option value="lastEvent">Last event date</option>
+        </select>
+      </div>
+      <div className={styles.toolbarSpacer} />
+      {onEditAssets && (
+        <button
+          type="button"
+          className={styles.toolbarBtn}
+          onClick={onEditAssets}
+          aria-label="Edit assets"
+        >
+          Edit assets
+        </button>
+      )}
+    </div>
+  );
 
   // ── Empty state ────────────────────────────────────────────────────────────
-  if (rows.length === 0) {
-    if (ctx?.emptyState) return <>{ctx.emptyState}</>;
+  if (resourceList.length === 0) {
     return (
-      <div className={styles.empty}>
-        <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
+      <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+        {toolbarNode}
+        {ctx?.emptyState
+          ? ctx.emptyState
+          : (
+            <div className={styles.empty}>
+              <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
+            </div>
+          )}
       </div>
     );
   }
@@ -415,6 +721,7 @@ export default function AssetsView({
 
   return (
     <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+      {toolbarNode}
       <div
         className={styles.inner}
         style={{ width: NAME_W + totalDays * dayColW }}
@@ -492,29 +799,38 @@ export default function AssetsView({
               const topOffset = rowOffsets[rowIdx];
               return (
                 <div
-                  key={`gh-${rowData.groupKey}`}
+                  key={`gh-${rowData.groupPath}`}
                   className={styles.groupHeaderRow}
                   style={{ position: 'absolute', top: topOffset, left: 0, right: 0, height: rowData.rowH }}
                   role="row"
                   aria-rowindex={rowIdx + 2}
+                  data-depth={rowData.depth}
+                  data-group-path={rowData.groupPath}
+                  data-header-idx={rowIdx}
                 >
-                  <div className={styles.groupHeaderCell} style={{ width: NAME_W + totalDays * dayColW }}>
-                    <button
-                      className={styles.groupToggleBtn}
-                      onClick={() => toggleGroup(rowData.groupKey)}
-                      aria-expanded={!rowData.collapsed}
-                      aria-label={`${rowData.collapsed ? 'Expand' : 'Collapse'} group ${rowData.groupLabel}`}
-                    >
-                      <span className={styles.groupChevron} data-collapsed={rowData.collapsed || undefined}>&#9656;</span>
-                      <span className={styles.groupLabel}>{rowData.groupLabel}</span>
-                      <span className={styles.groupCount}>{rowData.count}</span>
-                    </button>
+                  <div
+                    className={styles.groupHeaderCell}
+                    style={{ width: NAME_W + totalDays * dayColW }}
+                  >
+                    <GroupHeader
+                      id={`assets-gh-${rowIdx}`}
+                      label={rowData.groupLabel}
+                      count={rowData.count}
+                      depth={rowData.depth}
+                      collapsed={rowData.collapsed}
+                      onToggle={() => toggleGroup(rowData.groupPath)}
+                      posInSet={rowData.posInSet}
+                      setSize={rowData.setSize}
+                      fieldLabel={rowData.field}
+                      onArrowKey={(key) => handleHeaderArrowKey(rowIdx, key)}
+                    />
                   </div>
                 </div>
               );
             }
 
-            const { key, resource, sublabel, events: rowEvents, rowH } = rowData;
+            const { key, resource, label, sublabel, events: rowEvents, rowH } = rowData;
+            const displayLabel = label ?? resource;
             const topOffset = rowOffsets[rowIdx];
             const locationData = locations.get(resource) ?? null;
 
@@ -538,10 +854,11 @@ export default function AssetsView({
                   className={styles.nameCell}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
-                  aria-label={resource}
+                  aria-label={displayLabel}
+                  data-resource={resource}
                 >
                   <div className={styles.assetMeta}>
-                    <span className={styles.assetRegistration}>{resource}</span>
+                    <span className={styles.assetRegistration}>{displayLabel}</span>
                     {sublabel && (
                       <span className={styles.assetSublabel}>{sublabel}</span>
                     )}
@@ -621,6 +938,12 @@ export default function AssetsView({
                     const statusClass = ev.status === 'cancelled' ? styles.cancelled
                       : ev.status === 'tentative' ? styles.tentative : '';
 
+                    const approvalActions = stage
+                      ? allowedActionsFor(stage, approvalsConfig)
+                      : [];
+                    const showCaret = approvalActions.length > 0
+                      && typeof onApprovalAction === 'function';
+
                     const ariaLabel = [
                       ev.title,
                       ev.category && `category ${ev.category}`,
@@ -629,27 +952,47 @@ export default function AssetsView({
                     ].filter(Boolean).join(', ');
 
                     return (
-                      <button
-                        key={ev.id}
-                        className={[
-                          styles.event,
-                          styles[`pill_${pillStyle}`] || styles.pill_hue,
-                          approvalClass(stage),
-                          statusClass,
-                        ].filter(Boolean).join(' ')}
-                        style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
-                        onClick={onClick}
-                        aria-label={ariaLabel}
-                        data-stage={stage || undefined}
-                      >
-                        {prefix && (
-                          <span className={styles.stagePrefix} aria-hidden="true">{prefix}</span>
+                      <div key={ev.id} style={{ display: 'contents' }}>
+                        <button
+                          className={[
+                            styles.event,
+                            styles[`pill_${pillStyle}`] || styles.pill_hue,
+                            approvalClass(stage),
+                            statusClass,
+                          ].filter(Boolean).join(' ')}
+                          style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
+                          onClick={onClick}
+                          aria-label={ariaLabel}
+                          data-stage={stage || undefined}
+                        >
+                          {prefix && (
+                            <span className={styles.stagePrefix} aria-hidden="true">{prefix}</span>
+                          )}
+                          <span className={styles.evTitle}>{ev.title}</span>
+                          {(ev._dayEnd - ev._dayStart + 1) * dayColW >= 60 && ev.category && (
+                            <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
+                          )}
+                        </button>
+                        {showCaret && (
+                          <button
+                            className={styles.stageCaret}
+                            style={{
+                              left: left + width - 18,
+                              top:  top + (LANE_H - 16) / 2,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openApprovalMenu(ev, stage, e.currentTarget);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={approvalMenu?.event?.id === ev.id}
+                            aria-label={`Approval actions for ${ev.title}`}
+                            data-stage={stage}
+                          >
+                            ▾
+                          </button>
                         )}
-                        <span className={styles.evTitle}>{ev.title}</span>
-                        {(ev._dayEnd - ev._dayStart + 1) * dayColW >= 60 && ev.category && (
-                          <span className={styles.evCat} aria-hidden="true">{ev.category}</span>
-                        )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -658,7 +1001,25 @@ export default function AssetsView({
           })}
         </div>
       </div>
-      <AuditDrawer event={auditEvent} onClose={closeAudit} />
+      <AuditDrawer
+        event={auditEvent}
+        onClose={closeAudit}
+        approvalsConfig={approvalsConfig}
+        onAction={
+          auditEvent && typeof onApprovalAction === 'function'
+            ? (action) => onApprovalAction(auditEvent, action)
+            : undefined
+        }
+      />
+      {approvalMenu && (
+        <ApprovalActionMenu
+          stage={approvalMenu.stage}
+          approvalsConfig={approvalsConfig}
+          anchorRect={approvalMenu.anchorRect}
+          onAction={handleApprovalActionInternal}
+          onClose={closeApprovalMenu}
+        />
+      )}
       <div
         className={styles.srOnly}
         role="status"

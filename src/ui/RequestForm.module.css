@@ -1,0 +1,131 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 520;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.panel {
+  background: var(--wc-bg, #fff);
+  border-radius: var(--wc-radius, 10px);
+  box-shadow: var(--wc-shadow, 0 10px 32px rgba(0, 0, 0, 0.2));
+  width: 480px;
+  max-width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--wc-border, #e5e7eb);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--wc-text, #111827);
+}
+
+.body {
+  padding: 14px 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  color: var(--wc-text-muted, #6b7280);
+  font-size: 13px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--wc-text, #111827);
+}
+
+.formRow > span {
+  font-weight: 600;
+}
+
+.input,
+.textarea,
+.select {
+  padding: 6px 8px;
+  border: 1px solid var(--wc-border, #d1d5db);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--wc-bg, #fff);
+  color: var(--wc-text, #111827);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text, #111827);
+}
+
+.err {
+  color: var(--wc-danger, #dc2626);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--wc-border, #e5e7eb);
+}
+
+.btnSecondary,
+.btnPrimary {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--wc-border, #d1d5db);
+}
+
+.btnSecondary {
+  background: var(--wc-bg, #fff);
+  color: var(--wc-text, #111827);
+}
+
+.btnPrimary {
+  background: var(--wc-primary, #2563eb);
+  color: white;
+  border-color: transparent;
+}
+
+.btnPrimary:disabled {
+  background: var(--wc-bg-muted, #e5e7eb);
+  color: var(--wc-text-muted, #6b7280);
+  cursor: not-allowed;
+}

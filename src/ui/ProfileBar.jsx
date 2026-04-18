@@ -129,7 +129,7 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
         <span className={styles.chipName}>{savedView.name}</span>
         {isDirty && <span className={styles.dirtyDot} title="Filters changed since saved" />}
         {savedView.view && (
-          <span className={styles.viewTag}>{savedView.view.slice(0,3)}</span>
+          <span className={styles.viewTag} aria-hidden="true">{savedView.view.slice(0,3)}</span>
         )}
       </button>
 

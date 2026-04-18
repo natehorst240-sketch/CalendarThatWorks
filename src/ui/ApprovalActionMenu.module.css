@@ -1,0 +1,56 @@
+.menu {
+  z-index: 540;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--wc-bg, #fff);
+  border: 1px solid var(--wc-border, #d1d5db);
+  border-radius: 6px;
+  box-shadow: var(--wc-shadow, 0 6px 18px rgba(0, 0, 0, 0.12));
+}
+
+.menuInline {
+  position: static;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.menuItem {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--wc-text, #111827);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--wc-bg-muted, #f3f4f6);
+  outline: none;
+}
+
+.menuInline .menuItem {
+  border-color: var(--wc-border, #d1d5db);
+  background: var(--wc-bg, #fff);
+}
+
+.menuInline .menuItem:hover {
+  background: var(--wc-bg-muted, #f3f4f6);
+}
+
+.menuItem[data-action='deny'],
+.menuItem[data-action='revoke'] {
+  color: var(--wc-danger, #dc2626);
+}
