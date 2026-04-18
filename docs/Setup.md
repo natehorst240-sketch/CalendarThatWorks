@@ -10,15 +10,21 @@ Work through it top to bottom. Every step is optional after Step 1 — pick only
 
 1. [Install](#1-install)
 2. [Put a calendar on the page](#2-put-a-calendar-on-the-page)
-3. [Pick where your events live](#3-pick-where-your-events-live)
-4. [Pick which views to show](#4-pick-which-views-to-show)
-5. [Add your team (optional)](#5-add-your-team-optional)
+3. [Pick where your events live](#3-pick-where-your-events-live) — includes multi-source merging
+4. [Pick which views to show](#4-pick-which-views-to-show) — includes drag & drop
+5. [Add your team (optional)](#5-add-your-team-optional) — includes availability & working hours
 6. [Turn on team scheduling (optional)](#6-turn-on-team-scheduling-optional)
+6.5. [Filters & saved views (optional)](#65-filters--saved-views-optional)
 7. [Track things, not just people (optional)](#7-track-things-not-just-people-optional)
 7.5. [Propose → review → approve / deny (optional)](#75-turn-on-propose--review--approve--deny-for-assets-optional)
+7.6. [Categories — color & organize your events (optional)](#76-categories--color--organize-your-events-optional)
+7.7. [Recurring events (optional)](#77-recurring-events-optional)
+7.8. [Grouping — rows by team, role, or location (optional)](#78-grouping--rows-by-team-role-or-location-optional)
+7.9. [Conflict detection (optional)](#79-conflict-detection-optional)
 8. [Pick a theme](#8-pick-a-theme)
 9. [Let outsiders book time (optional)](#9-let-outsiders-book-time-optional)
-10. [Turn on the setup wizard (optional)](#10-turn-on-the-setup-wizard-optional)
+10. [Turn on the setup wizard & owner mode (optional)](#10-turn-on-the-setup-wizard--owner-mode-optional)
+10.5. [Bulk-import events from a spreadsheet (optional)](#105-bulk-import-events-from-a-spreadsheet-optional)
 11. [Ship it](#11-ship-it)
 12. [Pick-your-path cheat sheet](#12-pick-your-path-cheat-sheet)
 
@@ -146,6 +152,23 @@ npm install xlsx
 
 Then use the export helpers in `src/export/excelExport.js` to dump events or hand your users an Upload button.
 
+### 3g. Pull from more than one place at once
+
+You are not limited to a single source. Mix Google + Supabase + an iCal holiday feed in the same calendar. Each event is tagged with where it came from and gets its own filter pill.
+
+```jsx
+<WorksCalendar
+  calendarId="ops-team"
+  events={events}        // your Supabase-loaded events
+  feeds={[
+    { id: 'holidays', label: 'US Holidays', url: 'https://example.com/holidays.ics' },
+    { id: 'gcal',     label: 'Google',      url: '/api/google-proxy.ics' },
+  ]}
+/>
+```
+
+The calendar dedupes by `id`, shows a source filter pill per feed, and lets users toggle sources on/off without losing the rest of their view. See `examples/07-MultiSource.jsx` for the full pattern.
+
 ## 4. Pick which views to show
 
 Views are the buttons across the top (Month, Week, etc.). Turn on only what you need.
@@ -167,6 +190,22 @@ Views are the buttons across the top (Month, Week, etc.). Turn on only what you 
 | `timeline` | Rows of resources across time (Gantt-like) |
 | `assets` | Fleet / room / equipment rows (see Step 7) |
 
+### Drag & drop is already on
+
+Every time-grid view supports pointer + touch drag:
+
+- Drag an event to a new time → the event moves, `onEventSave` fires with the new `start` / `end`.
+- Drag the bottom edge → resize.
+- On `timeline` and `schedule` rows, drag an event onto a different row to reassign.
+
+Nothing to configure. If you want to turn it off on a specific view:
+
+```jsx
+<WorksCalendar readOnly />
+```
+
+See `examples/10-DragAndDrop.jsx` for a working demo, and `src/hooks/useDrag.js` / `useTouchDnd.js` if you need to peek under the hood.
+
 ## 5. Add your team (optional)
 
 If events belong to people, give the calendar a list of employees:
@@ -181,6 +220,20 @@ const employees = [
 ```
 
 Each event's `employeeId` links it to a person. Colors, filters, and grouping all light up once employees exist.
+
+### Availability & working hours
+
+Each employee can have three kinds of availability events, all created from the timeline → click employee menu:
+
+| Kind | What it means | Default look |
+| --- | --- | --- |
+| `pto` | Paid time off — triggers the coverage flow in Step 6 | Green all-day block |
+| `unavailable` | Not on the schedule (sick, class, other job) — also triggers coverage | Red all-day block |
+| `availability` | "I can work this window" — used by scheduling tools to find coverers | Blue time block |
+
+You don't hardcode these — they come from the `AvailabilityForm` modal the calendar shows when the user clicks **Edit Availability** or **Request PTO**. As the host, your only job is to persist them through `onEventSave` like any other event.
+
+Want to show "only people available right now"? Use a saved view (Step 6.5) with filter `category == 'availability' AND start <= now AND end > now`.
 
 ## 6. Turn on team scheduling (optional)
 
@@ -271,6 +324,67 @@ async function handleSave(event) {
 | Block coverers with their own conflict | Call `detectShiftConflicts` from `src/core/scheduleOverlap.js` before saving |
 
 Full walkthrough: [Schedule workflow guide](./ScheduleWorkflow.md).
+
+## 6.5. Filters & saved views (optional)
+
+This is WorksCalendar's #1 differentiator against every other free calendar library. If your users keep asking "show me just X," this step is for you.
+
+### What a filter does
+
+Filters narrow what's on screen without deleting anything. Examples:
+
+- "Only Alex and Sam this week"
+- "Only open shifts"
+- "Only events from the Google source, categorized as Training"
+- "Only events in the Chicago office"
+
+Filters stack. Users build them with pill buttons at the top of the calendar.
+
+### What a saved view adds
+
+A saved view is a named bundle of: current filter, current calendar view (week/timeline/etc.), date range, and grouping. Users click a name instead of rebuilding the filter every time.
+
+### Turn it on
+
+Filters are on by default. The only thing you configure is the schema — which fields people can filter by:
+
+```jsx
+import { WorksCalendar } from 'works-calendar';
+
+const filterSchema = [
+  { field: 'employeeId', label: 'Person',   type: 'multi-select' },
+  { field: 'category',   label: 'Category', type: 'multi-select' },
+  { field: 'meta.kind',  label: 'Kind',     type: 'multi-select' },
+  { field: 'location',   label: 'Location', type: 'text' },
+];
+
+<WorksCalendar
+  calendarId="team-alpha"
+  events={events}
+  filterSchema={filterSchema}
+/>
+```
+
+### Useful starter views to seed
+
+When new users land on your calendar, pre-seed a few saved views so they see the feature work immediately:
+
+| View name | Filter | Who it helps |
+| --- | --- | --- |
+| "Needs coverage" | `meta.kind == 'open-shift' AND meta.status == 'open'` | Schedulers |
+| "My week" | `employeeId == currentUser.id` | Individual contributors |
+| "Pending approval" | `meta.approvalStage.stage IN ('requested', 'pending_higher')` | Managers |
+| "This team only" | `meta.team == 'field-ops'` | Team leads |
+| "Just holidays" | `source == 'holidays'` | Everyone |
+
+### How users interact
+
+1. Click the **+ Filter** pill at the top → dropdown with fields from your schema.
+2. Add filters; the calendar updates instantly.
+3. Click **Save view** → give it a name. It lands in the Saved Views list.
+4. Click any saved view to snap back to that setup.
+
+Full reference: [Filtering system](./Filtering.md) and [Advanced filters](./AdvancedFilters.md).
 
 ## 7. Track things, not just people (optional)
 
@@ -422,6 +536,147 @@ async function handleApprovalAction(eventId, action) {
 | Hide denied items from the main view | Saved view with filter `approvalStage != 'denied'` |
 | Only the owner can finalize | Remove `finalize` from `approved.allow` and handle it through a custom owner action |
 
+## 7.6. Categories — color & organize your events (optional)
+
+Categories are the second-most-used organizing axis after people. They color-code events, drive filters, and power the schedule workflow (PTO/Unavailable/Open-shift are all categories under the hood).
+
+### Define them once in owner config
+
+```jsx
+<WorksCalendar
+  categoriesConfig={{
+    categories: [
+      { id: 'training',  label: 'Training',   color: '#8b5cf6' },
+      { id: 'customer',  label: 'Customer',   color: '#3b82f6' },
+      { id: 'internal',  label: 'Internal',   color: '#64748b' },
+      { id: 'on-call',   label: 'On-call',    color: '#f59e0b' },
+    ],
+  }}
+/>
+```
+
+### Rules of thumb
+
+- **Keep the list short.** Five categories are usable, fifteen are noise.
+- **One color per category.** Don't reuse — the color is how people scan the month view.
+- **Reserved ids** the calendar uses for scheduling: `pto`, `unavailable`, `availability`, `open-shift`, `covering`, `on-call`. Don't reuse these for custom categories.
+
+Non-technical owners can edit the category list from the setup wizard (Step 10) — no code changes needed.
+
+## 7.7. Recurring events (optional)
+
+Use this when someone needs "every Monday at 9" or "the first Tuesday of each month." The calendar stores one event with an `rrule` string; the engine expands it into visible occurrences inside the date range you're looking at.
+
+### Create a recurring event
+
+When the user clicks **+ Add event**, the form has a **Repeats** dropdown. Behind the scenes, saved events look like:
+
+```js
+{
+  id: 'standup',
+  title: 'Morning standup',
+  start: '2026-04-20T09:00:00',
+  end:   '2026-04-20T09:30:00',
+  rrule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+}
+```
+
+`rrule` follows the [iCalendar RRULE spec](https://icalendar.org/iCalendar-RFC-5545/3-8-5-3-recurrence-rule.html) — every other calendar on the planet speaks it.
+
+### Editing one occurrence vs. the whole series
+
+When a user drags or edits a single instance of a recurring event, the calendar pops a scope picker:
+
+- **Just this occurrence** — detaches that one, leaves the series alone.
+- **This and future** — splits the series at that date.
+- **All events in the series** — updates the master rule.
+
+You don't wire this up — it fires automatically. Your save handler just receives the resulting ops.
+
+### Patterns to copy
+
+| You want… | RRULE |
+| --- | --- |
+| Every weekday | `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR` |
+| Every other Monday | `FREQ=WEEKLY;INTERVAL=2;BYDAY=MO` |
+| First of every month | `FREQ=MONTHLY;BYMONTHDAY=1` |
+| First Tuesday of every month | `FREQ=MONTHLY;BYDAY=1TU` |
+| 10 times, then stop | append `;COUNT=10` |
+| Until a fixed date | append `;UNTIL=20260701T000000Z` |
+
+## 7.8. Grouping — rows by team, role, or location (optional)
+
+Grouping splits any row-based view (timeline, schedule, assets) into collapsible bands. Instead of a flat list of 40 people, you get "Field Ops (12)", "Dispatch (8)", "Management (4)" — each collapsible.
+
+```jsx
+<WorksCalendar
+  initialView="timeline"
+  employees={employees}
+  groupBy="role"
+/>
+```
+
+Common fields to group by:
+
+- `role` — "Nurses / Doctors / Admin"
+- `team` — "Field Ops / Back Office"
+- `location` — "Chicago / Austin / Remote"
+- Any custom field you put on employees or events
+
+### Let users change it at runtime
+
+Expose the **Group by** dropdown:
+
+```jsx
+<WorksCalendar
+  groupByOptions={[
+    { field: 'role',     label: 'Role' },
+    { field: 'team',     label: 'Team' },
+    { field: 'location', label: 'Location' },
+    { field: null,       label: 'No grouping' },
+  ]}
+/>
+```
+
+Full API: [Grouping API](./GROUPING_API.md). Runnable demo: `examples/09-Grouping.jsx`.
+
+## 7.9. Conflict detection (optional)
+
+Stop double-bookings before they save. The conflict engine warns when a new or edited event overlaps another event on the same person, asset, or resource.
+
+### Turn it on in owner config
+
+Open the Config panel → **Conflicts** tab and flip `enabled`. Or set it in code on first load:
+
+```js
+config.conflicts = {
+  enabled: true,
+  rules: [
+    { scope: 'employee', action: 'warn'  },  // two events on the same person → warning
+    { scope: 'asset',    action: 'block' },  // two events on the same vehicle → block save
+  ],
+};
+```
+
+### Three actions to choose from
+
+| Action | What it does |
+| --- | --- |
+| `warn` | Shows a yellow banner in the event form. User can still save. |
+| `block` | Save button disabled until the conflict is resolved. |
+| `silent` | Conflict is recorded in the event's metadata but no UI interruption. Useful for later reports. |
+
+### Use the engine directly
+
+If you want to check before saving (e.g., in your server-side API), import the engine:
+
+```js
+import { checkConflicts } from 'works-calendar/core/conflictEngine';
+
+const result = checkConflicts(newEvent, allEvents, rules);
+if (result.blocked) return { error: result.reasons };
+```
+
 ## 8. Pick a theme
 
 Pick one packaged theme or roll your own with CSS.
@@ -451,9 +706,19 @@ const adapter = createLocalStorageDataAdapter({ key: 'intake' });
 
 Swap the adapter for Supabase, Google, M365, or your own API — the form doesn't care.
 
-## 10. Turn on the setup wizard (optional)
+## 10. Turn on the setup wizard & owner mode (optional)
 
-Give non-technical owners a first-time walkthrough (theme, team, categories, smart views):
+The calendar has two modes built in: **viewer** (default — most users) and **owner** (admin — the person who sets up theme, team, categories, and saved views). Owner mode is unlocked with a password you choose.
+
+### Why owner mode matters
+
+Without it, everyone sees the same screen and has the same power. With it:
+
+- Viewers see only the calendar and the filters you allow.
+- Owners see the config panel (Approvals, Conflicts, Team, Categories, Theme), the setup wizard, and the magic-wand button.
+- You can put the owner password in an env var so only you (or your manager) can flip into admin mode.
+
+### Turn it on
 
 ```jsx
 <WorksCalendar
@@ -464,9 +729,49 @@ Give non-technical owners a first-time walkthrough (theme, team, categories, sma
 />
 ```
 
-The wizard opens once. The owner can reopen it with the wand button.
+First load triggers the **Setup Wizard** — a modal that walks the owner through theme, team, categories, and starter saved views. It opens once. The owner can reopen it anytime via the wand button.
+
+### Rules of thumb
+
+- **Use a real password**, not `admin` or `demo`. Viewers can see your bundled JS.
+- **Give every physical calendar a unique `calendarId`.** All owner config is keyed by it.
+- **Rotate the password** if a former admin leaves the team.
+- **Never commit the password to Git.** Use env vars, same as the Google/M365 client IDs.
 
 More: [Setup wizard](./SetupWizard.md).
+
+## 10.5. Bulk-import events from a spreadsheet (optional)
+
+Use this when a team hands you a CSV of last year's schedule or an Excel export from their old tool. The calendar ships with a **CSV Import** dialog that maps columns to event fields and drops the result straight into the calendar.
+
+### Minimum CSV shape
+
+```csv
+title,start,end,employeeId,category
+Morning Standup,2026-04-20 09:00,2026-04-20 09:30,alex,internal
+Onsite Visit,2026-04-20 13:00,2026-04-20 15:00,sam,customer
+```
+
+### Show the import button
+
+```jsx
+<WorksCalendar
+  allowCsvImport
+  events={events}
+  onEventSave={handleSave}
+/>
+```
+
+Owners click **Import CSV** → pick a file → map columns → preview → save. Errors surface per-row so a bad date in row 47 doesn't kill the other 499 rows.
+
+Want to run the parser yourself (e.g., to import on the server)?
+
+```js
+import { parseCsv } from 'works-calendar/core/csvParser';
+const { events, errors } = parseCsv(fileText, { columnMap });
+```
+
+Excel (`.xlsx`) works too — install `xlsx` as an optional dep (Section 3f) and the dialog gains native Excel support.
 
 ## 11. Ship it
 
@@ -484,13 +789,15 @@ Not sure which combination fits you? Start here.
 
 | You are… | Start with | Then add |
 | --- | --- | --- |
-| A hobbyist tracking your own stuff | LocalStorage + month view | Themes |
-| A small business owner with 2–20 staff | Custom API or Supabase + `schedule` view | Team, external form |
-| A contractor / freelancer | LocalStorage + Google sync | External form for client bookings |
-| A shift-based team (clinic, restaurant, ops) | Supabase + `schedule` view + employees | PTO workflow, saved views |
-| A fleet / rental / room-booking business | Supabase + `assets` view | Timeline view, external form |
-| An internal tool inside Microsoft 365 | M365 sync + `week` view | Setup wizard |
-| A school / church / community group | iCal feed + `month` view | Themes |
+| A hobbyist tracking your own stuff | LocalStorage + month view | Themes, recurring events |
+| A small business owner with 2–20 staff | Custom API or Supabase + `schedule` view | Team, availability, categories, external form |
+| A contractor / freelancer | LocalStorage + Google sync | External form for client bookings, categories |
+| A shift-based team (clinic, restaurant, ops) | Supabase + `schedule` view + employees | PTO workflow, saved views, conflict detection, CSV import for last year's schedule |
+| A fleet / rental / room-booking business | Supabase + `assets` view | Approvals workflow, timeline view, external form |
+| An internal tool inside Microsoft 365 | M365 sync + `week` view | Setup wizard, owner mode, saved views |
+| A school / church / community group | iCal feed + `month` view | Categories, themes, grouping by classroom/room |
+| Multiple teams in one calendar | Supabase + `timeline` + grouping | Saved views per team, multi-source merging |
+| A regulated org (HIPAA, finance) | Custom API + owner mode + approvals | Audit drawer, conflict detection with `block`, [HIPAA notes](./HIPAA-Security.md) |
 
 ## What to read next
 
