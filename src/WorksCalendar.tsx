@@ -1644,6 +1644,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
                   groupBy={activeGroupBy}
+                  onGroupByChange={setActiveGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
                   assets={assets ?? ownerCfg.config?.assets}
                   zoomLevel={activeAssetsZoom}
@@ -1652,6 +1653,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onCollapsedGroupsChange={setActiveAssetsCollapsed}
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
+                  onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                 />
               )}
             </>
@@ -1759,6 +1761,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             resources={resources}
             schema={schema}
             items={expandedEvents}
+            initialTab={ownerCfg.configInitialTab}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}

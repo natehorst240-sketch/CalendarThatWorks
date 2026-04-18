@@ -13,6 +13,7 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   const [config,        setConfig]        = useState(() => loadConfig(calendarId));
   const [isOwner,       setIsOwner]       = useState(devMode);
   const [configOpen,    setConfigOpen]    = useState(false);
+  const [configInitialTab, setConfigInitialTab] = useState(null);
   const [authError,     setAuthError]     = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const pendingNotifyRef = useRef(false);
@@ -70,15 +71,25 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
     // else OwnerLock component handles the prompt
   }, [isOwner]);
 
+  // Deep-link helper: open ConfigPanel focused on a specific tab id. Used by
+  // view toolbars (e.g. AssetsView's "Edit assets") so owners can jump
+  // straight to the relevant registry without hunting through tabs.
+  const openConfigToTab = useCallback((tabId) => {
+    setConfigInitialTab(tabId ?? null);
+    setConfigOpen(true);
+  }, []);
+
   return {
     config,
     isOwner,
     configOpen, setConfigOpen,
+    configInitialTab,
     authError,
     isAuthLoading,
     authenticate,
     updateConfig,
     closeConfig,
     openGear,
+    openConfigToTab,
   };
 }

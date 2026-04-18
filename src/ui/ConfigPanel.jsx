@@ -34,10 +34,22 @@ export default function ConfigPanel({
   // Team-tab hooks: when provided, TeamTab emits add/delete upstream so the
   // parent's employees prop can stay in sync with config-side edits.
   onEmployeeAdd, onEmployeeDelete,
+  // Deep-link: open ConfigPanel focused on a specific tab. Re-applied when
+  // the prop changes so consecutive deep-links (e.g. two clicks of "Edit
+  // assets" with a different target each time) land on the right tab.
+  initialTab,
 }) {
-  const [tab, setTab] = useState('setup');
+  const [tab, setTab] = useState(() =>
+    initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
+  );
   const trapRef = useFocusTrap(onClose);
   const tabRefs = useRef({});
+
+  useEffect(() => {
+    if (initialTab && TABS.some(t => t.id === initialTab)) {
+      setTab(initialTab);
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     tabRefs.current[tab]?.scrollIntoView({

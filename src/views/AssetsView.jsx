@@ -171,6 +171,7 @@ export default function AssetsView({
   onEventClick,
   onDateSelect,
   groupBy,
+  onGroupByChange,
   categoriesConfig,
   zoomLevel = 'month',
   onZoomChange,
@@ -179,6 +180,7 @@ export default function AssetsView({
   collapsedGroups: collapsedGroupsProp,
   onCollapsedGroupsChange,
   assets,
+  onEditAssets,
 }) {
   const ctx = useCalendarContext();
 
@@ -276,12 +278,50 @@ export default function AssetsView({
     return map;
   }, [assetRegistry]);
 
+  // Toolbar sort order. "registry" preserves declared order (default when a
+  // registry is present); "label" / "group" / "lastEvent" resort the rows
+  // without mutating the registry itself.
+  const [sortMode, setSortMode] = useState('registry');
+
+  // Most recent event end-date per resource (used by the "Last event date"
+  // sort). Missing resources sort to the bottom.
+  const lastEventByResource = useMemo(() => {
+    const map = new Map();
+    for (const e of events) {
+      const key = e.resource ?? '(Unassigned)';
+      const ts = e.end instanceof Date ? e.end.getTime() : 0;
+      const prev = map.get(key);
+      if (prev === undefined || ts > prev) map.set(key, ts);
+    }
+    return map;
+  }, [events]);
+
+  const applySort = useCallback((ids) => {
+    if (sortMode === 'registry' || !assetRegistry) return ids;
+    const byId = assetById;
+    const labelOf = (id) => byId.get(id)?.label ?? id;
+    const groupOf = (id) => byId.get(id)?.group ?? '';
+    const lastOf  = (id) => lastEventByResource.get(id) ?? -Infinity;
+    const copy = [...ids];
+    copy.sort((a, b) => {
+      // Always keep "(Unassigned)" at the end.
+      if (a === '(Unassigned)') return 1;
+      if (b === '(Unassigned)') return -1;
+      if (sortMode === 'label')     return labelOf(a).localeCompare(labelOf(b));
+      if (sortMode === 'group')     return groupOf(a).localeCompare(groupOf(b)) || labelOf(a).localeCompare(labelOf(b));
+      if (sortMode === 'lastEvent') return lastOf(b) - lastOf(a);
+      return 0;
+    });
+    return copy;
+  }, [sortMode, assetRegistry, assetById, lastEventByResource]);
+
   const resourceList = useMemo(() => {
     if (assetRegistry) {
       const ordered = assetRegistry.map(a => a.id);
       const orderedSet = new Set(ordered);
       const hasOrphan = events.some(e => !orderedSet.has(e.resource ?? '(Unassigned)'));
-      return hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
+      const base = hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
+      return applySort(base);
     }
     const set = new Set();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
@@ -290,7 +330,29 @@ export default function AssetsView({
       if (b === '(Unassigned)') return -1;
       return a.localeCompare(b);
     });
-  }, [assetRegistry, events]);
+  }, [assetRegistry, events, applySort]);
+
+  // GroupBy options exposed by the toolbar: fixed asset fields + every
+  // distinct `meta.*` key seen across the registry. Empty-string value
+  // maps to "no grouping".
+  const groupByOptions = useMemo(() => {
+    const opts = [{ value: '', label: 'None' }];
+    if (!assetRegistry) return opts;
+    opts.push({ value: 'group', label: 'Group' });
+    const metaKeys = new Set();
+    for (const a of assetRegistry) {
+      if (a?.meta && typeof a.meta === 'object') {
+        for (const k of Object.keys(a.meta)) metaKeys.add(k);
+      }
+    }
+    for (const k of [...metaKeys].sort()) {
+      opts.push({ value: `meta.${k}`, label: `Meta: ${k}` });
+    }
+    return opts;
+  }, [assetRegistry]);
+
+  const currentGroupByValue = typeof groupBy === 'string' ? groupBy : '';
+  const showToolbar = Boolean(assetRegistry) || Boolean(onEditAssets);
 
   // ── Live locations (via LocationProvider) ──────────────────────────────────
   const locations = useResourceLocations(resourceList, locationProvider);
@@ -530,12 +592,65 @@ export default function AssetsView({
     }
   }, [flatRows, totalDays, onEventClick, onDateSelect, days, openAudit]);
 
+  // ── Toolbar (declared above the empty-state branch so owners can still
+  // reach the Edit-assets deep-link when the registry has no rows yet) ──
+  const toolbarNode = showToolbar && (
+    <div className={styles.toolbar} role="toolbar" aria-label="Assets view controls">
+      <div className={styles.toolbarGroup}>
+        <label className={styles.toolbarLabel} htmlFor="assets-group-by">Group by</label>
+        <select
+          id="assets-group-by"
+          className={styles.toolbarSelect}
+          value={currentGroupByValue}
+          onChange={(e) => onGroupByChange?.(e.target.value || null)}
+          disabled={!onGroupByChange || groupByOptions.length <= 1}
+        >
+          {groupByOptions.map(o => (
+            <option key={o.value || '__none'} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className={styles.toolbarGroup}>
+        <label className={styles.toolbarLabel} htmlFor="assets-sort-by">Sort by</label>
+        <select
+          id="assets-sort-by"
+          className={styles.toolbarSelect}
+          value={sortMode}
+          onChange={(e) => setSortMode(e.target.value)}
+          disabled={!assetRegistry}
+        >
+          <option value="registry">Registry order</option>
+          <option value="label">Label</option>
+          <option value="group">Group</option>
+          <option value="lastEvent">Last event date</option>
+        </select>
+      </div>
+      <div className={styles.toolbarSpacer} />
+      {onEditAssets && (
+        <button
+          type="button"
+          className={styles.toolbarBtn}
+          onClick={onEditAssets}
+          aria-label="Edit assets"
+        >
+          Edit assets
+        </button>
+      )}
+    </div>
+  );
+
   // ── Empty state ────────────────────────────────────────────────────────────
   if (resourceList.length === 0) {
-    if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
-      <div className={styles.empty}>
-        <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
+      <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+        {toolbarNode}
+        {ctx?.emptyState
+          ? ctx.emptyState
+          : (
+            <div className={styles.empty}>
+              <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
+            </div>
+          )}
       </div>
     );
   }
@@ -548,6 +663,7 @@ export default function AssetsView({
 
   return (
     <div className={styles.wrap} ref={wrapRef} data-zoom={activeZoom}>
+      {toolbarNode}
       <div
         className={styles.inner}
         style={{ width: NAME_W + totalDays * dayColW }}
