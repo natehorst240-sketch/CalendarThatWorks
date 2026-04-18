@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Plus, Trash2, Check, Camera, Pencil } from 'lucide-react';
+import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown } from 'lucide-react';
 import { FIELD_TYPES } from '../core/configSchema.js';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap.js';
@@ -15,6 +15,7 @@ const TABS = [
   { id: 'hoverCard',   label: 'Hover Card' },
   { id: 'eventFields', label: 'Event Fields' },
   { id: 'categories',  label: 'Categories' },
+  { id: 'assets',      label: 'Assets' },
   { id: 'display',     label: 'Display' },
   { id: 'theme',       label: 'Theme' },
   { id: 'feeds',       label: 'Feeds' },
@@ -76,6 +77,7 @@ export default function ConfigPanel({
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
+          {tab === 'assets'      && <AssetsTab       config={config} onUpdate={onUpdate} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
           {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
@@ -733,6 +735,120 @@ export function CategoriesTab({ config, onUpdate }) {
         <span>Reset to shipped defaults</span>
         <button className={styles.addBtn} onClick={resetToDefaults}>Reset</button>
       </div>
+    </div>
+  );
+}
+
+/* ----- Assets tab ----- */
+/**
+ * Owner-editable asset registry. Persists to config.assets; WorksCalendar
+ * threads `props.assets ?? config.assets` into AssetsView. An empty array
+ * preserves the legacy event.resource-derived behavior so the tab is
+ * strictly additive — existing calendars keep rendering unchanged until the
+ * owner adds at least one asset.
+ *
+ * Each entry: { id, label, group?, meta: { sublabel? } }
+ *   id     — matched against event.resource; stable key, not user-facing.
+ *   label  — display name rendered in the AssetsView rowheader.
+ *   group  — optional group bucket (e.g. "CJ3", "West"); surfaces in
+ *            groupBy dropdowns added by ticket 10.
+ *   meta   — free-form; sublabel appears under label in the asset cell.
+ */
+export function AssetsTab({ config, onUpdate }) {
+  const assets = Array.isArray(config.assets) ? config.assets : [];
+
+  const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
+
+  const addAsset = () => {
+    const n = assets.length + 1;
+    writeAssets([
+      ...assets,
+      { id: `asset-${n}`, label: `Asset ${n}`, group: '', meta: {} },
+    ]);
+  };
+
+  const updateAsset = (idx, patch) => {
+    writeAssets(assets.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+  };
+
+  const updateAssetMeta = (idx, metaPatch) => {
+    writeAssets(assets.map((a, i) => (
+      i === idx ? { ...a, meta: { ...(a.meta ?? {}), ...metaPatch } } : a
+    )));
+  };
+
+  const removeAsset = (idx) => writeAssets(assets.filter((_, i) => i !== idx));
+
+  const moveAsset = (idx, delta) => {
+    const target = idx + delta;
+    if (target < 0 || target >= assets.length) return;
+    const next = [...assets];
+    const [moved] = next.splice(idx, 1);
+    next.splice(target, 0, moved);
+    writeAssets(next);
+  };
+
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionDesc}>
+        Register the assets that appear as rows in the Assets view. Rows
+        follow this order; leave empty to fall back to deriving rows from
+        <code> event.resource</code> values.
+      </p>
+
+      {assets.map((asset, i) => (
+        <div key={asset.id + ':' + i} className={styles.fieldRow} data-asset-id={asset.id}>
+          <input
+            className={styles.input}
+            value={asset.label ?? ''}
+            onChange={e => updateAsset(i, { label: e.target.value })}
+            placeholder="Label"
+            aria-label={`Label for ${asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.id}
+            onChange={e => updateAsset(i, { id: e.target.value.trim() || asset.id })}
+            placeholder="id"
+            aria-label={`Id for ${asset.label || asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.group ?? ''}
+            onChange={e => updateAsset(i, { group: e.target.value })}
+            placeholder="Group"
+            aria-label={`Group for ${asset.label || asset.id}`}
+          />
+          <input
+            className={styles.input}
+            value={asset.meta?.sublabel ?? ''}
+            onChange={e => updateAssetMeta(i, { sublabel: e.target.value })}
+            placeholder="Sublabel"
+            aria-label={`Sublabel for ${asset.label || asset.id}`}
+          />
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveAsset(i, -1)}
+            disabled={i === 0}
+            aria-label={`Move ${asset.label || asset.id} up`}
+          ><ArrowUp size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => moveAsset(i, 1)}
+            disabled={i === assets.length - 1}
+            aria-label={`Move ${asset.label || asset.id} down`}
+          ><ArrowDown size={13} /></button>
+          <button
+            className={styles.removeBtn}
+            onClick={() => removeAsset(i)}
+            aria-label={`Remove ${asset.label || asset.id}`}
+          ><Trash2 size={13} /></button>
+        </div>
+      ))}
+
+      <button className={styles.addFieldBtn} onClick={addAsset}>
+        <Plus size={13} /> Add asset
+      </button>
     </div>
   );
 }

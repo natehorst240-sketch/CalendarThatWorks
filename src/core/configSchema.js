@@ -54,6 +54,13 @@ export const DEFAULT_CONFIG = {
   access: {
     viewerPassword: '',
   },
+
+  // First-class asset registry. When non-empty, AssetsView renders one row
+  // per entry (label for display, id matched against event.resource). Empty
+  // array preserves the legacy event.resource-derived behavior. Edited from
+  // the ConfigPanel → Assets tab; no host redeploy needed to change the fleet.
+  // Shape: { id: string, label: string, group?: string, meta?: object }
+  assets: [],
 };
 
 function mergeDeep(target, source) {

@@ -178,6 +178,7 @@ export default function AssetsView({
   renderAssetLocation,
   collapsedGroups: collapsedGroupsProp,
   onCollapsedGroupsChange,
+  assets,
 }) {
   const ctx = useCalendarContext();
 
@@ -254,8 +255,34 @@ export default function AssetsView({
     };
   }, []);
 
-  // ── Row source: all resources appearing in events (for location provider) ──
+  // ── Row source ──
+  // When `assets` is provided (first-class registry from owner config),
+  // rows come from the registry in its declared order. Any event.resource
+  // value not present in the registry falls into an "(Unassigned)" row.
+  // When `assets` is absent/empty, preserve the legacy behavior: derive
+  // rows from the distinct event.resource values alphabetically.
+  const assetRegistry = useMemo(() => {
+    return Array.isArray(assets) && assets.length > 0 ? assets : null;
+  }, [assets]);
+
+  // id → { label, meta, group } lookup for rendering.
+  const assetById = useMemo(() => {
+    const map = new Map();
+    if (assetRegistry) {
+      for (const a of assetRegistry) {
+        if (a && typeof a.id === 'string' && a.id) map.set(a.id, a);
+      }
+    }
+    return map;
+  }, [assetRegistry]);
+
   const resourceList = useMemo(() => {
+    if (assetRegistry) {
+      const ordered = assetRegistry.map(a => a.id);
+      const orderedSet = new Set(ordered);
+      const hasOrphan = events.some(e => !orderedSet.has(e.resource ?? '(Unassigned)'));
+      return hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
+    }
     const set = new Set();
     events.forEach(e => set.add(e.resource ?? '(Unassigned)'));
     return [...set].sort((a, b) => {
@@ -263,7 +290,7 @@ export default function AssetsView({
       if (b === '(Unassigned)') return -1;
       return a.localeCompare(b);
     });
-  }, [events]);
+  }, [assetRegistry, events]);
 
   // ── Live locations (via LocationProvider) ──────────────────────────────────
   const locations = useResourceLocations(resourceList, locationProvider);
@@ -274,26 +301,39 @@ export default function AssetsView({
    * most events are filtered into a different group bucket.
    */
   const buildAssetRow = useCallback((resource, subsetEvents) => {
-    const resEvents = subsetEvents.filter(
-      e => (e.resource ?? '(Unassigned)') === resource,
-    );
+    // "(Unassigned)" bucket catches any event whose resource isn't in the
+    // registry (or is missing entirely). Registry rows keep exact-id match.
+    const matchesRow = assetRegistry
+      ? (e) => {
+          const r = e.resource ?? '(Unassigned)';
+          if (resource === '(Unassigned)') return !assetById.has(r);
+          return r === resource;
+        }
+      : (e) => (e.resource ?? '(Unassigned)') === resource;
+    const resEvents = subsetEvents.filter(matchesRow);
     const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
     const rowH = Math.max(
       laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
       ROW_PAD * 2 + LANE_H + 16,
     );
     const firstWithMeta = resEvents.find(e => e.meta?.assetSublabel || e.meta?.sublabel);
-    const sublabel = firstWithMeta?.meta?.assetSublabel ?? firstWithMeta?.meta?.sublabel ?? null;
+    const registryEntry = assetById.get(resource) ?? null;
+    const sublabel = firstWithMeta?.meta?.assetSublabel
+      ?? firstWithMeta?.meta?.sublabel
+      ?? registryEntry?.meta?.sublabel
+      ?? null;
+    const label = registryEntry?.label ?? resource;
     return {
       _type: 'assetRow',
       key: resource,
       resource,
+      label,
       sublabel,
       events: laned,
       laneCount,
       rowH,
     };
-  }, [monthStart.toISOString(), monthEnd.toISOString()]);
+  }, [monthStart.toISOString(), monthEnd.toISOString(), assetRegistry, assetById]);
 
   const sortResourceKeys = useCallback((keys) => {
     return [...keys].sort((a, b) => {
@@ -612,7 +652,8 @@ export default function AssetsView({
               );
             }
 
-            const { key, resource, sublabel, events: rowEvents, rowH } = rowData;
+            const { key, resource, label, sublabel, events: rowEvents, rowH } = rowData;
+            const displayLabel = label ?? resource;
             const topOffset = rowOffsets[rowIdx];
             const locationData = locations.get(resource) ?? null;
 
@@ -636,10 +677,11 @@ export default function AssetsView({
                   className={styles.nameCell}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
-                  aria-label={resource}
+                  aria-label={displayLabel}
+                  data-resource={resource}
                 >
                   <div className={styles.assetMeta}>
-                    <span className={styles.assetRegistration}>{resource}</span>
+                    <span className={styles.assetRegistration}>{displayLabel}</span>
                     {sublabel && (
                       <span className={styles.assetSublabel}>{sublabel}</span>
                     )}

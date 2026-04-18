@@ -152,6 +152,7 @@ export type WorksCalendarProps = {
   // ── Assets view ──
   locationProvider?: LocationProvider;
   categoriesConfig?: Record<string, unknown>;
+  assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
   onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
   onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
   renderAssetLocation?: (...args: unknown[]) => ReactNode;
@@ -296,6 +297,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // ── Assets view ──
     locationProvider,
     categoriesConfig,
+    assets,
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
@@ -1643,6 +1645,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onDateSelect={handleScheduleDateSelect}
                   groupBy={activeGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  assets={assets ?? ownerCfg.config?.assets}
                   zoomLevel={activeAssetsZoom}
                   onZoomChange={setActiveAssetsZoom}
                   collapsedGroups={activeAssetsCollapsed}
