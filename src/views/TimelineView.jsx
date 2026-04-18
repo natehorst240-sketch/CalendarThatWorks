@@ -261,8 +261,11 @@ export default function TimelineView({
         const coverId = String(ev.meta.coveredBy);
         if (!coveringMap.has(coverId)) coveringMap.set(coverId, []);
         const origEmp = employees.find(e => e.id === (ev.resource ?? ''));
-        const clampedStart = max([startOfDay(ev.start), monthStart]);
-        const clampedEnd   = min([startOfDay(ev.end),   monthEnd]);
+        const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
+        const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+        const clampedStart = max([startOfDay(reqStart), monthStart]);
+        // reqEnd is exclusive [start, end) — subtract 1 day to get the inclusive last day
+        const clampedEnd   = min([addDays(startOfDay(reqEnd), -1), monthEnd]);
         if (clampedStart > clampedEnd) return;
         const ds = differenceInCalendarDays(clampedStart, monthStart);
         const de = differenceInCalendarDays(clampedEnd,   monthStart);
