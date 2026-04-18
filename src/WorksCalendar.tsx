@@ -1006,9 +1006,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         // Mark the original shift as needing coverage
         const updatedMeta = {
           ...(shiftEv.meta ?? {}),
-          shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
-          openShiftId: openShift.id,
-          coveredBy:   null,
+          shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
+          openShiftId:  openShift.id,
+          coveredBy:    null,
+          requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
+          requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
         };
         applyEngineOp(
           { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },

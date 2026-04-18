@@ -925,8 +925,13 @@ export default function TimelineView({
                   {rowEvents
                     .filter(ev => (ev.category === onCallCategory || ev.meta?.onCall === true) && ev.meta?.shiftStatus)
                     .map(ev => {
-                      const left  = ev._dayStart * DAY_W + 2;
-                      const width = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
+                      const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
+                      const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+                      const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
+                      // reqEnd is exclusive [start, end), so subtract 1 day to get the last included day
+                      const pillDayEnd   = differenceInCalendarDays(min([addDays(startOfDay(reqEnd), -1), monthEnd]), monthStart);
+                      const left  = pillDayStart * DAY_W + 2;
+                      const width = Math.max(DAY_W - 4, (pillDayEnd - pillDayStart + 1) * DAY_W - 4);
                       const top   = baseH + 3;
                       const isCovered = !!ev.meta?.coveredBy;
                       const coveredByEmp = isCovered
