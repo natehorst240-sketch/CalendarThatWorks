@@ -71,6 +71,26 @@
   cursor: not-allowed;
 }
 
+.toolbarBtnPrimary {
+  font: inherit;
+  padding: 4px 12px;
+  border: 1px solid var(--wc-accent);
+  border-radius: 4px;
+  background: var(--wc-accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toolbarBtnPrimary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.toolbarBtnPrimary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .inner {
   display: flex;
   flex-direction: column;

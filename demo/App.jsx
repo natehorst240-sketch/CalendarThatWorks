@@ -183,6 +183,8 @@ const UNIFIED_CATEGORIES = [
   { id: 'PTO',      label: 'PTO',        color: '#10b981' },
   // Fleet (from DEFAULT_CATEGORIES, spread here so both sets share the palette)
   ...DEFAULT_CATEGORIES,
+  // Demo-only: asset movement requests route through the approvals workflow.
+  { id: 'aircraft-movement', label: 'Aircraft Movement', color: '#06b6d4' },
 ];
 
 const UNIFIED_CATEGORIES_CONFIG = {
@@ -411,6 +413,7 @@ function App() {
             employees={employees}
             assets={AIRCRAFT_RESOURCES}
             strictAssetFiltering={true}
+            assetRequestCategories={['maintenance', 'pr', 'training', 'aircraft-movement']}
             onEmployeeAdd={handleEmployeeAdd}
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}

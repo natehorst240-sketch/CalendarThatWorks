@@ -44,6 +44,7 @@ import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay.jsx';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
 import ConfigPanel            from './ui/ConfigPanel.jsx';
 import EventForm              from './ui/EventForm.jsx';
+import AssetRequestForm       from './ui/AssetRequestForm.jsx';
 import ImportZone             from './ui/ImportZone.jsx';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
 import AvailabilityForm        from './ui/AvailabilityForm.jsx';
@@ -156,6 +157,7 @@ export type WorksCalendarProps = {
   categoriesConfig?: Record<string, unknown>;
   assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
   strictAssetFiltering?: boolean;
+  assetRequestCategories?: string[];
   onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
   onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
   renderAssetLocation?: (...args: unknown[]) => ReactNode;
@@ -302,6 +304,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     categoriesConfig,
     assets,
     strictAssetFiltering,
+    assetRequestCategories,
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
@@ -544,6 +547,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     () => categories.filter(c => !SCHEDULE_ONLY_CATS.has(c)),
     [categories],
   );
+
+  // Resolve asset-request category ids → {id, label} pairs by looking up the
+  // host's configured categories. Falls back to using the id as the label so
+  // the modal never renders a blank dropdown.
+  const resolvedAssetRequestCategories = useMemo(() => {
+    if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
+    const cfg = categoriesConfig ?? ownerCfg.config?.categoriesConfig;
+    const defs = Array.isArray(cfg?.categories) ? cfg.categories : [];
+    const byId = new Map(defs.map(d => [d.id, d]));
+    return assetRequestCategories.map(id => {
+      const def = byId.get(id);
+      return { id, label: def?.label ?? id, color: def?.color };
+    });
+  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.categoriesConfig]);
+
+  const canRequestAsset =
+    resolvedAssetRequestCategories.length > 0 &&
+    Array.isArray(effectiveAssets) &&
+    effectiveAssets.length > 0;
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
   const filteredEvents = useMemo(
     () => applyFilters(expandedEvents, cal.filters, schema),
@@ -610,6 +632,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
   const [formEvent,        setFormEvent]        = useState(null);
+  const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
@@ -1064,6 +1087,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           status:     rawEv.status     ?? 'confirmed',
           rrule:      rawEv.rrule      ?? null,
           exdates:    rawEv.exdates    ?? [],
+          meta:       rawEv.meta       ?? {},
         },
         source: 'form',
       };
@@ -1687,6 +1711,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
+                  onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.approvals}
                   onApprovalAction={onApprovalAction}
                 />
@@ -1724,6 +1749,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onClose={() => setFormEvent(null)}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
+          />
+        )}
+
+        {/* ── Asset request form ── */}
+        {assetRequestOpen && canRequestAsset && perms.canAddEvent && (
+          <AssetRequestForm
+            assets={effectiveAssets}
+            categories={resolvedAssetRequestCategories}
+            initialStart={cal.currentDate}
+            onSubmit={(payload) => {
+              handleEventSave(payload);
+              setAssetRequestOpen(false);
+            }}
+            onClose={() => setAssetRequestOpen(false)}
           />
         )}
 

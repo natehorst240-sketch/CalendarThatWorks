@@ -182,6 +182,7 @@ export default function AssetsView({
   onCollapsedGroupsChange,
   assets,
   onEditAssets,
+  onRequestAsset,
   approvalsConfig,
   onApprovalAction,
   resolveResourceLabel,
@@ -400,7 +401,7 @@ export default function AssetsView({
   }, [assetRegistry]);
 
   const currentGroupByValue = typeof groupBy === 'string' ? groupBy : '';
-  const showToolbar = Boolean(assetRegistry) || Boolean(onEditAssets);
+  const showToolbar = Boolean(assetRegistry) || Boolean(onEditAssets) || Boolean(onRequestAsset);
 
   // ── Live locations (via LocationProvider) ──────────────────────────────────
   const locations = useResourceLocations(resourceList, locationProvider);
@@ -725,6 +726,16 @@ export default function AssetsView({
         </select>
       </div>
       <div className={styles.toolbarSpacer} />
+      {onRequestAsset && (
+        <button
+          type="button"
+          className={styles.toolbarBtnPrimary}
+          onClick={onRequestAsset}
+          aria-label="Request asset"
+        >
+          Request Asset
+        </button>
+      )}
       {onEditAssets && (
         <button
           type="button"

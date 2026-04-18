@@ -28,6 +28,16 @@ live in day-to-day.
 - **Create-shift fallback** — Schedule view date-select now routes to the
   generic `EventForm` when the dropped cell isn't a configured employee,
   instead of silently dropping the interaction.
+- **`assetRequestCategories` prop** on `<WorksCalendar>` (optional).
+  When provided alongside an `assets` registry, AssetsView renders a
+  primary "Request Asset" toolbar button that opens a focused modal
+  (`AssetRequestForm`). Submissions route through the normal
+  `onEventSave` path with `meta.approvalStage = { stage: 'requested' }`,
+  so the existing approvals state machine handles the rest
+  (approve / deny / finalize / escalate to higher). Categories are
+  constrained to the host-configured ids — the demo ships
+  `['maintenance', 'pr', 'training', 'aircraft-movement']` with a new
+  Aircraft Movement category.
 - **`strictAssetFiltering` prop** on `<WorksCalendar>` (default `false`).
   When `true` and an `assets` registry is provided, AssetsView keeps
   only events whose `resource` matches a registered asset id — drops
