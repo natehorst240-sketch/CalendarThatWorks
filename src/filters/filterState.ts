@@ -37,6 +37,15 @@ export function clearFilterValue(field) {
   }
 }
 
+/**
+ * Return true when at least one schema field has a non-empty value in `filters`.
+ * Mirrors the derivation used in FilterBar so the saved-views header can share it.
+ */
+export function hasActiveFilters(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+  if (!filters) return false;
+  return schema.some(field => !isEmptyFilterValue(filters[field.key]));
+}
+
 // ── Initial state ─────────────────────────────────────────────────────────────
 
 /**

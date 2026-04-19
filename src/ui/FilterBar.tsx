@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
-import { isEmptyFilterValue, buildActiveFilterPills, clearFilterValue } from '../filters/filterState';
+import { buildActiveFilterPills, clearFilterValue, hasActiveFilters as computeHasActiveFilters } from '../filters/filterState';
 import styles from './FilterBar.module.css';
 
 function formatDateInput(date) {
@@ -95,7 +95,7 @@ export default function FilterBar({
     ...(groupLabels ?? {}),
   };
 
-  const hasActiveFilters = schema.some(field => !isEmptyFilterValue(filters[field.key]));
+  const hasActiveFilters = computeHasActiveFilters(filters, schema);
   const activePills = buildActiveFilterPills(filters, schema);
 
   function selectedCountForGroup(groupKey) {

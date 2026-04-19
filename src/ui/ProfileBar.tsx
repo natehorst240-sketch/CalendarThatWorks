@@ -1,13 +1,23 @@
 /**
- * ProfileBar.jsx — Saved-view chips with add/rename/delete/resave.
+ * ProfileBar — Saved-view header with quick-view chip strip and organizing controls.
+ *
+ * Layout:
+ *   [All views ▾] [Customize Quick Views ▾] [Clear all filters] [+ Save view]
+ *   [chip] [chip] [chip] ...   (only views where !hiddenFromStrip)
+ *
+ * Applying a saved view and seeing the "unsaved" dirty indicator still work
+ * the same way. Renaming / recoloring / deleting / resaving now live in the
+ * CustomizeQuickViewsPanel rather than behind a pencil button on each chip.
  */
 import { useState, useRef, useEffect } from 'react';
 import {
-  Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X, Settings2,
+  Plus, Bookmark, BookmarkCheck,
   CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
 } from 'lucide-react';
-import { buildFilterSummary } from '../filters/filterState';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
+import ViewsDropdown from './ViewsDropdown';
+import CustomizeQuickViewsPanel from './CustomizeQuickViewsPanel';
+import ClearFiltersButton from './ClearFiltersButton';
 import styles from './ProfileBar.module.css';
 
 const PROFILE_COLORS = [
@@ -29,65 +39,73 @@ export default function ProfileBar({
   activeId,
   isDirty,
   schema = DEFAULT_FILTER_SCHEMA,
+  hasActiveFilters = false,
   onApply,
   onAdd,
   onResave,
   onUpdate,
   onDelete,
+  onToggleVisibility,
+  onClearFilters,
   onEditConditions,
 }: any) {
-  const [saveOpen,    setSaveOpen]    = useState(false);
-  const [manageId,    setManageId]    = useState(null); // which view is being managed
-  const scrollRef = useRef(null);
+  const [saveOpen, setSaveOpen] = useState(false);
 
-  if (views.length === 0 && !saveOpen) {
-    // Collapsed state — just a small "Save view" prompt
-    return (
-      <div className={styles.collapsed}>
-        <button className={styles.saveHint} onClick={() => setSaveOpen(true)}>
-          <Bookmark size={13} />
-          Save current view…
-        </button>
-      </div>
-    );
-  }
+  const visibleViews = views.filter((v: any) => !v.hiddenFromStrip);
 
   return (
     <div className={styles.bar}>
-      {/* View chip strip */}
-      <div className={styles.strip} ref={scrollRef}>
-        {views.map(savedView => (
-          <ViewChip
-            key={savedView.id}
-            savedView={savedView}
-            schema={schema}
-            isActive={savedView.id === activeId}
-            isDirty={isDirty && savedView.id === activeId}
-            isManaging={manageId === savedView.id}
-            onApply={() => { onApply(savedView); setManageId(null); setSaveOpen(false); }}
-            onManageToggle={() => setManageId(prev => prev === savedView.id ? null : savedView.id)}
-            onResave={() => { onResave(savedView.id); setManageId(null); }}
-            onDelete={() => { onDelete(savedView.id); setManageId(null); }}
-            onRename={(name) => { onUpdate(savedView.id, { name }); setManageId(null); }}
-            onColorChange={(color) => onUpdate(savedView.id, { color })}
-            onEditConditions={onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
-          />
-        ))}
+      <div className={styles.headerRow}>
+        <ViewsDropdown
+          views={views}
+          activeId={activeId}
+          onApply={(sv: any) => { onApply(sv); setSaveOpen(false); }}
+          onToggleVisibility={onToggleVisibility}
+        />
 
-        {/* Add button (inline in strip when views exist) */}
-        {!saveOpen && (
-          <button className={styles.addChip} onClick={() => { setSaveOpen(true); setManageId(null); }}
-            title="Save current filters as a new saved view">
-            <Plus size={13} />
-            Save view
-          </button>
-        )}
+        <CustomizeQuickViewsPanel
+          views={views}
+          onRename={(id: string, name: string) => onUpdate(id, { name })}
+          onColorChange={(id: string, color: string) => onUpdate(id, { color })}
+          onResave={(id: string) => onResave(id)}
+          onDelete={(id: string) => onDelete(id)}
+          onToggleVisibility={onToggleVisibility}
+          onEditConditions={onEditConditions}
+        />
+
+        <ClearFiltersButton
+          hasActiveFilters={hasActiveFilters}
+          onClear={onClearFilters}
+        />
+
+        <button
+          type="button"
+          className={styles.addChip}
+          onClick={() => setSaveOpen(v => !v)}
+          title="Save current filters as a new saved view"
+        >
+          <Plus size={13} />
+          Save view
+        </button>
       </div>
 
-      {/* Save form */}
+      {visibleViews.length > 0 && (
+        <div className={styles.strip}>
+          {visibleViews.map((savedView: any) => (
+            <ViewChip
+              key={savedView.id}
+              savedView={savedView}
+              isActive={savedView.id === activeId}
+              isDirty={isDirty && savedView.id === activeId}
+              onApply={() => { onApply(savedView); setSaveOpen(false); }}
+            />
+          ))}
+        </div>
+      )}
+
       {saveOpen && (
         <SaveForm
-          onSave={(opts) => { onAdd(opts); setSaveOpen(false); }}
+          onSave={(opts: any) => { onAdd(opts); setSaveOpen(false); }}
           onCancel={() => setSaveOpen(false)}
         />
       )}
@@ -96,37 +114,9 @@ export default function ProfileBar({
 }
 
 /* ─── View Chip ─────────────────────────────────────────────── */
-function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, onManageToggle,
-  onResave, onDelete, onRename, onColorChange, onEditConditions }) {
-
-  const [renaming, setRenaming] = useState(false);
-  const [nameVal, setNameVal]   = useState(savedView.name);
-  const [isHovered, setIsHovered] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const chipRef = useRef(null);
-
-  // Close manage panel on outside click
-  useEffect(() => {
-    if (!isManaging) return;
-    function handler(e) {
-      if (chipRef.current && !chipRef.current.contains(e.target)) {
-        onManageToggle();
-      }
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [isManaging, onManageToggle]);
-
-  // Reset confirm-delete when manage panel closes
-  useEffect(() => { if (!isManaging) setConfirmDelete(false); }, [isManaging]);
-
+function ViewChip({ savedView, isActive, isDirty, onApply }: any) {
   const color = savedView.color ?? '#64748b';
-
-  // Build a summary string for the tooltip using schema-driven formatting
-  const summaryItems = buildFilterSummary(savedView.filters, schema);
-  const summaryParts = summaryItems.map(item => `${item.label}: ${item.displayValues.join(', ')}`);
-  if (savedView.view) summaryParts.push(`View: ${savedView.view}`);
-  const summary = summaryParts.length ? summaryParts.join(' \u00b7 ') : 'No filters applied';
+  const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
   const chipClass = [styles.chip, isDirty && styles.dirty].filter(Boolean).join(' ');
   const wrapClass = [
@@ -135,27 +125,12 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
     isDirty && styles.chipWrapDirty,
   ].filter(Boolean).join(' ');
 
-  // Pencil is mounted only when its visual is meaningful — fixes the
-  // hidden-button querySelector / focus-order trap that previously kept
-  // the DOM button present even when invisible.
-  const showPencil = isHovered || isActive || isManaging;
-  const shouldOpenEditorDirectly = typeof onEditConditions === 'function';
-
-  const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
-
   return (
     <div
-      ref={chipRef}
       className={wrapClass}
       style={{ '--chip-color': color } as React.CSSProperties}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <button
-        className={chipClass}
-        onClick={onApply}
-        title={summary}
-      >
+      <button className={chipClass} onClick={onApply} title={savedView.name}>
         {isActive
           ? <BookmarkCheck size={12} className={styles.chipIcon} />
           : <Bookmark size={12} className={styles.chipIcon} />
@@ -175,147 +150,6 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
           />
         )}
       </button>
-
-      {/* Manage toggle (pencil) — only mounted when chip is hovered/active/managing
-          so screen readers and keyboard users don't traverse a hidden button. */}
-      {showPencil && (
-        <button
-          type="button"
-          className={styles.manageBtn}
-          onClick={e => {
-            e.stopPropagation();
-            if (shouldOpenEditorDirectly) {
-              onEditConditions();
-              return;
-            }
-            onManageToggle();
-          }}
-          aria-label={shouldOpenEditorDirectly ? 'Edit saved view' : 'Manage saved view'}
-          title={shouldOpenEditorDirectly ? 'Edit this saved view' : 'Manage this saved view'}
-        >
-          <Pencil size={10} />
-        </button>
-      )}
-
-      {/* Manage panel */}
-      {isManaging && (
-        <div className={styles.managePanel}>
-          {/* Filter summary */}
-          <div className={styles.summaryBlock}>
-            <FilterSummary savedView={savedView} schema={schema} />
-          </div>
-
-          {/* Rename */}
-          {renaming ? (
-            <div className={styles.renameRow}>
-              <input
-                className={styles.renameInput}
-                value={nameVal}
-                onChange={e => setNameVal(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { onRename(nameVal); setRenaming(false); }
-                  if (e.key === 'Escape') { setNameVal(savedView.name); setRenaming(false); }
-                }}
-                autoFocus
-              />
-              <button className={styles.iconBtn} onClick={() => { onRename(nameVal); setRenaming(false); }}>
-                <Check size={13} />
-              </button>
-              <button className={styles.iconBtn} onClick={() => { setNameVal(savedView.name); setRenaming(false); }}>
-                <X size={13} />
-              </button>
-            </div>
-          ) : (
-            <button className={styles.manageLine} onClick={() => setRenaming(true)}>
-              <Pencil size={12} /> Rename
-            </button>
-          )}
-
-          {/* Color picker */}
-          <div className={styles.colorRow}>
-            {PROFILE_COLORS.map(c => (
-              <button
-                key={c}
-                className={[styles.colorDot, savedView.color === c && styles.colorDotActive].filter(Boolean).join(' ')}
-                style={{ background: c }}
-                onClick={() => onColorChange(c)}
-                aria-label={`Set color ${c}`}
-              />
-            ))}
-          </div>
-
-          {/* Edit conditions in Settings */}
-          {onEditConditions && (
-            <button className={styles.manageLine} onClick={onEditConditions}>
-              <Settings2 size={12} /> Edit conditions
-            </button>
-          )}
-
-          {/* Resave current filters */}
-          <button className={styles.manageLine} onClick={onResave}>
-            <RefreshCw size={12} /> Update with current filters
-          </button>
-
-          {/* Delete with two-step inline confirm */}
-          {confirmDelete ? (
-            <div className={styles.confirmRow} role="alertdialog" aria-label="Confirm delete">
-              <span className={styles.confirmText}>Delete saved view?</span>
-              <button
-                className={[styles.confirmBtn, styles.confirmYes].join(' ')}
-                onClick={onDelete}
-                autoFocus
-              >
-                Yes, delete
-              </button>
-              <button
-                className={styles.confirmBtn}
-                onClick={() => setConfirmDelete(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              className={[styles.manageLine, styles.danger].join(' ')}
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 size={12} /> Delete saved view
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Filter Summary (inside manage panel) ─────────────────────── */
-function FilterSummary({ savedView, schema }: any) {
-  const summaryItems = buildFilterSummary(savedView.filters, schema);
-
-  if (summaryItems.length === 0 && !savedView.view) {
-    return <p className={styles.summaryNone}>No filters — matches all events</p>;
-  }
-
-  return (
-    <div className={styles.summary}>
-      {summaryItems.map(item => (
-        <div key={item.key} className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>{item.label}</span>
-          <span className={styles.summaryTags}>
-            {item.displayValues.map((dv, i) => (
-              <span key={`${item.key}-${i}`} className={styles.tag}>{dv}</span>
-            ))}
-          </span>
-        </div>
-      ))}
-      {savedView.view && (
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Pinned view</span>
-          <span className={styles.summaryTags}>
-            <span className={styles.tag}>{savedView.view}</span>
-          </span>
-        </div>
-      )}
     </div>
   );
 }
@@ -325,7 +159,7 @@ function SaveForm({ onSave, onCancel }: any) {
   const [name,     setName]     = useState('');
   const [color,    setColor]    = useState(PROFILE_COLORS[0]);
   const [pinView,  setPinView]  = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -346,11 +180,11 @@ function SaveForm({ onSave, onCancel }: any) {
         placeholder="View name, e.g. Agusta Inspections…"
       />
 
-      {/* Color row */}
       <div className={styles.colorRow}>
         {PROFILE_COLORS.map(c => (
           <button
             key={c}
+            type="button"
             className={[styles.colorDot, color === c && styles.colorDotActive].filter(Boolean).join(' ')}
             style={{ background: c }}
             onClick={() => setColor(c)}
@@ -365,12 +199,11 @@ function SaveForm({ onSave, onCancel }: any) {
       </label>
 
       <div className={styles.saveActions}>
-        <button className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>
+        <button type="button" className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>
           Save view
         </button>
-        <button className={styles.btnCancel} onClick={onCancel}>Cancel</button>
+        <button type="button" className={styles.btnCancel} onClick={onCancel}>Cancel</button>
       </div>
     </div>
   );
 }
-
