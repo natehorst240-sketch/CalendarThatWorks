@@ -400,6 +400,7 @@ function App() {
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
             initialView="schedule"
+            showSetupLanding
             onConfigSave={handleConfigSave}
             notes={notes}
             onNoteSave={handleNoteSave}

@@ -8,7 +8,7 @@
  *   - Rows derived from event.resource (one row per distinct asset).
  *   - Horizontal pill bars sized by duration and laid out with
  *     first-fit lane packing (shared algorithm with TimelineView).
- *   - Pxpday scales with zoomLevel (day=80, week=30, month=10, quarter=4).
+ *   - Assets timeline always renders in day-scale gantt mode.
  *   - Sticky left asset column: registration + sublabel + banner slot.
  *     Location banner is a placeholder in Sprint 2; Sprint 3 wires the
  *     real LocationProvider.
@@ -44,9 +44,7 @@ const OVERSCAN_ROWS = 3;
 
 // Zoom level → pixels per day. Sprint 2 keeps the visible range = current
 // month; later sprints may expand the range at coarser zooms.
-const ZOOM_PX_PER_DAY = { day: 80, week: 30, month: 10, quarter: 4 };
-const ZOOM_LABELS     = { day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter' };
-const ZOOM_ORDER      = ['day', 'week', 'month', 'quarter'];
+const DAY_PX_PER_DAY = 80;
 
 const APPROVAL_STAGES = new Set([
   'requested', 'approved', 'finalized', 'pending_higher', 'denied',
@@ -174,8 +172,6 @@ export default function AssetsView({
   groupBy,
   onGroupByChange,
   categoriesConfig,
-  zoomLevel = 'month',
-  onZoomChange,
   locationProvider,
   renderAssetLocation,
   collapsedGroups: collapsedGroupsProp,
@@ -242,14 +238,8 @@ export default function AssetsView({
     drawerOpenerRef.current = null;
   }, [announce]);
 
-  const handleZoomChange = useCallback((next) => {
-    if (!onZoomChange) return;
-    onZoomChange(next);
-    announce(`Zoom: ${ZOOM_LABELS[next] ?? next}`);
-  }, [onZoomChange, announce]);
-
-  const activeZoom = ZOOM_PX_PER_DAY[zoomLevel] ? zoomLevel : 'month';
-  const pxPerDay   = ZOOM_PX_PER_DAY[activeZoom];
+  const activeZoom = 'day';
+  const pxPerDay   = DAY_PX_PER_DAY;
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd   = endOfMonth(currentDate);
@@ -293,6 +283,27 @@ export default function AssetsView({
       ro?.disconnect();
     };
   }, []);
+
+  // Keep the current day in view for the gantt timeline by centering the
+  // selected date whenever the month/day scale changes. Depend on a stable
+  // primitive (ISO string) so we don't re-run on every render due to a new
+  // monthStart Date object reference.
+  const monthStartKey = monthStart.toISOString();
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const todayIdx = Math.min(
+      Math.max(differenceInCalendarDays(startOfDay(currentDate), monthStart), 0),
+      Math.max(totalDays - 1, 0),
+    );
+    // Day columns start after the sticky NAME_W column, so center within
+    // the visible-days region (clientWidth - NAME_W), not the whole viewport.
+    const dayCenter = NAME_W + (todayIdx + 0.5) * pxPerDay;
+    const visibleDaysWidth = Math.max(wrap.clientWidth - NAME_W, 0);
+    const targetLeft = Math.max(dayCenter - NAME_W - visibleDaysWidth / 2, 0);
+    wrap.scrollLeft = targetLeft;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate, monthStartKey, totalDays, pxPerDay]);
 
   // ── Row source ──
   // When `assets` is provided (first-class registry from owner config),
@@ -794,24 +805,6 @@ export default function AssetsView({
             <span className={styles.cornerTitle}>
               {format(currentDate, 'MMM yyyy')}
             </span>
-            <div className={styles.zoomControl} role="group" aria-label="Zoom level">
-              {ZOOM_ORDER.map(z => (
-                <button
-                  key={z}
-                  type="button"
-                  className={[
-                    styles.zoomBtn,
-                    z === activeZoom && styles.zoomBtnActive,
-                  ].filter(Boolean).join(' ')}
-                  aria-pressed={z === activeZoom}
-                  aria-label={`Zoom to ${ZOOM_LABELS[z]}`}
-                  onClick={() => handleZoomChange(z)}
-                  disabled={!onZoomChange}
-                >
-                  {ZOOM_LABELS[z][0]}
-                </button>
-              ))}
-            </div>
           </div>
           <div
             className={styles.dayHeads}

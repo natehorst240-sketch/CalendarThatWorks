@@ -216,4 +216,30 @@ describe('WorksCalendar schedule model integration', () => {
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
   }, 15000);
+
+  it('allows removing coverage after assignment from the covered status pill', async () => {
+    const apiRef = createRef<any>();
+    render(<WorksCalendar ref={apiRef} employees={employees} events={[baseShift]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
+    await requestPtoForAlex();
+    await assignCoverageTo(/^Bailey Chen — RN$/);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Shift covered by Bailey Chen — click to edit coverage/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Remove coverage/i }));
+
+    await waitFor(() => {
+      const visible = apiRef.current.getVisibleEvents();
+      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      expect(shift.meta?.coveredBy).toBeNull();
+
+      const openShift = getByKind(visible, 'open-shift')[0];
+      expect(openShift).toBeTruthy();
+      expect(openShift.meta?.coveredBy).toBeNull();
+      expect(openShift.meta?.status).toBe('open');
+
+      const coveringEvents = getByKind(visible, 'covering');
+      expect(coveringEvents).toHaveLength(0);
+    });
+  }, 15000);
 });

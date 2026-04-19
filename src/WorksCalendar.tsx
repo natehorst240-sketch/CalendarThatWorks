@@ -33,6 +33,7 @@ import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
+import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema';
 import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState';
@@ -155,6 +156,16 @@ export type WorksCalendarProps = {
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   showAddButton?: boolean;
+  /**
+   * Opt-in interactive setup landing page. When true, first-time owners
+   * (those with `config.setup.completed === false`) see a full-page
+   * guided walkthrough before the calendar renders — with a prominent
+   * "Skip setup guide" button for owners who already know the product.
+   *
+   * Defaults to false so hosts and test fixtures keep their current
+   * behavior. Turn it on from the host app to enable the guided flow.
+   */
+  showSetupLanding?: boolean;
   initialView?: CalendarView;
   weekStartDay?: 0 | 1;
   groupBy?: GroupByInput;
@@ -201,6 +212,72 @@ const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   previewMax: 200,
   createMax: 200,
 };
+
+/**
+ * Translate a SetupLanding recipe id into a real Saved View payload.
+ * These are the "plain-language starting points" the landing page offers
+ * owners who don't want to build filters by hand. Returns null if the id
+ * isn't recognised so future additions fail soft.
+ */
+function buildRecipeSavedView(
+  id: SetupRecipeId,
+  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6,
+): { name: string; filters: Record<string, unknown>; view: string | null; groupBy: GroupByInput | null } | null {
+  const emptyFilters = {
+    categories: new Set<string>(),
+    resources:  new Set<string>(),
+    sources:    new Set<string>(),
+    search:     '',
+    dateRange:  null as null | { start: string; end: string },
+  };
+
+  switch (id) {
+    case 'everything':
+      return { name: 'Show everything', filters: { ...emptyFilters }, view: null, groupBy: null };
+
+    case 'by-person':
+      return {
+        name:    'Group by person',
+        filters: { ...emptyFilters },
+        view:    'schedule',
+        groupBy: 'resource',
+      };
+
+    case 'by-type':
+      return {
+        name:    'Group by type',
+        filters: { ...emptyFilters },
+        view:    null,
+        groupBy: 'category',
+      };
+
+    case 'on-call':
+      return {
+        name:    'On-call only',
+        filters: { ...emptyFilters, categories: new Set(['on-call']) },
+        view:    null,
+        groupBy: null,
+      };
+
+    case 'this-week': {
+      const now      = new Date();
+      const weekStart = startOfWeek(now, { weekStartsOn });
+      const weekEnd   = endOfWeek(now, { weekStartsOn });
+      return {
+        name: 'This week only',
+        filters: {
+          ...emptyFilters,
+          dateRange: { start: weekStart.toISOString(), end: weekEnd.toISOString() },
+        },
+        view:    'week',
+        groupBy: null,
+      };
+    }
+
+    default:
+      return null;
+  }
+}
 let exportToExcelFn = null;
 
 async function exportVisibleEvents(events) {
@@ -296,6 +373,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── UI toggles ──
     showAddButton           = false,
+    showSetupLanding        = false,
 
     // ── Initial view (overrides saved config on first render) ──
     initialView,
@@ -410,6 +488,61 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
+
+  // ── Setup landing gate ──────────────────────────────────────────────────
+  // Shown before the calendar for first-time owners until they finish or
+  // skip the guide. The landing persists its decision via setup.completed;
+  // this session flag is just for "show on demand" re-opens later.
+  const [setupDismissed, setSetupDismissed] = useState(false);
+  const setupCompleted  = !!ownerCfg.config?.setup?.completed;
+  const shouldShowSetup = showSetupLanding && !setupCompleted && !setupDismissed;
+
+  const handleSetupSkip = useCallback(() => {
+    ownerCfg.updateConfig(prev => ({
+      ...prev,
+      setup: { ...(prev.setup ?? {}), completed: true },
+    }));
+    setSetupDismissed(true);
+  }, [ownerCfg.updateConfig]);
+
+  const handleSetupFinish = useCallback((result: SetupLandingResult) => {
+    // 1) Persist title / theme / default view / team / setup.completed.
+    ownerCfg.updateConfig(prev => ({
+      ...prev,
+      title: result.calendarName,
+      setup: {
+        ...(prev.setup ?? {}),
+        completed: true,
+        preferredTheme: result.theme,
+      },
+      display: {
+        ...(prev.display ?? {}),
+        defaultView: result.defaultView,
+      },
+      team: {
+        ...(prev.team ?? {}),
+        members: [
+          ...((prev.team?.members ?? []) as Array<{ id: unknown }>)
+            .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
+          ...result.teamMembers,
+        ],
+      },
+    }));
+
+    // 2) Save each chosen recipe as a Smart View so it shows up in the
+    //    views bar. Recipes map to real filter + groupBy state; the owner
+    //    can edit or delete any of them later.
+    for (const recipeId of result.recipes) {
+      const recipe = buildRecipeSavedView(recipeId, weekStartDay);
+      if (!recipe) continue;
+      savedViews.saveView(recipe.name, recipe.filters, {
+        view: recipe.view,
+        groupBy: recipe.groupBy,
+      });
+    }
+
+    setSetupDismissed(true);
+  }, [ownerCfg.updateConfig, savedViews, weekStartDay]);
 
   // ── Active groupBy / sort (controlled by props; overridden when a saved view is applied) ──
   const [activeGroupBy, setActiveGroupBy] = useState<GroupByInput | null>(groupBy ?? null);
@@ -832,10 +965,43 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
-    if (!normalizedCoveringEmployeeId) return;
 
     const openShiftCandidates = findLinkedOpenShifts(expandedEvents, ev);
     const primaryOpenShift = openShiftCandidates[0] ?? null;
+    const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
+
+    if (!normalizedCoveringEmployeeId) {
+      const clearedMeta = {
+        ...(ev.meta ?? {}),
+        coveredBy: null,
+      };
+      applyEngineOp(
+        { type: 'update', id: eventId, patch: { meta: clearedMeta }, source: 'api' },
+        () => emitEventSave(eventId, ev, { meta: clearedMeta }),
+      );
+
+      if (primaryOpenShift) {
+        const openId = resolveEventId(primaryOpenShift);
+        if (openId) {
+          const openMeta = {
+            ...(primaryOpenShift.meta ?? {}),
+            coveredBy: null,
+            status: 'open',
+          };
+          applyEngineOp(
+            { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
+            () => emitEventSave(openId, primaryOpenShift, { meta: openMeta }),
+          );
+        }
+      }
+
+      mirroredCoverage.forEach((coverEv) => {
+        const coverId = resolveEventId(coverEv);
+        if (!coverId) return;
+        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => onEventDelete?.(coverId));
+      });
+      return;
+    }
 
     // 1. Mark the shift as covered
     const newMeta = buildCoverageMeta(ev, normalizedCoveringEmployeeId, resolveEventId(primaryOpenShift));
@@ -866,19 +1032,27 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       }
     }
 
-    const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
     mirroredCoverage.slice(1).forEach((duplicateEv) => {
       const duplicateId = resolveEventId(duplicateEv);
       if (!duplicateId) return;
       applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
     });
 
-    // 3. Create or update the mirrored on-call event on the covering employee's row
+    // 3. Create or update the mirrored on-call event on the covering employee's row.
+    //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
+    //    when available, so the coverage bar only spans the days actually needing
+    //    coverage — not the entire underlying shift.
     const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
+    const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
+    const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
+    const requestEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : shiftEnd;
+    const mirrorStart = requestStart > shiftStart ? requestStart : shiftStart;
+    const mirrorEnd   = requestEnd   < shiftEnd   ? requestEnd   : shiftEnd;
     const mirroredPatch = {
       title:    `Covering: ${ev.title ?? 'Shift'}`,
-      start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
-      end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
+      start:    mirrorStart,
+      end:      mirrorEnd,
       category: onCallCat,
       resource: normalizedCoveringEmployeeId,
       meta: {
@@ -1094,9 +1268,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleEventSave = useCallback((rawEv) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
-    // _eventId is present on occurrences from the engine; fall back to id for
-    // legacy shapes passed directly (e.g. from the EventForm).
-    const eventId  = rawEv._eventId ?? (rawEv.id ? String(rawEv.id) : null);
+    // Expanded recurring occurrences from the engine carry _eventId.
+    // Legacy recurring shapes may only carry _seriesId.
+    const recurringMasterId = rawEv._eventId ?? rawEv._seriesId ?? null;
+    // Fallback to id for non-recurring/legacy event shapes from the EventForm.
+    const eventId  = recurringMasterId ?? (rawEv.id ? String(rawEv.id) : null);
+
+    // Defensive RRULE preservation: if a recurring edit payload arrives with a
+    // missing RRULE (e.g. an occurrence shape that lost series fields), keep
+    // the series master cadence instead of accidentally stripping recurrence.
+    const existingMaster = recurringMasterId ? engineRef.current?.state?.events?.get(String(recurringMasterId)) : null;
+    const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
 
     if (!eventId) {
       // New event — no scope picker needed.
@@ -1113,7 +1295,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           category:   rawEv.category   ?? null,
           color:      rawEv.color      ?? null,
           status:     rawEv.status     ?? 'confirmed',
-          rrule:      rawEv.rrule      ?? null,
+          rrule:      resolvedRrule,
           exdates:    rawEv.exdates    ?? [],
           meta:       rawEv.meta       ?? {},
         },
@@ -1142,7 +1324,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           category:   rawEv.category   ?? null,
           color:      rawEv.color      ?? null,
           status:     rawEv.status     ?? 'confirmed',
-          rrule:      rawEv.rrule      ?? null,
+          rrule:      resolvedRrule,
         },
         source: 'form',
       }),
@@ -1546,6 +1728,26 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     sort:          activeSort,
     showAllGroups: activeShowAllGroups,
   };
+
+  if (shouldShowSetup) {
+    return (
+      <CalendarErrorBoundary>
+        <div
+          className={styles.root}
+          data-wc-theme={effectiveTheme}
+          data-testid="works-calendar-setup"
+          style={customThemeVars as React.CSSProperties}
+        >
+          <SetupLanding
+            onSkip={handleSetupSkip}
+            onFinish={handleSetupFinish}
+            initialName={ownerCfg.config?.title}
+            initialTheme={ownerCfg.config?.setup?.preferredTheme ?? effectiveTheme}
+          />
+        </div>
+      </CalendarErrorBoundary>
+    );
+  }
 
   return (
     <CalendarErrorBoundary>

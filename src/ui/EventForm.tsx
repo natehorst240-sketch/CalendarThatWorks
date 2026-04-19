@@ -23,9 +23,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
   function handleSubmit(e) {
     e.preventDefault();
     if (!draft.validate()) return;
-    const normalizedResource = draft.values.resource == null
-      ? ''
-      : String(draft.values.resource);
+    const normalizedResource = draft.values.resource == null ? '' : String(draft.values.resource);
     onSave({
       ...(event || {}),
       title:    draft.values.title.trim(),

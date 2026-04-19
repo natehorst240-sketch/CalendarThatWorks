@@ -139,6 +139,7 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
   // hidden-button querySelector / focus-order trap that previously kept
   // the DOM button present even when invisible.
   const showPencil = isHovered || isActive || isManaging;
+  const shouldOpenEditorDirectly = typeof onEditConditions === 'function';
 
   const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
@@ -181,8 +182,16 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
         <button
           type="button"
           className={styles.manageBtn}
-          onClick={e => { e.stopPropagation(); onManageToggle(); }}
-          aria-label="Manage saved view"
+          onClick={e => {
+            e.stopPropagation();
+            if (shouldOpenEditorDirectly) {
+              onEditConditions();
+              return;
+            }
+            onManageToggle();
+          }}
+          aria-label={shouldOpenEditorDirectly ? 'Edit saved view' : 'Manage saved view'}
+          title={shouldOpenEditorDirectly ? 'Edit this saved view' : 'Manage this saved view'}
         >
           <Pencil size={10} />
         </button>
@@ -364,5 +373,4 @@ function SaveForm({ onSave, onCancel }: any) {
     </div>
   );
 }
-
 

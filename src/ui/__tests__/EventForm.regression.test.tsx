@@ -157,4 +157,24 @@ describe('EventForm end-to-end regression', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     expect(onDelete).not.toHaveBeenCalled();
   });
+
+  it('allows saving an edited event when resource is numeric', () => {
+    const onSave = vi.fn();
+    render(
+      <EventForm
+        event={{ id: 'real-2', title: 'On-Call Shift', start: START, end: END, resource: 1, rrule: 'FREQ=WEEKLY;BYDAY=WE' }}
+        config={{ eventFields: {} }}
+        categories={[]}
+        onSave={onSave}
+        onDelete={vi.fn()}
+        onClose={vi.fn()}
+        permissions={{}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0][0].resource).toBe('1');
+  });
 });
