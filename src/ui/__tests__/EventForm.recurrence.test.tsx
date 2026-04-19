@@ -64,4 +64,17 @@ describe('EventForm recurrence controls', () => {
       templateVersion: 1,
     });
   });
+
+  it('normalizes non-string resource values before save', () => {
+    const { onSave } = renderForm({
+      event: {
+        resource: { id: 'A1' },
+      },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].resource).toBe('[object Object]');
+  });
 });
