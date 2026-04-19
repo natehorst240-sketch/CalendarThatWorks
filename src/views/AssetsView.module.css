@@ -276,9 +276,9 @@
   background: var(--wc-bg);
   border-right: 2px solid var(--wc-border-dark);
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   flex-shrink: 0;
   transition: background 0.1s;
@@ -293,6 +293,7 @@
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .assetRegistration {
@@ -317,7 +318,9 @@
 }
 
 /* Location banner: placeholder in Sprint 2. Host can override via
-   renderAssetLocation. Status dot color tracks LocationData.status. */
+   renderAssetLocation. Status dot color tracks LocationData.status.
+   Sits to the right of the asset meta (registration + sublabel) so the
+   pill isn't squished below the type. */
 .locationBanner {
   display: flex;
   align-items: center;
@@ -330,6 +333,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 45%;
 }
 
 .locationBanner[data-status="live"]::before {
