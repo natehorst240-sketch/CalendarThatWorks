@@ -46,8 +46,8 @@ export interface SyncMetadata {
 // ─── Upgraded input event ─────────────────────────────────────────────────────
 
 // Re-import EventConstraint so CalendarEventV1 can reference it inline.
-import type { EventConstraint } from '../../core/engine/schema/constraintSchema.js';
-import type { EventStatus } from '../../core/engine/schema/eventSchema.js';
+import type { EventConstraint } from '../../core/engine/schema/constraintSchema';
+import type { EventStatus } from '../../core/engine/schema/eventSchema';
 
 /**
  * CalendarEventV1 — the next-generation input shape.
@@ -134,38 +134,38 @@ export const SYNC_META_KEY = '_v1sync' as const;
 
 // ── Event ────────────────────────────────────────────────────────────────────
 
-export type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema.js';
+export type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema';
 export {
   makeEvent,
   isRecurringSeries,
   isDetachedOccurrence,
   isPartOfSeries,
-} from '../../core/engine/schema/eventSchema.js';
+} from '../../core/engine/schema/eventSchema';
 
 // ── Occurrence ───────────────────────────────────────────────────────────────
 
-export type { EngineOccurrence } from '../../core/engine/schema/occurrenceSchema.js';
+export type { EngineOccurrence } from '../../core/engine/schema/occurrenceSchema';
 
 // ── Resource ─────────────────────────────────────────────────────────────────
 
 export type {
   EngineResource,
   ResourceBusinessHours,
-} from '../../core/engine/schema/resourceSchema.js';
+} from '../../core/engine/schema/resourceSchema';
 
 // ── Assignment ───────────────────────────────────────────────────────────────
 
-export type { Assignment } from '../../core/engine/schema/assignmentSchema.js';
+export type { Assignment } from '../../core/engine/schema/assignmentSchema';
 export {
   makeAssignment,
   assignmentsForEvent,
   resourceIdsForEvent,
   workloadForResource,
-} from '../../core/engine/schema/assignmentSchema.js';
+} from '../../core/engine/schema/assignmentSchema';
 
 // ── Dependency ───────────────────────────────────────────────────────────────
 
-export type { Dependency, DependencyType } from '../../core/engine/schema/dependencySchema.js';
+export type { Dependency, DependencyType } from '../../core/engine/schema/dependencySchema';
 export {
   makeDependency,
   constrainedAnchor,
@@ -174,16 +174,16 @@ export {
   predecessorsOf,
   hasCycle,
   wouldCreateCycle,
-} from '../../core/engine/schema/dependencySchema.js';
+} from '../../core/engine/schema/dependencySchema';
 
 // ── Constraint ───────────────────────────────────────────────────────────────
 
 export type {
   EventConstraint,
   ConstraintType,
-} from '../../core/engine/schema/constraintSchema.js';
+} from '../../core/engine/schema/constraintSchema';
 export {
   satisfiesConstraint,
   constraintSeverity,
   describeConstraint,
-} from '../../core/engine/schema/constraintSchema.js';
+} from '../../core/engine/schema/constraintSchema';

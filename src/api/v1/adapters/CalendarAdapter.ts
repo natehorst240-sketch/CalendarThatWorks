@@ -21,12 +21,12 @@
  *   const unsub = adapter.subscribe?.(change => render(change));
  */
 
-import type { CalendarEventV1 } from '../types.js';
+import type { CalendarEventV1 } from '../types';
 import type {
   ScheduleTemplateV1,
   ScheduleInstantiationRequestV1,
   ScheduleInstantiationResultV1,
-} from '../templates.js';
+} from '../templates';
 
 // ─── Change notification types ────────────────────────────────────────────────
 

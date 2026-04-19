@@ -18,27 +18,27 @@ import {
   wallClockToUtc,
   isValidTimezone,
   localTimezone,
-} from '../time/timezone.js';
+} from '../time/timezone';
 import {
   crossesDSTBoundary,
   dstShiftMinutes,
   preserveWallClockAfterDST,
   isInSpringForwardGap,
   isInFallBackRepeat,
-} from '../time/dst.js';
+} from '../time/dst';
 import {
   nycStandup,
   denverCall,
   londonMeeting,
   tokyoReview,
   floatingEvent,
-} from '../test-fixtures/timezoneFixtures.js';
+} from '../test-fixtures/timezoneFixtures';
 import {
   springForwardEvent,
   weeklyAcrossSpringForward,
   fallBackAmbiguousEvent,
   weeklyAcrossFallBack,
-} from '../test-fixtures/dstFixtures.js';
+} from '../test-fixtures/dstFixtures';
 
 // ─── partsInTimezone ──────────────────────────────────────────────────────────
 

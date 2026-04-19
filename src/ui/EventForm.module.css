@@ -336,3 +336,40 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Touch devices: guarantee comfortable tap targets (≥44px per iOS HIG). */
+@media (pointer: coarse) {
+  .closeBtn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .btnSave,
+  .btnCancel,
+  .btnDelete {
+    min-height: 44px;
+    padding: 10px 18px;
+  }
+  .addCatBtn {
+    width: 28px;
+    height: 28px;
+  }
+  .addCatSave {
+    min-height: 40px;
+    padding: 8px 16px;
+  }
+  .clearColor {
+    min-height: 40px;
+    padding: 10px 14px;
+  }
+  .colorPicker {
+    width: 44px;
+    height: 44px;
+  }
+  .input,
+  .select,
+  .textarea {
+    min-height: 44px;
+    font-size: 15px; /* ≥16px would prevent iOS zoom; 15px is the balance */
+  }
+}

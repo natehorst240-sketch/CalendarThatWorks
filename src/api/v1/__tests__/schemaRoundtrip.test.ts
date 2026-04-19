@@ -21,7 +21,7 @@ import {
   deserializeSyncMetadata,
   serializeEvent,
   deserializeEvent,
-} from '../serialization.js';
+} from '../serialization';
 import {
   SCHEMA_VERSION,
   makeEvent,
@@ -40,14 +40,14 @@ import {
   satisfiesConstraint,
   constraintSeverity,
   describeConstraint,
-} from '../types.js';
+} from '../types';
 import type {
   EngineEvent,
   SyncMetadata,
   Assignment,
   Dependency,
   EventConstraint,
-} from '../types.js';
+} from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

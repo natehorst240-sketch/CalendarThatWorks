@@ -208,3 +208,17 @@
   transition: background 0.1s;
 }
 .btnSave:hover { background: var(--wc-accent-dark, #2563eb); }
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .closeBtn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .btnCancel,
+  .btnSave {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
+}

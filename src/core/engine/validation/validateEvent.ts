@@ -1,4 +1,4 @@
-import type { EngineEvent } from '../schema/eventSchema.js';
+import type { EngineEvent } from '../schema/eventSchema';
 
 export type ValidationMode = 'strict' | 'prod';
 

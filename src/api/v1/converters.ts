@@ -22,17 +22,17 @@
  */
 
 import { parseISO, isValid, addHours } from 'date-fns';
-import { makeEvent }                   from '../../core/engine/schema/eventSchema.js';
-import { nextEngineId }                from '../../core/engine/adapters/normalizeInputEvent.js';
-import type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema.js';
-import type { EngineOccurrence }         from '../../core/engine/schema/occurrenceSchema.js';
-import type { EventConstraint }          from '../../core/engine/schema/constraintSchema.js';
+import { makeEvent }                   from '../../core/engine/schema/eventSchema';
+import { nextEngineId }                from '../../core/engine/adapters/normalizeInputEvent';
+import type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema';
+import type { EngineOccurrence }         from '../../core/engine/schema/occurrenceSchema';
+import type { EventConstraint }          from '../../core/engine/schema/constraintSchema';
 import type {
   CalendarEventV1,
   CalendarOccurrenceV1,
   SyncMetadata,
-} from './types.js';
-import { SYNC_META_KEY } from './types.js';
+} from './types';
+import { SYNC_META_KEY } from './types';
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 

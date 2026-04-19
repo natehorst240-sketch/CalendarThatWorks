@@ -1,5 +1,5 @@
 .agenda {
-  padding: 16px;
+  padding: calc(16px * var(--wc-density, 1));
   overflow-y: auto;
   height: 100%;
 }
@@ -15,7 +15,7 @@
 
 .group {
   display: flex;
-  gap: 16px;
+  gap: calc(16px * var(--wc-density, 1));
   margin-bottom: 20px;
 }
 
@@ -46,7 +46,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  font-size: 16px;
+  font-size: calc(16px * var(--wc-font-scale, 1));
   font-weight: 700;
   color: var(--wc-text);
   margin: 2px 0;
@@ -68,7 +68,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 12px;
+  padding: calc(10px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
   background: var(--wc-surface);
   border: 1px solid var(--wc-border);
   border-radius: var(--wc-radius);
@@ -101,7 +101,7 @@
 }
 
 .evTitle {
-  font-size: 14px;
+  font-size: calc(14px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text);
 }
@@ -157,4 +157,51 @@
   .monthLabel {
     display: none; /* redundant on mobile — month visible in header */
   }
+}
+
+/* ── Secondary (sub-group) headers ──────────────────────────── */
+.subGroup {
+  margin-bottom: 4px;
+}
+
+.subGroupLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wc-text-muted, var(--wc-text));
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--wc-border);
+  margin-bottom: 6px;
+}
+
+/* ── Cross-group events (showAllGroups=true) ──────────────── */
+.crossGroup {
+  opacity: 0.55;
+  background: var(--wc-surface-2, var(--wc-surface));
+  border-style: dashed;
+}
+.crossGroup:hover {
+  opacity: 0.85;
+}
+
+/* ── Drop target (DnD between groups) ──────────────────────── */
+.dropTarget {
+  outline: 2px dashed var(--wc-accent);
+  outline-offset: 2px;
+  border-radius: var(--wc-radius);
+  background: color-mix(in srgb, var(--wc-accent) 8%, transparent);
+}
+
+.sourceBadge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wc-text-faint);
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: 4px;
+  padding: 0 5px;
 }

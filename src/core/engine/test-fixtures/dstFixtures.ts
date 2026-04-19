@@ -8,8 +8,8 @@
  * Used to test recurrence expansion, drag move, and validation near transitions.
  */
 
-import { makeEvent } from '../schema/eventSchema.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
+import { makeEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema';
 
 // ─── Spring forward (2026-03-08 in US/Eastern) ────────────────────────────────
 

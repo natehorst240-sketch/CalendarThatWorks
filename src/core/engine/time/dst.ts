@@ -9,7 +9,7 @@
  * for recurrence expansion near DST transitions.
  */
 
-import { utcOffsetMinutes } from './timezone.js';
+import { utcOffsetMinutes } from './timezone';
 
 // ─── Transition detection ─────────────────────────────────────────────────────
 

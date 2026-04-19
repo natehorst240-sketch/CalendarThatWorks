@@ -11,7 +11,7 @@ import type {
   EngineEvent,
   FilterState,
   Operation,
-} from './types.js';
+} from './types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

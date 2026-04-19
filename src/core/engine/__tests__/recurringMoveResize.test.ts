@@ -11,11 +11,11 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { applyOperation } from '../operations/applyOperation.js';
-import { CalendarEngine } from '../CalendarEngine.js';
-import { UndoRedoManager } from '../UndoRedoManager.js';
-import { makeEvent } from '../schema/eventSchema.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
+import { applyOperation } from '../operations/applyOperation';
+import { CalendarEngine } from '../CalendarEngine';
+import { UndoRedoManager } from '../UndoRedoManager';
+import { makeEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema';
 
 // ─── Shared fixture ───────────────────────────────────────────────────────────
 

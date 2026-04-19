@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { canViewScheduleTemplate, instantiateScheduleTemplate, type ScheduleTemplateV1 } from '../templates.js';
+import { canViewScheduleTemplate, instantiateScheduleTemplate, type ScheduleTemplateV1 } from '../templates';
 
 const template: ScheduleTemplateV1 = {
   id: 'sched-team-oncall',

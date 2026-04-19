@@ -5,7 +5,7 @@
  * back if the adapter rejects the request.
  */
 
-import type { CalendarEventV1 } from '../types.js';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

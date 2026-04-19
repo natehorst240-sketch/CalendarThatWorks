@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SyncQueue }           from '../sync/SyncQueue.js';
+import { SyncQueue }           from '../sync/SyncQueue';
 import {
   clientWins,
   serverWins,
@@ -18,10 +18,10 @@ import {
   manualResolve,
   resolverFor,
   ConflictError,
-} from '../sync/conflictStrategies.js';
-import { SyncManager }         from '../sync/SyncManager.js';
-import type { CalendarAdapter } from '../adapters/CalendarAdapter.js';
-import type { CalendarEventV1 } from '../types.js';
+} from '../sync/conflictStrategies';
+import { SyncManager }         from '../sync/SyncManager';
+import type { CalendarAdapter } from '../adapters/CalendarAdapter';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

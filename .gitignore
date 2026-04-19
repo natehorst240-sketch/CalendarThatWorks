@@ -7,3 +7,4 @@ dist-examples/
 qa-output/
 test-results/
 playwright-report/
+.playwright-mcp/

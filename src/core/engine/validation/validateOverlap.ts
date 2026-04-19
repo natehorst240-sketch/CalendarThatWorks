@@ -14,8 +14,8 @@
  *     conflictPolicy is 'block' (hard) or 'allow' (skip).
  */
 
-import type { Violation, OperationContext, ChangeShape } from './validationTypes.js';
-import { assignmentsForEvent } from '../schema/assignmentSchema.js';
+import type { Violation, OperationContext, ChangeShape } from './validationTypes';
+import { assignmentsForEvent } from '../schema/assignmentSchema';
 
 export function validateOverlap(
   change: ChangeShape,

@@ -12,38 +12,44 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Download, Plus, Sparkles, Upload } from 'lucide-react';
 
-import { useCalendar }        from './hooks/useCalendar.js';
-import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
-import { useFetchEvents }     from './hooks/useFetchEvents.js';
-import { useSourceStore }      from './hooks/useSourceStore.js';
-import { useSourceAggregator } from './hooks/useSourceAggregator.js';
-import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
-import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
-import { usePermissions }     from './hooks/usePermissions.js';
-import { useEventOptions }    from './hooks/useEventOptions.js';
-import { useTouchSwipe }     from './hooks/useTouchSwipe.js';
-import { CalendarContext }    from './core/CalendarContext.js';
-import { normalizeEvents }    from './core/eventModel.js';
+import { useCalendar }        from './hooks/useCalendar';
+import { useOwnerConfig }     from './hooks/useOwnerConfig';
+import { useFetchEvents }     from './hooks/useFetchEvents';
+import { useSourceStore }      from './hooks/useSourceStore';
+import { useSourceAggregator } from './hooks/useSourceAggregator';
+import { useSavedViews, deserializeFilters } from './hooks/useSavedViews';
+import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
+import type { SortConfig } from './types/grouping.ts';
+import { sortEvents } from './core/sortEngine.ts';
+import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
+import { usePermissions }     from './hooks/usePermissions';
+import { useEventOptions }    from './hooks/useEventOptions';
+import { useTouchSwipe }     from './hooks/useTouchSwipe';
+import { CalendarContext }    from './core/CalendarContext';
+import { normalizeEvents }    from './core/eventModel';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
 import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
-import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
-import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA } from './filters/filterSchema.js';
-import { buildActiveFilterPills } from './filters/filterState.js';
-import FilterBar              from './ui/FilterBar.jsx';
-import ProfileBar             from './ui/ProfileBar.jsx';
-import HoverCard              from './ui/HoverCard.jsx';
-import OwnerLock              from './ui/OwnerLock.jsx';
-import ConfigPanel            from './ui/ConfigPanel.jsx';
-import EventForm              from './ui/EventForm.jsx';
-import ImportZone             from './ui/ImportZone.jsx';
-import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
-import AvailabilityForm        from './ui/AvailabilityForm.jsx';
-import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
-import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
+import RecurringScopeDialog   from './ui/RecurringScopeDialog';
+import { applyFilters, getCategories, getResources } from './filters/filterEngine';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema';
+import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState';
+import FilterBar              from './ui/FilterBar';
+import ProfileBar             from './ui/ProfileBar';
+import HoverCard              from './ui/HoverCard';
+import OwnerLock              from './ui/OwnerLock';
+import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import ConfigPanel            from './ui/ConfigPanel';
+import EventForm              from './ui/EventForm';
+import AssetRequestForm       from './ui/AssetRequestForm';
+import ImportZone             from './ui/ImportZone';
+import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog';
+import AvailabilityForm        from './ui/AvailabilityForm';
+import ScheduleEditorForm      from './ui/ScheduleEditorForm';
+import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap';
 import {
   buildCoverageMeta,
   buildOpenShiftPatch,
@@ -51,28 +57,32 @@ import {
   findLinkedMirroredCoverage,
   findLinkedOpenShifts,
   resolveEventId,
-} from './core/scheduleMutations.js';
+} from './core/scheduleMutations';
 import {
   normalizeScheduleKind,
   SCHEDULE_KINDS,
-} from './core/scheduleModel.js';
-import { createId } from './core/createId.js';
-import ValidationAlert          from './ui/ValidationAlert.jsx';
-import InlineEventEditor        from './ui/InlineEventEditor.jsx';
-import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
-import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
-import MonthView              from './views/MonthView.jsx';
-import WeekView               from './views/WeekView.jsx';
-import DayView                from './views/DayView.jsx';
-import AgendaView             from './views/AgendaView.jsx';
-import TimelineView           from './views/TimelineView.jsx';
+} from './core/scheduleModel';
+import { createId } from './core/createId';
+import ValidationAlert          from './ui/ValidationAlert';
+import InlineEventEditor        from './ui/InlineEventEditor';
+import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer';
+import CalendarErrorBoundary   from './ui/CalendarErrorBoundary';
+import MonthView              from './views/MonthView';
+import WeekView               from './views/WeekView';
+import DayView                from './views/DayView';
+import AgendaView             from './views/AgendaView';
+import TimelineView           from './views/TimelineView';
+import AssetsView             from './views/AssetsView';
+import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
+import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
-import { customThemeToCssVars } from './core/themeSchema.js';
+import { customThemeToCssVars } from './core/themeSchema';
 
-export type WorksCalendarEvent = Record<string, unknown>;
-export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+import type { WorksCalendarEvent } from './types/events';
+export type { WorksCalendarEvent };
+export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'assets';
 export type CalendarRole = 'admin' | 'user' | 'readonly';
 
 export type ScheduleInstantiationLimits = {
@@ -100,7 +110,12 @@ export type WorksCalendarProps = {
   icalFeeds?: Array<Record<string, unknown>>;
   onImport?: (events: WorksCalendarEvent[]) => void;
   scheduleTemplates?: Array<Record<string, unknown>>;
-  scheduleTemplateAdapter?: Record<string, unknown>;
+  scheduleTemplateAdapter?: {
+    listScheduleTemplates?: () => Promise<unknown>;
+    createScheduleTemplate?: (template: unknown) => Promise<unknown>;
+    deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
+    [key: string]: unknown;
+  };
   scheduleInstantiationLimits?: ScheduleInstantiationLimits;
   onScheduleTemplateAnalytics?: (payload: Record<string, unknown>) => void;
   calendarId?: string;
@@ -115,7 +130,8 @@ export type WorksCalendarProps = {
   onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
-  onDateSelect?: (start: Date, end: Date) => void;
+  onEventGroupChange?: (event: WorksCalendarEvent, patch: Record<string, unknown>) => void;
+  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
@@ -124,6 +140,9 @@ export type WorksCalendarProps = {
   employees?: Array<Record<string, unknown>>;
   onEmployeeAdd?: (...args: unknown[]) => void;
   onEmployeeDelete?: (...args: unknown[]) => void;
+  onEmployeeAction?: (...args: unknown[]) => void;
+  onAvailabilitySave?: (...args: unknown[]) => void;
+  onScheduleSave?: (...args: unknown[]) => void;
   blockedWindows?: Array<Record<string, unknown>>;
   theme?: string;
   colorRules?: Array<Record<string, unknown>>;
@@ -134,10 +153,24 @@ export type WorksCalendarProps = {
   renderFilterBar?: (...args: unknown[]) => ReactNode;
   renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
   emptyState?: ReactNode;
-  filterSchema?: Array<Record<string, unknown>>;
+  filterSchema?: FilterField[];
   showAddButton?: boolean;
   initialView?: CalendarView;
   weekStartDay?: 0 | 1;
+  groupBy?: GroupByInput;
+  sort?: SortConfig | SortConfig[];
+  showAllGroups?: boolean;
+
+  // ── Assets view ──
+  locationProvider?: LocationProvider;
+  categoriesConfig?: Record<string, unknown>;
+  assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
+  strictAssetFiltering?: boolean;
+  assetRequestCategories?: string[];
+  onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
+  onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
+  renderAssetLocation?: (...args: unknown[]) => ReactNode;
+  renderConflictBody?: (...args: unknown[]) => ReactNode;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,6 +183,7 @@ function opAnnouncement(op) {
     case 'delete': return 'Event deleted.';
     case 'move':   return 'Event moved.';
     case 'resize': return 'Event resized.';
+    case 'group-change': return 'Event reassigned.';
     default:       return 'Change applied.';
   }
 }
@@ -160,6 +194,7 @@ const VIEWS = [
   { id: 'day',      label: 'Day'      },
   { id: 'agenda',   label: 'Agenda'   },
   { id: 'schedule', label: 'Schedule' },
+  { id: 'assets',   label: 'Assets'   },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -176,13 +211,13 @@ async function exportVisibleEvents(events) {
 }
 
 /** Compute the visible [start, end] range for a given view + date. */
-function viewRange(view, date, weekStartDay = 0) {
+function viewRange(view, date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   switch (view) {
     case 'week':
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
     case 'day':
       return { start: date, end: addDays(date, 1) };
-    default: // month, agenda, schedule (timeline)
+    default: // month, agenda, schedule (timeline), assets
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
@@ -220,6 +255,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventMove,
     onEventResize,
     onEventDelete,
+    onEventGroupChange,
     onDateSelect,
 
     // ── Supabase realtime ──
@@ -266,6 +302,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Week start day (prop takes priority over owner config) ──
     weekStartDay: weekStartDayProp,
+
+    // ── Grouping ──
+    groupBy,
+    sort,
+    showAllGroups,
+
+    // ── Assets view ──
+    locationProvider,
+    categoriesConfig,
+    assets,
+    strictAssetFiltering,
+    assetRequestCategories,
+    onConflictCheck,
+    onApprovalAction,
+    renderAssetLocation,
+    renderConflictBody,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -273,37 +325,79 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   if (typeof window === 'undefined') return null;
 
   // ── View / date / filter state ───────────────────────────────────────────
-  const schema   = filterSchema ?? DEFAULT_FILTER_SCHEMA;
-  const cal      = useCalendar([], initialView ?? 'month', schema);
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.display?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.customTheme), [ownerCfg.config?.customTheme]);
-  const configuredEmployees = useMemo(
-    () => (ownerCfg.config?.wizardData?.teamMembers ?? [])
-      .filter((member) => String(member?.name ?? '').trim().length > 0)
-      .map((member, index) => ({
-        id: String(member?.id ?? `cfg-emp-${index}`),
-        name: String(member?.name ?? '').trim(),
-        color: member?.color,
-        role: member?.role,
-        avatar: member?.avatar ?? null,
-      })),
-    [ownerCfg.config?.wizardData?.teamMembers],
-  );
-  const resolvedEmployees = useMemo(
-    () => (employees.length > 0 ? employees : configuredEmployees),
-    [configuredEmployees, employees],
+  const effectiveTheme = theme || ownerCfg.config?.setup?.preferredTheme || 'light';
+  const calendarTitle = ownerCfg.config?.title || 'My WorksCalendar';
+  // Merge parent's employees prop with owner-config team.members so edits
+  // made from the Settings → Employees tab (e.g. renaming a member) are
+  // reflected live in the schedule, even when the parent's prop is stale.
+  // Config entries take precedence for matching ids; parent-only entries
+  // (not yet mirrored into config) are preserved.
+  const configuredEmployees = useMemo(() => {
+    const configMembers = ownerCfg.config?.team?.members ?? [];
+    const parentMembers = Array.isArray(employees) ? employees : [];
+    if (configMembers.length === 0) return parentMembers;
+    if (parentMembers.length === 0) return configMembers;
+    const configById = new Map(configMembers.map((m) => [String(m.id), m]));
+    const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
+    return [...configMembers, ...parentOnly];
+  }, [employees, ownerCfg.config?.team?.members]);
+
+  // Resolve resource ids (e.g. "emp-sarah") to human-readable labels
+  // (e.g. "Sarah Chen") using merged employees + assets directory.
+  const effectiveAssets = assets ?? ownerCfg.config?.assets;
+  const resolveResourceLabel = useMemo(
+    () => makeResourceResolver({ employees: configuredEmployees, assets: effectiveAssets }),
+    [configuredEmployees, effectiveAssets],
   );
 
-  // Honor defaultView from owner config (applied once after config loads)
+  // When no custom schema is supplied, build the default schema with the
+  // live resolver so People-filter options render names instead of ids.
+  const schema = useMemo(
+    () => filterSchema
+      ?? buildDefaultFilterSchema({ employees: configuredEmployees, assets: effectiveAssets }),
+    [filterSchema, configuredEmployees, effectiveAssets],
+  );
+  const cal = useCalendar([], initialView ?? 'month', schema);
+
+  // Wrap parent employee handlers so edits from ANY surface (timeline add-form
+  // or TeamTab settings) flow both to the consumer's state AND to the owner
+  // config. Keeps TeamTab and the live schedule in sync. See issue #101.
+  const handleEmployeeAddInternal = useCallback((member) => {
+    ownerCfg.updateConfig(c => {
+      const existing = c.team?.members ?? [];
+      if (existing.some(m => String(m.id) === String(member.id))) return c;
+      return {
+        ...c,
+        team: { ...(c.team ?? {}), members: [...existing, member] },
+        setup: { ...(c.setup ?? {}), completed: true },
+      };
+    });
+    onEmployeeAdd?.(member);
+  }, [ownerCfg.updateConfig, onEmployeeAdd]);
+
+  const handleEmployeeDeleteInternal = useCallback((id) => {
+    ownerCfg.updateConfig(c => ({
+      ...c,
+      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter(m => String(m.id) !== String(id)) },
+    }));
+    onEmployeeDelete?.(id);
+  }, [ownerCfg.updateConfig, onEmployeeDelete]);
+
+  // Honor defaultView from owner config (applied once after config loads).
+  // Explicit initialView prop takes precedence — hosts that opt into a
+  // specific startup view shouldn't be overridden by DEFAULT_CONFIG's 'month'.
   const defaultViewApplied = useRef(false);
   useEffect(() => {
+    if (initialView) return;
     const defaultView = ownerCfg.config?.display?.defaultView;
     if (defaultView && !defaultViewApplied.current) {
       defaultViewApplied.current = true;
       cal.setView(defaultView);
     }
-  }, [ownerCfg.config?.display?.defaultView]);
+  }, [ownerCfg.config?.display?.defaultView, initialView]);
 
   // ── Permissions ──────────────────────────────────────────────────────────
   const perms = usePermissions(role);
@@ -317,17 +411,51 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
 
-  // Mark dirty when filters/view change after a saved view was applied
-  // Use a ref to skip the first effect run immediately after applying
+  // ── Active groupBy / sort (controlled by props; overridden when a saved view is applied) ──
+  const [activeGroupBy, setActiveGroupBy] = useState<GroupByInput | null>(groupBy ?? null);
+  useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
+
+  const normalizeSortProp = (s: SortConfig | SortConfig[] | null | undefined): SortConfig[] | null => {
+    if (!s) return null;
+    return Array.isArray(s) ? s : [s];
+  };
+  const [activeSort, setActiveSort] = useState<SortConfig[] | null>(normalizeSortProp(sort));
+  useEffect(() => setActiveSort(normalizeSortProp(sort)), [sort]);
+
+  const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
+  useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
+
+  // ── Assets view: zoom level + collapse state + location provider ──
+  const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
+  const [activeAssetsCollapsed, setActiveAssetsCollapsed] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const effectiveLocationProvider = useMemo<LocationProvider>(
+    () => locationProvider ?? createManualLocationProvider(),
+    [locationProvider],
+  );
+
+  // Mark dirty when filters/view/groupBy/sort/showAllGroups/assets-state change
+  // after a saved view was applied. A ref skips the first run that fires
+  // synchronously after handleApplyView seeds state from the saved view.
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
+    setActiveGroupBy(savedView.groupBy ?? null);
+    setActiveSort(Array.isArray(savedView.sort) ? savedView.sort : null);
+    setActiveShowAllGroups(!!savedView.showAllGroups);
+    if (savedView.zoomLevel) setActiveAssetsZoom(savedView.zoomLevel);
+    setActiveAssetsCollapsed(
+      Array.isArray(savedView.collapsedGroups)
+        ? new Set(savedView.collapsedGroups)
+        : new Set(),
+    );
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
   }, [cal, schema]);
@@ -399,16 +527,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
   }
 
+  // Counts how many onEventSave-triggered prop updates to suppress clear() for.
+  // Scope ops (single/following) emit multiple onEventSave calls; each one
+  // causes a separate allNormalized update that must not wipe the undo stack.
+  const engineMutationPendingRef = useRef(0);
+
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
   useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
-  // Clear undo history on a full reload so stale entries can't reference
-  // events that no longer exist.
+  // Skip clear() when the change was triggered by our own onEventSave so the
+  // undo stack survives the controlled-events prop round-trip.
   useEffect(() => {
     engineRef.current.setEvents(fromLegacyEvents(allNormalized));
-    undoManagerRef.current.clear();
+    if (engineMutationPendingRef.current > 0) {
+      engineMutationPendingRef.current -= 1;
+    } else {
+      undoManagerRef.current.clear();
+    }
   }, [allNormalized]);
 
   // ── Expand recurring events within the visible range (via engine) ────────
@@ -428,10 +565,39 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     () => categories.filter(c => !SCHEDULE_ONLY_CATS.has(c)),
     [categories],
   );
+
+  // Resolve asset-request category ids → {id, label} pairs by looking up the
+  // host's configured categories. Falls back to using the id as the label so
+  // the modal never renders a blank dropdown.
+  const resolvedAssetRequestCategories = useMemo(() => {
+    if (!Array.isArray(assetRequestCategories) || assetRequestCategories.length === 0) return [];
+    const cfg = categoriesConfig ?? ownerCfg.config?.categoriesConfig;
+    const defs = (Array.isArray(cfg?.categories) ? cfg.categories : []) as Array<{
+      id: string
+      label?: string
+      color?: string
+    }>;
+    const byId = new Map(defs.map(d => [d.id, d]));
+    return assetRequestCategories.map(id => {
+      const def = byId.get(id);
+      return { id, label: def?.label ?? id, color: def?.color };
+    });
+  }, [assetRequestCategories, categoriesConfig, ownerCfg.config?.categoriesConfig]);
+
+  const canRequestAsset =
+    resolvedAssetRequestCategories.length > 0 &&
+    Array.isArray(effectiveAssets) &&
+    effectiveAssets.length > 0;
   const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
-  const visibleEvents = useMemo(
+  const filteredEvents = useMemo(
     () => applyFilters(expandedEvents, cal.filters, schema),
     [expandedEvents, cal.filters, schema],
+  );
+  const visibleEvents = useMemo(
+    () => (activeSort && activeSort.length > 0
+      ? sortEvents(filteredEvents, activeSort)
+      : filteredEvents),
+    [filteredEvents, activeSort],
   );
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
@@ -461,7 +627,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // State has changed — record the pre-mutation snapshot.
       undoMgr.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
-      onAccepted();
+      // Each emitted onEventSave call will trigger an allNormalized update; count
+      // them so the effect can skip clear() for all of them.
+      engineMutationPendingRef.current = Math.max(1, result.changes.length);
+      onAccepted(result);
 
     } else if (result.status === 'pending-confirmation') {
       // Engine state is UNCHANGED at this point (pending means no commit yet).
@@ -474,7 +643,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
             undoMgr.record(preSnap, op.type);
             announcerRef.current?.announce(opAnnouncement(op));
-            onAccepted();
+            engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
+            onAccepted(confirmed);
           }
         },
       });
@@ -488,6 +658,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Local UI state ───────────────────────────────────────────────────────
   const [selectedEvent,  setSelectedEvent]  = useState(null);
   const [formEvent,        setFormEvent]        = useState(null);
+  const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
@@ -496,6 +667,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [scheduleEditorState, setScheduleEditorState] = useState(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
+  const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
   const [inlineEditTarget, setInlineEditTarget] = useState(null);
   // Capture last click coords so InlineEventEditor can position near the pill
@@ -740,7 +912,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    * All actions also bubble to the external onEmployeeAction prop.
    */
   const handleEmployeeAction = useCallback((empId, actionInput) => {
-    const emp = resolvedEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+    const emp = configuredEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const actionPayload = typeof actionInput === 'string'
       ? { type: actionInput }
       : (actionInput ?? {});
@@ -779,7 +951,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       setScheduleEditorState({ emp, start: new Date() });
     }
     onEmployeeAction?.(empId, actionInput);
-  }, [expandedEvents, onEmployeeAction, resolvedEmployees]);
+  }, [configuredEmployees, expandedEvents, onEmployeeAction]);
 
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
@@ -860,9 +1032,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         // Mark the original shift as needing coverage
         const updatedMeta = {
           ...(shiftEv.meta ?? {}),
-          shiftStatus: availEv.kind,   // 'pto' | 'unavailable'
-          openShiftId: openShift.id,
-          coveredBy:   null,
+          shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
+          openShiftId:  openShift.id,
+          coveredBy:    null,
+          requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
+          requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
         };
         applyEngineOp(
           { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
@@ -941,6 +1115,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           status:     rawEv.status     ?? 'confirmed',
           rrule:      rawEv.rrule      ?? null,
           exdates:    rawEv.exdates    ?? [],
+          meta:       rawEv.meta       ?? {},
         },
         source: 'form',
       };
@@ -971,9 +1146,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         },
         source: 'form',
       }),
-      () => {
-        const savedPayload = getSavedEventPayload(eventId, rawEv);
-        if (savedPayload) onEventSave?.(savedPayload);
+      (result) => {
+        // For scoped recurring ops the engine may produce multiple changes
+        // (e.g. updated master + created detached occurrence). Emit onEventSave
+        // for every changed/created event so the host stays fully in sync.
+        if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') {
+              onEventSave?.(toLegacyEvent(change.event) as any);
+            } else if (change.type === 'updated') {
+              onEventSave?.(toLegacyEvent(change.after) as any);
+            }
+          });
+        } else {
+          const savedPayload = getSavedEventPayload(eventId, rawEv);
+          if (savedPayload) onEventSave?.(savedPayload);
+        }
         setFormEvent(null);
       },
       'Edit',
@@ -986,9 +1174,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     applyWithRecurringCheck(
       ev,
       (scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
-      () => {
-        if (onEventMove) onEventMove(ev, newStart, newEnd);
-        else {
+      (result) => {
+        if (onEventMove) {
+          onEventMove(ev, newStart, newEnd);
+        } else if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
+            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
+          });
+        } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
           if (savedPayload) onEventSave?.(savedPayload);
         }
@@ -1003,9 +1197,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     applyWithRecurringCheck(
       ev,
       (scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
-      () => {
-        if (onEventResize) onEventResize(ev, newStart, newEnd);
-        else {
+      (result) => {
+        if (onEventResize) {
+          onEventResize(ev, newStart, newEnd);
+        } else if (result?.changes?.length > 1) {
+          result.changes.forEach(change => {
+            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
+            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
+          });
+        } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
           if (savedPayload) onEventSave?.(savedPayload);
         }
@@ -1013,6 +1213,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       'Resize',
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
+
+  const handleEventGroupChange = useCallback((ev, patch) => {
+    if (!patch || typeof patch !== 'object') return;
+    const raw = ev._raw ?? ev;
+    const id  = ev._eventId ?? String(ev.id);
+    applyEngineOp(
+      { type: 'group-change', id, patch, source: 'drag' },
+      () => {
+        if (onEventGroupChange) onEventGroupChange(ev, patch);
+        else emitEventSave(id, raw, patch);
+      },
+    );
+  }, [applyEngineOp, emitEventSave, onEventGroupChange]);
 
   const handleEventDelete = useCallback((id) => {
     // Find the event so we can check if it's recurring.
@@ -1169,7 +1382,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         meta: ev.meta ?? {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
-      const op = { type: 'create', event: previewEvent };
+      const op = { type: 'create' as const, event: previewEvent };
       const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
       if (validation.violations.length > 0) {
         conflicts.push({
@@ -1215,7 +1428,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const handleEditFromHoverCard = useCallback((ev) => {
     setSelectedEvent(null);
-    setFormEvent(ev._raw ?? ev);
+    let formEv = ev._raw ?? ev;
+    // Recurring occurrences carry rrule:null — look up the series master so the
+    // EventForm shows the correct repeat cadence and preserves it on save.
+    if (ev._recurring && ev._eventId) {
+      const master = engineRef.current?.state?.events?.get(ev._eventId);
+      if (master?.rrule) {
+        formEv = { ...formEv, rrule: master.rrule };
+      }
+    }
+    setFormEvent(formEv);
   }, []);
 
   /** Save quick display customizations from InlineEventEditor. */
@@ -1271,6 +1493,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onSwipeRight: () => cal.navigate(-1),
   });
 
+  useKeyboardShortcuts({
+    setView: cal.setView,
+    navigate: cal.navigate,
+    goToToday: cal.goToToday,
+    openHelp: () => setHelpOpen(true),
+  });
+
   const hasAddButton = (showAddButton || ownerCfg.isOwner || devMode) && perms.canAddEvent;
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
@@ -1284,19 +1513,23 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [hasAddButton, onDateSelect]);
 
   // Schedule cell select → route to schedule-specific editor, not generic EventForm.
+  // When the dropped cell isn't a known employee (no resource match), fall back
+  // to the generic EventForm so the user still has a way to create an event.
   const handleScheduleDateSelect = useCallback((start, end, resourceId) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
-    const emp = resolvedEmployees.find(e => String(e.id) === String(resourceId));
-    if (!emp) return;
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate = end instanceof Date ? end : new Date(end);
 
-    setScheduleEditorState({
-      emp,
-      start: start instanceof Date ? start : new Date(start),
-      end: end instanceof Date ? end : new Date(end),
-    });
-  }, [hasAddButton, onDateSelect, resolvedEmployees]);
+    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
+    if (!emp) {
+      setFormEvent({ start: startDate, end: endDate, resource: resourceId });
+      return;
+    }
+
+    setScheduleEditorState({ emp, start: startDate, end: endDate });
+  }, [configuredEmployees, hasAddButton, onDateSelect]);
 
   const sharedViewProps = {
     currentDate:   cal.currentDate,
@@ -1304,16 +1537,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventClick:  handleEventClick,
     onEventMove:   handleEventMove,
     onEventResize: handleEventResize,
+    onEventGroupChange: handleEventGroupChange,
     onDateSelect:  handleDateSelect,
     config:        ownerCfg.config,
     weekStartDay,
     pillHoverTitle,
+    groupBy:       activeGroupBy,
+    sort:          activeSort,
+    showAllGroups: activeShowAllGroups,
   };
 
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles.root} data-wc-theme={theme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars}>
+        <div className={styles.root} data-wc-theme={effectiveTheme} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -1339,6 +1576,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 <ChevronRight size={18} aria-hidden="true" />
               </button>
               <span className={styles.dateLabel} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+              <span className={styles.calendarTitle}>{calendarTitle}</span>
               {fetchLoading && <span className={styles.loadingDot} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
@@ -1429,25 +1667,29 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, opts),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed }),
               deleteView:  handleDeleteView,
               currentFilters: cal.filters,
               currentView:    cal.view,
+              schema,
+              buildFilterSummary: (filters) => buildFilterSummary(filters, schema),
             })
           : (
             <ProfileBar
               views={savedViews.views}
               activeId={savedViewActiveId}
               isDirty={savedViewDirty}
+              schema={schema}
               onApply={handleApplyView}
               onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null })
+                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view)}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
+              onEditConditions={ownerCfg.isOwner ? (id) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
             />
           )
         }
@@ -1495,19 +1737,48 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
               {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
               {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} />}
+              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={handleEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} employees={configuredEmployees} />}
               {cal.view === 'schedule' && (
                 <TimelineView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
                   onEventClick={handleEventClick}
+                  onEventGroupChange={handleEventGroupChange}
                   onDateSelect={handleScheduleDateSelect}
-                  employees={resolvedEmployees}
-                  onEmployeeAdd={perms.canManagePeople ? onEmployeeAdd : undefined}
-                  onEmployeeDelete={perms.canManagePeople ? onEmployeeDelete : undefined}
+                  employees={configuredEmployees}
+                  onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
                   onShiftStatusChange={handleShiftStatusChange}
                   onCoverageAssign={handleCoverageAssign}
                   onEmployeeAction={handleEmployeeAction}
+                  groupBy={activeGroupBy}
+                  sort={activeSort}
+                  roles={ownerCfg.config?.team?.roles ?? []}
+                  bases={ownerCfg.config?.team?.bases ?? []}
+                />
+              )}
+              {cal.view === 'assets'   && (
+                <AssetsView
+                  currentDate={cal.currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  onDateSelect={handleScheduleDateSelect}
+                  groupBy={activeGroupBy}
+                  onGroupByChange={setActiveGroupBy}
+                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
+                  assets={effectiveAssets}
+                  strictAssetFiltering={strictAssetFiltering}
+                  resolveResourceLabel={resolveResourceLabel}
+                  zoomLevel={activeAssetsZoom}
+                  onZoomChange={setActiveAssetsZoom}
+                  collapsedGroups={activeAssetsCollapsed}
+                  onCollapsedGroupsChange={setActiveAssetsCollapsed}
+                  locationProvider={effectiveLocationProvider}
+                  renderAssetLocation={renderAssetLocation}
+                  onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
+                  onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
+                  approvalsConfig={ownerCfg.config?.approvals}
+                  onApprovalAction={onApprovalAction}
                 />
               )}
             </>
@@ -1527,6 +1798,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 onNoteSave={onNoteSave}
                 onNoteDelete={onNoteDelete}
                 onEdit={(ownerCfg.isOwner || perms.canEditEvent) ? handleEditFromHoverCard : null}
+                anchor={null}
+                resolveResourceLabel={resolveResourceLabel}
               />
             )
         )}
@@ -1542,6 +1815,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onClose={() => setFormEvent(null)}
             permissions={perms}
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
+          />
+        )}
+
+        {/* ── Asset request form ── */}
+        {assetRequestOpen && canRequestAsset && perms.canAddEvent && (
+          <AssetRequestForm
+            assets={effectiveAssets}
+            categories={resolvedAssetRequestCategories}
+            initialStart={cal.currentDate}
+            initialAssetId={undefined}
+            onSubmit={(payload) => {
+              handleEventSave(payload);
+              setAssetRequestOpen(false);
+            }}
+            onClose={() => setAssetRequestOpen(false)}
           />
         )}
 
@@ -1613,9 +1901,18 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             config={ownerCfg.config}
             categories={categories}
             resources={resources}
+            schema={schema}
+            items={expandedEvents}
+            initialTab={ownerCfg.configInitialTab}
+            initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
+            savedViews={savedViews.views}
+            onUpdateView={savedViews.updateView}
+            onDeleteView={handleDeleteView}
+            onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
+            onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
             sources={sourceStore.sources}
             feedErrors={feedErrors}
             onAddSource={sourceStore.addSource}
@@ -1623,11 +1920,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onToggleSource={sourceStore.toggleSource}
             onUpdateSource={sourceStore.updateSource}
             scheduleTemplates={mergedScheduleTemplates}
-            onCreateScheduleTemplate={ownerCfg.isOwner ? handleCreateScheduleTemplate : undefined}
-            onDeleteScheduleTemplate={ownerCfg.isOwner ? handleDeleteScheduleTemplate : undefined}
+            onCreateScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.createScheduleTemplate ? handleCreateScheduleTemplate : undefined}
+            onDeleteScheduleTemplate={ownerCfg.isOwner && !!scheduleTemplateAdapter?.deleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
             scheduleTemplateError={templateError}
           />
         )}
+
+        {/* ── Keyboard shortcuts cheat sheet ── */}
+        {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
 
         {/* ── Screen reader live region ── */}
         <ScreenReaderAnnouncer ref={announcerRef} />

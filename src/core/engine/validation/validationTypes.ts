@@ -2,11 +2,11 @@
  * CalendarEngine — validation domain types.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineRuntimeConfig } from '../engineConfig.js';
-import type { Assignment } from '../schema/assignmentSchema.js';
-import type { Dependency } from '../schema/dependencySchema.js';
-import type { ResourceCalendar } from '../schema/resourceCalendarSchema.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineRuntimeConfig } from '../engineConfig';
+import type { Assignment } from '../schema/assignmentSchema';
+import type { Dependency } from '../schema/dependencySchema';
+import type { ResourceCalendar } from '../schema/resourceCalendarSchema';
 
 // ─── Violation ───────────────────────────────────────────────────────────────
 
@@ -52,9 +52,29 @@ export const VALID_RESULT: ValidationResult = {
  * Context passed to every validation rule.
  * All fields are optional to make partial context easy to construct in tests.
  */
+/**
+ * Change shape for group-field mutations.  Consumers plug rules into
+ * OperationContext.groupChangeValidators to reject invalid reassignments.
+ */
+export interface GroupChangeShape {
+  readonly event: EngineEvent;
+  readonly patch: Readonly<Record<string, unknown>>;
+}
+
+export type GroupChangeRule = (
+  change: GroupChangeShape,
+  ctx: OperationContext,
+) => Violation | null;
+
 export interface OperationContext {
   /** All current events (used for overlap and dependency checks). */
   readonly events?: readonly EngineEvent[];
+  /**
+   * Optional rules applied to 'group-change' operations.  Each rule sees
+   * the target event and the proposed patch and may return a Violation to
+   * reject (hard) or warn (soft) the reassignment.
+   */
+  readonly groupChangeValidators?: readonly GroupChangeRule[];
   readonly businessHours?: {
     /** Day indices that are working days (0=Sun … 6=Sat). */
     readonly days: readonly number[];

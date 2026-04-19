@@ -27,15 +27,15 @@
  *   5c. On error: mark 'error', notify onError, keep rollbackEvent for retry
  */
 
-import type { CalendarAdapter } from '../adapters/CalendarAdapter.js';
-import type { CalendarEventV1 }  from '../types.js';
-import { SyncQueue }             from './SyncQueue.js';
-import type { SyncStatus }       from './SyncQueue.js';
+import type { CalendarAdapter } from '../adapters/CalendarAdapter';
+import type { CalendarEventV1 }  from '../types';
+import { SyncQueue }             from './SyncQueue';
+import type { SyncStatus }       from './SyncQueue';
 import {
   resolverFor,
   ConflictError,
-} from './conflictStrategies.js';
-import type { ConflictStrategy, ConflictResolver } from './conflictStrategies.js';
+} from './conflictStrategies';
+import type { ConflictStrategy, ConflictResolver } from './conflictStrategies';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 

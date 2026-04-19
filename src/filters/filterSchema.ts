@@ -19,6 +19,42 @@ export type FilterFieldType =
   | 'boolean'
   | 'custom'
 
+export type FilterOperator = {
+  value: string
+  label: string
+  noValue?: boolean
+}
+
+export function defaultOperatorsForType(type: FilterFieldType): FilterOperator[] {
+  switch (type) {
+    case 'multi-select':
+    case 'select':
+      return [
+        { value: 'is',     label: 'is' },
+        { value: 'is_not', label: 'is not' },
+      ]
+    case 'text':
+      return [
+        { value: 'contains',     label: 'contains' },
+        { value: 'not_contains', label: 'does not contain' },
+        { value: 'is',           label: 'is exactly' },
+      ]
+    case 'date-range':
+      return [
+        { value: 'between', label: 'between' },
+        { value: 'before',  label: 'before' },
+        { value: 'after',   label: 'after' },
+      ]
+    case 'boolean':
+      return [
+        { value: 'is', label: 'is' },
+      ]
+    case 'custom':
+    default:
+      return []
+  }
+}
+
 export type FilterOption = {
   /** Human-readable text shown in pills and dropdowns. */
   label: string
@@ -66,6 +102,8 @@ export type FilterField = {
    * Boolean, or a function receiving the current items + active filters.
    */
   hidden?: boolean | ((ctx: { items: unknown[]; filters: Record<string, unknown> }) => boolean)
+  /** Operators available for this field. Defaults to defaultOperatorsForType(type). */
+  operators?: FilterOperator[]
 }
 
 /** Generic filter state — one key per FilterField, value shape depends on type. */
@@ -94,6 +132,7 @@ export function statusField(overrides: Partial<FilterField> = {}): FilterField {
       { label: 'Tentative', value: 'tentative' },
       { label: 'Cancelled', value: 'cancelled' },
     ],
+    operators: defaultOperatorsForType('select'),
     predicate: (item: any, value: any) =>
       (item.status ?? 'confirmed') === value,
     ...overrides,
@@ -116,6 +155,7 @@ export function priorityField(overrides: Partial<FilterField> = {}): FilterField
       { label: 'High',     value: 'high',     color: '#ef4444' },
       { label: 'Critical', value: 'critical', color: '#7c3aed' },
     ],
+    operators: defaultOperatorsForType('select'),
     predicate: (item: any, value: any) =>
       ((item as any).priority ?? (item as any).meta?.priority) === value,
     ...overrides,
@@ -131,6 +171,7 @@ export function ownerField(overrides: Partial<FilterField> = {}): FilterField {
     key:   'owner',
     label: 'Owner',
     type:  'multi-select',
+    operators: defaultOperatorsForType('multi-select'),
     predicate: (item: any, value: any) => {
       const owner = item.owner ?? item.meta?.owner ?? item.meta?.assignee
       return value instanceof Set
@@ -159,6 +200,7 @@ export function tagsField(overrides: Partial<FilterField> = {}): FilterField {
     key:   'tags',
     label: 'Tag',
     type:  'multi-select',
+    operators: defaultOperatorsForType('multi-select'),
     predicate: (item: any, value: any) => {
       const itemTags: string[] = item.tags ?? item.meta?.tags ?? []
       const active = value instanceof Set ? value : new Set(value as string[])
@@ -188,6 +230,7 @@ export function metaSelectField(
     key:   metaKey,
     label: metaKey.charAt(0).toUpperCase() + metaKey.slice(1),
     type:  'select',
+    operators: defaultOperatorsForType('select'),
     predicate: (item: any, value: any) =>
       (item.meta?.[metaKey] ?? item[metaKey]) === value,
     getOptions: (items: any[]) => {
@@ -208,11 +251,129 @@ export function metaSelectField(
 // (categories, resources, sources) to the singular event properties
 // (category, resource, _sourceId).
 
+/**
+ * Resolve a resource id (e.g. "emp-sarah") to a human-readable label
+ * (e.g. "Sarah Chen") using the merged employees + assets lookup.
+ * Falls back to the raw id when no match is found.
+ */
+export type ResourceResolver = (id: string | number | null | undefined) => string
+
+type ResolverInput = {
+  employees?: Array<{ id: string | number; name?: string; label?: string }> | null
+  assets?: Array<{ id: string | number; label?: string; name?: string }> | null
+}
+
+export function makeResourceResolver({ employees, assets }: ResolverInput = {}): ResourceResolver {
+  const lookup = new Map<string, string>()
+  for (const e of employees ?? []) {
+    if (e && e.id != null) {
+      const key = String(e.id)
+      const label = (e as any).name ?? e.label ?? key
+      lookup.set(key, label)
+    }
+  }
+  // Assets register only when the id isn't already claimed by an employee.
+  for (const a of assets ?? []) {
+    if (a && a.id != null) {
+      const key = String(a.id)
+      if (lookup.has(key)) continue
+      const label = a.label ?? (a as any).name ?? key
+      lookup.set(key, label)
+    }
+  }
+  return (id) => {
+    if (id == null) return ''
+    const key = String(id)
+    return lookup.get(key) ?? key
+  }
+}
+
+/**
+ * Build a default schema that resolves resource ids to human-readable
+ * labels using the supplied employees/assets directory. Preserves the
+ * shape of DEFAULT_FILTER_SCHEMA — callers that don't need label
+ * resolution can keep using the static export.
+ */
+export function buildDefaultFilterSchema(input: ResolverInput = {}): FilterField[] {
+  const resolve = makeResourceResolver(input)
+  return [
+    {
+      key:       'categories',
+      label:     'Category',
+      type:      'multi-select',
+      operators: defaultOperatorsForType('multi-select'),
+      predicate: (item: any, value: any) =>
+        value instanceof Set
+          ? value.has(item.category)
+          : (value as string[]).includes(item.category),
+      getOptions: (items: any[]) => {
+        const seen = new Set<string>()
+        items.forEach(e => { if (e.category) seen.add(e.category) })
+        return [...seen].sort().map(c => ({ label: c, value: c }))
+      },
+    },
+    {
+      key:       'resources',
+      label:     'Resource',
+      type:      'multi-select',
+      operators: defaultOperatorsForType('multi-select'),
+      predicate: (item: any, value: any) =>
+        value instanceof Set
+          ? value.has(item.resource)
+          : (value as string[]).includes(item.resource),
+      getOptions: (items: any[]) => {
+        const seen = new Set<string>()
+        items.forEach(e => { if (e.resource) seen.add(e.resource) })
+        return [...seen]
+          .map(r => ({ label: resolve(r), value: r }))
+          .sort((a, b) => a.label.localeCompare(b.label))
+      },
+    },
+    {
+      key:       'sources',
+      label:     'Source',
+      type:      'multi-select',
+      operators: defaultOperatorsForType('multi-select'),
+      predicate: (item: any, value: any) =>
+        !item._sourceId ||
+        (value instanceof Set
+          ? value.has(item._sourceId)
+          : (value as string[]).includes(item._sourceId)),
+      getOptions: (items: any[]) => {
+        const seen = new Map<string, FilterOption>()
+        items.forEach(e => {
+          if (e._sourceId && !seen.has(e._sourceId)) {
+            seen.set(e._sourceId, {
+              label: e._sourceLabel ?? e._sourceId,
+              value: e._sourceId,
+            })
+          }
+        })
+        return [...seen.values()]
+      },
+    },
+    {
+      key:       'dateRange',
+      label:     'Date',
+      type:      'date-range',
+      operators: defaultOperatorsForType('date-range'),
+    },
+    {
+      key:         'search',
+      label:       'Search',
+      type:        'text',
+      placeholder: 'Search events…',
+      operators:   defaultOperatorsForType('text'),
+    },
+  ]
+}
+
 export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
   {
-    key:   'categories',
-    label: 'Category',
-    type:  'multi-select',
+    key:       'categories',
+    label:     'Category',
+    type:      'multi-select',
+    operators: defaultOperatorsForType('multi-select'),
     predicate: (item: any, value: any) =>
       value instanceof Set
         ? value.has(item.category)
@@ -224,9 +385,10 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     },
   },
   {
-    key:   'resources',
-    label: 'Resource',
-    type:  'multi-select',
+    key:       'resources',
+    label:     'Resource',
+    type:      'multi-select',
+    operators: defaultOperatorsForType('multi-select'),
     predicate: (item: any, value: any) =>
       value instanceof Set
         ? value.has(item.resource)
@@ -238,9 +400,10 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     },
   },
   {
-    key:   'sources',
-    label: 'Source',
-    type:  'multi-select',
+    key:       'sources',
+    label:     'Source',
+    type:      'multi-select',
+    operators: defaultOperatorsForType('multi-select'),
     // Events without _sourceId (passed via the events prop) are always visible.
     predicate: (item: any, value: any) =>
       !item._sourceId ||
@@ -262,14 +425,16 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     },
   },
   {
-    key:   'dateRange',
-    label: 'Date',
-    type:  'date-range',
+    key:       'dateRange',
+    label:     'Date',
+    type:      'date-range',
+    operators: defaultOperatorsForType('date-range'),
   },
   {
     key:         'search',
     label:       'Search',
     type:        'text',
     placeholder: 'Search events…',
+    operators:   defaultOperatorsForType('text'),
   },
 ]

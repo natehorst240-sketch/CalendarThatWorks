@@ -1,0 +1,71 @@
+/* GroupHeader.module.css
+ * Theme-agnostic styling via --wc-* variables defined per theme
+ * (aviation.css, soft.css, minimal.css, corporate.css, forest.css, ocean.css).
+ */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  background: var(--wc-surface-muted, var(--wc-surface));
+  border-bottom: 1px solid var(--wc-border);
+  color: var(--wc-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: background-color 0.12s ease;
+}
+
+.header:hover {
+  background: var(--wc-surface-hover, var(--wc-surface-muted, var(--wc-surface)));
+}
+
+.header:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--wc-accent);
+}
+
+.chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--wc-text-muted);
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+  flex: none;
+}
+
+.chevron[data-collapsed] {
+  transform: rotate(0deg);
+}
+
+.label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--wc-border);
+  color: var(--wc-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.header[data-collapsed] .count {
+  background: var(--wc-accent);
+  color: #fff;
+}

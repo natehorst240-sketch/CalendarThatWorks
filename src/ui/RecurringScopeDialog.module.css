@@ -13,7 +13,7 @@
   border-radius: 12px;
   width: 400px;
   max-width: calc(100vw - 32px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  box-shadow: var(--wc-shadow);
   overflow: hidden;
 }
 

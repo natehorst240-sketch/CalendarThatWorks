@@ -22,16 +22,50 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
+    html, body, #root { height: 100%; }
     body {
       margin: 0;
       font-family: 'Inter', system-ui, sans-serif;
       background: #f1f5f9;
       color: #0f172a;
     }
+    /* Let the calendar sit flush with the viewport edges in the demo. */
+    #root > div > [data-testid="works-calendar"] {
+      border: none;
+      border-radius: 0;
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" src="./App.jsx"></script>
+  <script>
+    // Self-heal for stale PWA cache. On iOS Safari and other browsers, an
+    // old service worker can keep serving a cached index.html that points
+    // at JS hashes no longer on the origin, producing a blank page. If the
+    // React root hasn't mounted within 8s, unregister SWs + clear caches
+    // and reload exactly once (guarded by sessionStorage).
+    (function () {
+      var KEY = 'wc-sw-recovered';
+      if (sessionStorage.getItem(KEY)) return;
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        if (root && root.childElementCount > 0) return;
+        sessionStorage.setItem(KEY, '1');
+        var steps = [];
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+          steps.push(navigator.serviceWorker.getRegistrations()
+            .then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+            .catch(function () {}));
+        }
+        if (window.caches && caches.keys) {
+          steps.push(caches.keys()
+            .then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+            .catch(function () {}));
+        }
+        Promise.all(steps).finally(function () { location.reload(); });
+      }, 8000);
+    })();
+  </script>
+  <script type="module" src="./App.tsx"></script>
 </body>
 </html>

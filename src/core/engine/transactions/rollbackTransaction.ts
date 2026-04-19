@@ -5,8 +5,8 @@
  * Pure function — returns the snapshot map directly.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { TransactionHandle } from './beginTransaction.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { TransactionHandle } from './beginTransaction';
 
 /**
  * Discard any changes made since the transaction was opened and return

@@ -1,6 +1,6 @@
 {
   "name": "works-calendar",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
@@ -29,11 +29,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CalendarThatWorks/works-calendar.git"
+    "url": "git+https://github.com/natehorst240-sketch/CalendarThatWorks.git"
   },
-  "homepage": "https://github.com/CalendarThatWorks/works-calendar#readme",
+  "homepage": "https://github.com/natehorst240-sketch/CalendarThatWorks#readme",
   "bugs": {
-    "url": "https://github.com/CalendarThatWorks/works-calendar/issues"
+    "url": "https://github.com/natehorst240-sketch/CalendarThatWorks/issues"
   },
   "scripts": {
     "test": "vitest run",
@@ -42,12 +42,17 @@
     "qa:visual": "playwright test visual-qa --config playwright.config.ts && node scripts/ai-qa-review.mjs",
     "qa:review": "node scripts/ai-qa-review.mjs",
     "ai:qa": "playwright test && node scripts/ai-qa-review.mjs",
-    "dev": "vite --config vite.demo.config.js",
-    "examples": "vite --config vite.examples.config.js",
+    "perf:benchmark": "node scripts/perf-benchmark.mjs",
+    "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
+    "dev": "vite --config vite.demo.config.ts",
+    "examples": "vite --config vite.examples.config.ts",
     "build": "vite build",
-    "build:demo": "vite build --config vite.demo.config.js",
-    "build:examples": "vite build --config vite.examples.config.js",
-    "preview": "vite preview --config vite.demo.config.js"
+    "build:demo": "vite build --config vite.demo.config.ts",
+    "build:examples": "vite build --config vite.examples.config.ts",
+    "preview": "vite preview --config vite.demo.config.ts",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "peerDependencies": {
     "react": "^18.0.0",
@@ -67,13 +72,28 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20.19.39",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.2.1",
     "happy-dom": "^20.8.9",
     "openai": "^4.104.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "typescript": "^5.9.3",
     "vite": "^5.2.11",
+    "vite-plugin-dts": "^4.5.4",
     "vite-plugin-pwa": "^0.21.2",
     "vitest": "^4.1.4"
-  }
+  },
+  "keywords": [
+    "calendar",
+    "scheduler",
+    "react-calendar",
+    "team-scheduling",
+    "pto",
+    "drag-and-drop",
+    "timeline",
+    "agenda"
+  ]
 }

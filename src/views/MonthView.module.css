@@ -16,9 +16,9 @@
 
 .weekNumHead,
 .dayName {
-  padding: 8px 0;
+  padding: calc(8px * var(--wc-density, 1)) 0;
   text-align: center;
-  font-size: 12px;
+  font-size: calc(12px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text-muted);
   text-transform: uppercase;
@@ -95,7 +95,7 @@
   font-size: 11px;
   font-weight: 500;
   border-radius: var(--wc-radius-sm);
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 65%, #000);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
@@ -139,7 +139,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 4px 4px 2px;
+  padding: calc(4px * var(--wc-density, 1)) calc(4px * var(--wc-density, 1)) calc(2px * var(--wc-density, 1));
   border-right: 1px solid var(--wc-border);
   cursor: pointer;
   transition: background 0.1s;
@@ -167,6 +167,13 @@
   color: #fff;
 }
 
+.cellHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .dayNum {
   position: relative;
   z-index: 3;
@@ -176,11 +183,26 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: calc(13px * var(--wc-font-scale, 1));
   font-weight: 500;
   color: var(--wc-text);
-  margin-bottom: 2px;
+  flex-shrink: 0;
 }
+
+.moreLink {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: calc(11px * var(--wc-font-scale, 1));
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  padding: 2px 4px;
+  border-radius: var(--wc-radius-sm);
+  line-height: 1;
+  white-space: nowrap;
+}
+.moreLink:hover { color: var(--wc-accent); }
 
 .events {
   position: relative;
@@ -198,19 +220,22 @@
   width: 100%;
   min-height: var(--month-pill-h);
   height: var(--month-pill-h);
-  padding: 0 6px;
+  padding: 0 calc(6px * var(--wc-density, 1));
   border-radius: var(--wc-radius-sm);
   background: var(--ev-color, var(--wc-accent));
   color: #fff;
-  font-size: 11px;
+  font-size: calc(11px * var(--wc-font-scale, 1));
   font-weight: 500;
   text-align: left;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 65%, #000);
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: opacity 0.1s;
+  /* Touch: claim the pointer for move so the browser doesn't fire tap
+     through to a date-cell pointer-down. */
+  touch-action: none;
 }
 .eventPill:hover { opacity: 0.85; }
 /* In edit mode: subtle dashed outline signals every pill is editable */
@@ -287,10 +312,28 @@
   .weekRowHovered { min-height: 120px; }
   .cell { padding: 2px 1px; }
   .dayName { font-size: 9px; letter-spacing: 0; }
-  .dayNum  { width: 18px; height: 18px; font-size: 10px; margin-bottom: 1px; }
+  .dayNum  { width: 18px; height: 18px; font-size: 10px; }
 
   .eventPill { font-size: 10px; padding: 1px 4px; }
   .moreLink  { font-size: 9px; }
   .spanBar   { font-size: 10px; padding: 0 3px; }
   .popover   { width: min(260px, calc(100vw - 16px)) !important; }
+}
+
+/* Touch devices: bump small hit targets. Event pills stay visually dense
+ * because month-cell real estate is scarce, but we expand the "more" link
+ * and popover controls to a comfortable size. */
+@media (pointer: coarse) {
+  .moreLink {
+    min-height: 32px;
+    min-width: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .popoverHead button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    font-size: 18px;
+  }
 }

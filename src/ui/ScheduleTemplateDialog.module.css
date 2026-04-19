@@ -12,7 +12,7 @@
   background: var(--wc-panel, #fff);
   border: 1px solid var(--wc-border, #e5e7eb);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--wc-shadow);
   padding: 16px;
 }
 
@@ -83,9 +83,9 @@
 }
 
 .error {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border: 1px solid color-mix(in srgb, var(--wc-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--wc-danger) 5%, var(--wc-bg));
+  color: var(--wc-danger);
   border-radius: 8px;
   font-size: 0.85rem;
   padding: 8px 10px;

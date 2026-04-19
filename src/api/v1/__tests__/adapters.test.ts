@@ -13,11 +13,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RestAdapter }       from '../adapters/RestAdapter.js';
-import { SupabaseAdapter }   from '../adapters/SupabaseAdapter.js';
-import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter.js';
-import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter.js';
-import type { CalendarEventV1 } from '../types.js';
+import { RestAdapter }       from '../adapters/RestAdapter';
+import { SupabaseAdapter }   from '../adapters/SupabaseAdapter';
+import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter';
+import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -350,7 +350,7 @@ describe('SupabaseAdapter.loadRange', () => {
     const a = new SupabaseAdapter({
       client: sb,
       table: 'events',
-      fromRow: row => ({ ...row as CalendarEventV1, title: 'mapped' }),
+      fromRow: row => ({ ...(row as unknown as CalendarEventV1), title: 'mapped' }),
     });
     const result = await a.loadRange(S, E);
     expect(result[0].title).toBe('mapped');

@@ -17,17 +17,17 @@ import {
   occurrenceToV1,
   legacyToV1,
   v1ToLegacy,
-} from '../converters.js';
-import { normalizeInputEvent } from '../index.js';
-import { makeEvent }          from '../types.js';
-import { SYNC_META_KEY }      from '../types.js';
+} from '../converters';
+import { normalizeInputEvent } from '../index';
+import { makeEvent }          from '../types';
+import { SYNC_META_KEY }      from '../types';
 import type {
   CalendarEventV1,
   CalendarOccurrenceV1,
   SyncMetadata,
   EngineEvent,
   EngineOccurrence,
-} from '../types.js';
+} from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

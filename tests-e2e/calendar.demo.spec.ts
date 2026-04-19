@@ -59,6 +59,9 @@ for (const vp of viewports) {
 
     test('add event dialog opens', async ({ page }) => {
       await page.goto('/');
+      // Demo now defaults to schedule view; the "Add new event" button only
+      // renders in non-schedule views, so switch to Month first.
+      await page.getByRole('button', { name: /^Month$/i }).click();
       const addBtn = page.getByRole('button', { name: /add new event/i });
       await expect(addBtn).toBeVisible();
       await addBtn.click();

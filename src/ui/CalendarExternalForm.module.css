@@ -40,9 +40,9 @@
 }
 
 .globalError {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border: 1px solid color-mix(in srgb, var(--wc-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--wc-danger) 5%, var(--wc-bg));
+  color: var(--wc-danger);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.85rem;

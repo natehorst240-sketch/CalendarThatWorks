@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { expandOccurrences } from '../recurrence/expandOccurrences.js';
-import { makeEvent } from '../schema/eventSchema.js';
+import { expandOccurrences } from '../recurrence/expandOccurrences';
+import { makeEvent } from '../schema/eventSchema';
 
 function d(y: number, mo: number, day: number, h = 9, m = 0): Date {
   return new Date(y, mo - 1, day, h, m, 0, 0);

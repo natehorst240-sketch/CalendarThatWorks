@@ -2,6 +2,10 @@
 
 This index is the canonical docs entrypoint for the package.
 
+## Start here
+
+- [Setup guide](./Setup.md) — install to live calendar in 10 minutes
+
 ## Product guides
 
 - [Schedule workflow](./ScheduleWorkflow.md)
@@ -9,6 +13,11 @@ This index is the canonical docs entrypoint for the package.
 - [Advanced filters](./AdvancedFilters.md)
 - [Setup wizard](./SetupWizard.md)
 - [Data adapter](./DataAdapter.md)
+
+## Provider setup guides
+
+- [Google Calendar setup](./GoogleCalendarSetup.md)
+- [Microsoft 365 setup](./Microsoft365Setup.md)
 
 ## Project and contributor docs
 

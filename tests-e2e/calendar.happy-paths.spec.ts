@@ -26,6 +26,9 @@ test.describe('WorksCalendar happy paths', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
+    // Demo defaults to schedule view; these tests exercise month-view flows
+    // (drag, add-event toolbar button), so normalize to Month first.
+    await page.getByRole('button', { name: /^Month$/i }).click();
   });
 
   test('month view navigation moves forward and back', async ({ page }) => {
@@ -89,10 +92,24 @@ test.describe('WorksCalendar happy paths', () => {
     await expect(page.getByRole('button', { name: /Happy Path Recurring Event/i }).first()).toBeVisible();
   });
 
-  test('can switch theme from demo theme picker', async ({ page }) => {
-    await page.getByTitle('Change theme').click();
+  test('can switch theme via Settings > Setup', async ({ page }) => {
+    // Authenticate as owner (demo password is "demo1234").
+    // On success, useOwnerConfig.authenticate() calls setConfigOpen(true) so
+    // the Settings dialog opens automatically — no need to click the gear button.
+    await page.getByLabel('Owner settings').click();
+    await page.getByPlaceholder(/Enter password/i).fill('demo1234');
+    await page.getByRole('button', { name: /Unlock/i }).click();
+
+    // Dialog auto-opens on successful auth (SHA-256 check is async, give it time).
+    await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible({ timeout: 10000 });
+
+    // The Setup tab should be active by default, click the Ocean theme
     await page.getByRole('button', { name: /Ocean/i }).click();
 
+    // Close the settings panel
+    await page.getByLabel('Close settings').click();
+
+    // Verify the theme was applied
     await expect(page.getByTestId('works-calendar')).toHaveAttribute('data-wc-theme', 'ocean');
   });
 

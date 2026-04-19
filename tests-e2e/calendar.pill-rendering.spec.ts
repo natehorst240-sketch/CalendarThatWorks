@@ -15,7 +15,9 @@ test.describe('WorksCalendar month pill rendering regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    const pill = page.getByRole('button', { name: /^Cross-Day Hover Range, Incident$/i }).first();
+    // Use partial match so the selector works even when the event splits
+    // across week rows (aria-label gains ", continues next week" suffix).
+    const pill = page.getByRole('button', { name: /Cross-Day Hover Range, Incident/i }).first();
     await expect(pill).toBeVisible();
 
     const startCell = page.locator(`[data-date="${dateKey(2)}"]`).first();
@@ -32,10 +34,17 @@ test.describe('WorksCalendar month pill rendering regressions', () => {
     expect(endBox).not.toBeNull();
 
     if (pillBox && startBox && endBox) {
-      expect(pillBox.left ?? pillBox.x).toBeGreaterThanOrEqual(startBox.x - 8);
-      expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(endBox.x + endBox.width + 8);
-      expect(pillBox.width).toBeGreaterThan(startBox.width * 1.5);
       expect(pillBox.height).toBeGreaterThan(10);
+
+      // When both cells are in the same row the pill should span across them.
+      // When the event crosses a week-row boundary the span is split, so the
+      // multi-cell width assertion only applies to the same-row case.
+      const sameRow = Math.abs(startBox.y - endBox.y) < 10;
+      if (sameRow) {
+        expect(pillBox.left ?? pillBox.x).toBeGreaterThanOrEqual(startBox.x - 8);
+        expect(pillBox.x + pillBox.width).toBeLessThanOrEqual(endBox.x + endBox.width + 8);
+        expect(pillBox.width).toBeGreaterThan(startBox.width * 1.5);
+      }
     }
   });
 });

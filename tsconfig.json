@@ -8,11 +8,28 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": false,
-    "allowJs": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "demo"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "demo",
+    "vite.config.ts",
+    "vite.demo.config.ts",
+    "vite.examples.config.ts",
+    "vitest.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-demo",
+    "dist-examples",
+    "examples"
+  ]
 }
+

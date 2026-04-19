@@ -38,7 +38,7 @@
 }
 
 .title {
-  font-size: 15px;
+  font-size: calc(15px * var(--wc-font-scale, 1));
   font-weight: 700;
   color: var(--wc-text);
   margin: 0;
@@ -266,5 +266,19 @@
   @keyframes slideUp {
     from { transform: translateY(100%); opacity: 0.8; }
     to   { transform: translateY(0);    opacity: 1; }
+  }
+}
+
+/* Touch devices: guarantee comfortable tap targets. */
+@media (pointer: coarse) {
+  .close {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+  .editBtn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
   }
 }

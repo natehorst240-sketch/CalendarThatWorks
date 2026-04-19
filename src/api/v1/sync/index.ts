@@ -7,11 +7,11 @@
  */
 
 // ── Queue ─────────────────────────────────────────────────────────────────────
-export { SyncQueue }       from './SyncQueue.js';
+export { SyncQueue }       from './SyncQueue';
 export type {
   SyncStatus,
   QueuedOperation,
-} from './SyncQueue.js';
+} from './SyncQueue';
 
 // ── Conflict strategies ───────────────────────────────────────────────────────
 export {
@@ -21,17 +21,17 @@ export {
   manualResolve,
   resolverFor,
   ConflictError,
-} from './conflictStrategies.js';
+} from './conflictStrategies';
 export type {
   ConflictStrategy,
   ConflictResolver,
-} from './conflictStrategies.js';
+} from './conflictStrategies';
 
 // ── SyncManager ───────────────────────────────────────────────────────────────
-export { SyncManager }     from './SyncManager.js';
+export { SyncManager }     from './SyncManager';
 export type {
   SyncManagerOptions,
   SyncState,
   SyncStateListener,
   SyncUnsubscribe,
-} from './SyncManager.js';
+} from './SyncManager';

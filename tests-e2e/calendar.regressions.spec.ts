@@ -48,7 +48,9 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    const crossDay = page.getByRole('button', { name: /^Cross-Day Hover Range, Incident$/i }).first();
+    // Use partial match so the selector works even when the event splits
+    // across week rows (aria-label gains ", continues next week" suffix).
+    const crossDay = page.getByRole('button', { name: /Cross-Day Hover Range, Incident/i }).first();
     await expect(crossDay).toBeVisible();
     await crossDay.evaluate((el) => el.click());
 
@@ -87,5 +89,25 @@ test.describe('WorksCalendar targeted regressions', () => {
     const editor = page.getByRole('dialog', { name: /Edit event/i });
     await expect(editor).toBeVisible();
     await expect(editor.getByPlaceholder('Event title')).toHaveValue('Edit Pen Fixture');
+  });
+
+  test('edit pen on a recurring event shows the series repeat cadence, not "Does not repeat"', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/regression-bugs.html');
+
+    await page.getByRole('button', { name: /Repeating Pencil Test/i }).first().click();
+
+    const dialog = page.getByRole('dialog', { name: /Event details: Repeating Pencil Test/i });
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('button', { name: /Edit event/i }).click();
+
+    const editor = page.getByRole('dialog', { name: /Edit event/i });
+    await expect(editor).toBeVisible();
+    await expect(editor.getByPlaceholder('Event title')).toHaveValue('Repeating Pencil Test');
+
+    // The Repeat dropdown must NOT show "Does not repeat" — the series RRULE should be loaded.
+    const repeatSelect = editor.getByLabel(/^Repeat$/i);
+    await expect(repeatSelect).not.toHaveValue('none');
   });
 });

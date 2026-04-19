@@ -21,32 +21,32 @@
  *   unsub();
  */
 
-import { applyOperation as applyStateOp } from './operations.js';
+import { applyOperation as applyStateOp } from './operations';
 import {
   applyOperation as applyMutationOp,
   type ApplyOptions,
-} from './operations/applyOperation.js';
-import type { Assignment }       from './schema/assignmentSchema.js';
-import type { Dependency }       from './schema/dependencySchema.js';
-import type { ResourceCalendar } from './schema/resourceCalendarSchema.js';
+} from './operations/applyOperation';
+import type { Assignment }       from './schema/assignmentSchema';
+import type { Dependency }       from './schema/dependencySchema';
+import type { ResourceCalendar } from './schema/resourceCalendarSchema';
 import {
   getOccurrencesInRange,
   type GetOccurrencesOptions,
-} from './selectors/getOccurrencesInRange.js';
+} from './selectors/getOccurrencesInRange';
 import {
   beginTransaction,
-} from './transactions/beginTransaction.js';
+} from './transactions/beginTransaction';
 import {
   commitTransaction,
-} from './transactions/commitTransaction.js';
+} from './transactions/commitTransaction';
 import {
   rollbackTransaction,
-} from './transactions/rollbackTransaction.js';
-import type { TransactionHandle } from './transactions/beginTransaction.js';
-import type { OperationResult } from './operations/operationResult.js';
-import type { EngineOperation } from './schema/operationSchema.js';
-import type { EngineOccurrence } from './schema/occurrenceSchema.js';
-import type { OperationContext } from './validation/validationTypes.js';
+} from './transactions/rollbackTransaction';
+import type { TransactionHandle } from './transactions/beginTransaction';
+import type { OperationResult } from './operations/operationResult';
+import type { EngineOperation } from './schema/operationSchema';
+import type { EngineOccurrence } from './schema/occurrenceSchema';
+import type { OperationContext } from './validation/validationTypes';
 import type {
   CalendarState,
   CalendarEngineInit,
@@ -54,8 +54,8 @@ import type {
   Operation,
   StateListener,
   Unsubscribe,
-} from './types.js';
-import type { EngineEvent } from './schema/eventSchema.js';
+} from './types';
+import type { EngineEvent } from './schema/eventSchema';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 

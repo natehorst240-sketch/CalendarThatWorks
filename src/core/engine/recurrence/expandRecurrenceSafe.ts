@@ -1,8 +1,8 @@
-import { expandOccurrences, type ExpandOptions } from './expandOccurrences.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
-import type { OnError } from '../errors/onError.js';
-import { toStructuredError } from '../errors/onError.js';
+import { expandOccurrences, type ExpandOptions } from './expandOccurrences';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOccurrence } from '../schema/occurrenceSchema';
+import type { OnError } from '../errors/onError';
+import { toStructuredError } from '../errors/onError';
 
 export interface ExpandRecurrenceSafeOptions extends ExpandOptions {
   readonly onError?: OnError;

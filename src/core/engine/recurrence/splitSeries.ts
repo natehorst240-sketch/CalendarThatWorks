@@ -9,10 +9,10 @@
  * This is a pure function — no side effects.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import { makeEvent } from '../schema/eventSchema.js';
-import { setRRuleUntil } from './recurrenceMath.js';
-import { nextEngineId } from '../adapters/normalizeInputEvent.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import { makeEvent } from '../schema/eventSchema';
+import { setRRuleUntil } from './recurrenceMath';
+import { nextEngineId } from '../adapters/normalizeInputEvent';
 
 export interface SeriesSplitResult {
   /** The head series (original master with UNTIL set). */
