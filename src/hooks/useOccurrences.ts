@@ -8,7 +8,7 @@
  */
 import { useMemo } from 'react';
 import { addDays } from 'date-fns';
-import { expandRRule } from '../core/icalParser.js';
+import { expandRRule } from '../core/icalParser';
 
 /**
  * @param {import('../index.d.ts').NormalizedEvent[]} events

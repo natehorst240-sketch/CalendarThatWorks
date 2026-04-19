@@ -172,7 +172,7 @@ export function mapToEvents(rows, mapping, dateFormat = 'auto') {
       };
 
       events.push(event);
-    } catch (err) {
+    } catch (err: any) {
       errors.push({ row, index: index + 2, message: err.message }); // +2: 1-based + header row
     }
   });

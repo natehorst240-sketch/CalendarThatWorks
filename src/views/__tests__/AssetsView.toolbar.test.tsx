@@ -18,8 +18,8 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import React from 'react';
 
-import AssetsView from '../AssetsView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import AssetsView from '../AssetsView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
 const evOn = (day) => new Date(2026, 3, day);

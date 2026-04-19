@@ -7,9 +7,9 @@ import {
   DEFAULT_CATEGORIES,
   createManualLocationProvider,
 } from '../src/index.ts';
-import { THEMES } from '../src/styles/themes.js';
-import { saveProfiles } from '../src/core/profileStore.js';
-import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema.js';
+import { THEMES } from '../src/styles/themes';
+import { saveProfiles } from '../src/core/profileStore';
+import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
 
 /* ─── Demo profiles ─────────────────────────────────────────────── */
 const DEMO_CALENDAR_ID = 'ihc-oncall-demo';

@@ -9,7 +9,7 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import styles from './AuditDrawer.module.css';
-import ApprovalActionMenu from '../ui/ApprovalActionMenu.jsx';
+import ApprovalActionMenu from '../ui/ApprovalActionMenu';
 
 /**
  * Formats an ISO timestamp as a locale-aware date + time string. Returns the

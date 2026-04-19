@@ -2,10 +2,10 @@
  * filterEngine unit tests — applyFilters (all stages), getSources.
  */
 import { describe, it, expect } from 'vitest';
-import { applyFilters, getCategories, getResources, getSources } from '../filterEngine.js';
+import { applyFilters, getCategories, getResources, getSources } from '../filterEngine';
 import {
   statusField, priorityField, ownerField, tagsField, metaSelectField,
-} from '../filterSchema.js';
+} from '../filterSchema';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

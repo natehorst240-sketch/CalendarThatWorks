@@ -18,7 +18,7 @@
  */
 import { describe, it, expect } from 'vitest';
 
-import { applyFilters } from '../filters/filterEngine.js';
+import { applyFilters } from '../filters/filterEngine';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.ts';
 import { sortEvents } from '../core/sortEngine.ts';
 import { buildGroupTree } from '../hooks/useGrouping.ts';

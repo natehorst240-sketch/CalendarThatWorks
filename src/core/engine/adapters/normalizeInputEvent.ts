@@ -12,8 +12,8 @@
  */
 
 import { parseISO, isValid, addHours } from 'date-fns';
-import type { EngineEvent, EventStatus } from '../schema/eventSchema.js';
-import type { EventConstraint, ConstraintType } from '../schema/constraintSchema.js';
+import type { EngineEvent, EventStatus } from '../schema/eventSchema';
+import type { EventConstraint, ConstraintType } from '../schema/constraintSchema';
 
 // ─── Internal ID counter ──────────────────────────────────────────────────────
 

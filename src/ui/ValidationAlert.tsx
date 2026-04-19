@@ -1,4 +1,4 @@
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './ValidationAlert.module.css';
 
 /**

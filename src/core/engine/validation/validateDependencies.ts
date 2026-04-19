@@ -14,13 +14,13 @@
  *   scheduler know the successor needs to be rescheduled.
  */
 
-import type { EngineEvent }      from '../schema/eventSchema.js';
-import type { Violation, OperationContext, ChangeShape } from './validationTypes.js';
+import type { EngineEvent }      from '../schema/eventSchema';
+import type { Violation, OperationContext, ChangeShape } from './validationTypes';
 import {
   isDependencyViolated,
   successorsOf,
   predecessorsOf,
-} from '../schema/dependencySchema.js';
+} from '../schema/dependencySchema';
 
 export function validateDependencies(
   change: ChangeShape,

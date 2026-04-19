@@ -7,10 +7,10 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { addMonths, addWeeks, addDays } from 'date-fns';
-import { normalizeEvents } from '../core/eventModel.js';
-import { applyFilters, getCategories, getResources } from '../filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
-import { createInitialFilters, clearFilterValue } from '../filters/filterState.js';
+import { normalizeEvents } from '../core/eventModel';
+import { applyFilters, getCategories, getResources } from '../filters/filterEngine';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
+import { createInitialFilters, clearFilterValue } from '../filters/filterState';
 
 export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEFAULT_FILTER_SCHEMA) {
   const [view,        setView]        = useState(initialView);

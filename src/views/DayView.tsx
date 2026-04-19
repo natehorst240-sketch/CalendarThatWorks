@@ -3,10 +3,10 @@ import {
   format, isToday, isSameDay, getHours, getMinutes,
   startOfDay, addDays,
 } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import { hoursInTimezone } from '../core/engine/time/timezone.js';
-import { layoutOverlaps } from '../core/layout.js';
-import { useDrag } from '../hooks/useDrag.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import { hoursInTimezone } from '../core/engine/time/timezone';
+import { layoutOverlaps } from '../core/layout';
+import { useDrag } from '../hooks/useDrag';
 import styles from './DayView.module.css';
 
 const GUTTER_W = 56;

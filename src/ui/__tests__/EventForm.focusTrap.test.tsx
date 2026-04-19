@@ -8,7 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import EventForm from '../EventForm.jsx';
+import EventForm from '../EventForm';
 
 function renderForm(extra: any = {}) {
   render(

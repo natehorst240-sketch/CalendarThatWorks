@@ -10,8 +10,8 @@
 // Canonical EngineEvent lives in ./schema/eventSchema. Re-exported here so
 // existing callers that import from engine/types.ts keep working while all
 // engine code agrees on a single event shape.
-export type { EngineEvent } from './schema/eventSchema.js';
-import type { EngineEvent } from './schema/eventSchema.js';
+export type { EngineEvent } from './schema/eventSchema';
+import type { EngineEvent } from './schema/eventSchema';
 
 // ─── Filter / View state ──────────────────────────────────────────────────────
 

@@ -36,8 +36,8 @@
  *   });
  */
 
-import type { CalendarAdapter, AdapterChange, AdapterChangeCallback, AdapterUnsubscribe } from './CalendarAdapter.js';
-import type { CalendarEventV1 } from '../types.js';
+import type { CalendarAdapter, AdapterChange, AdapterChangeCallback, AdapterUnsubscribe } from './CalendarAdapter';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 

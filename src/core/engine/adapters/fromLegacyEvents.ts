@@ -9,7 +9,7 @@
  * changing the host-app's data model.
  */
 
-import type { EngineEvent, EventStatus } from '../schema/eventSchema.js';
+import type { EngineEvent, EventStatus } from '../schema/eventSchema';
 
 // ─── Legacy shape (from normalizeEvent output) ────────────────────────────────
 

@@ -14,7 +14,7 @@
  * Custom strategies can be provided directly as a ConflictResolver function.
  */
 
-import type { CalendarEventV1 } from '../types.js';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 

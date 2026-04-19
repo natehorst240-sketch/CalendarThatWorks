@@ -25,11 +25,11 @@ import {
   format, isToday, isWeekend,
   differenceInCalendarDays, startOfDay, addDays, min, max,
 } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import EmployeeActionCard from '../ui/EmployeeActionCard.jsx';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import EmployeeActionCard from '../ui/EmployeeActionCard';
 import styles from './TimelineView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
-import { useTouchDnd } from '../hooks/useTouchDnd.js';
+import { useTouchDnd } from '../hooks/useTouchDnd';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 

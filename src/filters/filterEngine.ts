@@ -10,8 +10,8 @@
  * which reproduces the previous hardcoded pipeline exactly.
  */
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { DEFAULT_FILTER_SCHEMA } from './filterSchema.js';
-import { isEmptyFilterValue }    from './filterState.js';
+import { DEFAULT_FILTER_SCHEMA } from './filterSchema';
+import { isEmptyFilterValue }    from './filterState';
 
 // ── Public API ────────────────────────────────────────────────────────────────
 

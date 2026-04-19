@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupRows } from '../groupRows.js';
+import { groupRows } from '../groupRows';
 
 const rows = [
   { id: 1, emp: { role: 'Nurse' } },

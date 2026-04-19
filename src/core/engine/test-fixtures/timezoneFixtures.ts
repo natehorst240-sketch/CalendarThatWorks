@@ -7,8 +7,8 @@
  *   - events that cross midnight in one zone but not another
  */
 
-import { makeEvent } from '../schema/eventSchema.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
+import { makeEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema';
 
 // ─── NYC morning standup (EST = UTC-5) ────────────────────────────────────────
 

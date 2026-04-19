@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './RecurringScopeDialog.module.css';
 
 const SCOPE_OPTIONS = [

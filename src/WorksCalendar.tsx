@@ -12,44 +12,44 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Download, Plus, Sparkles, Upload } from 'lucide-react';
 
-import { useCalendar }        from './hooks/useCalendar.js';
-import { useOwnerConfig }     from './hooks/useOwnerConfig.js';
-import { useFetchEvents }     from './hooks/useFetchEvents.js';
-import { useSourceStore }      from './hooks/useSourceStore.js';
-import { useSourceAggregator } from './hooks/useSourceAggregator.js';
-import { useSavedViews, deserializeFilters } from './hooks/useSavedViews.js';
+import { useCalendar }        from './hooks/useCalendar';
+import { useOwnerConfig }     from './hooks/useOwnerConfig';
+import { useFetchEvents }     from './hooks/useFetchEvents';
+import { useSourceStore }      from './hooks/useSourceStore';
+import { useSourceAggregator } from './hooks/useSourceAggregator';
+import { useSavedViews, deserializeFilters } from './hooks/useSavedViews';
 import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
 import type { SortConfig } from './types/grouping.ts';
 import { sortEvents } from './core/sortEngine.ts';
-import { useRealtimeEvents }  from './hooks/useRealtimeEvents.js';
-import { usePermissions }     from './hooks/usePermissions.js';
-import { useEventOptions }    from './hooks/useEventOptions.js';
-import { useTouchSwipe }     from './hooks/useTouchSwipe.js';
-import { CalendarContext }    from './core/CalendarContext.js';
-import { normalizeEvents }    from './core/eventModel.js';
+import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
+import { usePermissions }     from './hooks/usePermissions';
+import { useEventOptions }    from './hooks/useEventOptions';
+import { useTouchSwipe }     from './hooks/useTouchSwipe';
+import { CalendarContext }    from './core/CalendarContext';
+import { normalizeEvents }    from './core/eventModel';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
 import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
-import RecurringScopeDialog   from './ui/RecurringScopeDialog.jsx';
-import { applyFilters, getCategories, getResources } from './filters/filterEngine.js';
-import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema.js';
-import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState.js';
-import FilterBar              from './ui/FilterBar.jsx';
-import ProfileBar             from './ui/ProfileBar.jsx';
-import HoverCard              from './ui/HoverCard.jsx';
-import OwnerLock              from './ui/OwnerLock.jsx';
-import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay.jsx';
-import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts.js';
-import ConfigPanel            from './ui/ConfigPanel.jsx';
-import EventForm              from './ui/EventForm.jsx';
-import AssetRequestForm       from './ui/AssetRequestForm.jsx';
-import ImportZone             from './ui/ImportZone.jsx';
-import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog.jsx';
-import AvailabilityForm        from './ui/AvailabilityForm.jsx';
-import ScheduleEditorForm      from './ui/ScheduleEditorForm.jsx';
-import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap.js';
+import RecurringScopeDialog   from './ui/RecurringScopeDialog';
+import { applyFilters, getCategories, getResources } from './filters/filterEngine';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema';
+import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState';
+import FilterBar              from './ui/FilterBar';
+import ProfileBar             from './ui/ProfileBar';
+import HoverCard              from './ui/HoverCard';
+import OwnerLock              from './ui/OwnerLock';
+import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import ConfigPanel            from './ui/ConfigPanel';
+import EventForm              from './ui/EventForm';
+import AssetRequestForm       from './ui/AssetRequestForm';
+import ImportZone             from './ui/ImportZone';
+import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog';
+import AvailabilityForm        from './ui/AvailabilityForm';
+import ScheduleEditorForm      from './ui/ScheduleEditorForm';
+import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap';
 import {
   buildCoverageMeta,
   buildOpenShiftPatch,
@@ -57,30 +57,31 @@ import {
   findLinkedMirroredCoverage,
   findLinkedOpenShifts,
   resolveEventId,
-} from './core/scheduleMutations.js';
+} from './core/scheduleMutations';
 import {
   normalizeScheduleKind,
   SCHEDULE_KINDS,
-} from './core/scheduleModel.js';
-import { createId } from './core/createId.js';
-import ValidationAlert          from './ui/ValidationAlert.jsx';
-import InlineEventEditor        from './ui/InlineEventEditor.jsx';
-import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer.jsx';
-import CalendarErrorBoundary   from './ui/CalendarErrorBoundary.jsx';
-import MonthView              from './views/MonthView.jsx';
-import WeekView               from './views/WeekView.jsx';
-import DayView                from './views/DayView.jsx';
-import AgendaView             from './views/AgendaView.jsx';
-import TimelineView           from './views/TimelineView.jsx';
-import AssetsView             from './views/AssetsView.jsx';
+} from './core/scheduleModel';
+import { createId } from './core/createId';
+import ValidationAlert          from './ui/ValidationAlert';
+import InlineEventEditor        from './ui/InlineEventEditor';
+import ScreenReaderAnnouncer   from './ui/ScreenReaderAnnouncer';
+import CalendarErrorBoundary   from './ui/CalendarErrorBoundary';
+import MonthView              from './views/MonthView';
+import WeekView               from './views/WeekView';
+import DayView                from './views/DayView';
+import AgendaView             from './views/AgendaView';
+import TimelineView           from './views/TimelineView';
+import AssetsView             from './views/AssetsView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
-import { customThemeToCssVars } from './core/themeSchema.js';
+import { customThemeToCssVars } from './core/themeSchema';
 
-export type WorksCalendarEvent = Record<string, unknown>;
+import type { WorksCalendarEvent } from './types/events';
+export type { WorksCalendarEvent };
 export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'assets';
 export type CalendarRole = 'admin' | 'user' | 'readonly';
 

@@ -7,9 +7,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { RecurrenceSection } from '../EventFormSections/RecurrenceSection.jsx';
-import { CategorySection } from '../EventFormSections/CategorySection.jsx';
-import { CustomFieldsSection } from '../EventFormSections/CustomFieldsSection.jsx';
+import { RecurrenceSection } from '../EventFormSections/RecurrenceSection';
+import { CategorySection } from '../EventFormSections/CategorySection';
+import { CustomFieldsSection } from '../EventFormSections/CustomFieldsSection';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RecurrenceSection

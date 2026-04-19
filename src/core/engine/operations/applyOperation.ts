@@ -14,22 +14,22 @@
  */
 
 import { addHours } from 'date-fns';
-import type { EngineEvent } from '../schema/eventSchema.js';
-import { makeEvent } from '../schema/eventSchema.js';
-import type { EngineOperation } from '../schema/operationSchema.js';
-import type { OperationContext } from '../validation/validationTypes.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import { makeEvent } from '../schema/eventSchema';
+import type { EngineOperation } from '../schema/operationSchema';
+import type { OperationContext } from '../validation/validationTypes';
 import type {
   OperationResult,
   EventChange,
-} from './operationResult.js';
+} from './operationResult';
 import {
   makeRejectedResult,
   makePendingResult,
-} from './operationResult.js';
-import { validateOperation } from '../validation/validateOperation.js';
-import { resolveOperationScope } from './resolveOperationScope.js';
-import { resolveRecurringDelete } from '../recurrence/resolveRecurringEdit.js';
-import { nextEngineId } from '../adapters/normalizeInputEvent.js';
+} from './operationResult';
+import { validateOperation } from '../validation/validateOperation';
+import { resolveOperationScope } from './resolveOperationScope';
+import { resolveRecurringDelete } from '../recurrence/resolveRecurringEdit';
+import { nextEngineId } from '../adapters/normalizeInputEvent';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

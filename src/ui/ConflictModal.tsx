@@ -12,7 +12,7 @@
  * engine and two callbacks. It does not mutate state itself.
  */
 import { AlertTriangle, X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './ConflictModal.module.css';
 
 export default function ConflictModal({

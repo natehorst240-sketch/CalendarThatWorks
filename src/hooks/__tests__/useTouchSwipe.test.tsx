@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useRef } from 'react';
-import { useTouchSwipe } from '../useTouchSwipe.js';
+import { useTouchSwipe } from '../useTouchSwipe';
 
 function Harness({ enabled = true, onSwipeLeft, onSwipeRight }: any) {
   const ref = useRef(null);

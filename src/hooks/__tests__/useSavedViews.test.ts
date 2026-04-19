@@ -9,7 +9,7 @@ import {
   useSavedViews,
   serializeFilters,
   deserializeFilters,
-} from '../useSavedViews.js';
+} from '../useSavedViews';
 
 const CAL_ID = 'test-cal';
 

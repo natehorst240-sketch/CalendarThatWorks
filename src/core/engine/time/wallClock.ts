@@ -11,8 +11,8 @@
  * engine can always recover the correct UTC instant for any given date.
  */
 
-import { wallClockToUtc, hoursInTimezone, partsInTimezone } from './timezone.js';
-import { buildOccurrenceDateKey } from '../recurrence/recurrenceMath.js';
+import { wallClockToUtc, hoursInTimezone, partsInTimezone } from './timezone';
+import { buildOccurrenceDateKey } from '../recurrence/recurrenceMath';
 
 // ─── Wall-clock anchor ────────────────────────────────────────────────────────
 

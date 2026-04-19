@@ -2,7 +2,7 @@
  * Unit tests for src/core/scheduleOverlap.js
  */
 import { describe, it, expect } from 'vitest';
-import { intervalsOverlap, detectShiftConflicts, buildOpenShiftEvent } from '../scheduleOverlap.js';
+import { intervalsOverlap, detectShiftConflicts, buildOpenShiftEvent } from '../scheduleOverlap';
 
 // ─── intervalsOverlap ─────────────────────────────────────────────────────────
 

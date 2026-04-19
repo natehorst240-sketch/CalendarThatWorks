@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { format, parseISO, isValid, addDays, addHours } from 'date-fns';
 import { X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
-import { createId } from '../core/createId.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { createId } from '../core/createId';
 import styles from './ScheduleEditorForm.module.css';
 
 // ─── Shift templates ──────────────────────────────────────────────────────────

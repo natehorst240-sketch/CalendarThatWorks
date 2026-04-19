@@ -9,12 +9,12 @@
  * Each scope returns a list of EventChanges that the engine should apply.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EventChange } from '../operations/operationResult.js';
-import type { RecurringEditScope } from '../schema/operationSchema.js';
-import { makeEvent } from '../schema/eventSchema.js';
-import { addExdate, setRRuleUntil, buildOccurrenceDateKey, eventDurationMs } from './recurrenceMath.js';
-import { nextEngineId } from '../adapters/normalizeInputEvent.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EventChange } from '../operations/operationResult';
+import type { RecurringEditScope } from '../schema/operationSchema';
+import { makeEvent } from '../schema/eventSchema';
+import { addExdate, setRRuleUntil, buildOccurrenceDateKey, eventDurationMs } from './recurrenceMath';
+import { nextEngineId } from '../adapters/normalizeInputEvent';
 
 // ─── Shared patch type ────────────────────────────────────────────────────────
 

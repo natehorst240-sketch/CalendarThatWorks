@@ -2,7 +2,7 @@
  * useOwnerConfig.js — Owner authentication + config state.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema.js';
+import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema';
 
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));

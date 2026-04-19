@@ -12,7 +12,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { AssetsDemoExample } from '../../../examples/assets-demo.jsx';
+import { AssetsDemoExample } from '../../../examples/assets-demo';
 
 describe('AssetsDemoExample', () => {
   it('mounts without crashing and renders the Assets view by default', () => {

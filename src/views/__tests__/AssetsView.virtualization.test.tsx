@@ -18,8 +18,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import React from 'react';
-import AssetsView from '../AssetsView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import AssetsView from '../AssetsView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 // ─── Fixture generators ───────────────────────────────────────────────────────
 

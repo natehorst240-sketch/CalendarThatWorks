@@ -2,11 +2,11 @@
  * CalendarEngine — validation domain types.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineRuntimeConfig } from '../engineConfig.js';
-import type { Assignment } from '../schema/assignmentSchema.js';
-import type { Dependency } from '../schema/dependencySchema.js';
-import type { ResourceCalendar } from '../schema/resourceCalendarSchema.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineRuntimeConfig } from '../engineConfig';
+import type { Assignment } from '../schema/assignmentSchema';
+import type { Dependency } from '../schema/dependencySchema';
+import type { ResourceCalendar } from '../schema/resourceCalendarSchema';
 
 // ─── Violation ───────────────────────────────────────────────────────────────
 

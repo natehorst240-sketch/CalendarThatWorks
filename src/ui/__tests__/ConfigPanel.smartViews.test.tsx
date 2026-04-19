@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { SmartViewsTab } from '../ConfigPanel.jsx';
+import { SmartViewsTab } from '../ConfigPanel';
 
 const savedViews = [
   { id: 'v1', name: 'Alpha',   color: '#111', conditions: [{ field: 'category', operator: 'is', value: 'Cat-A', logic: 'AND' }] },

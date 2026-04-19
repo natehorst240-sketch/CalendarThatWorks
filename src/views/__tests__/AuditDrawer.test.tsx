@@ -10,7 +10,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import AuditDrawer from '../AuditDrawer.jsx';
+import AuditDrawer from '../AuditDrawer';
 
 const deniedEvent = {
   id: 'ev-1',

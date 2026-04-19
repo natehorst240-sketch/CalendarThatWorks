@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { tsExtensionFallback } from './scripts/vite-ts-fallback';
 
 export default defineConfig({
-  plugins: [react(), tsExtensionFallback()],
+  plugins: [react()],
   root: 'examples',
   build: {
     outDir: '../dist-examples',

@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
-import { useRealtimeEvents } from '../useRealtimeEvents.js';
+import { useRealtimeEvents } from '../useRealtimeEvents';
 
 afterEach(() => cleanup());
 

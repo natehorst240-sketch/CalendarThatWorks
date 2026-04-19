@@ -5,7 +5,7 @@
  * closes, click-outside dismisses.
  */
 import { Keyboard, X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './KeyboardHelpOverlay.module.css';
 
 const SHORTCUTS = [

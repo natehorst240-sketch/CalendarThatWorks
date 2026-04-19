@@ -13,7 +13,7 @@ import {
   evaluateConflicts,
   type ConflictEvent,
   type ConflictRule,
-} from '../conflictEngine.js';
+} from '../conflictEngine';
 
 const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
 

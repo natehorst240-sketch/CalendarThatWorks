@@ -5,7 +5,7 @@ import {
   buildShiftStatusMeta,
   findLinkedMirroredCoverage,
   findLinkedOpenShifts,
-} from '../scheduleMutations.js';
+} from '../scheduleMutations';
 
 describe('scheduleMutations helpers', () => {
   const shift = {

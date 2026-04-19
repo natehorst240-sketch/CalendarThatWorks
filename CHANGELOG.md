@@ -5,6 +5,45 @@ All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-04-19
+
+The "Full TypeScript" release. The library is now written end-to-end in
+strict TypeScript, with `dist/index.d.ts` generated from source by
+`vite-plugin-dts` instead of a hand-maintained 826-line `.d.ts` that
+silently drifted from the JS implementation. All `.js`/`.jsx` files under
+`src/`, `demo/`, and `examples/` have been converted to `.ts`/`.tsx`.
+
+### Added
+
+- **Generated type declarations** — `dist/index.d.ts` is now produced by
+  `vite-plugin-dts` from the TypeScript source, so the published types
+  cannot drift from the implementation. Public types include
+  `WorksCalendarEvent`, `NormalizedEvent`, `WorksCalendar`, `CalendarApi`,
+  the `api/v1` engine schema, grouping types, and the assets module.
+- **`type-check` script** (`npm run type-check`) and CI step that runs
+  `tsc --noEmit` against the strict configuration.
+
+### Changed
+
+- **All source converted to TypeScript** — 179 internal modules across
+  `src/`, plus `demo/` and `examples/`, are now `.ts`/`.tsx`. Vite/Vitest
+  configs are TypeScript too.
+- **Strict-mode TypeScript enabled** — `strict: true` is now on, with
+  pragmatic short-term opt-outs for `noImplicitAny` and `strictNullChecks`
+  to keep the migration shippable; these will be tightened in a follow-up.
+- **`tsExtensionFallback` Vite plugin removed** — internal imports are now
+  extensionless and resolved by bundler module resolution.
+
+### Breaking
+
+- **`NormalizedEvent` import path change.** The internal-but-exported
+  `NormalizedEvent` type used to be importable from
+  `'works-calendar/src/index.d.ts'` (or transitively through legacy
+  module-augmentation paths). It now lives at the public API surface and
+  is only importable from the package root: `import type { NormalizedEvent }
+  from 'works-calendar'`. Consumers reaching into `src/index.d.ts`
+  directly (which never existed as a public path) must migrate.
+
 ## [0.4.0] — 2026-04-18
 
 The "UX Polish Pass" release. Five short sprints turned a workflow-rich but

@@ -11,7 +11,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { AssetsTab } from '../ConfigPanel.jsx';
+import { AssetsTab } from '../ConfigPanel';
 
 function renderTab({ initialConfig = {}, onUpdate }: any = {}) {
   let currentConfig = { ...initialConfig };

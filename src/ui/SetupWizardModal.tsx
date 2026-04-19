@@ -18,9 +18,9 @@
  */
 import { useState } from 'react';
 import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
-import { THEMES } from '../styles/themes.js';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
-import AdvancedFilterBuilder from './AdvancedFilterBuilder.jsx';
+import { THEMES } from '../styles/themes';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './SetupWizardModal.module.css';
 
 const TOTAL_STEPS = 4;

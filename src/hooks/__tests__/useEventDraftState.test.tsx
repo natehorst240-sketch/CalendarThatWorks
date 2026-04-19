@@ -5,7 +5,7 @@
  */
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { useEventDraftState } from '../useEventDraftState.js';
+import { useEventDraftState } from '../useEventDraftState';
 
 const START = new Date('2026-04-14T09:00:00.000Z');
 const END   = new Date('2026-04-14T10:00:00.000Z');

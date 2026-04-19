@@ -8,8 +8,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import React, { useState } from 'react';
-import AssetsView from '../AssetsView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import AssetsView from '../AssetsView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
 

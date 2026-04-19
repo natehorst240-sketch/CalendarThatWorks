@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import CalendarExternalForm from '../CalendarExternalForm.jsx';
+import CalendarExternalForm from '../CalendarExternalForm';
 
 describe('CalendarExternalForm', () => {
   it('submits through adapter and calls onSuccess', async () => {

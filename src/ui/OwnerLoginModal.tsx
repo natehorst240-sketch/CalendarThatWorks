@@ -8,7 +8,7 @@
  */
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './OwnerLoginModal.module.css';
 
 export default function OwnerLoginModal({ authError, isAuthLoading, onAuthenticate, onClose }: any) {

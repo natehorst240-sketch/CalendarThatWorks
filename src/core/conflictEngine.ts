@@ -14,7 +14,7 @@
  * `Violation | null`; the engine aggregates violations and computes an
  * overall severity.
  */
-import type { Violation } from './engine/validation/validationTypes.js'
+import type { Violation } from './engine/validation/validationTypes'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

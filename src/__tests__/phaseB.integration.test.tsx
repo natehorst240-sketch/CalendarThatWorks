@@ -21,11 +21,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
 import '@testing-library/jest-dom';
 
-import RequestForm from '../ui/RequestForm.jsx';
-import ConflictModal from '../ui/ConflictModal.jsx';
-import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu.jsx';
+import RequestForm from '../ui/RequestForm';
+import ConflictModal from '../ui/ConflictModal';
+import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
 import { evaluateConflicts } from '../core/conflictEngine.ts';
-import { DEFAULT_CONFIG } from '../core/configSchema.js';
+import { DEFAULT_CONFIG } from '../core/configSchema';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 

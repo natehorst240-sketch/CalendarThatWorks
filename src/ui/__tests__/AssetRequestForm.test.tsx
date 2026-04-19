@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import React from 'react';
 
-import AssetRequestForm from '../AssetRequestForm.jsx';
+import AssetRequestForm from '../AssetRequestForm';
 
 const assets = [
   { id: 'n100aa', label: 'N100AA', meta: { sublabel: 'CJ3' } },

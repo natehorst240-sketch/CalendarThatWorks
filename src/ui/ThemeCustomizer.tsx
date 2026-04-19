@@ -1,4 +1,4 @@
-import { normalizeCustomTheme, customThemeToCssVars } from '../core/themeSchema.js';
+import { normalizeCustomTheme, customThemeToCssVars } from '../core/themeSchema';
 import styles from './ThemeCustomizer.module.css';
 import { useMemo, useState } from 'react';
 

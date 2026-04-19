@@ -22,7 +22,7 @@ import {
   deletePreset,
   EVENT_FIELDS,
   DATE_FORMATS,
-} from '../core/csvParser.js';
+} from '../core/csvParser';
 import styles from './ImportZone.module.css';
 import pStyles from './ImportPreview.module.css';
 
@@ -47,7 +47,7 @@ function DropStep({ onFile, onClose }: any) {
         if (!headers.length) { setError('No columns detected in this file.'); return; }
         if (!rows.length)    { setError('No data rows found (file has headers but no data).'); return; }
         onFile({ filename: file.name, headers, rows });
-      } catch (err) {
+      } catch (err: any) {
         setError(`Could not read file: ${err.message}`);
       }
     };

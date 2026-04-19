@@ -9,10 +9,10 @@
  * Pure function — no side effects.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import { makeEvent } from '../schema/eventSchema.js';
-import { addExdate, buildOccurrenceDateKey, eventDurationMs } from './recurrenceMath.js';
-import { nextEngineId } from '../adapters/normalizeInputEvent.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import { makeEvent } from '../schema/eventSchema';
+import { addExdate, buildOccurrenceDateKey, eventDurationMs } from './recurrenceMath';
+import { nextEngineId } from '../adapters/normalizeInputEvent';
 
 export interface DetachResult {
   /** Series master with the occurrence's start date added to exdates. */

@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import OwnerLoginModal from '../OwnerLoginModal.jsx';
+import OwnerLoginModal from '../OwnerLoginModal';
 
 function mount(props = {}) {
   return render(

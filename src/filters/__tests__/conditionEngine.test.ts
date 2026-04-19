@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { conditionsToFilters, conditionsMatchSchema } from '../conditionEngine.js'
-import { DEFAULT_FILTER_SCHEMA } from '../filterSchema.js'
+import { conditionsToFilters, conditionsMatchSchema } from '../conditionEngine'
+import { DEFAULT_FILTER_SCHEMA } from '../filterSchema'
 
 const schema = DEFAULT_FILTER_SCHEMA
 

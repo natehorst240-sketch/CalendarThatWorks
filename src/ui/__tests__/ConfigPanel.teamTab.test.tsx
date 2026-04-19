@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { TeamTab } from '../ConfigPanel.jsx';
+import { TeamTab } from '../ConfigPanel';
 
 function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDelete }: any = {}) {
   let currentConfig = { team: { members: initialMembers } };

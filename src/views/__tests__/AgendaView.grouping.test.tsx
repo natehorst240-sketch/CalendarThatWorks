@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import React from 'react';
-import AgendaView from '../AgendaView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import AgendaView from '../AgendaView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
 

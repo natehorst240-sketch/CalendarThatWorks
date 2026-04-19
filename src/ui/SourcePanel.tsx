@@ -21,7 +21,7 @@ import {
   Plus, Trash2, RefreshCw, AlertCircle, CheckCircle,
   Link, FileSpreadsheet,
 } from 'lucide-react';
-import { fetchAndParseICS } from '../core/icalParser.js';
+import { fetchAndParseICS } from '../core/icalParser';
 import styles from './ConfigPanel.module.css';
 
 // ── Shared constants ──────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ function AddFeedForm({ onAdd }: any) {
       const events = await fetchAndParseICS(trimmed);
       if (!label) setLabel(_suggestLabel(trimmed));
       setValidation({ ok: true, count: events.length });
-    } catch (err) {
+    } catch (err: any) {
       const isCors = ['cors', 'fetch', 'network', 'failed'].some(
         w => err.message?.toLowerCase().includes(w),
       );

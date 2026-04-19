@@ -8,7 +8,7 @@ import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { useKeyboardShortcuts } from '../useKeyboardShortcuts.js';
+import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 
 function Harness({ api }: any) {
   useKeyboardShortcuts(api);

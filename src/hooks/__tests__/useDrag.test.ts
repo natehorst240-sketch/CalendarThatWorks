@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useDrag } from '../useDrag.js';
+import { useDrag } from '../useDrag';
 
 const PX_PER_HOUR = 60; // 60 px = 1 hour  →  1 px = 1 minute
 const DAY_START   = 6;

@@ -10,7 +10,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
-import EventForm from '../EventForm.jsx';
+import EventForm from '../EventForm';
 
 const START = new Date('2026-04-14T09:00:00.000Z');
 const END   = new Date('2026-04-14T10:00:00.000Z');

@@ -12,9 +12,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
-import WeekView from '../WeekView.jsx';
-import DayView from '../DayView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import WeekView from '../WeekView';
+import DayView from '../DayView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 function d(y, mo, day, h = 0, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);

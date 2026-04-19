@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { groupRows } from '../grouping/groupRows.js';
+import { groupRows } from '../grouping/groupRows';
 
 export function useGrouping(rows, options: {
   groupBy?: unknown

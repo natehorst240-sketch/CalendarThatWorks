@@ -4,15 +4,15 @@ import {
   FIELD_TYPES,
   APPROVAL_STAGE_IDS,
   APPROVAL_ACTIONS,
-} from '../core/configSchema.js';
+} from '../core/configSchema';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
-import { serializeFilters } from '../hooks/useSavedViews.js';
-import { THEMES } from '../styles/themes.js';
-import SourcePanel from './SourcePanel.jsx';
-import ThemeCustomizer from './ThemeCustomizer.jsx';
-import AdvancedFilterBuilder from './AdvancedFilterBuilder.jsx';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { serializeFilters } from '../hooks/useSavedViews';
+import { THEMES } from '../styles/themes';
+import SourcePanel from './SourcePanel';
+import ThemeCustomizer from './ThemeCustomizer';
+import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [

@@ -13,11 +13,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RestAdapter }       from '../adapters/RestAdapter.js';
-import { SupabaseAdapter }   from '../adapters/SupabaseAdapter.js';
-import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter.js';
-import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter.js';
-import type { CalendarEventV1 } from '../types.js';
+import { RestAdapter }       from '../adapters/RestAdapter';
+import { SupabaseAdapter }   from '../adapters/SupabaseAdapter';
+import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter';
+import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter';
+import type { CalendarEventV1 } from '../types';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

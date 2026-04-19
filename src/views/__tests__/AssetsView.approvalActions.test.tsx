@@ -12,8 +12,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import AssetsView from '../AssetsView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import AssetsView from '../AssetsView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1);
 

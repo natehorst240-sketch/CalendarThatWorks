@@ -19,7 +19,7 @@
  *   checkbox   boolean toggle
  */
 import { useMemo, useState } from 'react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './RequestForm.module.css';
 
 const INPUT_TYPES = new Set(['text', 'textarea', 'number', 'date', 'datetime', 'select', 'checkbox']);

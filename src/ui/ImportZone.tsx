@@ -6,9 +6,9 @@
  */
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
-import { parseICS } from '../core/icalParser.js';
-import ImportPreview from './ImportPreview.jsx';
-import CSVImportDialog from './CSVImportDialog.jsx';
+import { parseICS } from '../core/icalParser';
+import ImportPreview from './ImportPreview';
+import CSVImportDialog from './CSVImportDialog';
 import styles from './ImportZone.module.css';
 
 export default function ImportZone({ onImport, onClose }: any) {
@@ -43,7 +43,7 @@ export default function ImportZone({ onImport, onClose }: any) {
         const events = parseICS(e.target.result);
         if (!events.length) { setError('No events found in this file.'); return; }
         setParsed(events);
-      } catch (err) {
+      } catch (err: any) {
         setError(`Could not parse file: ${err.message}`);
       }
     };

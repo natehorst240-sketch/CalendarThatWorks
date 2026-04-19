@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildFieldAccessor } from '../buildFieldAccessor.js';
+import { buildFieldAccessor } from '../buildFieldAccessor';
 
 describe('buildFieldAccessor — employee mode', () => {
   const accessor = buildFieldAccessor('role', 'employee');

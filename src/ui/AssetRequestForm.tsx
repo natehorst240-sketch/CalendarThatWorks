@@ -11,7 +11,7 @@
  */
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './EventForm.module.css';
 
 function toLocalInput(date) {

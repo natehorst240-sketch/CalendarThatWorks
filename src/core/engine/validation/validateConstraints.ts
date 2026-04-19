@@ -7,7 +7,7 @@
  *   - blocked-window:   event must not overlap a declared blocked window
  */
 
-import type { Violation, OperationContext, ChangeShape } from './validationTypes.js';
+import type { Violation, OperationContext, ChangeShape } from './validationTypes';
 
 // ─── Duration rules ───────────────────────────────────────────────────────────
 

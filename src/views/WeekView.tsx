@@ -6,11 +6,11 @@ import {
   startOfDay, addDays, addMinutes,
 } from 'date-fns';
 import type { Day } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import { hoursInTimezone } from '../core/engine/time/timezone.js';
-import { layoutOverlaps, layoutSpans } from '../core/layout.js';
-import { useDrag } from '../hooks/useDrag.js';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import { hoursInTimezone } from '../core/engine/time/timezone';
+import { layoutOverlaps, layoutSpans } from '../core/layout';
+import { useDrag } from '../hooks/useDrag';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './WeekView.module.css';
 
 const SPAN_H    = 34;

@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import { tsExtensionFallback } from './scripts/vite-ts-fallback';
 
 // Set VITE_BASE=/CalendarThatWorks/ when building for GitHub Pages.
 // Defaults to '/' for local dev and preview.
@@ -11,7 +10,6 @@ export default defineConfig({
   base,
   plugins: [
     react(),
-    tsExtensionFallback(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg', 'icon-192.svg', 'icon-512.svg'],

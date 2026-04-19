@@ -6,8 +6,8 @@ import {
   Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X, Settings2,
   CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
 } from 'lucide-react';
-import { buildFilterSummary } from '../filters/filterState.js';
-import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
+import { buildFilterSummary } from '../filters/filterState';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import styles from './ProfileBar.module.css';
 
 const PROFILE_COLORS = [

@@ -6,7 +6,7 @@
  */
 
 import { isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
-import type { CalendarState, EngineEvent } from './types.js';
+import type { CalendarState, EngineEvent } from './types';
 
 // ─── Basic event accessors ────────────────────────────────────────────────────
 

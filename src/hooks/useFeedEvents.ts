@@ -9,7 +9,7 @@
  * a single flat array tagged with { _feedLabel } for identification.
  */
 import { useState, useEffect } from 'react';
-import { fetchAndParseICS } from '../core/icalParser.js';
+import { fetchAndParseICS } from '../core/icalParser';
 
 export function useFeedEvents(icalFeeds) {
   const [feedEvents, setFeedEvents] = useState([]);
@@ -32,7 +32,7 @@ export function useFeedEvents(icalFeeds) {
           const evs = await fetchAndParseICS(feed.url);
           const label = feed.label ?? feed.url;
           results.push(...evs.map(ev => ({ ...ev, _feedLabel: label })));
-        } catch (err) {
+        } catch (err: any) {
           errors.push({ feed, err });
           console.warn('[WorksCalendar] iCal feed error:', feed.url, err.message);
         }

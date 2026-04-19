@@ -10,7 +10,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import { CategoriesTab } from '../ConfigPanel.jsx';
+import { CategoriesTab } from '../ConfigPanel';
 import { DEFAULT_CATEGORIES } from '../../types/assets.ts';
 
 function renderTab({ initialConfig = {}, onUpdate }: any = {}) {

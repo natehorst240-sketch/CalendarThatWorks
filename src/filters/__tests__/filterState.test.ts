@@ -9,8 +9,8 @@ import {
   createInitialFilters,
   buildActiveFilterPills,
   buildFilterSummary,
-} from '../filterState.js';
-import { DEFAULT_FILTER_SCHEMA, statusField, tagsField } from '../filterSchema.js';
+} from '../filterState';
+import { DEFAULT_FILTER_SCHEMA, statusField, tagsField } from '../filterSchema';
 
 // ── isEmptyFilterValue ─────────────────────────────────────────────────────────
 

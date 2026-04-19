@@ -1,10 +1,10 @@
-import { beginTransaction } from '../transactions/beginTransaction.js';
-import { commitTransaction } from '../transactions/commitTransaction.js';
-import { rollbackTransaction } from '../transactions/rollbackTransaction.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EventChange, OperationResult } from './operationResult.js';
-import type { OnError } from '../errors/onError.js';
-import { toStructuredError } from '../errors/onError.js';
+import { beginTransaction } from '../transactions/beginTransaction';
+import { commitTransaction } from '../transactions/commitTransaction';
+import { rollbackTransaction } from '../transactions/rollbackTransaction';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EventChange, OperationResult } from './operationResult';
+import type { OnError } from '../errors/onError';
+import { toStructuredError } from '../errors/onError';
 
 export interface SafeMutateOptions {
   readonly onError?: OnError;

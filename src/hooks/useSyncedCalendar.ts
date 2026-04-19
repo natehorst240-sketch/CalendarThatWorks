@@ -26,7 +26,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { SyncManager } from '../api/v1/sync/SyncManager.js';
+import { SyncManager } from '../api/v1/sync/SyncManager';
 
 /**
  * @typedef {import('../api/v1/sync/SyncManager.js').SyncManagerOptions} SyncManagerOptions

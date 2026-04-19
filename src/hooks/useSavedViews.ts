@@ -13,7 +13,7 @@
  *     search: string, dateRange: null | { start: string, end: string } }
  */
 import { useState, useEffect, useCallback } from 'react';
-import { createId } from '../core/createId.js';
+import { createId } from '../core/createId';
 
 function viewsKey(calendarId) { return `wc-saved-views-${calendarId}`; }
 const STORAGE_VERSION = 3;

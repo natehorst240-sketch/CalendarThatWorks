@@ -11,7 +11,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import RequestForm from '../RequestForm.jsx';
+import RequestForm from '../RequestForm';
 
 const baseSchema = {
   fields: [

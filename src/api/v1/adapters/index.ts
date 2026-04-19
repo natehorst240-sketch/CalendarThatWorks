@@ -11,16 +11,16 @@ export type {
   AdapterChangeCallback,
   AdapterUnsubscribe,
   AdapterStatus,
-} from './CalendarAdapter.js';
+} from './CalendarAdapter';
 
-export { RestAdapter }     from './RestAdapter.js';
-export type { RestAdapterOptions } from './RestAdapter.js';
+export { RestAdapter }     from './RestAdapter';
+export type { RestAdapterOptions } from './RestAdapter';
 
-export { SupabaseAdapter } from './SupabaseAdapter.js';
-export type { SupabaseAdapterOptions } from './SupabaseAdapter.js';
+export { SupabaseAdapter } from './SupabaseAdapter';
+export type { SupabaseAdapterOptions } from './SupabaseAdapter';
 
-export { ICSAdapter, serializeToICS } from './ICSAdapter.js';
-export type { ICSAdapterOptions } from './ICSAdapter.js';
+export { ICSAdapter, serializeToICS } from './ICSAdapter';
+export type { ICSAdapterOptions } from './ICSAdapter';
 
-export { WebSocketAdapter } from './WebSocketAdapter.js';
-export type { WebSocketAdapterOptions } from './WebSocketAdapter.js';
+export { WebSocketAdapter } from './WebSocketAdapter';
+export type { WebSocketAdapterOptions } from './WebSocketAdapter';

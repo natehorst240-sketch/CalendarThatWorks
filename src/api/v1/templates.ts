@@ -1,5 +1,5 @@
 import { addMinutes } from 'date-fns';
-import type { CalendarEventV1 } from './types.js';
+import type { CalendarEventV1 } from './types';
 
 export type TemplateVisibility = 'private' | 'team' | 'org';
 

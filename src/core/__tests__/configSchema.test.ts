@@ -16,7 +16,7 @@ import {
   DEFAULT_CONFIG,
   CONFIG_SCHEMA_VERSION,
   APPROVAL_STAGE_IDS,
-} from '../configSchema.js';
+} from '../configSchema';
 
 const CAL_ID = 'test-cal';
 const key = `wc-config-${CAL_ID}`;

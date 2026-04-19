@@ -23,14 +23,14 @@ import {
   format, isToday, isWeekend,
   differenceInCalendarDays, startOfDay, addDays, min, max,
 } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import styles from './AssetsView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
-import AuditDrawer from './AuditDrawer.jsx';
-import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu.jsx';
+import AuditDrawer from './AuditDrawer';
+import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
 
 const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 

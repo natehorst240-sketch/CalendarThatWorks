@@ -5,8 +5,8 @@
  * splitSeries, detachOccurrence, and validateOperation.
  */
 
-import { makeEvent } from '../schema/eventSchema.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
+import { makeEvent } from '../schema/eventSchema';
+import type { EngineEvent } from '../schema/eventSchema';
 
 // ─── Base dates ───────────────────────────────────────────────────────────────
 // Use a fixed date so tests are deterministic.

@@ -3,10 +3,10 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isSameDay, isToday, startOfDay,
 } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import { displayEndDay } from '../core/layout.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import { displayEndDay } from '../core/layout';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
-import { useTouchDnd } from '../hooks/useTouchDnd.js';
+import { useTouchDnd } from '../hooks/useTouchDnd';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
 

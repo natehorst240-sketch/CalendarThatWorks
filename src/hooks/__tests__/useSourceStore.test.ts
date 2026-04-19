@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { loadSources, persistSources, useSourceStore } from '../useSourceStore.js';
+import { loadSources, persistSources, useSourceStore } from '../useSourceStore';
 
 const CAL_ID = 'test-calendar';
 

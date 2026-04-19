@@ -9,23 +9,23 @@
 import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { DemoLanding }            from './00-DemoLanding.jsx';
-import { GettingStarted }          from './01-GettingStarted.jsx';
-import { BasicCalendar }           from './02-BasicCalendar.jsx';
-import { WithFilters }             from './03-WithFilters.jsx';
-import { TimelineScheduler }       from './04-TimelineScheduler.jsx';
-import { CustomFilters }           from './05-CustomFilters.jsx';
-import { TeamCalendar }            from './06-TeamCalendar.jsx';
-import { MultiSource }             from './07-MultiSource.jsx';
-import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking.jsx';
-import { GroupingExample }         from './09-Grouping.jsx';
-import { DragAndDropExample }      from './10-DragAndDrop.jsx';
-import { BasicUsageExample }       from './basic-usage.jsx';
-import { SetupWizardExample }      from './setup-wizard.jsx';
-import { AdvancedFiltersExample }  from './advanced-filters.jsx';
-import { LocalDataAdapterExample } from './data-adapter-local.jsx';
-import { ExternalFormExample }     from './external-form.jsx';
-import { AssetsDemoExample }       from './assets-demo.jsx';
+import { DemoLanding }            from './00-DemoLanding';
+import { GettingStarted }          from './01-GettingStarted';
+import { BasicCalendar }           from './02-BasicCalendar';
+import { WithFilters }             from './03-WithFilters';
+import { TimelineScheduler }       from './04-TimelineScheduler';
+import { CustomFilters }           from './05-CustomFilters';
+import { TeamCalendar }            from './06-TeamCalendar';
+import { MultiSource }             from './07-MultiSource';
+import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking';
+import { GroupingExample }         from './09-Grouping';
+import { DragAndDropExample }      from './10-DragAndDrop';
+import { BasicUsageExample }       from './basic-usage';
+import { SetupWizardExample }      from './setup-wizard';
+import { AdvancedFiltersExample }  from './advanced-filters';
+import { LocalDataAdapterExample } from './data-adapter-local';
+import { ExternalFormExample }     from './external-form';
+import { AssetsDemoExample }       from './assets-demo';
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const EXAMPLES = [

@@ -11,10 +11,10 @@
  */
 
 import { addDays } from 'date-fns';
-import { expandRRule } from '../../icalParser.js';
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
-import { buildOccurrenceId, eventDurationMs } from './recurrenceMath.js';
+import { expandRRule } from '../../icalParser';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOccurrence } from '../schema/occurrenceSchema';
+import { buildOccurrenceId, eventDurationMs } from './recurrenceMath';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ import {
   isSameDay, isToday,
 } from 'date-fns';
 import type { Day } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;

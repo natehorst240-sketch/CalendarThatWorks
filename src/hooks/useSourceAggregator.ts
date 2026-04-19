@@ -16,7 +16,7 @@
  * @returns {{ events: CalendarEvent[], feedErrors: Array }}
  */
 import { useMemo } from 'react';
-import { useFeedEvents } from './useFeedEvents.js';
+import { useFeedEvents } from './useFeedEvents';
 
 export function useSourceAggregator({ icalFeedsProp = [], sourceStore }) {
   // Merge prop-level feeds + store-managed ICS feeds for the polling hook.

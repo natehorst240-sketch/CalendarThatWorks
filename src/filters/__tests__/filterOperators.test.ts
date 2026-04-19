@@ -7,7 +7,7 @@ import {
   ownerField,
   tagsField,
   metaSelectField,
-} from '../filterSchema.js'
+} from '../filterSchema'
 
 describe('defaultOperatorsForType', () => {
   it('returns 2 operators for multi-select', () => {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './HoverCard.module.css';
 
 export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }: any) {

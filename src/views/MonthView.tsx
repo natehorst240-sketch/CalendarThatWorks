@@ -5,8 +5,8 @@ import {
   format, getISOWeek, startOfDay, addDays, subDays,
 } from 'date-fns';
 import type { Day } from 'date-fns';
-import { useCalendarContext, resolveColor } from '../core/CalendarContext.js';
-import { displayEndDay, layoutSpans } from '../core/layout.js';
+import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import { displayEndDay, layoutSpans } from '../core/layout';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;

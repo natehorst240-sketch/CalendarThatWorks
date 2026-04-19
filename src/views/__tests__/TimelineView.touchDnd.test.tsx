@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import React from 'react';
-import TimelineView from '../TimelineView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import TimelineView from '../TimelineView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1);
 const shiftStart  = new Date(2026, 3, 5, 9);

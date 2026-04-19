@@ -18,7 +18,7 @@
  *   toggleSource     — (id) => void
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { createId } from '../core/createId.js';
+import { createId } from '../core/createId';
 
 // ── Storage keys ──────────────────────────────────────────────────────────────
 

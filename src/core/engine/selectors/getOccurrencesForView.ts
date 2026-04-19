@@ -6,10 +6,10 @@
  */
 
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from 'date-fns';
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
-import type { GetOccurrencesOptions } from './getOccurrencesInRange.js';
-import { getOccurrencesInRange } from './getOccurrencesInRange.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOccurrence } from '../schema/occurrenceSchema';
+import type { GetOccurrencesOptions } from './getOccurrencesInRange';
+import { getOccurrencesInRange } from './getOccurrencesInRange';
 
 type EventSource = ReadonlyMap<string, EngineEvent> | readonly EngineEvent[];
 type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;

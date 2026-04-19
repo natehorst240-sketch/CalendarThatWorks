@@ -11,9 +11,9 @@
  *   - postMessage / worker handoff across serialization boundaries
  */
 
-import type { EngineEvent } from '../../core/engine/schema/eventSchema.js';
-import type { EventConstraint, ConstraintType } from '../../core/engine/schema/constraintSchema.js';
-import type { SyncMetadata } from './types.js';
+import type { EngineEvent } from '../../core/engine/schema/eventSchema';
+import type { EventConstraint, ConstraintType } from '../../core/engine/schema/constraintSchema';
+import type { SyncMetadata } from './types';
 
 // ─── JSON-safe (serialized) types ─────────────────────────────────────────────
 

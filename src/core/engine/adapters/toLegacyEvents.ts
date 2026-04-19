@@ -6,8 +6,8 @@
  * migrated to the engine API yet.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOccurrence } from '../schema/occurrenceSchema';
 
 // ─── Legacy shape ─────────────────────────────────────────────────────────────
 

@@ -9,7 +9,7 @@ import {
   loadPresets,
   savePreset,
   deletePreset,
-} from '../csvParser.js';
+} from '../csvParser';
 
 // ── parseCSV ──────────────────────────────────────────────────────────────────
 

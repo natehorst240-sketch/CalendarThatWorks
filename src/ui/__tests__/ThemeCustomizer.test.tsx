@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render, fireEvent, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import ThemeCustomizer from '../ThemeCustomizer.jsx';
+import ThemeCustomizer from '../ThemeCustomizer';
 
 function renderWithConfig(customTheme = {}) {
   const setConfig = vi.fn();

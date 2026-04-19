@@ -9,12 +9,12 @@
  * Views should not call expandOccurrences directly.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOccurrence } from '../schema/occurrenceSchema.js';
-import type { FilterState } from '../types.js';
-import type { Assignment } from '../schema/assignmentSchema.js';
-import { resourceIdsForEvent } from '../schema/assignmentSchema.js';
-import { expandOccurrences, type ExpandOptions } from '../recurrence/expandOccurrences.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOccurrence } from '../schema/occurrenceSchema';
+import type { FilterState } from '../types';
+import type { Assignment } from '../schema/assignmentSchema';
+import { resourceIdsForEvent } from '../schema/assignmentSchema';
+import { expandOccurrences, type ExpandOptions } from '../recurrence/expandOccurrences';
 
 // ─── Options ──────────────────────────────────────────────────────────────────
 

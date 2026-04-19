@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import CalendarErrorBoundary from '../ui/CalendarErrorBoundary.jsx';
+import CalendarErrorBoundary from '../ui/CalendarErrorBoundary';
 
 describe('WorksCalendar SSR safety + CalendarErrorBoundary', () => {
   it('renders fallback UI when a child throws', () => {

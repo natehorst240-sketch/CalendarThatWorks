@@ -3,8 +3,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
-import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.js';
-import { isEmptyFilterValue, buildActiveFilterPills, clearFilterValue } from '../filters/filterState.js';
+import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
+import { isEmptyFilterValue, buildActiveFilterPills, clearFilterValue } from '../filters/filterState';
 import styles from './FilterBar.module.css';
 
 function formatDateInput(date) {

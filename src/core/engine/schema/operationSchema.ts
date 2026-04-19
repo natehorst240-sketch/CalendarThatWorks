@@ -8,7 +8,7 @@
  * dispatching.  EngineOperation covers the mutable calendar data path only.
  */
 
-import type { EngineEvent } from './eventSchema.js';
+import type { EngineEvent } from './eventSchema';
 
 // ─── Scope for recurring edits ────────────────────────────────────────────────
 

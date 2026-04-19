@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { displayEndDay, layoutSpans } from '../layout.js';
+import { displayEndDay, layoutSpans } from '../layout';
 
 function makeEvent(start, end, allDay = false) {
   return {

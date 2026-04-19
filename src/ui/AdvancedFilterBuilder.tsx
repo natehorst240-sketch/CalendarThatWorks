@@ -28,9 +28,9 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, X, Check } from 'lucide-react';
-import { createId } from '../core/createId.js';
-import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema.js';
-import { conditionsToFilters } from '../filters/conditionEngine.js';
+import { createId } from '../core/createId';
+import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema';
+import { conditionsToFilters } from '../filters/conditionEngine';
 import styles from './AdvancedFilterBuilder.module.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

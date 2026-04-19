@@ -7,7 +7,7 @@
  */
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { useFocusTrap } from '../useFocusTrap.js';
+import { useFocusTrap } from '../useFocusTrap';
 
 /* ── tiny helper component ──────────────────────────────────────────────── */
 

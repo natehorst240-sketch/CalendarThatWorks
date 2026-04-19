@@ -1,4 +1,4 @@
-import { isCoveringEvent, isOpenShiftEvent } from './scheduleModel.js';
+import { isCoveringEvent, isOpenShiftEvent } from './scheduleModel';
 
 export function resolveEventId(ev) {
   return String(ev?._eventId ?? ev?.id ?? '');

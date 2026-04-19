@@ -4,7 +4,7 @@
  * These functions know nothing about the UI or React. They operate on plain
  * filter state objects and FilterField schema arrays.
  */
-import { DEFAULT_FILTER_SCHEMA } from './filterSchema.js';
+import { DEFAULT_FILTER_SCHEMA } from './filterSchema';
 
 // ── Value helpers ─────────────────────────────────────────────────────────────
 

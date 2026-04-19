@@ -8,14 +8,14 @@
  * to the resolveRecurringEdit function.
  */
 
-import type { EngineEvent } from '../schema/eventSchema.js';
-import type { EngineOperation, RecurringEditScope } from '../schema/operationSchema.js';
-import type { EventChange } from './operationResult.js';
-import { isRecurringSeries } from '../schema/eventSchema.js';
+import type { EngineEvent } from '../schema/eventSchema';
+import type { EngineOperation, RecurringEditScope } from '../schema/operationSchema';
+import type { EventChange } from './operationResult';
+import { isRecurringSeries } from '../schema/eventSchema';
 import {
   resolveRecurringEdit,
   type RecurringEditPatch,
-} from '../recurrence/resolveRecurringEdit.js';
+} from '../recurrence/resolveRecurringEdit';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

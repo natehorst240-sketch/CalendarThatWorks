@@ -5,13 +5,13 @@
  */
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { useFocusTrap } from '../hooks/useFocusTrap.js';
-import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState.js';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState';
 import { BUILT_IN_EVENT_TEMPLATES } from '../core/engine/recurrence/templates.ts';
-import { RecurrenceSection } from './EventFormSections/RecurrenceSection.jsx';
-import { CategorySection } from './EventFormSections/CategorySection.jsx';
-import { CustomFieldsSection } from './EventFormSections/CustomFieldsSection.jsx';
-import ConfirmDialog from './ConfirmDialog.jsx';
+import { RecurrenceSection } from './EventFormSections/RecurrenceSection';
+import { CategorySection } from './EventFormSections/CategorySection';
+import { CustomFieldsSection } from './EventFormSections/CustomFieldsSection';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './EventForm.module.css';
 
 export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }: any) {

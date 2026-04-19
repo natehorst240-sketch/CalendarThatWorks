@@ -17,13 +17,13 @@ import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { renderHook } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React, { createRef } from 'react';
-import ScreenReaderAnnouncer from '../ScreenReaderAnnouncer.jsx';
-import { useFocusTrap } from '../../hooks/useFocusTrap.js';
-import MonthView from '../../views/MonthView.jsx';
-import WeekView from '../../views/WeekView.jsx';
-import DayView from '../../views/DayView.jsx';
-import TimelineView from '../../views/TimelineView.jsx';
-import { CalendarContext } from '../../core/CalendarContext.js';
+import ScreenReaderAnnouncer from '../ScreenReaderAnnouncer';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import MonthView from '../../views/MonthView';
+import WeekView from '../../views/WeekView';
+import DayView from '../../views/DayView';
+import TimelineView from '../../views/TimelineView';
+import { CalendarContext } from '../../core/CalendarContext';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Settings } from 'lucide-react';
-import OwnerLoginModal from './OwnerLoginModal.jsx';
+import OwnerLoginModal from './OwnerLoginModal';
 import styles from './OwnerLock.module.css';
 
 export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthenticate, onOpen }: any) {

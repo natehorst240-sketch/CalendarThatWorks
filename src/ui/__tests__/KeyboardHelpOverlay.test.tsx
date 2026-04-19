@@ -6,7 +6,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import KeyboardHelpOverlay from '../KeyboardHelpOverlay.jsx';
+import KeyboardHelpOverlay from '../KeyboardHelpOverlay';
 
 describe('KeyboardHelpOverlay', () => {
   it('renders an aria-modal dialog labelled "Keyboard shortcuts"', () => {

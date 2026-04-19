@@ -10,8 +10,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
-import ConfigPanel from '../ConfigPanel.jsx';
-import { DEFAULT_CONFIG } from '../../core/configSchema.js';
+import ConfigPanel from '../ConfigPanel';
+import { DEFAULT_CONFIG } from '../../core/configSchema';
 
 function mount(props = {}) {
   return render(

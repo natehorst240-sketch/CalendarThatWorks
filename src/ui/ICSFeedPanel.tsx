@@ -11,7 +11,7 @@
  */
 import { useState, useRef } from 'react';
 import { Plus, Trash2, RefreshCw, AlertCircle, CheckCircle, Link } from 'lucide-react';
-import { fetchAndParseICS } from '../core/icalParser.js';
+import { fetchAndParseICS } from '../core/icalParser';
 import styles from './ConfigPanel.module.css';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ function AddFeedForm({ onAdd }: any) {
       const suggested = label || _suggestLabel(trimmed);
       if (!label) setLabel(suggested);
       setValidation({ ok: true, count: events.length });
-    } catch (err) {
+    } catch (err: any) {
       // CORS failures are expected for some feeds — still allow adding with a warning
       const isCors = err.message?.toLowerCase().includes('cors') ||
                      err.message?.toLowerCase().includes('fetch') ||
