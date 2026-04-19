@@ -59,8 +59,8 @@ for (const c of cases) {
     await page.goto('/pill-span-matrix-fixture.html');
 
 const category =
-  c.label === 'On Call Matrix' ? 'on-call'
-  : c.label.includes('PTO') ? 'PTO'
+  c.label === 'On Call Matrix' ? 'oncall'
+  : c.label.includes('PTO') ? 'TimeOff'
   : c.label.includes('Deploy') ? 'Deploy'
   : 'Incident';
 

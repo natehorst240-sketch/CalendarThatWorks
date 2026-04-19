@@ -1125,7 +1125,9 @@ function DisplayTab({ config, onUpdate }: any) {
         <select className={styles.select} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
           {['month','week','day','agenda','schedule','base','assets'].map(v => (
             <option key={v} value={v}>
-              {v.charAt(0).toUpperCase() + v.slice(1)}
+              {v === 'base'
+                ? (config.team?.locationLabel ?? 'Base')
+                : v.charAt(0).toUpperCase() + v.slice(1)}
             </option>
           ))}
         </select>

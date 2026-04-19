@@ -21,7 +21,7 @@ test.describe('WorksCalendar on-call span end-date regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/oncall-span-fixture.html');
 
-    const onCall = page.getByRole('button', { name: /^On Call, on-call$/i }).first();
+    const onCall = page.getByRole('button', { name: /^On Call, oncall$/i }).first();
     await expect(onCall).toBeVisible();
 
     const base = new Date();

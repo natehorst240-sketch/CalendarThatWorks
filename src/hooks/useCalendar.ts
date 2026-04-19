@@ -33,7 +33,9 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
         case 'month':
         case 'agenda':
         case 'schedule':
-        case 'timeline': return addMonths(prev, direction);
+        case 'timeline':
+        case 'base':
+        case 'assets':   return addMonths(prev, direction);
         case 'week':     return addWeeks(prev, direction);
         case 'day':      return addDays(prev, direction);
         default:         return prev;

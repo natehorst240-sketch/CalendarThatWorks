@@ -315,8 +315,9 @@ export function useSavedViews(calendarId) {
     sortBy?: any
     zoomLevel?: any
     collapsedGroups?: any
+    selectedBaseIds?: any
   } = {}) => {
-    const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups } = opts || {};
+    const { sort, showAllGroups, sortBy, zoomLevel, collapsedGroups, selectedBaseIds } = opts || {};
     setViews(prev => prev.map(v =>
       v.id === id
         ? {
@@ -332,6 +333,9 @@ export function useSavedViews(calendarId) {
               : {}),
             ...(showAllGroups !== undefined
               ? { showAllGroups: typeof showAllGroups === 'boolean' ? showAllGroups : null }
+              : {}),
+            ...(selectedBaseIds !== undefined
+              ? { selectedBaseIds: sanitizeBaseIds(selectedBaseIds) }
               : {}),
           }
         : v

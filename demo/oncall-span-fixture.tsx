@@ -23,7 +23,7 @@ const events = [
     title: 'On Call',
     start: start.toISOString(),
     end: endExclusive.toISOString(),
-    category: 'on-call',
+    category: 'oncall',
     resource: 'emp-alpha',
     color: '#ef4444',
     allDay: true,

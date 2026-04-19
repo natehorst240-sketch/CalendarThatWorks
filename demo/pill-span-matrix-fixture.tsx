@@ -18,7 +18,7 @@ const matrixCases = [
   {
     id: 'case-sameweek-oncall',
     title: 'On Call Matrix',
-    category: 'on-call',
+    category: 'oncall',
     color: '#ef4444',
     start: monday,
     endExclusive: addDays(monday, 3),
@@ -27,7 +27,7 @@ const matrixCases = [
   {
     id: 'case-sameweek-pto',
     title: 'PTO Matrix',
-    category: 'PTO',
+    category: 'TimeOff',
     color: '#10b981',
     start: addDays(monday, 1),
     endExclusive: addDays(monday, 3),

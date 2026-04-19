@@ -6,7 +6,7 @@
  * builders both consult this registry so they can never drift apart. Adding a
  * new view = one entry in VIEW_SCOPES.
  */
-import { isScheduleWorkflowEvent } from './scheduleModel';
+import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from './scheduleModel';
 
 export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
 
@@ -25,19 +25,20 @@ export interface ViewScope {
 
 function includesForBase(ev: any, ctx: ViewScopeContext): boolean {
   const baseIds = ctx.selectedBaseIds.length > 0
-    ? ctx.selectedBaseIds
-    : ctx.bases.map(b => b.id);
+    ? ctx.selectedBaseIds.map(String)
+    : ctx.bases.map(b => String(b.id));
   if (baseIds.length === 0) return false;
 
   const metaBase = ev?.meta?.base;
-  if (metaBase && baseIds.includes(metaBase)) return true;
+  if (metaBase != null && baseIds.includes(String(metaBase))) return true;
 
-  if (!ev?.resource) return false;
+  if (ev?.resource == null) return false;
+  const resource = String(ev.resource);
 
   for (const id of baseIds) {
-    const emp = ctx.employees.find(e => e.base === id && e.id === ev.resource);
+    const emp = ctx.employees.find(e => String(e.base ?? '') === id && String(e.id) === resource);
     if (emp) return true;
-    const asset = ctx.assets.find(a => a?.meta?.base === id && a.id === ev.resource);
+    const asset = ctx.assets.find(a => String(a?.meta?.base ?? '') === id && String(a.id) === resource);
     if (asset) return true;
   }
   return false;
@@ -51,7 +52,7 @@ export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
   schedule: {
     id: 'schedule',
     includes: ev => isScheduleWorkflowEvent(ev),
-    seedCategoryOptions: ['base', 'on-call', 'shift', 'PTO', 'availability'],
+    seedCategoryOptions: SCHEDULE_TAB_CATEGORY_SEEDS,
   },
   base:     { id: 'base',     includes: includesForBase },
   assets:   { id: 'assets',   includes: () => true },

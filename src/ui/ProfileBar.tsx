@@ -35,6 +35,7 @@ export default function ProfileBar({
   schema = DEFAULT_FILTER_SCHEMA,
   currentView,
   viewOrder = DEFAULT_VIEW_ORDER,
+  enabledViews,
   locationLabel = 'Base',
   onApply,
   onAdd,
@@ -43,6 +44,20 @@ export default function ProfileBar({
   onDelete,
   onEditConditions,
 }: any) {
+  // Views that are never hidden by Setup (Month + Week are always on).
+  const ALWAYS_ON_VIEWS = new Set(['month', 'week']);
+  // enabledViews is the config-allowed list (ids currently shown as tabs).
+  // If the host doesn't pass it, treat every view as enabled (pre-feature compat).
+  const enabledSet = useMemo(
+    () => (Array.isArray(enabledViews) ? new Set(enabledViews) : null),
+    [enabledViews],
+  );
+  const isViewEnabled = (viewId: string | null | undefined) => {
+    if (!viewId) return true; // global bucket — always applicable
+    if (ALWAYS_ON_VIEWS.has(viewId)) return true;
+    if (!enabledSet) return true;
+    return enabledSet.has(viewId);
+  };
   const [saveOpen,    setSaveOpen]    = useState(false);
   const [manageId,    setManageId]    = useState(null); // which view is being managed
   const scrollRef = useRef(null);
@@ -81,16 +96,18 @@ export default function ProfileBar({
       isActive={savedView.id === activeId}
       isDirty={isDirty && savedView.id === activeId}
       isEnabled={isEnabled}
-      isManaging={manageId === savedView.id}
+      isManaging={isEnabled && manageId === savedView.id}
       onApply={isEnabled
         ? () => { onApply(savedView); setManageId(null); setSaveOpen(false); }
         : undefined}
-      onManageToggle={() => setManageId((prev: any) => prev === savedView.id ? null : savedView.id)}
-      onResave={() => { onResave(savedView.id); setManageId(null); }}
-      onDelete={() => { onDelete(savedView.id); setManageId(null); }}
-      onRename={(name: string) => { onUpdate(savedView.id, { name }); setManageId(null); }}
-      onColorChange={(color: string) => onUpdate(savedView.id, { color })}
-      onEditConditions={onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
+      onManageToggle={isEnabled
+        ? () => setManageId((prev: any) => prev === savedView.id ? null : savedView.id)
+        : undefined}
+      onResave={isEnabled ? () => { onResave(savedView.id); setManageId(null); } : undefined}
+      onDelete={isEnabled ? () => { onDelete(savedView.id); setManageId(null); } : undefined}
+      onRename={isEnabled ? (name: string) => { onUpdate(savedView.id, { name }); setManageId(null); } : undefined}
+      onColorChange={isEnabled ? (color: string) => onUpdate(savedView.id, { color }) : undefined}
+      onEditConditions={isEnabled && onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
     />
   );
 
@@ -105,15 +122,19 @@ export default function ProfileBar({
             ? { Icon: Bookmark, label: 'All views' }
             : (VIEW_ICON_MAP[key] ?? { Icon: Bookmark, label: key });
           const headerLabel = key === 'base' ? `${locationLabel} view` : meta.label;
-          const enabled = key === GLOBAL_GROUP_KEY || key === currentView;
+          // A chip is "enabled" when its pinned view is currently allowed by
+          // Setup (enabledViews). Chips for other tabs stay clickable — applying
+          // switches the active tab via cal.setView in the parent.
+          const groupEnabled = key === GLOBAL_GROUP_KEY || isViewEnabled(key);
+          const isCurrent = key === currentView;
           return (
-            <div key={key} className={styles.group} data-active={enabled ? 'true' : 'false'}>
+            <div key={key} className={styles.group} data-active={isCurrent ? 'true' : 'false'}>
               {idx > 0 && <span className={styles.groupDivider} aria-hidden="true" />}
-              <div className={styles.groupHeader} title={enabled ? undefined : `${headerLabel} — switch to this tab to apply`}>
+              <div className={styles.groupHeader} title={groupEnabled ? undefined : `${headerLabel} is hidden in Setup`}>
                 <meta.Icon size={11} aria-hidden="true" />
                 <span>{headerLabel}</span>
               </div>
-              {list.map((sv: any) => renderChip(sv, enabled))}
+              {list.map((sv: any) => renderChip(sv, groupEnabled))}
             </div>
           );
         })}
@@ -183,7 +204,7 @@ function ViewChip({ savedView, schema, isActive, isDirty, isEnabled = true, isMa
   // Pencil is mounted only when its visual is meaningful — fixes the
   // hidden-button querySelector / focus-order trap that previously kept
   // the DOM button present even when invisible.
-  const showPencil = isHovered || isActive || isManaging;
+  const showPencil = isEnabled && (isHovered || isActive || isManaging);
   const shouldOpenEditorDirectly = typeof onEditConditions === 'function';
 
   const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
@@ -357,7 +378,7 @@ function FilterSummary({ savedView, schema }: any) {
       ))}
       {savedView.view && (
         <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Pinned view</span>
+          <span className={styles.summaryLabel}>Tab</span>
           <span className={styles.summaryTags}>
             <span className={styles.tag}>{savedView.view}</span>
           </span>

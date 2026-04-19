@@ -459,7 +459,7 @@ export function viewScopedSchema(schema: FilterField[], view: string): FilterFie
     return {
       ...field,
       getOptions: (items: any[]) => {
-        const derived = baseGetOptions ? baseGetOptions(items) : (field.options ?? [])
+        const derived = field.options ?? (baseGetOptions ? baseGetOptions(items) : [])
         const seen = new Set(derived.map(o => String(o.value).toLowerCase()))
         const out = derived.slice()
         seeds.forEach((v, i) => {

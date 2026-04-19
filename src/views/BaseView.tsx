@@ -176,10 +176,10 @@ export default function BaseView({
                   <p className={styles.emptyLine}>No events scheduled.</p>
                 ) : (
                   <ul className={styles.eventList}>
-                    {evs.map(ev => {
+                    {evs.map((ev, index) => {
                       const bg = resolveColor(ev, ctx.colorRules);
                       return (
-                        <li key={ev.id ?? `${ev.title}-${ev.start}`} className={styles.eventRow}>
+                        <li key={ev.id ?? `${ev.title ?? 'untitled'}-${String(ev.start)}-${index}`} className={styles.eventRow}>
                           <button
                             type="button"
                             className={styles.eventBtn}
