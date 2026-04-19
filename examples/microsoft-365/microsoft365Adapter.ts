@@ -3,13 +3,13 @@
  * Keep this in examples/ so the core package stays auth-provider neutral.
  */
 
-export function createMicrosoft365Adapter({ tokenProvider, calendarId = 'primary' }) {
+export function createMicrosoft365Adapter({ tokenProvider, calendarId = 'primary' }: { tokenProvider: () => Promise<string>; calendarId?: string }) {
   if (typeof tokenProvider !== 'function') {
     throw new Error('tokenProvider is required for Microsoft 365 adapter.');
   }
 
   return {
-    async submitEvent(payload) {
+    async submitEvent(payload: any) {
       const token = await tokenProvider();
       const response = await fetch(`https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`, {
         method: 'POST',
@@ -30,7 +30,7 @@ export function createMicrosoft365Adapter({ tokenProvider, calendarId = 'primary
   };
 }
 
-function toGraphEvent(payload) {
+function toGraphEvent(payload: any) {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   return {
     subject: payload.title,

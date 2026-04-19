@@ -1,5 +1,5 @@
 import { CalendarExternalForm } from '../../src/index.ts';
-import { createMicrosoft365Adapter } from './microsoft365Adapter.js';
+import { createMicrosoft365Adapter } from './microsoft365Adapter.ts';
 
 const fields = [
   { name: 'title', label: 'Title', type: 'text', required: true },
@@ -9,7 +9,7 @@ const fields = [
   { name: 'description', label: 'Description', type: 'textarea' },
 ];
 
-export default function Microsoft365ExternalFormExample({ tokenProvider }) {
+export default function Microsoft365ExternalFormExample({ tokenProvider }: { tokenProvider: () => Promise<string> }) {
   const adapter = createMicrosoft365Adapter({ tokenProvider });
 
   return (
