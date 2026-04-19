@@ -126,6 +126,16 @@ describe('useEventDraftState — validate', () => {
     expect(result.current.errors.end).toMatch(/after/i);
   });
 
+  it('returns false when start equals end (issue #144: client/engine parity)', () => {
+    // Zero-duration drafts must be rejected client-side so the inline
+    // field error fires before the engine alertdialog has a chance to.
+    const { result } = renderDraft(makeEvent({ end: START }));
+    let ok;
+    act(() => { ok = result.current.validate(); });
+    expect(ok).toBe(false);
+    expect(result.current.errors.end).toMatch(/after/i);
+  });
+
   it('returns false when a required custom field is missing', () => {
     const config = { eventFields: { Ops: [{ name: 'tailNo', type: 'text', required: true }] } };
     const { result } = renderDraft(makeEvent({ category: 'Ops' }), ['Ops'], config);
