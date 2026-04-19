@@ -88,6 +88,7 @@ export default function ViewsDropdown({
                       className={styles.dropdownVisibilityBtn}
                       onClick={() => onToggleVisibility(view.id)}
                       aria-pressed={!isHidden}
+                      aria-label={isHidden ? `Show ${view.name} in quick views` : `Hide ${view.name} from quick views`}
                       title={isHidden ? 'Show in quick views' : 'Hide from quick views'}
                     >
                       {isHidden ? <EyeOff size={14} /> : <Eye size={14} />}

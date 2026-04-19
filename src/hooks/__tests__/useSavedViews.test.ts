@@ -612,9 +612,9 @@ describe('useSavedViews — collapsedGroups + showAllGroups', () => {
   });
 });
 
-// ── v2 → v3 migration ─────────────────────────────────────────────────────────
+// ── v2 → v4 migration ─────────────────────────────────────────────────────────
 
-describe('useSavedViews — storage v2 → v3 migration', () => {
+describe('useSavedViews — storage v2 → v4 migration', () => {
   it('loads v2 payloads without dropping entries', () => {
     const v2 = {
       version: 2,

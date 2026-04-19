@@ -94,9 +94,7 @@ describe('ProfileBar — All Views dropdown', () => {
     const { props } = renderBar();
     fireEvent.click(screen.getByRole('button', { name: /All views/i }));
     const menu = screen.getByRole('menu', { name: /All saved views/i });
-    // The visibility toggle is the button whose aria-pressed state reflects visibility.
-    const toggles = within(menu).getAllByRole('button', { pressed: true });
-    fireEvent.click(toggles[0]);
+    fireEvent.click(within(menu).getByRole('button', { name: /Hide Work Week from quick views/i }));
     expect(props.onToggleVisibility).toHaveBeenCalledWith(VIEW_VISIBLE.id);
   });
 

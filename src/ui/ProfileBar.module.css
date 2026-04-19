@@ -97,8 +97,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 6px 4px 8px;
-  border-radius: 100px 0 0 100px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 100px;
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
@@ -122,12 +122,6 @@
    chip is out-of-sync with the live filters. */
 .chipWrapDirty {
   border-style: dashed;
-}
-
-/* Chip takes the full pill shape (no pencil sibling in the redesign). */
-.chip {
-  padding-right: 10px;
-  border-radius: 100px;
 }
 
 .chipIcon { flex-shrink: 0; opacity: 0.8; }

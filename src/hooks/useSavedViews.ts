@@ -118,8 +118,9 @@ function migrateSavedViewsPayload(payload, calendarId) {
       && payload.version >= MIN_READABLE_VERSION
       && payload.version <= STORAGE_VERSION
     ) {
-      // v2 and v3 share the same on-disk shape; normalizeSavedView fills in
-      // new fields (sort, collapsedGroups, showAllGroups) as null on load.
+      // v2–v4 share a compatible on-disk shape; normalizeSavedView fills in
+      // fields added in later versions (sort, collapsedGroups, showAllGroups,
+      // hiddenFromStrip) when loading older payloads.
       return normalizeViews(payload.views);
     }
 

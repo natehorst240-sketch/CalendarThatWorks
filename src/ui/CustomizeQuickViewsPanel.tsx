@@ -110,6 +110,17 @@ function CustomizeRow({
   const isHidden = !!view.hiddenFromStrip;
   const color = view.color ?? '#64748b';
 
+  function commitRename() {
+    const trimmed = nameVal.trim();
+    if (!trimmed) {
+      setNameVal(view.name);
+      setRenaming(false);
+      return;
+    }
+    if (trimmed !== view.name) onRename(view.id, trimmed);
+    setRenaming(false);
+  }
+
   return (
     <li className={styles.customizeRow} style={{ '--chip-color': color } as React.CSSProperties}>
       <div className={styles.customizeHeader}>
@@ -120,7 +131,7 @@ function CustomizeRow({
               value={nameVal}
               onChange={e => setNameVal(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') { onRename(view.id, nameVal); setRenaming(false); }
+                if (e.key === 'Enter') { commitRename(); }
                 if (e.key === 'Escape') { setNameVal(view.name); setRenaming(false); }
               }}
               autoFocus
@@ -128,7 +139,7 @@ function CustomizeRow({
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => { onRename(view.id, nameVal); setRenaming(false); }}
+              onClick={commitRename}
               aria-label="Confirm rename"
             >
               <Check size={13} />
