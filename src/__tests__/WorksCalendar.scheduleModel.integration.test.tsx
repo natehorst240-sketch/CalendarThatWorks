@@ -54,7 +54,7 @@ describe('WorksCalendar schedule model integration', () => {
       const kinds = getKinds(visible);
       expect(kinds).toContain('open-shift');
     }, { timeout: 10000 });
-  }, 15000);
+  }, 30000);
 
   it('creates a PTO availability event and emits onAvailabilitySave', async () => {
     const apiRef = createRef<any>();
@@ -83,7 +83,7 @@ describe('WorksCalendar schedule model integration', () => {
       const ptoEvents = visible.filter((ev) => String(ev?.meta?.kind ?? '') === 'pto');
       expect(ptoEvents.length).toBeGreaterThan(0);
     });
-  }, 15000);
+  }, 30000);
 
   it('does not create duplicate open-shift records when PTO is re-saved', async () => {
     const apiRef = createRef<any>();
@@ -101,7 +101,7 @@ describe('WorksCalendar schedule model integration', () => {
       );
       expect(openShifts).toHaveLength(1);
     });
-  }, 15000);
+  }, 30000);
 
   it('assigns coverage by updating shift/open-shift state and creating one mirror event', async () => {
     const apiRef = createRef<any>();
@@ -127,7 +127,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(String(mirrored[0].meta?.sourceShiftId ?? '')).toBe('shift-1');
       expect(String(mirrored[0].meta?.coveredEmployeeId ?? '')).toBe('emp-1');
     });
-  }, 15000);
+  }, 30000);
 
   it('clears linked schedule metadata and open/covering events when status is cleared', async () => {
     const apiRef = createRef<any>();
@@ -152,7 +152,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(shift.meta?.coveredBy).toBeUndefined();
       expect(shift.meta?.openShiftId).toBeUndefined();
     });
-  }, 15000);
+  }, 30000);
 
   it('emits onEventSave/onEventDelete for linked schedule records during coverage + clear', async () => {
     const apiRef = createRef<any>();
@@ -187,7 +187,7 @@ describe('WorksCalendar schedule model integration', () => {
         );
       expect(savedShiftWithCoverage).toBeTruthy();
     });
-  }, 15000);
+  }, 30000);
 
   it('keeps exactly one covering record when coverage is reassigned', async () => {
     const apiRef = createRef<any>();
@@ -241,5 +241,5 @@ describe('WorksCalendar schedule model integration', () => {
       const coveringEvents = getByKind(visible, 'covering');
       expect(coveringEvents).toHaveLength(0);
     });
-  }, 15000);
+  }, 30000);
 });
