@@ -30,6 +30,7 @@ import EmployeeActionCard from '../ui/EmployeeActionCard';
 import styles from './TimelineView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd';
+import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -94,20 +95,16 @@ function assignLanes(events, monthStart, monthEnd) {
   return { events: clipped, laneCount: Math.max(1, laneEnd.length) };
 }
 
-function getInclusiveDayEnd(endDate) {
-  const end = endDate instanceof Date ? endDate : new Date(endDate);
-  if (Number.isNaN(end.getTime())) return startOfDay(new Date());
-  // Built schedule bars treat end-at-midnight as exclusive, so coverage pills
-  // should follow the same visual span.
-  if (
-    end.getHours() === 0
-    && end.getMinutes() === 0
-    && end.getSeconds() === 0
-    && end.getMilliseconds() === 0
-  ) {
-    return addDays(startOfDay(end), -1);
-  }
-  return startOfDay(end);
+// Matches any event that represents a shift or on-call bar, whether it was
+// tagged via category (legacy seed events) or via meta.kind / meta.onCall
+// (events created by ScheduleEditorForm or mirrored coverage).  Used so the
+// shift-status pills render for user-created shifts, not just seeded ones.
+function isShiftOrOnCallLikeEvent(ev, onCallCategory) {
+  const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
+  return ev?.category === onCallCategory
+    || ev?.meta?.onCall === true
+    || kind === SCHEDULE_KINDS.SHIFT
+    || kind === SCHEDULE_KINDS.ON_CALL;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -290,13 +287,18 @@ export default function TimelineView({
     const coveringMap = new Map(); // empId → [{ ev, origEmpName, _dayStart, _dayEnd }]
     if (useEmployees) {
       events.forEach(ev => {
-        const isOnCallEv = ev.category === onCallCategory || ev.meta?.onCall === true;
-        if (!isOnCallEv || !ev.meta?.shiftStatus || !ev.meta?.coveredBy) return;
+        if (!isShiftOrOnCallLikeEvent(ev, onCallCategory)) return;
+        if (!ev.meta?.shiftStatus || !ev.meta?.coveredBy) return;
         const coverId = String(ev.meta.coveredBy);
         if (!coveringMap.has(coverId)) coveringMap.set(coverId, []);
-        const origEmp = displayEmployees.find(e => e.id === (ev.resource ?? ''));
-        const clampedStart = max([startOfDay(ev.start), monthStart]);
-        const clampedEnd   = min([startOfDay(ev.end),   monthEnd]);
+        const origEmp = displayEmployees.find(e => String(e.id) === String(ev.resource ?? ''));
+        // Clamp to the PTO request window (meta.requestStart/End) so the
+        // "covering for" pill only spans the days actually needing coverage,
+        // not the entire underlying shift.
+        const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
+        const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+        const clampedStart = max([startOfDay(reqStart), monthStart]);
+        const clampedEnd   = min([startOfDay(reqEnd),   monthEnd]);
         if (clampedStart > clampedEnd) return;
         const ds = differenceInCalendarDays(clampedStart, monthStart);
         const de = differenceInCalendarDays(clampedEnd,   monthStart);
@@ -311,12 +313,12 @@ export default function TimelineView({
 
     if (useEmployees) {
       return displayEmployees.map((emp, idx) => {
-        const eventsForRow = events.filter(e => (e.resource ?? '') === emp.id);
+        const eventsForRow = events.filter(e => String(e.resource ?? '') === String(emp.id));
         const { events: laned, laneCount } = assignLanes(eventsForRow, monthStart, monthEnd);
 
-        const coveringPills  = coveringMap.get(emp.id) ?? [];
+        const coveringPills  = coveringMap.get(String(emp.id)) ?? [];
         const hasStatusPills = laned.some(ev =>
-          (ev.category === onCallCategory || ev.meta?.onCall === true) && !!ev.meta?.shiftStatus
+          isShiftOrOnCallLikeEvent(ev, onCallCategory) && !!ev.meta?.shiftStatus
         );
 
         const baseH = Math.max(
@@ -1003,18 +1005,20 @@ export default function TimelineView({
 
                   {/* ── Shift coverage status pills (below event lanes) ── */}
                   {rowEvents
-                    .filter(ev => (ev.category === onCallCategory || ev.meta?.onCall === true) && ev.meta?.shiftStatus)
+                    .filter(ev => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.shiftStatus)
                     .map(ev => {
                       const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
                       const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
+                      // Use startOfDay (matches assignLanes) so this pill spans the same
+                      // day range as the PTO/unavailable event pill it mirrors.
                       const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
-                      const pillDayEnd   = differenceInCalendarDays(min([getInclusiveDayEnd(reqEnd), monthEnd]), monthStart);
+                      const pillDayEnd   = differenceInCalendarDays(min([startOfDay(reqEnd), monthEnd]), monthStart);
                       const left  = pillDayStart * DAY_W + 2;
                       const width = Math.max(DAY_W - 4, (pillDayEnd - pillDayStart + 1) * DAY_W - 4);
                       const top   = baseH + 3;
                       const isCovered = !!ev.meta?.coveredBy;
                       const coveredByEmp = isCovered
-                        ? employees.find(e => e.id === String(ev.meta.coveredBy))
+                        ? employees.find(e => String(e.id) === String(ev.meta.coveredBy))
                         : null;
                       const coveredByName = coveredByEmp?.name ?? 'Someone';
 

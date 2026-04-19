@@ -1038,12 +1038,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
     });
 
-    // 3. Create or update the mirrored on-call event on the covering employee's row
+    // 3. Create or update the mirrored on-call event on the covering employee's row.
+    //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
+    //    when available, so the coverage bar only spans the days actually needing
+    //    coverage — not the entire underlying shift.
     const onCallCat = ownerCfg.config?.onCallCategory ?? 'on-call';
+    const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
+    const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
+    const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
+    const requestEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : shiftEnd;
+    const mirrorStart = requestStart > shiftStart ? requestStart : shiftStart;
+    const mirrorEnd   = requestEnd   < shiftEnd   ? requestEnd   : shiftEnd;
     const mirroredPatch = {
       title:    `Covering: ${ev.title ?? 'Shift'}`,
-      start:    ev.start instanceof Date ? ev.start : new Date(ev.start),
-      end:      ev.end   instanceof Date ? ev.end   : new Date(ev.end),
+      start:    mirrorStart,
+      end:      mirrorEnd,
       category: onCallCat,
       resource: normalizedCoveringEmployeeId,
       meta: {
