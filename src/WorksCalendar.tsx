@@ -720,7 +720,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const fallback = (ownerCfg.config?.display?.defaultView as ViewId) ?? 'month';
     const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
     if (cal.view !== target) cal.setView(target);
-  }, [VIEWS, cal, ownerCfg.config?.display?.defaultView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [VIEWS, cal.view, ownerCfg.config?.display?.defaultView]);
 
   // ── Derive categories / resources / filtered events ──────────────────────
   // Events scoped to the active tab — drives BOTH FilterBar option lists and
