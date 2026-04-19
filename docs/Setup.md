@@ -806,4 +806,4 @@ Not sure which combination fits you? Start here.
 - [Schedule workflow](./ScheduleWorkflow.md) — PTO → uncovered → coverage details.
 - [Roadmap](./Roadmap.md) — what's coming.
 
-Stuck? Open an issue: https://github.com/natehorst240-sketch/CalendarThatWorks/issues
+Stuck? Open an issue: https://github.com/workscalendar/calendarthatworks/issues

@@ -263,7 +263,7 @@ The calendar is a valuable product. Let's build grouping features properly, not 
 
 ## Delivery Update — 2026-04 Sprint
 
-**Tracking issue:** [#134 — Sprint: Close the Grouping Plan A gap](https://github.com/natehorst240-sketch/calendarthatworks/issues/134)
+**Tracking issue:** [#134 — Sprint: Close the Grouping Plan A gap](https://github.com/workscalendar/calendarthatworks/issues/134)
 
 The original 5-day "infinite grouping" ambition was correctly flagged above as
 infeasible. Work landed in two phases instead, with a strict owner-config-first

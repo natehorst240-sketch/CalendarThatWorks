@@ -2,6 +2,8 @@
 
 WorksCalendar is an embeddable React calendar focused on **real scheduling workflows** (team coverage, PTO handling, saved filtered views) instead of a single static calendar screen.
 
+**Website:** [workscalendar.com](https://workscalendar.com) · **Repository:** [github.com/workscalendar/calendarthatworks](https://github.com/workscalendar/calendarthatworks)
+
 ## Highlights
 
 - Multiple calendar modes: month, week, day, agenda, schedule, timeline
