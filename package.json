@@ -29,11 +29,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/natehorst240-sketch/CalendarThatWorks.git"
+    "url": "git+https://github.com/workscalendar/calendarthatworks.git"
   },
-  "homepage": "https://github.com/natehorst240-sketch/CalendarThatWorks#readme",
+  "homepage": "https://workscalendar.com",
   "bugs": {
-    "url": "https://github.com/natehorst240-sketch/CalendarThatWorks/issues"
+    "url": "https://github.com/workscalendar/calendarthatworks/issues"
   },
   "scripts": {
     "test": "vitest run",
