@@ -197,7 +197,7 @@ describe('useSavedViews', () => {
       });
     });
     const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(4);
     expect(stored.views).toHaveLength(1);
     expect(stored.views[0].name).toBe('Persisted');
   });
@@ -669,7 +669,7 @@ describe('useSavedViews — storage v2 → v3 migration', () => {
       result.current.saveView('New One', EMPTY_FILTERS);
     });
     const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
-    expect(stored.version).toBe(3);
+    expect(stored.version).toBe(4);
     expect(stored.views).toHaveLength(2);
   });
 
@@ -869,5 +869,67 @@ describe('useSavedViews — resaveView collapsedGroups persistence', () => {
       });
     });
     expect(result.current.views[0].collapsedGroups).toBeNull();
+  });
+});
+
+// ── hiddenFromStrip + toggleStripVisibility ───────────────────────────────────
+
+describe('useSavedViews — hiddenFromStrip strip visibility', () => {
+  it('saveView defaults hiddenFromStrip to false so new views appear in the strip', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Visible', EMPTY_FILTERS);
+    });
+    expect(result.current.views[0].hiddenFromStrip).toBe(false);
+  });
+
+  it('toggleStripVisibility flips hiddenFromStrip on and off', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Toggle', EMPTY_FILTERS);
+    });
+    const id = result.current.views[0].id;
+
+    act(() => { result.current.toggleStripVisibility(id); });
+    expect(result.current.views[0].hiddenFromStrip).toBe(true);
+
+    act(() => { result.current.toggleStripVisibility(id); });
+    expect(result.current.views[0].hiddenFromStrip).toBe(false);
+  });
+
+  it('updateView can set hiddenFromStrip directly via patch', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Direct', EMPTY_FILTERS);
+    });
+    const id = result.current.views[0].id;
+    act(() => { result.current.updateView(id, { hiddenFromStrip: true }); });
+    expect(result.current.views[0].hiddenFromStrip).toBe(true);
+  });
+
+  it('hiddenFromStrip survives localStorage round-trip', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Persist hidden', EMPTY_FILTERS);
+    });
+    const id = result.current.views[0].id;
+    act(() => { result.current.toggleStripVisibility(id); });
+
+    const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result2.current.views[0].hiddenFromStrip).toBe(true);
+  });
+
+  it('v2/v3 payloads migrate with hiddenFromStrip = false (existing views remain visible)', () => {
+    localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
+      version: 3,
+      views: [{
+        id: 'v-old',
+        name: 'Old',
+        createdAt: new Date().toISOString(),
+        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+      }],
+    }));
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    expect(result.current.views[0].hiddenFromStrip).toBe(false);
   });
 });
