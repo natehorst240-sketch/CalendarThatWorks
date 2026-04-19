@@ -24,6 +24,18 @@ const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
 if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
 
 /* ─── Demo config seed ──────────────────────────────────────────── */
+// Bases (airbases / regional hubs). Used by BaseView, the Assets view's
+// base column, and the approval-flow demo. Employees and assets below
+// reference these by id.
+const DEMO_BASES = [
+  { id: 'base-phx', name: 'Phoenix HQ (KPHX)' },
+  { id: 'base-lax', name: 'Los Angeles (KLAX)' },
+  { id: 'base-den', name: 'Denver (KDEN)' },
+  { id: 'base-ord', name: 'Chicago (KORD)' },
+  { id: 'base-jfk', name: 'New York (KJFK)' },
+  { id: 'base-bos', name: 'Boston (KBOS)' },
+];
+
 // Pre-seed config with demo-appropriate defaults if it hasn't been set yet.
 // This ensures the calendar title, default view, and theme all reflect the
 // demo context rather than the generic DEFAULT_CONFIG values.
@@ -34,7 +46,28 @@ if (!storedCfg) {
     title: 'IHC Fleet On-Call',
     setup: { completed: true, preferredTheme: 'corporate' },
     display: { ...DEFAULT_CONFIG.display, defaultView: 'schedule' },
+    team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
+    approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
+} else {
+  // Idempotent backfill: returning demo users pick up bases / approvals
+  // without clearing localStorage. Reads the RAW stored payload (not the
+  // default-merged result) so an owner who explicitly disabled approvals
+  // in Settings keeps their choice — only missing values are filled in.
+  let parsedRaw = null;
+  try { parsedRaw = JSON.parse(storedCfg); } catch {}
+  if (parsedRaw && typeof parsedRaw === 'object') {
+    const needsBases     = !Array.isArray(parsedRaw.team?.bases) || parsedRaw.team.bases.length === 0;
+    const needsApprovals = parsedRaw.approvals?.enabled === undefined;
+    if (needsBases || needsApprovals) {
+      const existing = loadConfig(DEMO_CALENDAR_ID);
+      saveConfig(DEMO_CALENDAR_ID, {
+        ...existing,
+        ...(needsBases     ? { team:      { ...existing.team,      bases: DEMO_BASES } } : {}),
+        ...(needsApprovals ? { approvals: { ...existing.approvals, enabled: true } }    : {}),
+      });
+    }
+  }
 }
 
 // Read the stored (or just-seeded) preferred theme so the ThemePicker
@@ -43,13 +76,16 @@ const _seedConfig = loadConfig(DEMO_CALENDAR_ID);
 const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'corporate';
 
 /* ─── Employees ─────────────────────────────────────────────────── */
+// Each employee is pre-assigned to a base so BaseView renders populated
+// rows out of the box. Phoenix and LAX each host two people; Denver and
+// Chicago host one; JFK and Boston are asset-only bases.
 const INITIAL_EMPLOYEES = [
-  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6' },
-  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444' },
-  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981' },
-  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6' },
-  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b' },
-  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4' },
+  { id: 'emp-sarah',  name: 'Sarah Chen',    role: 'Senior Engineer',   color: '#3b82f6', base: 'base-phx' },
+  { id: 'emp-marcus', name: 'Marcus Webb',   role: 'On-Call Engineer',  color: '#ef4444', base: 'base-phx' },
+  { id: 'emp-priya',  name: 'Priya Sharma',  role: 'Team Lead',         color: '#10b981', base: 'base-den' },
+  { id: 'emp-james',  name: 'James Torres',  role: 'DevOps / SRE',      color: '#8b5cf6', base: 'base-lax' },
+  { id: 'emp-alex',   name: 'Alex Kim',      role: 'Software Engineer', color: '#f59e0b', base: 'base-ord' },
+  { id: 'emp-dana',   name: 'Dana Okafor',   role: 'Site Reliability',  color: '#06b6d4', base: 'base-lax' },
 ];
 
 /* ─── Events ────────────────────────────────────────────────────── */
@@ -149,12 +185,12 @@ const INITIAL_EVENTS = [
  * aircraft; the library accepts any resource kind the user defines.
  */
 const AIRCRAFT_RESOURCES = [
-  { id: 'N121AB', label: 'N121AB', group: 'West',    meta: { sublabel: 'Citation CJ3',    model: 'Citation CJ3',     location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N505CD', label: 'N505CD', group: 'West',    meta: { sublabel: 'Phenom 300',      model: 'Phenom 300',       location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
-  { id: 'N88QR',  label: 'N88QR',  group: 'Central', meta: { sublabel: 'King Air 350',    model: 'King Air 350',     location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N733XY', label: 'N733XY', group: 'Central', meta: { sublabel: 'Challenger 350',  model: 'Challenger 350',   location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N901JT', label: 'N901JT', group: 'East',    meta: { sublabel: 'Gulfstream G280', model: 'Gulfstream G280',  location: { text: 'KJFK', status: 'live',  asOf: new Date().toISOString() } } },
-  { id: 'N245LM', label: 'N245LM', group: 'East',    meta: { sublabel: 'Pilatus PC-24',   model: 'Pilatus PC-24',    location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N121AB', label: 'N121AB', group: 'West',    meta: { sublabel: 'Citation CJ3',    model: 'Citation CJ3',     base: 'base-phx', location: { text: 'KPHX', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N505CD', label: 'N505CD', group: 'West',    meta: { sublabel: 'Phenom 300',      model: 'Phenom 300',       base: 'base-lax', location: { text: 'KLAX', status: 'stale', asOf: new Date().toISOString() } } },
+  { id: 'N88QR',  label: 'N88QR',  group: 'Central', meta: { sublabel: 'King Air 350',    model: 'King Air 350',     base: 'base-den', location: { text: 'KDEN', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N733XY', label: 'N733XY', group: 'Central', meta: { sublabel: 'Challenger 350',  model: 'Challenger 350',   base: 'base-ord', location: { text: 'KORD', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N901JT', label: 'N901JT', group: 'East',    meta: { sublabel: 'Gulfstream G280', model: 'Gulfstream G280',  base: 'base-jfk', location: { text: 'KJFK', status: 'live',  asOf: new Date().toISOString() } } },
+  { id: 'N245LM', label: 'N245LM', group: 'East',    meta: { sublabel: 'Pilatus PC-24',   model: 'Pilatus PC-24',    base: 'base-bos', location: { text: 'KBOS', status: 'live',  asOf: new Date().toISOString() } } },
 ];
 const FLEET_EVENTS = [
   { id: 'f1',  title: 'Recurrent training',   start: d(0, 9),   end: dEnd(0, 9, 6),  category: 'training',    resource: 'N121AB', meta: { sublabel: 'Citation CJ3',  region: 'West' } },
@@ -193,6 +229,57 @@ const UNIFIED_CATEGORIES_CONFIG = {
   pillStyle: 'hue',
   defaultCategoryId: 'other',
 };
+
+/* ─── Approval state machine (demo) ─────────────────────────────── */
+//
+// Resolves the next stage purely from action-verb semantics, so any
+// (stage, action) pair the owner-configured ApprovalActionMenu can present
+// produces a sensible transition — no dead clicks if the owner customizes
+// `config.approvals.rules[stage].allow[]`.
+//
+//   approve  ─▶ pending_higher → finalized    (second-tier approval)
+//              everything else → approved     (first approval lands here)
+//   deny     ─▶ denied
+//   finalize ─▶ finalized
+//   revoke   ─▶ finalized → approved          (roll back one step)
+//              everything else → requested
+function nextStageFor(currentStage, actionId) {
+  const stage = currentStage ?? 'requested';
+  switch (actionId) {
+    case 'approve':  return stage === 'pending_higher' ? 'finalized' : 'approved';
+    case 'deny':     return 'denied';
+    case 'finalize': return 'finalized';
+    case 'revoke':   return stage === 'finalized'      ? 'approved'  : 'requested';
+    default:         return null;
+  }
+}
+
+function applyApprovalTransition(event, actionId, payload) {
+  const stage = event?.meta?.approvalStage;
+  const currentStage = stage?.stage ?? 'requested';
+  const nextStage = nextStageFor(currentStage, actionId);
+  if (!nextStage) return event;
+
+  const now = new Date().toISOString();
+  const historyEntry = {
+    action: actionId,
+    at:     now,
+    actor:  payload?.actor ?? 'demo-user',
+    ...(payload?.tier   !== undefined ? { tier:   payload.tier   } : {}),
+    ...(payload?.reason !== undefined ? { reason: payload.reason } : {}),
+  };
+  return {
+    ...event,
+    meta: {
+      ...(event.meta ?? {}),
+      approvalStage: {
+        stage:     nextStage,
+        updatedAt: now,
+        history:   [...(stage?.history ?? []), historyEntry],
+      },
+    },
+  };
+}
 
 /* ─── Theme picker ──────────────────────────────────────────────── */
 function ThemePicker({ current, onChange }) {
@@ -383,6 +470,16 @@ function App() {
     log(`Removed employee: ${id}`);
   }, []);
 
+  const handleApprovalAction = useCallback((event, actionId, payload) => {
+    const nextStage = nextStageFor(event?.meta?.approvalStage?.stage ?? 'requested', actionId);
+    if (!nextStage) {
+      log(`Approval: ${actionId} not allowed from ${event?.meta?.approvalStage?.stage ?? 'requested'}`);
+      return;
+    }
+    setEvents(prev => prev.map(e => e.id === event.id ? applyApprovalTransition(e, actionId, payload) : e));
+    log(`Approval: ${event.title} → ${nextStage}`);
+  }, []);
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: pageBg }}>
 
@@ -409,6 +506,7 @@ function App() {
             onEventDelete={handleEventDelete}
             onScheduleSave={handleEventSave}
             onAvailabilitySave={handleEventSave}
+            onApprovalAction={handleApprovalAction}
             onEventClick={ev => log(`Clicked: ${ev.title}`)}
             theme={theme}
             showAddButton={true}
