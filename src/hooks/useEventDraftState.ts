@@ -66,7 +66,7 @@ export function useEventDraftState(event, categories, config) {
       end:      toDatetimeLocal(endDate),
       allDay:   event?.allDay   ?? false,
       category: event?.category ?? categories[0] ?? '',
-      resource: event?.resource ?? '',
+      resource: event?.resource == null ? '' : String(event.resource),
       color:    event?.color    ?? '',
       meta:     event?.meta     ?? {},
     };
@@ -124,7 +124,7 @@ export function useEventDraftState(event, categories, config) {
       };
       if (template.defaults.title) next.title = template.defaults.title;
       if (template.defaults.category) next.category = template.defaults.category;
-      if (template.defaults.resource) next.resource = template.defaults.resource;
+      if (template.defaults.resource) next.resource = String(template.defaults.resource);
       if (template.defaults.color) next.color = template.defaults.color;
       if (typeof template.defaults.allDay === 'boolean') next.allDay = template.defaults.allDay;
       if (startDate && Number.isFinite(template.defaults.durationMinutes)) {
