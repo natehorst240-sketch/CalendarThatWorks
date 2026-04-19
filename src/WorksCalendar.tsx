@@ -1268,9 +1268,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleEventSave = useCallback((rawEv) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
-    // _eventId is present on occurrences from the engine; fall back to id for
-    // legacy shapes passed directly (e.g. from the EventForm).
-    const eventId  = rawEv._eventId ?? (rawEv.id ? String(rawEv.id) : null);
+    // Expanded recurring occurrences from the engine carry _eventId.
+    // Legacy recurring shapes may only carry _seriesId.
+    const recurringMasterId = rawEv._eventId ?? rawEv._seriesId ?? null;
+    // Fallback to id for non-recurring/legacy event shapes from the EventForm.
+    const eventId  = recurringMasterId ?? (rawEv.id ? String(rawEv.id) : null);
+
+    // Defensive RRULE preservation: if a recurring edit payload arrives with a
+    // missing RRULE (e.g. an occurrence shape that lost series fields), keep
+    // the series master cadence instead of accidentally stripping recurrence.
+    const existingMaster = recurringMasterId ? engineRef.current?.state?.events?.get(String(recurringMasterId)) : null;
+    const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
 
     if (!eventId) {
       // New event — no scope picker needed.
@@ -1287,7 +1295,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           category:   rawEv.category   ?? null,
           color:      rawEv.color      ?? null,
           status:     rawEv.status     ?? 'confirmed',
-          rrule:      rawEv.rrule      ?? null,
+          rrule:      resolvedRrule,
           exdates:    rawEv.exdates    ?? [],
           meta:       rawEv.meta       ?? {},
         },
@@ -1316,7 +1324,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           category:   rawEv.category   ?? null,
           color:      rawEv.color      ?? null,
           status:     rawEv.status     ?? 'confirmed',
-          rrule:      rawEv.rrule      ?? null,
+          rrule:      resolvedRrule,
         },
         source: 'form',
       }),
