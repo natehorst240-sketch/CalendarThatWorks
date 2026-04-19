@@ -89,36 +89,16 @@ describe('AssetsView — rows & rendering', () => {
   });
 });
 
-describe('AssetsView — zoom control', () => {
-  it('renders four zoom buttons with Month as the default active', () => {
+describe('AssetsView — gantt day view', () => {
+  it('does not render zoom buttons', () => {
     renderAssets();
-    expect(screen.getByRole('button', { name: 'Zoom to Day' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zoom to Week' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zoom to Month' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zoom to Quarter' })).toBeInTheDocument();
-
-    expect(screen.getByRole('button', { name: 'Zoom to Month' }))
-      .toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Zoom to Day' }))
-      .toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('group', { name: /zoom level/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /zoom to/i })).not.toBeInTheDocument();
   });
 
-  it('calls onZoomChange with the clicked zoom id', () => {
-    const onZoomChange = vi.fn();
-    renderAssets({ zoomLevel: 'month', onZoomChange });
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom to Week' }));
-    expect(onZoomChange).toHaveBeenCalledWith('week');
-  });
-
-  it('disables zoom buttons when onZoomChange is absent', () => {
-    renderAssets({ onZoomChange: undefined });
-    expect(screen.getByRole('button', { name: 'Zoom to Day' })).toBeDisabled();
-  });
-
-  it('respects the passed-in zoomLevel', () => {
-    renderAssets({ zoomLevel: 'day', onZoomChange: vi.fn() });
-    expect(screen.getByRole('button', { name: 'Zoom to Day' }))
-      .toHaveAttribute('aria-pressed', 'true');
+  it('renders the timeline in day zoom mode', () => {
+    const { container } = renderAssets();
+    expect(container.querySelector('[data-zoom="day"]')).toBeTruthy();
   });
 });
 
@@ -298,8 +278,8 @@ describe('AssetsView — keyboard navigation', () => {
   it('calls onDateSelect on Enter when the cell is empty', () => {
     const onDateSelect = vi.fn();
     renderAssets({ onDateSelect });
-    // April 20 = day index 19, no event on N121AB
-    const cell = document.querySelector('[data-cell="0-19"]') as HTMLElement;
+    // Day index 0 has no event on N121AB and is always visible.
+    const cell = document.querySelector('[data-cell="0-0"]') as HTMLElement;
     cell.focus();
     fireEvent.keyDown(cell, { key: 'Enter' });
     expect(onDateSelect).toHaveBeenCalled();
@@ -316,13 +296,6 @@ describe('AssetsView — a11y', () => {
     const announcer = screen.getByTestId('assets-announcer');
     expect(announcer).toHaveAttribute('role', 'status');
     expect(announcer).toHaveAttribute('aria-live', 'polite');
-  });
-
-  it('announces zoom changes', () => {
-    const onZoomChange = vi.fn();
-    renderAssets({ zoomLevel: 'month', onZoomChange });
-    fireEvent.click(screen.getByRole('button', { name: 'Zoom to Week' }));
-    expect(screen.getByTestId('assets-announcer').textContent).toMatch(/Zoom: Week/);
   });
 
   it('announces when audit drawer opens and closes', () => {

@@ -2,11 +2,9 @@
  * AssetsView — grouping + saved-view round-trip E2E (ticket #134-6).
  *
  * The demo loads with the schedule view; we flip to Assets, verify the
- * grid paints its core affordances (rowheaders, zoom control), then drive
- * a saved-view round-trip by seeding localStorage with a pinned Assets
- * profile and clicking its chip. The round-trip spec is the one that
- * ties ticket #134-2 (persist zoomLevel + collapsedGroups) back to the
- * user-facing flow.
+ * grid paints its core affordances (rowheaders, fixed day gantt), then
+ * drives a saved-view round-trip by seeding localStorage with a pinned
+ * Assets profile and clicking its chip.
  */
 import { test, expect } from '@playwright/test';
 
@@ -20,30 +18,26 @@ test.describe('WorksCalendar Assets view', () => {
     await expect(page.getByTestId('works-calendar')).toBeVisible();
   });
 
-  test('renders the Assets grid with rowheaders and the zoom control', async ({ page }) => {
+  test('renders the Assets grid with rowheaders in fixed day gantt mode', async ({ page }) => {
     await page.getByRole('button', { name: /^Assets$/ }).click();
     // The grid's aria-label includes "Assets timeline for <month>".
     await expect(page.getByRole('grid', { name: /Assets timeline for / })).toBeVisible();
     // At least one rowheader (employee resource) should be present.
     const rowheaders = page.getByRole('rowheader');
     await expect(rowheaders.first()).toBeVisible();
-    // Zoom control group with its four buttons.
-    await expect(page.getByRole('group', { name: /Zoom level/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Zoom to Day/ })).toBeVisible();
+    // Assets no longer exposes zoom controls; it should always render in day mode.
+    await expect(page.getByRole('group', { name: /Zoom level/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Zoom to / })).toHaveCount(0);
+    await expect(page.locator('[data-zoom="day"]').first()).toBeVisible();
   });
 
-  test('clicking a zoom button toggles aria-pressed on the new zoom', async ({ page }) => {
+  test('assets timeline does not render interactive zoom buttons', async ({ page }) => {
     await page.getByRole('button', { name: /^Assets$/ }).click();
-    const monthBtn = page.getByRole('button', { name: /Zoom to Month/ });
-    const dayBtn   = page.getByRole('button', { name: /Zoom to Day/ });
-    // Default zoom is month per AssetsView.
-    await expect(monthBtn).toHaveAttribute('aria-pressed', 'true');
-    await dayBtn.click();
-    await expect(dayBtn).toHaveAttribute('aria-pressed', 'true');
-    await expect(monthBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('button', { name: /Zoom to / })).toHaveCount(0);
+    await expect(page.locator('[data-zoom="day"]').first()).toBeVisible();
   });
 
-  test('saved view round-trip restores zoomLevel when its chip is applied', async ({ page }) => {
+  test('saved view round-trip still opens Assets even with legacy zoomLevel', async ({ page }) => {
     // Seed a saved view pinned to the Assets view with zoomLevel=day.
     await page.evaluate(({ key }) => {
       window.localStorage.setItem(key, JSON.stringify({
@@ -78,10 +72,8 @@ test.describe('WorksCalendar Assets view', () => {
 
     // Applying the saved view switches to the Assets grid.
     await expect(page.getByRole('grid', { name: /Assets timeline for / })).toBeVisible();
-    // And the pinned zoomLevel ('day') should be active.
-    await expect(page.getByRole('button', { name: /Zoom to Day/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    // Legacy zoomLevel is ignored; Assets always renders day-scale.
+    await expect(page.getByRole('button', { name: /Zoom to / })).toHaveCount(0);
+    await expect(page.locator('[data-zoom="day"]').first()).toBeVisible();
   });
 });
