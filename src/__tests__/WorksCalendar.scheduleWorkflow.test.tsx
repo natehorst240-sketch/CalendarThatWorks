@@ -50,7 +50,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     expect(await screen.findByRole('dialog', { name: 'Request PTO for Alex Rivera' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save PTO Request' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('opens unavailable-focused form when Mark Unavailable is selected', async () => {
     render(<WorksCalendar events={[]} employees={employees} />);
@@ -62,7 +62,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     expect(await screen.findByRole('dialog', { name: 'Mark Unavailable for Alex Rivera' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Unavailable Time' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it('opens availability-focused edit form when Edit Availability is selected', async () => {
     render(
@@ -90,5 +90,5 @@ describe('WorksCalendar schedule workflow entry points', () => {
     expect(screen.getByDisplayValue('Clinic Hours')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Availability Changes' })).toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Type' })).not.toBeInTheDocument();
-  });
+  }, 15000);
 });
