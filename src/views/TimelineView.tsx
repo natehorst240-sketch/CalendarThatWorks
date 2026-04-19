@@ -94,6 +94,22 @@ function assignLanes(events, monthStart, monthEnd) {
   return { events: clipped, laneCount: Math.max(1, laneEnd.length) };
 }
 
+function getInclusiveDayEnd(endDate) {
+  const end = endDate instanceof Date ? endDate : new Date(endDate);
+  if (Number.isNaN(end.getTime())) return startOfDay(new Date());
+  // Built schedule bars treat end-at-midnight as exclusive, so coverage pills
+  // should follow the same visual span.
+  if (
+    end.getHours() === 0
+    && end.getMinutes() === 0
+    && end.getSeconds() === 0
+    && end.getMilliseconds() === 0
+  ) {
+    return addDays(startOfDay(end), -1);
+  }
+  return startOfDay(end);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function TimelineView({
@@ -992,8 +1008,7 @@ export default function TimelineView({
                       const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
                       const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
                       const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
-                      // reqEnd is exclusive [start, end), so subtract 1 day to get the last included day
-                      const pillDayEnd   = differenceInCalendarDays(min([addDays(startOfDay(reqEnd), -1), monthEnd]), monthStart);
+                      const pillDayEnd   = differenceInCalendarDays(min([getInclusiveDayEnd(reqEnd), monthEnd]), monthStart);
                       const left  = pillDayStart * DAY_W + 2;
                       const width = Math.max(DAY_W - 4, (pillDayEnd - pillDayStart + 1) * DAY_W - 4);
                       const top   = baseH + 3;
@@ -1005,14 +1020,20 @@ export default function TimelineView({
 
                       if (isCovered) {
                         return (
-                          <div
+                          <button
                             key={`sp-${ev.id}`}
                             className={[styles.coveragePill, styles.coveragePillCovered].join(' ')}
                             style={{ left, top, width, height: COVERAGE_PILL_H }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setCoverMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                            }}
                             title={`Shift covered by ${coveredByName}`}
+                            aria-label={`Shift covered by ${coveredByName} — click to edit coverage`}
                           >
                             ✓ Shift covered by {coveredByName}
-                          </div>
+                          </button>
                         );
                       }
                       return (
@@ -1109,7 +1130,17 @@ export default function TimelineView({
           className={styles.coverPopover}
           style={{ top: coverMenu.rect.bottom + 4, left: coverMenu.rect.left }}
         >
-          <p className={styles.coverPopoverTitle}>Who will cover this shift?</p>
+          <p className={styles.coverPopoverTitle}>
+            {coverMenu.ev?.meta?.coveredBy ? 'Edit shift coverage' : 'Who will cover this shift?'}
+          </p>
+          {coverMenu.ev?.meta?.coveredBy && (
+            <button
+              className={styles.coverEmpBtn}
+              onClick={() => { onCoverageAssign?.(coverMenu.ev, null); setCoverMenu(null); }}
+            >
+              ✕ Remove coverage (mark shift as available)
+            </button>
+          )}
           {employees.filter(e => e.id !== (coverMenu.ev.resource ?? '')).length === 0 ? (
             <p className={styles.coverPopoverEmpty}>No other employees available.</p>
           ) : (

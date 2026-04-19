@@ -832,10 +832,43 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
-    if (!normalizedCoveringEmployeeId) return;
 
     const openShiftCandidates = findLinkedOpenShifts(expandedEvents, ev);
     const primaryOpenShift = openShiftCandidates[0] ?? null;
+    const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
+
+    if (!normalizedCoveringEmployeeId) {
+      const clearedMeta = {
+        ...(ev.meta ?? {}),
+        coveredBy: null,
+      };
+      applyEngineOp(
+        { type: 'update', id: eventId, patch: { meta: clearedMeta }, source: 'api' },
+        () => emitEventSave(eventId, ev, { meta: clearedMeta }),
+      );
+
+      if (primaryOpenShift) {
+        const openId = resolveEventId(primaryOpenShift);
+        if (openId) {
+          const openMeta = {
+            ...(primaryOpenShift.meta ?? {}),
+            coveredBy: null,
+            status: 'open',
+          };
+          applyEngineOp(
+            { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
+            () => emitEventSave(openId, primaryOpenShift, { meta: openMeta }),
+          );
+        }
+      }
+
+      mirroredCoverage.forEach((coverEv) => {
+        const coverId = resolveEventId(coverEv);
+        if (!coverId) return;
+        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => onEventDelete?.(coverId));
+      });
+      return;
+    }
 
     // 1. Mark the shift as covered
     const newMeta = buildCoverageMeta(ev, normalizedCoveringEmployeeId, resolveEventId(primaryOpenShift));
@@ -866,7 +899,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       }
     }
 
-    const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
     mirroredCoverage.slice(1).forEach((duplicateEv) => {
       const duplicateId = resolveEventId(duplicateEv);
       if (!duplicateId) return;
