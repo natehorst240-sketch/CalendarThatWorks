@@ -453,6 +453,42 @@
 }
 .btnCancel:hover { border-color: var(--wc-text-muted); }
 
+/* ─── Tab-grouped chip strip ─────────────────────────────────── */
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.groupDivider {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--wc-border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+.groupHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--wc-text-muted);
+  white-space: nowrap;
+}
+
+.group[data-active="false"] .groupHeader {
+  opacity: 0.55;
+}
+
+.chipWrapDimmed { opacity: 0.45; }
+.chipDimmed { cursor: not-allowed; }
+
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .managePanel {

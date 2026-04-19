@@ -54,3 +54,27 @@ export function isCoveredShift(ev) {
     || ev?.meta?.status === 'covered'
     || ev?.meta?.shiftStatus === 'covered';
 }
+
+export const SCHEDULE_WORKFLOW_CATEGORIES = Object.freeze(new Set([
+  'shift', 'on-call', 'open-shift', 'covering', 'base',
+  'pto', 'PTO', 'availability', 'Availability', 'unavailable', 'Unavailable',
+]));
+
+const SCHEDULE_WORKFLOW_KINDS = new Set([
+  SCHEDULE_KINDS.SHIFT, SCHEDULE_KINDS.ON_CALL,
+  SCHEDULE_KINDS.OPEN_SHIFT, SCHEDULE_KINDS.COVERING,
+]);
+
+export function isScheduleWorkflowEvent(ev): boolean {
+  if (!ev) return false;
+  const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
+  if (kind && SCHEDULE_WORKFLOW_KINDS.has(kind)) return true;
+  if (ev?.meta?.onCall === true) return true;
+  const cat = String(ev?.category ?? '');
+  return SCHEDULE_WORKFLOW_CATEGORIES.has(cat)
+      || SCHEDULE_WORKFLOW_CATEGORIES.has(cat.toLowerCase());
+}
+
+export const SCHEDULE_TAB_CATEGORY_SEEDS = Object.freeze([
+  'base', 'on-call', 'shift', 'PTO', 'availability',
+]);

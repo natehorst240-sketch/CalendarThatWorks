@@ -1,10 +1,10 @@
 /**
  * ProfileBar.jsx — Saved-view chips with add/rename/delete/resave.
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Plus, Bookmark, BookmarkCheck, Pencil, Trash2, RefreshCw, Check, X, Settings2,
-  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes,
+  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, MapPin,
 } from 'lucide-react';
 import { buildFilterSummary } from '../filters/filterState';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
@@ -15,20 +15,27 @@ const PROFILE_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
 
-const VIEW_ICON_MAP = {
+const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
   month:    { Icon: CalendarDays,  label: 'Month view' },
   week:     { Icon: Columns3,      label: 'Week view' },
   day:      { Icon: Calendar,      label: 'Day view' },
   agenda:   { Icon: List,          label: 'Agenda view' },
   schedule: { Icon: CalendarRange, label: 'Schedule view' },
+  base:     { Icon: MapPin,        label: 'Base view' },
   assets:   { Icon: Boxes,         label: 'Assets view' },
 };
+
+const GLOBAL_GROUP_KEY = '__global__';
+const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets'];
 
 export default function ProfileBar({
   views,
   activeId,
   isDirty,
   schema = DEFAULT_FILTER_SCHEMA,
+  currentView,
+  viewOrder = DEFAULT_VIEW_ORDER,
+  locationLabel = 'Base',
   onApply,
   onAdd,
   onResave,
@@ -39,6 +46,20 @@ export default function ProfileBar({
   const [saveOpen,    setSaveOpen]    = useState(false);
   const [manageId,    setManageId]    = useState(null); // which view is being managed
   const scrollRef = useRef(null);
+
+  // Bucket saved views by the tab they were created on. Views with a null /
+  // unknown `view` land in the global bucket so they remain applicable from
+  // any tab (pre-feature backward compat).
+  const grouped = useMemo(() => {
+    const buckets = new Map<string, any[]>();
+    viewOrder.forEach((v: string) => buckets.set(v, []));
+    buckets.set(GLOBAL_GROUP_KEY, []);
+    views.forEach((sv: any) => {
+      const key = sv.view && buckets.has(sv.view) ? sv.view : GLOBAL_GROUP_KEY;
+      buckets.get(key)!.push(sv);
+    });
+    return buckets;
+  }, [views, viewOrder]);
 
   if (views.length === 0 && !saveOpen) {
     // Collapsed state — just a small "Save view" prompt
@@ -52,27 +73,50 @@ export default function ProfileBar({
     );
   }
 
+  const renderChip = (savedView: any, isEnabled: boolean) => (
+    <ViewChip
+      key={savedView.id}
+      savedView={savedView}
+      schema={schema}
+      isActive={savedView.id === activeId}
+      isDirty={isDirty && savedView.id === activeId}
+      isEnabled={isEnabled}
+      isManaging={manageId === savedView.id}
+      onApply={isEnabled
+        ? () => { onApply(savedView); setManageId(null); setSaveOpen(false); }
+        : undefined}
+      onManageToggle={() => setManageId((prev: any) => prev === savedView.id ? null : savedView.id)}
+      onResave={() => { onResave(savedView.id); setManageId(null); }}
+      onDelete={() => { onDelete(savedView.id); setManageId(null); }}
+      onRename={(name: string) => { onUpdate(savedView.id, { name }); setManageId(null); }}
+      onColorChange={(color: string) => onUpdate(savedView.id, { color })}
+      onEditConditions={onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
+    />
+  );
+
+  const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
+
   return (
     <div className={styles.bar}>
       {/* View chip strip */}
       <div className={styles.strip} ref={scrollRef}>
-        {views.map(savedView => (
-          <ViewChip
-            key={savedView.id}
-            savedView={savedView}
-            schema={schema}
-            isActive={savedView.id === activeId}
-            isDirty={isDirty && savedView.id === activeId}
-            isManaging={manageId === savedView.id}
-            onApply={() => { onApply(savedView); setManageId(null); setSaveOpen(false); }}
-            onManageToggle={() => setManageId(prev => prev === savedView.id ? null : savedView.id)}
-            onResave={() => { onResave(savedView.id); setManageId(null); }}
-            onDelete={() => { onDelete(savedView.id); setManageId(null); }}
-            onRename={(name) => { onUpdate(savedView.id, { name }); setManageId(null); }}
-            onColorChange={(color) => onUpdate(savedView.id, { color })}
-            onEditConditions={onEditConditions ? () => { onEditConditions(savedView.id); setManageId(null); } : undefined}
-          />
-        ))}
+        {nonEmpty.map(([key, list], idx) => {
+          const meta = key === GLOBAL_GROUP_KEY
+            ? { Icon: Bookmark, label: 'All views' }
+            : (VIEW_ICON_MAP[key] ?? { Icon: Bookmark, label: key });
+          const headerLabel = key === 'base' ? `${locationLabel} view` : meta.label;
+          const enabled = key === GLOBAL_GROUP_KEY || key === currentView;
+          return (
+            <div key={key} className={styles.group} data-active={enabled ? 'true' : 'false'}>
+              {idx > 0 && <span className={styles.groupDivider} aria-hidden="true" />}
+              <div className={styles.groupHeader} title={enabled ? undefined : `${headerLabel} — switch to this tab to apply`}>
+                <meta.Icon size={11} aria-hidden="true" />
+                <span>{headerLabel}</span>
+              </div>
+              {list.map((sv: any) => renderChip(sv, enabled))}
+            </div>
+          );
+        })}
 
         {/* Add button (inline in strip when views exist) */}
         {!saveOpen && (
@@ -96,7 +140,7 @@ export default function ProfileBar({
 }
 
 /* ─── View Chip ─────────────────────────────────────────────── */
-function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, onManageToggle,
+function ViewChip({ savedView, schema, isActive, isDirty, isEnabled = true, isManaging, onApply, onManageToggle,
   onResave, onDelete, onRename, onColorChange, onEditConditions }) {
 
   const [renaming, setRenaming] = useState(false);
@@ -128,11 +172,12 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
   if (savedView.view) summaryParts.push(`View: ${savedView.view}`);
   const summary = summaryParts.length ? summaryParts.join(' \u00b7 ') : 'No filters applied';
 
-  const chipClass = [styles.chip, isDirty && styles.dirty].filter(Boolean).join(' ');
+  const chipClass = [styles.chip, isDirty && styles.dirty, !isEnabled && styles.chipDimmed].filter(Boolean).join(' ');
   const wrapClass = [
     styles.chipWrap,
     isActive && styles.chipWrapActive,
     isDirty && styles.chipWrapDirty,
+    !isEnabled && styles.chipWrapDimmed,
   ].filter(Boolean).join(' ');
 
   // Pencil is mounted only when its visual is meaningful — fixes the
@@ -154,7 +199,9 @@ function ViewChip({ savedView, schema, isActive, isDirty, isManaging, onApply, o
       <button
         className={chipClass}
         onClick={onApply}
-        title={summary}
+        disabled={!isEnabled}
+        aria-disabled={!isEnabled || undefined}
+        title={isEnabled ? summary : `${summary} — switch to the ${savedView.view ?? ''} tab to apply`}
       >
         {isActive
           ? <BookmarkCheck size={12} className={styles.chipIcon} />
@@ -322,9 +369,8 @@ function FilterSummary({ savedView, schema }: any) {
 
 /* ─── Save Form ────────────────────────────────────────────────── */
 function SaveForm({ onSave, onCancel }: any) {
-  const [name,     setName]     = useState('');
-  const [color,    setColor]    = useState(PROFILE_COLORS[0]);
-  const [pinView,  setPinView]  = useState(false);
+  const [name,  setName]  = useState('');
+  const [color, setColor] = useState(PROFILE_COLORS[0]);
   const inputRef = useRef(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -332,7 +378,7 @@ function SaveForm({ onSave, onCancel }: any) {
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed) { inputRef.current?.focus(); return; }
-    onSave({ name: trimmed, color, pinView });
+    onSave({ name: trimmed, color });
   }
 
   return (
@@ -359,10 +405,9 @@ function SaveForm({ onSave, onCancel }: any) {
         ))}
       </div>
 
-      <label className={styles.pinRow}>
-        <input type="checkbox" checked={pinView} onChange={e => setPinView(e.target.checked)} />
-        Also pin the current view (month/week/day…)
-      </label>
+      <p className={styles.pinRow}>
+        Saved views are now scoped to the current tab.
+      </p>
 
       <div className={styles.saveActions}>
         <button className={styles.btnSave} onClick={handleSave} disabled={!name.trim()}>

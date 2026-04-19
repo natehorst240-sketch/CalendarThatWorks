@@ -491,6 +491,18 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
       {/* ── Bases / Locations ── */}
       <p className={styles.fieldGroupLabel} style={{ marginTop: 16 }}>Bases / Locations</p>
       <p className={styles.sectionDesc}>Define bases, buildings, or regions. Employees can be assigned to one and the schedule can be filtered by base.</p>
+      <div className={styles.fieldRow}>
+        <label style={{ fontSize: 12, color: 'var(--wc-text-muted)', marginRight: 8 }}>Label these as</label>
+        <select
+          className={styles.select}
+          value={config.team?.locationLabel ?? 'Base'}
+          onChange={e => updateTeam({ locationLabel: e.target.value })}
+          aria-label="Location label"
+        >
+          <option value="Base">Base</option>
+          <option value="Region">Region</option>
+        </select>
+      </div>
       {bases.map((b) => (
         <div key={b.id} className={styles.fieldRow}>
           <input
@@ -1098,18 +1110,47 @@ function DisplayTab({ config, onUpdate }: any) {
       },
     }));
 
+  const enabledViews: string[] = Array.isArray(d.enabledViews) ? d.enabledViews : [];
+  const toggleEnabledView = (id: string, on: boolean) => {
+    const next = on
+      ? Array.from(new Set([...enabledViews, id]))
+      : enabledViews.filter(v => v !== id);
+    set('enabledViews', next);
+  };
+
   return (
     <div className={styles.section}>
       <div className={styles.formRow}>
         <span>Default view</span>
         <select className={styles.select} value={d.defaultView} onChange={e => set('defaultView', e.target.value)}>
-          {['month','week','day','agenda','schedule','timeline'].map(v => (
+          {['month','week','day','agenda','schedule','base','assets'].map(v => (
             <option key={v} value={v}>
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </option>
           ))}
         </select>
       </div>
+
+      {/* ── Visible tabs ── */}
+      <p className={styles.fieldGroupLabel} style={{ marginTop: 12 }}>Visible tabs</p>
+      <p className={styles.sectionDesc}>Month and Week are always on. Toggle the rest to keep the top bar focused on what your team uses.</p>
+      {[
+        { id: 'day',      label: 'Day' },
+        { id: 'agenda',   label: 'Agenda' },
+        { id: 'schedule', label: 'Schedule (gantt)' },
+        { id: 'base',     label: `${config.team?.locationLabel ?? 'Base'} (location-first)` },
+        { id: 'assets',   label: 'Assets' },
+      ].map(v => (
+        <label key={v.id} className={styles.toggle}>
+          <span>{v.label}</span>
+          <input
+            type="checkbox"
+            checked={enabledViews.includes(v.id)}
+            onChange={e => toggleEnabledView(v.id, e.target.checked)}
+          />
+          <span className={styles.toggleTrack} />
+        </label>
+      ))}
 
       <div className={styles.formRow}>
         <span>Week starts on</span>

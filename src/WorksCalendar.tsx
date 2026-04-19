@@ -35,7 +35,10 @@ import { validateOperation } from './core/engine/validation/validateOperation.ts
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
-import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, type FilterField } from './filters/filterSchema';
+import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
+import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
+import { useTabScopedEvents } from './hooks/useTabScopedEvents';
+import type { ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
@@ -74,6 +77,7 @@ import DayView                from './views/DayView';
 import AgendaView             from './views/AgendaView';
 import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
+import BaseView               from './views/BaseView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
@@ -199,13 +203,15 @@ function opAnnouncement(op) {
   }
 }
 
-const VIEWS = [
-  { id: 'month',    label: 'Month'    },
-  { id: 'week',     label: 'Week'     },
-  { id: 'day',      label: 'Day'      },
-  { id: 'agenda',   label: 'Agenda'   },
-  { id: 'schedule', label: 'Schedule' },
-  { id: 'assets',   label: 'Assets'   },
+type ViewDef = { id: ViewId; label: string; alwaysOn: boolean };
+const ALL_VIEWS: readonly ViewDef[] = [
+  { id: 'month',    label: 'Month',    alwaysOn: true  },
+  { id: 'week',     label: 'Week',     alwaysOn: true  },
+  { id: 'day',      label: 'Day',      alwaysOn: false },
+  { id: 'agenda',   label: 'Agenda',   alwaysOn: false },
+  { id: 'schedule', label: 'Schedule', alwaysOn: false },
+  { id: 'base',     label: 'Base',     alwaysOn: false },
+  { id: 'assets',   label: 'Assets',   alwaysOn: false },
 ];
 
 const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
@@ -518,9 +524,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       display: {
         ...(prev.display ?? {}),
         defaultView: result.defaultView,
+        enabledViews: result.enabledViews,
       },
       team: {
         ...(prev.team ?? {}),
+        locationLabel: result.locationLabel,
         members: [
           ...((prev.team?.members ?? []) as Array<{ id: unknown }>)
             .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
@@ -563,6 +571,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeAssetsCollapsed, setActiveAssetsCollapsed] = useState<Set<string>>(
     () => new Set(),
   );
+
+  // ── Base/Region view: multi-base selection ──
+  const [selectedBaseIds, setSelectedBaseIds] = useState<string[]>([]);
   const effectiveLocationProvider = useMemo<LocationProvider>(
     () => locationProvider ?? createManualLocationProvider(),
     [locationProvider],
@@ -574,7 +585,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView) => {
     skipDirtyRef.current = true;
@@ -588,6 +599,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       Array.isArray(savedView.collapsedGroups)
         ? new Set(savedView.collapsedGroups)
         : new Set(),
+    );
+    setSelectedBaseIds(
+      Array.isArray(savedView.selectedBaseIds) ? savedView.selectedBaseIds : [],
     );
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
@@ -688,14 +702,41 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [engineVer, range],
   );
 
-  // ── Derive categories / resources / filtered events ──────────────────────
-  // Categories that belong exclusively to the schedule/employee workflow —
-  // they are managed through the EmployeeActionCard, not the generic EventForm.
-  const SCHEDULE_ONLY_CATS = new Set(['pto', 'PTO', 'unavailable', 'Unavailable', 'open-shift', 'availability', 'Availability']);
+  // ── Base/Region view config ───────────────────────────────────────────────
+  const configuredBases = ownerCfg.config?.team?.bases ?? [];
+  const locationLabel   = ownerCfg.config?.team?.locationLabel ?? 'Base';
 
-  const categories    = useMemo(() => getCategories(expandedEvents), [expandedEvents]);
+  // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
+  const VIEWS = useMemo(() => {
+    const enabled = new Set<string>(ownerCfg.config?.display?.enabledViews ?? []);
+    return ALL_VIEWS
+      .filter(v => v.alwaysOn || enabled.has(v.id))
+      .map(v => v.id === 'base' ? { ...v, label: locationLabel } : v);
+  }, [ownerCfg.config?.display?.enabledViews, locationLabel]);
+
+  // Self-heal: if the active tab is no longer enabled, fall back to default/month.
+  useEffect(() => {
+    if (VIEWS.some(v => v.id === cal.view)) return;
+    const fallback = (ownerCfg.config?.display?.defaultView as ViewId) ?? 'month';
+    const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
+    if (cal.view !== target) cal.setView(target);
+  }, [VIEWS, cal, ownerCfg.config?.display?.defaultView]);
+
+  // ── Derive categories / resources / filtered events ──────────────────────
+  // Events scoped to the active tab — drives BOTH FilterBar option lists and
+  // applyFilters, so they can never drift. See src/core/viewScope.ts.
+  const scopedEvents = useTabScopedEvents(cal.view, expandedEvents, {
+    employees: configuredEmployees,
+    assets:    effectiveAssets,
+    bases:     configuredBases,
+    selectedBaseIds,
+  });
+
+  const categories    = useMemo(() => getCategories(scopedEvents), [scopedEvents]);
+  // Categories offered in the generic EventForm — hide schedule-workflow
+  // categories (shift/PTO/etc) which are managed through EmployeeActionCard.
   const eventFormCats = useMemo(
-    () => categories.filter(c => !SCHEDULE_ONLY_CATS.has(c)),
+    () => categories.filter(c => !SCHEDULE_WORKFLOW_CATEGORIES.has(c) && !SCHEDULE_WORKFLOW_CATEGORIES.has(String(c).toLowerCase())),
     [categories],
   );
 
@@ -721,10 +762,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     resolvedAssetRequestCategories.length > 0 &&
     Array.isArray(effectiveAssets) &&
     effectiveAssets.length > 0;
-  const resources     = useMemo(() => getResources(expandedEvents),  [expandedEvents]);
+  const resources     = useMemo(() => getResources(scopedEvents),  [scopedEvents]);
   const filteredEvents = useMemo(
-    () => applyFilters(expandedEvents, cal.filters, schema),
-    [expandedEvents, cal.filters, schema],
+    () => applyFilters(scopedEvents, cal.filters, schema),
+    [scopedEvents, cal.filters, schema],
+  );
+  const filterBarSchema = useMemo(
+    () => viewScopedSchema(schema, cal.view),
+    [schema, cal.view],
   );
   const visibleEvents = useMemo(
     () => (activeSort && activeSort.length > 0
@@ -1869,7 +1914,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { view: cal.view, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds, ...opts }),
               updateView:  savedViews.updateView,
               resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed }),
               deleteView:  handleDeleteView,
@@ -1884,9 +1929,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId={savedViewActiveId}
               isDirty={savedViewDirty}
               schema={schema}
+              currentView={cal.view}
+              viewOrder={ALL_VIEWS.map(v => v.id)}
+              locationLabel={locationLabel}
               onApply={handleApplyView}
-              onAdd={({ name, color, pinView }) =>
-                savedViews.saveView(name, cal.filters, { color, view: pinView ? cal.view : null, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })
+              onAdd={({ name, color }) =>
+                savedViews.saveView(name, cal.filters, { color, view: cal.view, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds })
               }
               onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed })}
               onUpdate={savedViews.updateView}
@@ -1899,20 +1947,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── Filter Bar ── */}
         {renderFilterBar
           ? renderFilterBar({
-              schema,
+              schema:        filterBarSchema,
               filters:       cal.filters,
               setFilter:     cal.setFilter,
               toggleFilter:  cal.toggleFilter,
               clearFilter:   cal.clearFilter,
               clearAllFilters: cal.clearFilters,
-              activePills:   buildActiveFilterPills(cal.filters, schema),
-              items:         expandedEvents,
+              activePills:   buildActiveFilterPills(cal.filters, filterBarSchema),
+              items:         scopedEvents,
             })
           : (
             <FilterBar
-              schema={schema}
+              schema={filterBarSchema}
               filters={cal.filters}
-              items={expandedEvents}
+              items={scopedEvents}
               onChange={cal.setFilter}
               onClear={cal.clearFilter}
               onClearAll={cal.clearFilters}
@@ -1957,6 +2005,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   sort={activeSort}
                   roles={ownerCfg.config?.team?.roles ?? []}
                   bases={ownerCfg.config?.team?.bases ?? []}
+                />
+              )}
+              {cal.view === 'base' && (
+                <BaseView
+                  currentDate={cal.currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  employees={configuredEmployees}
+                  assets={effectiveAssets ?? []}
+                  bases={configuredBases}
+                  locationLabel={locationLabel}
+                  selectedBaseIds={selectedBaseIds}
+                  onBaseSelectionChange={setSelectedBaseIds}
                 />
               )}
               {cal.view === 'assets'   && (

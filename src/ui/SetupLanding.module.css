@@ -328,6 +328,47 @@
   gap: 12px;
 }
 
+/* ── Location label picker (shown in StepTabs when Base is enabled) ────── */
+
+.locationLabelBlock {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid var(--wc-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--wc-surface-alt, rgba(0, 0, 0, 0.02));
+}
+
+.locationLabelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--wc-text, #0f172a);
+}
+
+.locationLabelChoices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chipRadio {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--wc-border, #cbd5e1);
+  background: var(--wc-surface, #ffffff);
+  color: var(--wc-text-muted, #64748b);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chipRadioSelected {
+  background: var(--wc-accent, #3b82f6);
+  border-color: var(--wc-accent, #3b82f6);
+  color: var(--wc-accent-contrast, #ffffff);
+}
+
 /* ── Team ──────────────────────────────────────────────────────────────── */
 
 .teamIllustrationRow {

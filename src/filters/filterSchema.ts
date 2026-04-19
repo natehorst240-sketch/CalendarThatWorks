@@ -438,3 +438,35 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     operators:   defaultOperatorsForType('text'),
   },
 ]
+
+// ─── View-scoped schema shim ─────────────────────────────────────────────────
+//
+// Wraps a schema so that per-tab option lists pick up seed options in addition
+// to values derived from scoped events. The Schedule tab seeds its canonical
+// categories (base/on-call/shift/PTO/availability); other tabs pass through
+// unchanged. Options actually FILTERED by applyFilters still use the raw
+// schema, so legacy saved views with non-seed values keep working.
+import { getViewScope } from '../core/viewScope'
+
+export function viewScopedSchema(schema: FilterField[], view: string): FilterField[] {
+  const scope = getViewScope(view)
+  const seeds = scope.seedCategoryOptions ?? []
+  if (seeds.length === 0) return schema
+  const seedLower = seeds.map(s => s.toLowerCase())
+  return schema.map(field => {
+    if (field.key !== 'categories') return field
+    const baseGetOptions = field.getOptions
+    return {
+      ...field,
+      getOptions: (items: any[]) => {
+        const derived = baseGetOptions ? baseGetOptions(items) : (field.options ?? [])
+        const seen = new Set(derived.map(o => String(o.value).toLowerCase()))
+        const out = derived.slice()
+        seeds.forEach((v, i) => {
+          if (!seen.has(seedLower[i])) out.push({ value: v, label: v })
+        })
+        return out
+      },
+    }
+  })
+}

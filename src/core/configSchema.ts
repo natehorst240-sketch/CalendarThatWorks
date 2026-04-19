@@ -57,6 +57,9 @@ export const DEFAULT_CONFIG = {
     roles: ['Team Lead', 'DevOps / SRE', 'Software Engineer', 'Site Reliability'],
     // Named locations (bases/buildings/regions). Shape: { id: string, name: string }
     bases: [],
+    // UI label for locations — 'Base' or 'Region'. Affects the Base/Region
+    // tab label and any other location-facing copy.
+    locationLabel: 'Base',
   },
 
   // Hover card field visibility
@@ -80,6 +83,10 @@ export const DEFAULT_CONFIG = {
     dayEnd: 22,
     showWeekNumbers: false,
     enlargeMonthRowOnHover: false,
+    // Which view tabs are visible in the top bar. 'month' and 'week' are
+    // always on regardless of this list. Owners toggle the rest from Setup
+    // or ConfigPanel → Views.
+    enabledViews: ['day', 'agenda', 'schedule', 'base', 'assets'],
   },
 
   // Filter UI labels editable by owner/dev

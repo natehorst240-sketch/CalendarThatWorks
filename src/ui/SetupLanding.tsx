@@ -9,8 +9,8 @@
  * Escape hatch: a prominent "Skip setup guide" button marks setup complete
  * and drops the owner straight into the calendar with default config.
  */
-import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2, MapPin } from 'lucide-react';
 import { THEMES } from '../styles/themes';
 import styles from './SetupLanding.module.css';
 import {
@@ -31,10 +31,14 @@ export type SetupRecipeId =
   | 'on-call'
   | 'this-week';
 
+export type OptionalViewId = 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+
 export type SetupLandingResult = {
   calendarName: string;
   theme: string;
-  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule';
+  defaultView: 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets';
+  enabledViews: OptionalViewId[];
+  locationLabel: 'Base' | 'Region';
   teamMembers: Array<{ id: string; name: string; color: string }>;
   recipes: SetupRecipeId[];
 };
@@ -54,19 +58,26 @@ export type SetupLandingProps = {
 /*  Constants                                                                 */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
-const VIEW_CHOICES: Array<{
+type ViewChoice = {
   id: SetupLandingResult['defaultView'];
   label: string;
   plain: string;
-}> = [
-  { id: 'month',    label: 'Month',    plain: 'See one whole month at a time, like a paper calendar.' },
-  { id: 'week',     label: 'Week',     plain: 'See seven days side by side with start and end times.' },
+  alwaysOn?: boolean;
+};
+
+const VIEW_CHOICES: ViewChoice[] = [
+  { id: 'month',    label: 'Month',    plain: 'See one whole month at a time, like a paper calendar.', alwaysOn: true },
+  { id: 'week',     label: 'Week',     plain: 'See seven days side by side with start and end times.', alwaysOn: true },
   { id: 'day',      label: 'Day',      plain: 'Zoom in on a single day, hour by hour.' },
   { id: 'agenda',   label: 'List',     plain: 'A simple list of what is coming up next.' },
   { id: 'schedule', label: 'Schedule', plain: 'One row per person. Great for shifts and coverage.' },
+  { id: 'base',     label: 'Base',     plain: 'One row per location. Shows the assets, people, and events at each base.' },
+  { id: 'assets',   label: 'Assets',   plain: 'One row per asset — vehicles, rooms, equipment.' },
 ];
+
+const OPTIONAL_VIEW_IDS: OptionalViewId[] = ['day', 'agenda', 'schedule', 'base', 'assets'];
 
 const RECIPE_CHOICES: Array<{
   id: SetupRecipeId;
@@ -127,6 +138,8 @@ export default function SetupLanding({
   const [calendarName, setCalendarName] = useState(initialName);
   const [theme, setTheme] = useState(initialTheme);
   const [defaultView, setDefaultView] = useState<SetupLandingResult['defaultView']>('month');
+  const [enabledViews, setEnabledViews] = useState<OptionalViewId[]>([...OPTIONAL_VIEW_IDS]);
+  const [locationLabel, setLocationLabel] = useState<'Base' | 'Region'>('Base');
   const [team, setTeam] = useState(STARTER_TEAM);
   const [recipes, setRecipes] = useState<SetupRecipeId[]>(['everything']);
 
@@ -137,11 +150,27 @@ export default function SetupLanding({
     setRecipes(prev => prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]);
   };
 
+  const toggleEnabledView = (id: OptionalViewId) => {
+    setEnabledViews(prev => prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]);
+  };
+
+  // Views the user can choose as the default (always-on + opted-in optional).
+  const defaultViewChoices = useMemo(
+    () => VIEW_CHOICES.filter(v => v.alwaysOn || enabledViews.includes(v.id as OptionalViewId)),
+    [enabledViews],
+  );
+
+  // If the previously picked default view is now disabled, snap back to month.
+  const safeDefaultView: SetupLandingResult['defaultView'] =
+    defaultViewChoices.some(v => v.id === defaultView) ? defaultView : 'month';
+
   const handleFinish = () => {
     onFinish({
       calendarName: calendarName.trim() || 'My Calendar',
       theme,
-      defaultView,
+      defaultView: safeDefaultView,
+      enabledViews,
+      locationLabel,
       teamMembers: team
         .filter(m => m.name.trim())
         .map(m => ({ id: m.id, name: m.name.trim(), color: m.color })),
@@ -208,12 +237,25 @@ export default function SetupLanding({
             <StepTheme current={theme} onChange={setTheme} />
           )}
           {step === 3 && (
-            <StepView current={defaultView} onChange={setDefaultView} />
+            <StepTabs
+              enabled={enabledViews}
+              onToggle={toggleEnabledView}
+              locationLabel={locationLabel}
+              onLocationLabelChange={setLocationLabel}
+            />
           )}
           {step === 4 && (
-            <StepTeam team={team} onChange={setTeam} />
+            <StepView
+              current={safeDefaultView}
+              onChange={setDefaultView}
+              choices={defaultViewChoices}
+              locationLabel={locationLabel}
+            />
           )}
           {step === 5 && (
+            <StepTeam team={team} onChange={setTeam} />
+          )}
+          {step === 6 && (
             <StepRecipes selected={recipes} onToggle={toggleRecipe} />
           )}
         </main>
@@ -316,12 +358,96 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
   );
 }
 
+function StepTabs({
+  enabled,
+  onToggle,
+  locationLabel,
+  onLocationLabelChange,
+}: {
+  enabled: OptionalViewId[];
+  onToggle: (id: OptionalViewId) => void;
+  locationLabel: 'Base' | 'Region';
+  onLocationLabelChange: (v: 'Base' | 'Region') => void;
+}) {
+  return (
+    <section className={styles.step}>
+      <h2 className={styles.stepTitle}>Which tabs do you want?</h2>
+      <p className={styles.stepPlain}>
+        Keep only the tabs you need. <strong>Month</strong> and <strong>Week</strong> are always on.
+        You can turn any of the others off now — and flip them back on later from settings.
+      </p>
+
+      <div className={styles.viewGrid}>
+        {VIEW_CHOICES.map(v => {
+          const isOptional = !v.alwaysOn;
+          const isOn = v.alwaysOn || enabled.includes(v.id as OptionalViewId);
+          const label = v.id === 'base' ? locationLabel : v.label;
+          return (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => isOptional && onToggle(v.id as OptionalViewId)}
+              className={[styles.viewCard, isOn && styles.cardSelected].filter(Boolean).join(' ')}
+              aria-pressed={isOn}
+              aria-disabled={!isOptional}
+              disabled={!isOptional}
+              title={!isOptional ? 'Always on' : undefined}
+            >
+              <IllustrationView kind={illustrationKindFor(v.id)} />
+              <div className={styles.viewMeta}>
+                <span className={styles.viewLabel}>{label}</span>
+                {isOn && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
+              </div>
+              <span className={styles.viewBlurb}>
+                {!isOptional ? `${v.plain} (always on)` : v.plain}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {enabled.includes('base') && (
+        <div className={styles.locationLabelBlock}>
+          <div className={styles.locationLabelHeader}>
+            <MapPin size={14} aria-hidden="true" />
+            <span className={styles.fieldLabel}>What do you call your locations?</span>
+          </div>
+          <p className={styles.stepPlain}>
+            Pick the word that matches how your team talks. This shows up as the tab name
+            and in saved views.
+          </p>
+          <div className={styles.locationLabelChoices}>
+            {(['Base', 'Region'] as const).map(value => {
+              const selected = locationLabel === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={[styles.chipRadio, selected && styles.chipRadioSelected].filter(Boolean).join(' ')}
+                  aria-pressed={selected}
+                  onClick={() => onLocationLabelChange(value)}
+                >
+                  {value}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function StepView({
   current,
   onChange,
+  choices,
+  locationLabel,
 }: {
   current: SetupLandingResult['defaultView'];
   onChange: (v: SetupLandingResult['defaultView']) => void;
+  choices: ViewChoice[];
+  locationLabel: 'Base' | 'Region';
 }) {
   return (
     <section className={styles.step}>
@@ -331,8 +457,9 @@ function StepView({
       </p>
 
       <div className={styles.viewGrid}>
-        {VIEW_CHOICES.map(v => {
+        {choices.map(v => {
           const selected = current === v.id;
+          const label = v.id === 'base' ? locationLabel : v.label;
           return (
             <button
               key={v.id}
@@ -341,9 +468,9 @@ function StepView({
               className={[styles.viewCard, selected && styles.cardSelected].filter(Boolean).join(' ')}
               aria-pressed={selected}
             >
-              <IllustrationView kind={v.id} />
+              <IllustrationView kind={illustrationKindFor(v.id)} />
               <div className={styles.viewMeta}>
-                <span className={styles.viewLabel}>{v.label}</span>
+                <span className={styles.viewLabel}>{label}</span>
                 {selected && <span className={styles.selectedMark}><Check size={12} aria-hidden="true" /></span>}
               </div>
               <span className={styles.viewBlurb}>{v.plain}</span>
@@ -467,6 +594,12 @@ function StepRecipes({
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Utilities                                                                 */
 /* ────────────────────────────────────────────────────────────────────────── */
+
+/** Map setup view ids to illustration kinds. Base/assets reuse the schedule illustration. */
+function illustrationKindFor(id: SetupLandingResult['defaultView']): 'month' | 'week' | 'day' | 'agenda' | 'schedule' {
+  if (id === 'base' || id === 'assets') return 'schedule';
+  return id;
+}
 
 /** Strip jargon words from theme descriptions so 5th-graders get the gist. */
 function simpleBlurb(desc: string): string {
