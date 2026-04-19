@@ -38,7 +38,7 @@ import { applyFilters, getCategories, getResources } from './filters/filterEngin
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
-import type { ViewId } from './core/viewScope';
+import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
@@ -1775,6 +1775,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     showAllGroups: activeShowAllGroups,
   };
 
+  const savedViewCaptureCtx = {
+    groupBy:         activeGroupBy,
+    sort:            activeSort,
+    showAllGroups:   activeShowAllGroups,
+    zoomLevel:       activeAssetsZoom,
+    collapsedGroups: activeAssetsCollapsed,
+    selectedBaseIds,
+  };
+
   if (shouldShowSetup) {
     return (
       <CalendarErrorBoundary>
@@ -1915,9 +1924,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { view: cal.view, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds, ...opts }),
+              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx), ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds }),
+              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx)),
               deleteView:  handleDeleteView,
               toggleStripVisibility: savedViews.toggleStripVisibility,
               clearFilters: cal.clearFilters,
@@ -1940,9 +1949,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               hasActiveFilters={hasActiveFilters(cal.filters, schema)}
               onApply={handleApplyView}
               onAdd={({ name, color }) =>
-                savedViews.saveView(name, cal.filters, { color, view: cal.view, groupBy: activeGroupBy, sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds })
+                savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, { sort: activeSort, showAllGroups: activeShowAllGroups, zoomLevel: activeAssetsZoom, collapsedGroups: activeAssetsCollapsed, selectedBaseIds })}
+              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
               onToggleVisibility={savedViews.toggleStripVisibility}
