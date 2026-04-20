@@ -1,0 +1,123 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--wc-bg-muted, #f9fafb);
+  border: 1px solid var(--wc-border, #d1d5db);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.node {
+  cursor: grab;
+}
+
+.node.dragging {
+  cursor: grabbing;
+}
+
+.nodeRect {
+  fill: var(--wc-bg, #ffffff);
+  stroke: var(--wc-border, #d1d5db);
+  stroke-width: 1.5;
+  rx: 6;
+  ry: 6;
+}
+
+.node:focus-visible {
+  outline: none;
+}
+
+.node:focus-visible .nodeRect,
+.nodeSelected .nodeRect {
+  stroke: var(--wc-accent, #2563eb);
+  stroke-width: 2;
+}
+
+.nodeActive .nodeRect {
+  stroke: var(--wc-success, #16a34a);
+  stroke-width: 3;
+  animation: wc-node-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes wc-node-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(22, 163, 74, 0.5)); }
+  50%      { filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.6)); }
+}
+
+.nodeKindApproval .nodeRect { fill: #eff6ff; }
+.nodeKindCondition .nodeRect { fill: #fefce8; }
+.nodeKindNotify .nodeRect { fill: #f3e8ff; }
+.nodeKindTerminal .nodeRect { fill: #f3f4f6; }
+
+.nodeKind {
+  font: 10px var(--wc-font, system-ui, sans-serif);
+  fill: var(--wc-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.nodeLabel {
+  font: 12px var(--wc-font, system-ui, sans-serif);
+  fill: var(--wc-text, #111827);
+  pointer-events: none;
+  user-select: none;
+}
+
+.handle {
+  fill: var(--wc-accent, #2563eb);
+  stroke: var(--wc-bg, #fff);
+  stroke-width: 1.5;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+
+.node:hover .handle,
+.node:focus-within .handle,
+.nodeSelected .handle,
+.edgeDrawSource .handle {
+  opacity: 1;
+}
+
+.edgeDrawSource .nodeRect {
+  stroke: var(--wc-accent, #2563eb);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--wc-muted, #6b7280);
+  stroke-width: 1.5;
+}
+
+.edgeGuard {
+  font: 10px var(--wc-font, system-ui, sans-serif);
+  fill: var(--wc-text, #111827);
+  pointer-events: none;
+  user-select: none;
+}
+
+.edgeGuardBg {
+  fill: var(--wc-bg, #fff);
+  stroke: var(--wc-border, #d1d5db);
+}
+
+.liveRegion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
