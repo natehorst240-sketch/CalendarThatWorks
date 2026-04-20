@@ -15,6 +15,11 @@
  * overall severity.
  */
 import type { Violation } from './engine/validation/validationTypes'
+import type { EngineResource } from './engine/schema/resourceSchema'
+import type { Assignment } from './engine/schema/assignmentSchema'
+import type { CategoryDef } from '../types/assets'
+import { parseHoursString } from './engine/time/dateMath'
+import { partsInTimezone } from './engine/time/timezone'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +38,9 @@ export type ConflictRule =
   | ResourceOverlapRule
   | CategoryMutexRule
   | MinRestRule
+  | CapacityOverflowRule
+  | OutsideBusinessHoursRule
+  | PolicyViolationRule
 
 export interface ResourceOverlapRule {
   readonly id: string
@@ -58,6 +66,40 @@ export interface MinRestRule {
   readonly minutes: number
 }
 
+export interface CapacityOverflowRule {
+  readonly id: string
+  readonly type: 'capacity-overflow'
+  /** Defaults to 'hard' — capacity is a physical constraint, not a hint. */
+  readonly severity?: 'soft' | 'hard'
+  /** Skip when the proposed event's category matches any of these. */
+  readonly ignoreCategories?: readonly string[]
+}
+
+export interface OutsideBusinessHoursRule {
+  readonly id: string
+  readonly type: 'outside-business-hours'
+  /** Defaults to 'soft' — users often book outside hours intentionally. */
+  readonly severity?: 'soft' | 'hard'
+  /** Skip when the proposed event's category matches any of these. */
+  readonly ignoreCategories?: readonly string[]
+}
+
+export interface PolicyViolationRule {
+  readonly id: string
+  readonly type: 'policy-violation'
+  /**
+   * Defaults to 'hard' — policies are owner-set constraints on bookings.
+   * Owners can relax to 'soft' to surface a warning only.
+   */
+  readonly severity?: 'soft' | 'hard'
+  /**
+   * Which policy sub-checks to run. Defaults to all four when omitted.
+   * Allows owners to tune a single rule per sub-check if they want
+   * independent severities (e.g., blackouts=hard, lead-time=soft).
+   */
+  readonly checks?: readonly ('min-lead-time' | 'max-duration' | 'max-advance' | 'blackout-dates')[]
+}
+
 export interface ConflictEvaluationResult {
   readonly violations: readonly Violation[]
   readonly severity: 'none' | 'soft' | 'hard'
@@ -74,6 +116,33 @@ export interface EvaluateConflictsInput {
   readonly rules: readonly ConflictRule[]
   /** Master switch — when false, returns `VALID` without running any rule. */
   readonly enabled?: boolean
+  /**
+   * Resource records keyed by id. Required for `capacity-overflow` and
+   * `outside-business-hours` rules; other rules ignore this map. When the
+   * proposed event's resource is not in the map, capacity/hours rules skip
+   * silently (unknown capacity / hours ⇒ cannot evaluate ⇒ no violation).
+   */
+  readonly resources?: ReadonlyMap<string, EngineResource>
+  /**
+   * Assignment records keyed by assignment id. When provided, the
+   * capacity-overflow rule sums `units` per overlapping same-resource
+   * assignment; when absent, each overlapping event is assumed to occupy
+   * 100 units (one full slot).
+   */
+  readonly assignments?: ReadonlyMap<string, Assignment>
+  /**
+   * Category definitions keyed by category id. Required for the
+   * `policy-violation` rule (#213); ignored by every other rule. When
+   * the proposed event's category is not in the map or has no `policy`
+   * block, the rule skips silently.
+   */
+  readonly categories?: ReadonlyMap<string, CategoryDef>
+  /**
+   * "Now" reference for time-based policy checks (min-lead-time,
+   * max-advance). Defaults to `Date.now()`. Overridable for
+   * deterministic tests.
+   */
+  readonly now?: Date | string | number
 }
 
 const VALID: ConflictEvaluationResult = {
@@ -152,6 +221,255 @@ function evalCategoryMutex(
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** Units a single event contributes to the resource's workload for capacity checks. */
+function unitsFor(
+  event: ConflictEvent,
+  resourceId: string,
+  assignments: ReadonlyMap<string, Assignment> | undefined,
+): number {
+  if (!assignments) return 100
+  let total = 0
+  let matched = false
+  for (const a of assignments.values()) {
+    if (a.eventId === event.id && a.resourceId === resourceId) {
+      total += a.units
+      matched = true
+    }
+  }
+  return matched ? total : 100
+}
+
+function evalCapacityOverflow(
+  rule: CapacityOverflowRule,
+  proposed: ConflictEvent,
+  events: readonly ConflictEvent[],
+  resources: ReadonlyMap<string, EngineResource> | undefined,
+  assignments: ReadonlyMap<string, Assignment> | undefined,
+): Violation | null {
+  if (!resources) return null
+  const ignore = new Set(rule.ignoreCategories ?? [])
+  if (proposed.category && ignore.has(proposed.category)) return null
+
+  const resourceId = proposed.resource ?? ''
+  if (!resourceId) return null
+  const resource = resources.get(resourceId)
+  // Unknown capacity (missing resource or null capacity) ⇒ unlimited ⇒ skip.
+  if (!resource || resource.capacity == null) return null
+  const capacityUnits = resource.capacity * 100
+
+  const ps = toDate(proposed.start)
+  const pe = toDate(proposed.end)
+
+  const proposedUnits = unitsFor(proposed, resourceId, assignments)
+  let totalUnits = proposedUnits
+  for (const other of events) {
+    if (other.id && proposed.id && other.id === proposed.id) continue
+    if (!sameResource(proposed, other)) continue
+    const os = toDate(other.start)
+    const oe = toDate(other.end)
+    if (!overlaps(ps, pe, os, oe)) continue
+    totalUnits += unitsFor(other, resourceId, assignments)
+  }
+
+  if (totalUnits <= capacityUnits) return null
+  return {
+    rule: rule.id,
+    severity: rule.severity ?? 'hard',
+    message: `Resource "${resource.name}" over capacity (${totalUnits / 100} of ${resource.capacity}).`,
+    details: { type: 'capacity-overflow', totalUnits, capacityUnits },
+  }
+}
+
+function evalOutsideBusinessHours(
+  rule: OutsideBusinessHoursRule,
+  proposed: ConflictEvent,
+  resources: ReadonlyMap<string, EngineResource> | undefined,
+): Violation | null {
+  if (!resources) return null
+  const ignore = new Set(rule.ignoreCategories ?? [])
+  if (proposed.category && ignore.has(proposed.category)) return null
+
+  const resourceId = proposed.resource ?? ''
+  if (!resourceId) return null
+  const resource = resources.get(resourceId)
+  if (!resource?.businessHours) return null
+
+  const ps = toDate(proposed.start)
+  const pe = toDate(proposed.end)
+
+  // Skip multi-day spans — "outside hours" isn't meaningful for them.
+  if (pe.getTime() - ps.getTime() >= DAY_MS) return null
+
+  const tz = resource.timezone ?? 'UTC'
+  const startParts = partsInTimezone(ps, tz)
+  // Day-of-week is computed by treating the wall-clock date as UTC and
+  // reading getUTCDay() — avoids double timezone shift from local Date.
+  const startDow = new Date(Date.UTC(
+    startParts.year, startParts.month - 1, startParts.day,
+  )).getUTCDay()
+
+  const bizDays = resource.businessHours.days
+  if (!bizDays.includes(startDow)) {
+    return {
+      rule: rule.id,
+      severity: rule.severity ?? 'soft',
+      message: `"${resource.name}" is closed on this day.`,
+      details: { type: 'outside-business-hours', reason: 'closed-day', dayOfWeek: startDow },
+    }
+  }
+
+  const endParts = partsInTimezone(pe, tz)
+  const bizStart = parseHoursString(resource.businessHours.start)
+  const bizEnd   = parseHoursString(resource.businessHours.end)
+  const evStartH = startParts.hour + startParts.minute / 60
+  const evEndHRaw = endParts.hour + endParts.minute / 60
+  // Midnight end (00:00) means "runs to end of day" — treat as 24.
+  const evEndH = evEndHRaw === 0 ? 24 : evEndHRaw
+
+  if (evStartH < bizStart || evEndH > bizEnd) {
+    return {
+      rule: rule.id,
+      severity: rule.severity ?? 'soft',
+      message: `"${resource.name}" is only open ${resource.businessHours.start}–${resource.businessHours.end}.`,
+      details: {
+        type: 'outside-business-hours',
+        reason: 'outside-hours',
+        proposedStartHour: evStartH,
+        proposedEndHour: evEndH,
+      },
+    }
+  }
+
+  return null
+}
+
+/** Format a Date as `YYYY-MM-DD` in the given IANA zone (UTC when unset). */
+function dateKey(d: Date, tz: string | undefined): string {
+  if (!tz || tz === 'UTC') {
+    const y = d.getUTCFullYear()
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(d.getUTCDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  const parts = partsInTimezone(d, tz)
+  const m = String(parts.month).padStart(2, '0')
+  const day = String(parts.day).padStart(2, '0')
+  return `${parts.year}-${m}-${day}`
+}
+
+function evalPolicyViolation(
+  rule: PolicyViolationRule,
+  proposed: ConflictEvent,
+  categories: ReadonlyMap<string, CategoryDef> | undefined,
+  resources: ReadonlyMap<string, EngineResource> | undefined,
+  nowMs: number,
+): Violation[] {
+  if (!categories) return []
+  const categoryId = proposed.category ?? ''
+  if (!categoryId) return []
+  const category = categories.get(categoryId)
+  const policy = category?.policy
+  if (!policy) return []
+
+  const active = new Set(rule.checks ?? ['min-lead-time', 'max-duration', 'max-advance', 'blackout-dates'])
+  const severity = rule.severity ?? 'hard'
+  const ps = toDate(proposed.start)
+  const pe = toDate(proposed.end)
+  const out: Violation[] = []
+
+  if (active.has('min-lead-time') && typeof policy.minLeadTimeMinutes === 'number' && policy.minLeadTimeMinutes > 0) {
+    const leadMs = ps.getTime() - nowMs
+    const requiredMs = policy.minLeadTimeMinutes * 60_000
+    if (leadMs < requiredMs) {
+      out.push({
+        rule: rule.id,
+        severity,
+        message: `Category "${category?.label ?? categoryId}" requires ≥${policy.minLeadTimeMinutes} min lead time.`,
+        details: {
+          type: 'policy-violation',
+          check: 'min-lead-time',
+          leadMinutes: Math.max(0, leadMs / 60_000),
+          requiredMinutes: policy.minLeadTimeMinutes,
+        },
+      })
+    }
+  }
+
+  if (active.has('max-duration') && typeof policy.maxDurationMinutes === 'number' && policy.maxDurationMinutes > 0) {
+    const durMinutes = (pe.getTime() - ps.getTime()) / 60_000
+    if (durMinutes > policy.maxDurationMinutes) {
+      out.push({
+        rule: rule.id,
+        severity,
+        message: `Category "${category?.label ?? categoryId}" caps duration at ${policy.maxDurationMinutes} min.`,
+        details: {
+          type: 'policy-violation',
+          check: 'max-duration',
+          durationMinutes: durMinutes,
+          maxMinutes: policy.maxDurationMinutes,
+        },
+      })
+    }
+  }
+
+  if (active.has('max-advance') && typeof policy.maxAdvanceDays === 'number' && policy.maxAdvanceDays >= 0) {
+    const advanceMs = ps.getTime() - nowMs
+    const maxMs = policy.maxAdvanceDays * DAY_MS
+    if (advanceMs > maxMs) {
+      out.push({
+        rule: rule.id,
+        severity,
+        message: `Category "${category?.label ?? categoryId}" cannot be booked more than ${policy.maxAdvanceDays} day(s) in advance.`,
+        details: {
+          type: 'policy-violation',
+          check: 'max-advance',
+          advanceDays: advanceMs / DAY_MS,
+          maxDays: policy.maxAdvanceDays,
+        },
+      })
+    }
+  }
+
+  if (active.has('blackout-dates') && policy.blackoutDates && policy.blackoutDates.length > 0) {
+    const tz = proposed.resource
+      ? resources?.get(proposed.resource)?.timezone
+      : undefined
+    const blackoutSet = new Set(policy.blackoutDates)
+    // Check every calendar date the event touches (in the resource's zone).
+    const endInclusive = new Date(pe.getTime() - 1)
+    const startKey = dateKey(ps, tz)
+    const endKey = dateKey(endInclusive, tz)
+    let hit: string | null = null
+    if (blackoutSet.has(startKey)) hit = startKey
+    else if (startKey !== endKey && blackoutSet.has(endKey)) hit = endKey
+    else if (startKey !== endKey) {
+      // Multi-day: walk each calendar day between start + end, inclusive.
+      const cursor = new Date(ps.getTime())
+      while (cursor <= endInclusive) {
+        const k = dateKey(cursor, tz)
+        if (blackoutSet.has(k)) { hit = k; break }
+        cursor.setUTCDate(cursor.getUTCDate() + 1)
+      }
+    }
+    if (hit) {
+      out.push({
+        rule: rule.id,
+        severity,
+        message: `Category "${category?.label ?? categoryId}" is blacked out on ${hit}.`,
+        details: {
+          type: 'policy-violation',
+          check: 'blackout-dates',
+          blackoutDate: hit,
+        },
+      })
+    }
+  }
+
+  return out
+}
+
 function evalMinRest(
   rule: MinRestRule,
   proposed: ConflictEvent,
@@ -191,10 +509,32 @@ function evalMinRest(
  * pure and side-effect-free so the result is fully memoisable by caller.
  */
 export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvaluationResult {
-  const { proposed, events, rules, enabled = true } = input
+  const { proposed, events, rules, enabled = true, resources, assignments, categories, now } = input
   if (!enabled || rules.length === 0) return VALID
 
+  const nowMs = now !== undefined ? toDate(now).getTime() : Date.now()
   const violations: Violation[] = []
+
+  // Single-pass (non-pairwise) rules — evaluated once per rule.
+  for (const rule of rules) {
+    let v: Violation | null = null
+    switch (rule.type) {
+      case 'capacity-overflow':
+        v = evalCapacityOverflow(rule, proposed, events, resources, assignments)
+        break
+      case 'outside-business-hours':
+        v = evalOutsideBusinessHours(rule, proposed, resources)
+        break
+      case 'policy-violation':
+        violations.push(...evalPolicyViolation(rule, proposed, categories, resources, nowMs))
+        break
+      default:
+        break
+    }
+    if (v) violations.push(v)
+  }
+
+  // Pairwise rules — evaluated for every (other, rule) combination.
   for (const other of events) {
     if (other.id && proposed.id && other.id === proposed.id) continue
     for (const rule of rules) {
@@ -222,4 +562,7 @@ export const CONFLICT_RULE_TYPES: readonly ConflictRule['type'][] = [
   'resource-overlap',
   'category-mutex',
   'min-rest',
+  'capacity-overflow',
+  'outside-business-hours',
+  'policy-violation',
 ] as const

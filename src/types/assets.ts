@@ -31,8 +31,16 @@ export type ApprovalStageId =
 export type ApprovalActionId =
   | 'submit' | 'approve' | 'deny' | 'downgrade' | 'finalize';
 
+/**
+ * Superset of `ApprovalActionId` that the history log records. `revoke`
+ * is a reducer-level action (reopen a terminal stage) that does not
+ * appear in the owner-configurable action menu but IS persisted in the
+ * audit trail when the reducer is invoked.
+ */
+export type ApprovalHistoryActionId = ApprovalActionId | 'revoke';
+
 export interface ApprovalHistoryEntry {
-  action: ApprovalActionId;
+  action: ApprovalHistoryActionId;
   /** ISO timestamp. */
   at: string;
   /** Actor display name or id. Optional — host may redact. */
@@ -224,6 +232,42 @@ export interface CategoryDef {
   approvalTier?: 1 | 2;
   /** Disabled categories stay in historical data but can't be selected new. */
   disabled?: boolean;
+  /**
+   * Booking policy — enforced by the `policy-violation` conflict rule
+   * (issue #213). Host surfaces violations in the conflict drawer just
+   * like overlap/capacity rules; keeps lead-time / duration / blackouts
+   * as *data* so owners tune them from ConfigPanel without host JS.
+   */
+  policy?: BookingPolicy;
+}
+
+/**
+ * Per-category booking constraints. Every field is optional; a category
+ * with no policy is unconstrained. Checked by the `policy-violation`
+ * conflict rule (see `src/core/conflictEngine.ts`).
+ */
+export interface BookingPolicy {
+  /**
+   * Minimum time between "now" and the event start, in minutes. Blocks
+   * last-minute bookings. `0` or unset disables the check.
+   */
+  minLeadTimeMinutes?: number;
+  /**
+   * Maximum event duration in minutes. Blocks over-long holds. Unset
+   * disables the check; `0` is treated as unset (any duration allowed).
+   */
+  maxDurationMinutes?: number;
+  /**
+   * Maximum days in advance the event can be booked — i.e., the event
+   * start must be ≤ now + `maxAdvanceDays`. Unset disables the check.
+   */
+  maxAdvanceDays?: number;
+  /**
+   * Calendar dates on which this category may not be booked. Strings in
+   * `YYYY-MM-DD` form, interpreted in the *resource's* timezone when one
+   * is available, else UTC. Intended for holidays + corporate blackouts.
+   */
+  blackoutDates?: readonly string[];
 }
 
 export interface CategoriesConfig {
