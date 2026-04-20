@@ -105,8 +105,18 @@ export class CalendarEngine {
   private _state: CalendarState;
   private _listeners: Set<StateListener> = new Set();
 
+  // ── Assignment indexes (issue #221) ───────────────────────────────────────
+  //
+  // Maintained alongside `_state.assignments` so resource/event lookups are
+  // O(k) in the number of matching assignments rather than O(n) over all.
+  // Rebuilt wholesale on bulk replacement (setAssignments / restoreState /
+  // reset) and updated incrementally on single-assignment mutations.
+  private _assignmentsByResource: Map<string, Set<string>> = new Map();
+  private _assignmentsByEvent:    Map<string, Set<string>> = new Map();
+
   constructor(init: CalendarEngineInit = {}) {
     this._state = createInitialState(init);
+    this._rebuildAssignmentIndex();
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -220,6 +230,7 @@ export class CalendarEngine {
       config: this._state.config,
       ...init,
     });
+    this._rebuildAssignmentIndex();
     this._notify();
   }
 
@@ -229,42 +240,76 @@ export class CalendarEngine {
   setAssignments(assignments: ReadonlyArray<Assignment>): void {
     const map = new Map<string, Assignment>(assignments.map(a => [a.id, a]));
     this._state = { ...this._state, assignments: map };
+    this._rebuildAssignmentIndex();
     this._notify();
   }
 
   /** Add or replace a single assignment. */
   upsertAssignment(assignment: Assignment): void {
+    const existing = this._state.assignments.get(assignment.id);
     const map = new Map(this._state.assignments);
     map.set(assignment.id, assignment);
     this._state = { ...this._state, assignments: map };
+    if (existing) this._removeFromAssignmentIndex(existing);
+    this._addToAssignmentIndex(assignment);
     this._notify();
   }
 
   /** Remove a single assignment by id. No-op when not found. */
   removeAssignment(id: string): void {
-    if (!this._state.assignments.has(id)) return;
+    const existing = this._state.assignments.get(id);
+    if (!existing) return;
     const map = new Map(this._state.assignments);
     map.delete(id);
     this._state = { ...this._state, assignments: map };
+    this._removeFromAssignmentIndex(existing);
     this._notify();
   }
 
-  /** Return all assignments for a given event. */
+  /**
+   * Return all assignments for a given event. O(k) via the event index
+   * (issue #221); k = number of resources assigned to the event.
+   */
   getAssignmentsForEvent(eventId: string): Assignment[] {
-    const result: Assignment[] = [];
-    for (const a of this._state.assignments.values()) {
-      if (a.eventId === eventId) result.push(a);
+    const ids = this._assignmentsByEvent.get(eventId);
+    if (!ids) return [];
+    const out: Assignment[] = [];
+    for (const id of ids) {
+      const a = this._state.assignments.get(id);
+      if (a) out.push(a);
     }
-    return result;
+    return out;
   }
 
-  /** Return all assignments for a given resource. */
+  /**
+   * Return all assignments for a given resource. O(k) via the resource
+   * index (issue #221); k = number of events using the resource.
+   */
   getAssignmentsForResource(resourceId: string): Assignment[] {
-    const result: Assignment[] = [];
-    for (const a of this._state.assignments.values()) {
-      if (a.resourceId === resourceId) result.push(a);
+    const ids = this._assignmentsByResource.get(resourceId);
+    if (!ids) return [];
+    const out: Assignment[] = [];
+    for (const id of ids) {
+      const a = this._state.assignments.get(id);
+      if (a) out.push(a);
     }
-    return result;
+    return out;
+  }
+
+  /**
+   * Indexed workload sum — total `units` across all assignments for the
+   * resource. O(k) via the resource index. Equivalent to
+   * `workloadForResource(state.assignments, id)` but avoids the full scan.
+   */
+  workloadForResource(resourceId: string): number {
+    const ids = this._assignmentsByResource.get(resourceId);
+    if (!ids) return 0;
+    let total = 0;
+    for (const id of ids) {
+      const a = this._state.assignments.get(id);
+      if (a) total += a.units;
+    }
+    return total;
   }
 
   // ── Dependency CRUD ────────────────────────────────────────────────────────────
@@ -385,6 +430,7 @@ export class CalendarEngine {
       ...(snapshot.dependencies      != null && { dependencies:      snapshot.dependencies }),
       ...(snapshot.resourceCalendars != null && { resourceCalendars: snapshot.resourceCalendars }),
     };
+    if (snapshot.assignments != null) this._rebuildAssignmentIndex();
     this._notify();
   }
 
@@ -397,6 +443,39 @@ export class CalendarEngine {
       } catch (err) {
         console.error('[CalendarEngine] Listener threw:', err);
       }
+    }
+  }
+
+  // ── Assignment index maintenance (issue #221) ─────────────────────────────
+
+  private _rebuildAssignmentIndex(): void {
+    this._assignmentsByResource = new Map();
+    this._assignmentsByEvent    = new Map();
+    for (const a of this._state.assignments.values()) {
+      this._addToAssignmentIndex(a);
+    }
+  }
+
+  private _addToAssignmentIndex(a: Assignment): void {
+    let byR = this._assignmentsByResource.get(a.resourceId);
+    if (!byR) { byR = new Set(); this._assignmentsByResource.set(a.resourceId, byR); }
+    byR.add(a.id);
+
+    let byE = this._assignmentsByEvent.get(a.eventId);
+    if (!byE) { byE = new Set(); this._assignmentsByEvent.set(a.eventId, byE); }
+    byE.add(a.id);
+  }
+
+  private _removeFromAssignmentIndex(a: Assignment): void {
+    const byR = this._assignmentsByResource.get(a.resourceId);
+    if (byR) {
+      byR.delete(a.id);
+      if (byR.size === 0) this._assignmentsByResource.delete(a.resourceId);
+    }
+    const byE = this._assignmentsByEvent.get(a.eventId);
+    if (byE) {
+      byE.delete(a.id);
+      if (byE.size === 0) this._assignmentsByEvent.delete(a.eventId);
     }
   }
 }
