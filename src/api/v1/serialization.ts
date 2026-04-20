@@ -56,6 +56,12 @@ export interface SerializedEvent {
   readonly exdates: readonly string[];
   readonly constraints: readonly SerializedConstraint[];
   readonly meta: Readonly<Record<string, unknown>>;
+  /**
+   * Tenant scope — mirrors `EngineEvent.tenantId` (#218). Omitted entirely
+   * when the source event is unscoped, so persisted shapes stay compatible
+   * with older payloads.
+   */
+  readonly tenantId?: string;
 }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -150,6 +156,7 @@ export function serializeEvent(ev: EngineEvent): SerializedEvent {
     exdates:      ev.exdates.map(d => d.toISOString()),
     constraints:  ev.constraints.map(serializeConstraint),
     meta:         ev.meta,
+    ...(ev.tenantId !== undefined ? { tenantId: ev.tenantId } : {}),
   };
 }
 
@@ -173,5 +180,6 @@ export function deserializeEvent(raw: SerializedEvent): EngineEvent {
     exdates:      raw.exdates.map(s => deserializeDate(s)),
     constraints:  raw.constraints.map(deserializeConstraint),
     meta:         raw.meta,
+    ...(raw.tenantId !== undefined ? { tenantId: raw.tenantId } : {}),
   };
 }
