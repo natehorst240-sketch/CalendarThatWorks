@@ -17,6 +17,8 @@ import type {
   ApprovalStageId,
   ApprovalHistoryEntry,
 } from '../../types/assets'
+import { advance, type WorkflowAction, type WorkflowEmitEvent } from '../workflow/advance'
+import type { Workflow, WorkflowInstance } from '../workflow/workflowSchema'
 import { appendAuditEntry } from './auditChain'
 
 // ─── Errors ───────────────────────────────────────────────────────────────
@@ -25,6 +27,7 @@ export type TransitionErrorCode =
   | 'ILLEGAL_TRANSITION'
   | 'DENY_REQUIRES_REASON'
   | 'INVALID_STAGE'
+  | 'WORKFLOW_FAILED'
 
 export interface TransitionError {
   readonly code: TransitionErrorCode
@@ -36,7 +39,18 @@ export interface TransitionError {
 // ─── Result type (Result<T, E>) ───────────────────────────────────────────
 
 export type TransitionResult =
-  | { readonly ok: true; readonly stage: ApprovalStage }
+  | {
+      readonly ok: true
+      readonly stage: ApprovalStage
+      /**
+       * Populated only when a `workflow` was supplied to `transitionApproval`
+       * and the interpreter took the action. Host persists on
+       * `event.meta.workflowInstance`.
+       */
+      readonly workflowInstance?: WorkflowInstance
+      /** Lifecycle events emitted during this advance; absent when no workflow ran. */
+      readonly emit?: readonly WorkflowEmitEvent[]
+    }
   | { readonly ok: false; readonly error: TransitionError }
 
 // ─── Legal transition table ───────────────────────────────────────────────
@@ -124,6 +138,38 @@ export interface TransitionInput {
   readonly reason?: string
   /** ISO timestamp for determinism in tests; defaults to `new Date().toISOString()`. */
   readonly at?: string
+  /**
+   * Optional workflow DSL integration (#219). When supplied alongside
+   * `workflowInstance`, the reducer advances the interpreter in lockstep
+   * with the approval stage. Submit/approve/deny map to start/approve/deny
+   * workflow actions; revoke/downgrade/finalize pass through unchanged.
+   */
+  readonly workflow?: Workflow
+  readonly workflowInstance?: WorkflowInstance | null
+  /** Variables exposed to `condition` node expressions. */
+  readonly variables?: Readonly<Record<string, unknown>>
+}
+
+/**
+ * Map an approval action to the workflow signal the interpreter expects.
+ * Returns null for actions that don't drive the workflow (revoke, downgrade,
+ * finalize) — those are host-level state moves.
+ */
+function mapToWorkflowAction(input: TransitionInput): WorkflowAction | null {
+  switch (input.action) {
+    case 'submit':  return { type: 'start' }
+    case 'approve': return {
+      type: 'approve',
+      ...(input.actor !== undefined  ? { actor: input.actor  } : {}),
+      ...(input.reason !== undefined ? { reason: input.reason } : {}),
+    }
+    case 'deny': return {
+      type: 'deny',
+      reason: input.reason ?? '',
+      ...(input.actor !== undefined ? { actor: input.actor } : {}),
+    }
+    default: return null
+  }
 }
 
 /**
@@ -209,6 +255,39 @@ export function transitionApproval(
     updatedAt: at,
     history: appendAuditEntry(current?.history ?? [], entrySeed),
     ...(counts ? { counts } : {}),
+  }
+
+  // Workflow DSL (#219): advance the interpreter in lockstep when the caller
+  // supplied one. Only submit/approve/deny map to workflow signals — other
+  // transitions pass through with the stage change alone.
+  if (input.workflow) {
+    const workflowAction = mapToWorkflowAction(input)
+    if (workflowAction) {
+      const advanced = advance({
+        workflow: input.workflow,
+        instance: input.workflowInstance ?? null,
+        action: workflowAction,
+        at,
+        ...(input.variables !== undefined ? { variables: input.variables } : {}),
+      })
+      if (advanced.ok === false) {
+        return {
+          ok: false,
+          error: {
+            code: 'WORKFLOW_FAILED',
+            message: advanced.error,
+            from,
+            action: input.action,
+          },
+        }
+      }
+      return {
+        ok: true,
+        stage: nextStageObj,
+        workflowInstance: advanced.instance,
+        emit: advanced.emit,
+      }
+    }
   }
 
   return { ok: true, stage: nextStageObj }

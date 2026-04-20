@@ -219,6 +219,24 @@ describe('evaluateAvailability — multi-day windows', () => {
     })
     expect(result.ok).toBe(true)
   })
+
+  it('terminates on DST-at-midnight zones without stalling', () => {
+    // Regression: some zones (e.g. Asia/Gaza around 2026-03-27) shift the
+    // local clock forward AT midnight, so `wallClockToUtc(day+1, 00:00)`
+    // can return a timestamp <= the cursor. The walker must still make
+    // forward progress and either return a finite segment list or pass.
+    const allDay: AvailabilityRule = {
+      id: '24x7', kind: 'open', days: [0, 1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00',
+    }
+    const started = Date.now()
+    const result = evaluateAvailability({
+      window: win('2026-03-26T00:00:00Z', '2026-03-29T00:00:00Z'),
+      rules: [allDay],
+      timezone: 'Asia/Gaza',
+    })
+    expect(Date.now() - started).toBeLessThan(2000) // sanity: not hanging
+    expect(result.ok).toBe(true)
+  })
 })
 
 describe('evaluateAvailability — timezone awareness', () => {

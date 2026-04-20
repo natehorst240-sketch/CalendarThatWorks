@@ -40,3 +40,31 @@ export { buildFieldAccessor }             from './grouping/buildFieldAccessor';
 export { useGrouping }                    from './hooks/useGroupingRows.ts';
 export { createManualLocationProvider }   from './providers/ManualLocationProvider.ts';
 export { DEFAULT_CATEGORIES }             from './types/assets.ts';
+
+// ── Approvals + Workflow DSL (#209, #215, #219) ─────────────────────────────
+export { transitionApproval, legalActionsFrom, LEGAL_TRANSITIONS } from './core/approvals/transitions';
+export type { TransitionInput, TransitionResult, TransitionError, TransitionErrorCode } from './core/approvals/transitions';
+export { verifyAuditChain, appendAuditEntry } from './core/approvals/auditChain';
+export { advance as advanceWorkflow } from './core/workflow/advance';
+export type {
+  WorkflowAction, WorkflowEmitEvent, AdvanceInput, AdvanceResult,
+} from './core/workflow/advance';
+export { evaluate as evaluateExpression, evaluateBool as evaluateExpressionBool, ExpressionError } from './core/workflow/expression';
+export type {
+  Workflow, WorkflowNode, WorkflowEdge, WorkflowInstance, WorkflowInstanceStatus,
+  WorkflowHistoryEntry, WorkflowOutcome, WorkflowTrigger, EdgeGuard,
+  WorkflowConditionNode, WorkflowApprovalNode, WorkflowNotifyNode, WorkflowTerminalNode,
+} from './core/workflow/workflowSchema';
+export { findNode as findWorkflowNode, resolveNextEdge as resolveWorkflowEdge } from './core/workflow/workflowSchema';
+export {
+  WORKFLOW_TEMPLATES,
+  singleApproverWorkflow, twoTierApproverWorkflow, conditionalByCostWorkflow,
+} from './core/workflow/templates';
+
+// ── Lifecycle event bus (#216) ──────────────────────────────────────────────
+export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
+export type {
+  EventBusChannel, BookingChannel, AssignmentChannel,
+  BookingLifecyclePayload, AssignmentLifecyclePayload,
+  EventBusPayload, EventBusHandler, EventBusUnsubscribe, EventBusOptions,
+} from './core/engine/eventBus';

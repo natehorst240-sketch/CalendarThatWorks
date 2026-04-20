@@ -86,12 +86,30 @@ function daySegmentsInZone(ws: Date, we: Date, tz: string): DaySegment[] {
   let cursorMs = ws.getTime()
   let isFirst = true
 
-  while (cursorMs < endMs) {
+  // Hard upper bound on iterations as a belt-and-suspenders guard. A month-
+  // long window has ~31 segments; we cap at 400 to leave headroom for any
+  // weird timezone math without risking an infinite loop.
+  const MAX_SEGMENTS = 400
+
+  while (cursorMs < endMs && segments.length < MAX_SEGMENTS) {
     const cursor = new Date(cursorMs)
     const p = partsInTimezone(cursor, tz)
     const dow = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()
-    // Day+1 may overflow into the next month/year — Date.UTC normalizes.
-    const nextMidnightMs = wallClockToUtc(p.year, p.month, p.day + 1, 0, 0, 0, tz).getTime()
+
+    // Compute the next midnight in tz. DST-at-midnight zones (e.g.
+    // Asia/Gaza around 2026-03-27) can make `p.day + 1` at 00:00 land at
+    // or before `cursorMs`, which would stall the loop. Bump forward one
+    // extra day at a time until we strictly progress, then fall back to
+    // a 24h step if the zone keeps playing tricks.
+    let dayOffset = 1
+    let nextMidnightMs = wallClockToUtc(p.year, p.month, p.day + dayOffset, 0, 0, 0, tz).getTime()
+    while (nextMidnightMs <= cursorMs && dayOffset < 4) {
+      dayOffset++
+      nextMidnightMs = wallClockToUtc(p.year, p.month, p.day + dayOffset, 0, 0, 0, tz).getTime()
+    }
+    if (nextMidnightMs <= cursorMs) {
+      nextMidnightMs = cursorMs + 24 * 60 * 60 * 1000
+    }
 
     const startH = isFirst ? p.hour + p.minute / 60 + p.second / 3600 : 0
     const segEndMs = Math.min(endMs, nextMidnightMs)

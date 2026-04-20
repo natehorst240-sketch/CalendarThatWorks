@@ -9,6 +9,7 @@ This index is the canonical docs entrypoint for the package.
 ## Product guides
 
 - [Schedule workflow](./ScheduleWorkflow.md)
+- [Approval workflow DSL](./Workflow.md)
 - [Filtering system](./Filtering.md)
 - [Advanced filters](./AdvancedFilters.md)
 - [Setup wizard](./SetupWizard.md)

@@ -293,6 +293,18 @@ describe('event serialization: nullable / optional fields', () => {
     const back = deserializeEvent(serializeEvent(makeBaseEvent({ meta })));
     expect(back.meta).toEqual(meta);
   });
+
+  it('preserves tenantId when set (#218)', () => {
+    const back = deserializeEvent(serializeEvent(makeBaseEvent({ tenantId: 'acme' })));
+    expect(back.tenantId).toBe('acme');
+  });
+
+  it('omits tenantId from the serialized shape when unset', () => {
+    const s = serializeEvent(makeBaseEvent());
+    expect('tenantId' in s).toBe(false);
+    const back = deserializeEvent(s);
+    expect(back.tenantId).toBeUndefined();
+  });
 });
 
 describe('event serialization: JSON transport path', () => {
