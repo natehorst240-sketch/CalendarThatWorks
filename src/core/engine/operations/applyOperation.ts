@@ -116,6 +116,7 @@ function applyCreate(
     allDay:       raw.allDay       ?? false,
     category:     raw.category     ?? null,
     resourceId:   raw.resourceId   ?? null,
+    resourcePoolId: raw.resourcePoolId ?? null,
     status:       raw.status       ?? 'confirmed',
     color:        raw.color        ?? null,
     rrule:        raw.rrule        ?? null,

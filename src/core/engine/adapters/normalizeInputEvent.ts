@@ -117,6 +117,7 @@ export function normalizeInputEvent(raw: RawInputEvent): EngineEvent {
     resourceId:    raw.resourceId != null ? String(raw.resourceId)
                    : raw.resource != null ? String(raw.resource)   // legacy field
                    : null,
+    resourcePoolId: raw.resourcePoolId != null ? String(raw.resourcePoolId) : null,
     status:        toStatus(raw.status),
     color:         typeof raw.color === 'string' ? raw.color : null,
     rrule:         hasRrule ? String(raw.rrule) : null,

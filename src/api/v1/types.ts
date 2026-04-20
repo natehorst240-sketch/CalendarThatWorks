@@ -77,6 +77,12 @@ export interface CalendarEventV1 {
    * Prefer explicit Assignment records for multi-resource events.
    */
   resourceId?: string;
+  /**
+   * Virtual `ResourcePool` id (issue #212). Mutually exclusive with
+   * `resourceId` at submit time — the engine resolves the pool to a
+   * concrete member and fills in `resourceId` on the stored event.
+   */
+  resourcePoolId?: string;
   /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
   status?: EventStatus;
   /** iCal RRULE string, e.g. "FREQ=MONTHLY;INTERVAL=3;COUNT=8" */
@@ -152,6 +158,10 @@ export type {
   EngineResource,
   ResourceBusinessHours,
 } from '../../core/engine/schema/resourceSchema';
+
+// ── Resource pool (issue #212) ───────────────────────────────────────────────
+
+export type { PoolStrategy, ResourcePool } from '../../core/pools/resourcePoolSchema';
 
 // ── Assignment ───────────────────────────────────────────────────────────────
 

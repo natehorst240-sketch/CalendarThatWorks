@@ -89,6 +89,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     title:         raw.title ?? '(untitled)',
     category:      raw.category ?? null,
     resourceId:    raw.resource ?? null,
+    resourcePoolId: null,
     status:        STATUS_MAP[raw.status ?? ''] ?? 'confirmed',
     color:         raw.color ?? null,
     rrule:         hasRrule ? raw.rrule! : null,
