@@ -8,7 +8,7 @@ state on 2026-04-20:
 | Phase | Issue | State | Notes |
 |---|---|---|---|
 | P1 JSON schema + interpreter | #220 | **Closed** | commit `da05b47` |
-| P2 Visual builder | #221 | **Implemented, not merged** | current branch `claude/plan-phase-2-visual-builder-ggFY5` |
+| P2 Visual builder | #221 | **Closed** | merged across PRs #237–244; closed via comment `4284955436` |
 | P3 SLA timers + escalation | #222 | Not started | |
 | P4 Branching, parallel, notify | #223 | Not started | |
 
@@ -62,29 +62,28 @@ epic #219 closes with Sprint E.
 
 ---
 
-## Sprint A — Land P2 Visual Builder · Closes #221
+## Sprint A — Land P2 Visual Builder · Closes #221 ✅
 
-**Effort: ~½ day (review turnaround only; code is done).**
+**Status: DONE (2026-04-20).** All work shipped to `main` before this
+plan was written — `claude/plan-phase-2-visual-builder-ggFY5` was
+merged incrementally via eight PRs (#237–244). Issue #221 stayed open
+because none of those PR bodies wired `Closes #221`; closed manually
+via issue comment `4284955436`.
 
-The work on `claude/plan-phase-2-visual-builder-ggFY5` is complete:
-- `src/core/workflow/validate.ts`, `layout.ts`, `__tests__/*`
-- `src/ui/WorkflowBuilderModal.tsx`, `WorkflowCanvas.tsx`,
-  `WorkflowNodeInspector.tsx`, `WorkflowEdgeGuardPicker.tsx`,
-  `WorkflowSimulator.tsx`
-- `src/hooks/useSavedWorkflows.ts`
-- `src/ui/ApprovalFlowsTab.tsx` (lazy) + `ConfigPanel.tsx` integration
-- `tests-e2e/workflow-builder.spec.ts` (mouse + keyboard-only)
-- `docs/bundle-size-audit.md` (main-chunk delta +0.24 kB gzip,
-  lazy chunks 17.83 kB gzip total — within the ≤2 kB main-chunk budget)
-- P2-review Escape-layering fix (`WorkflowBuilderModal.tsx`) + test
+**Landing PRs:**
+| PR | Head SHA | Scope |
+|---|---|---|
+| #237 | `8552f10` | Plan doc + validator + layout + `ExpressionError.kind` |
+| #238 | `a9ab9ff` | `useSavedWorkflows` hook |
+| #239 | `be8d457` | Fix: couple `calendarId` + `workflows` in one state atom |
+| #240 | `b8c7a11` | `WorkflowNodeInspector` |
+| #241 | `73d7e18` | `WorkflowEdgeGuardPicker` |
+| #242 | `5ff1e33` | `WorkflowSimulator` |
+| #243 | `79f97a7` | `ApprovalFlowsTab` in `ConfigPanel` |
+| #244 | `e7a76f4` | Lazy-load the tab (main +0.24 kB gzip) |
 
-Actions:
-1. Open PR from `claude/plan-phase-2-visual-builder-ggFY5` → `main`
-   with body "Closes #221". Attach bundle audit numbers.
-2. Respond to review; merge.
-
-Verification: all unit + component + e2e suites green at merge
-(already green locally).
+Bundle audit: main-chunk +0.24 kB gzip, lazy chunks 17.83 kB gzip —
+within the ≤2 kB main-chunk budget.
 
 ---
 
