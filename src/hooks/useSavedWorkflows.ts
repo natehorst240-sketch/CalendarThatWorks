@@ -10,6 +10,13 @@
  * `workflow.version` (and the paired `layout.workflowVersion`) on every
  * structural change so stale layouts can't be rendered against a graph
  * whose topology has moved on — matching the guard in `layoutWorkflow`.
+ *
+ * State + the id it was loaded for live in a single atom so a
+ * calendarId switch can't trigger a persist against the new key with
+ * the previous calendar's workflows (the reload and the persist
+ * effects both depend on calendarId; without this coupling the persist
+ * effect would fire once before `setWorkflows` settles and corrupt
+ * storage for the new calendar).
  */
 import { useCallback, useEffect, useState } from 'react'
 import { createId } from '../core/createId'
@@ -37,6 +44,11 @@ export interface UseSavedWorkflowsResult {
     patch: { name?: string; workflow?: Workflow; layout?: WorkflowLayout },
   ) => void
   readonly deleteWorkflow: (id: string) => void
+}
+
+interface HookState {
+  readonly calendarId: string
+  readonly workflows: readonly SavedWorkflow[]
 }
 
 function storageKey(calendarId: string): string {
@@ -91,17 +103,28 @@ function persistWorkflows(
 }
 
 export function useSavedWorkflows(calendarId: string): UseSavedWorkflowsResult {
-  const [workflows, setWorkflows] = useState<SavedWorkflow[]>(() =>
-    loadWorkflows(calendarId),
-  )
+  const [state, setState] = useState<HookState>(() => ({
+    calendarId,
+    workflows: loadWorkflows(calendarId),
+  }))
 
+  // Reload when the prop flips. Couples the swap in a single setState
+  // so `state.calendarId` and `state.workflows` are never out of sync.
   useEffect(() => {
-    setWorkflows(loadWorkflows(calendarId))
+    setState(prev =>
+      prev.calendarId === calendarId
+        ? prev
+        : { calendarId, workflows: loadWorkflows(calendarId) },
+    )
   }, [calendarId])
 
+  // Persist only when state matches the rendered prop. On a prop flip
+  // this render carries the stale state; we skip the write until the
+  // reload-effect's setState commits with the new id's workflows.
   useEffect(() => {
-    persistWorkflows(calendarId, workflows)
-  }, [calendarId, workflows])
+    if (state.calendarId !== calendarId) return
+    persistWorkflows(state.calendarId, state.workflows)
+  }, [state, calendarId])
 
   const saveWorkflow = useCallback(
     (name: string, workflow: Workflow, layout: WorkflowLayout): SavedWorkflow => {
@@ -116,7 +139,7 @@ export function useSavedWorkflows(calendarId: string): UseSavedWorkflowsResult {
           workflowVersion: workflow.version,
         },
       }
-      setWorkflows(prev => [...prev, saved])
+      setState(prev => ({ ...prev, workflows: [...prev.workflows, saved] }))
       return saved
     },
     [],
@@ -127,11 +150,11 @@ export function useSavedWorkflows(calendarId: string): UseSavedWorkflowsResult {
       id: string,
       patch: { name?: string; workflow?: Workflow; layout?: WorkflowLayout },
     ) => {
-      setWorkflows(prev =>
-        prev.map(saved => {
+      setState(prev => ({
+        ...prev,
+        workflows: prev.workflows.map(saved => {
           if (saved.id !== id) return saved
           if (patch.workflow === undefined) {
-            // Layout-only / rename: keep the existing version number.
             return {
               ...saved,
               ...(patch.name !== undefined ? { name: patch.name } : {}),
@@ -160,14 +183,17 @@ export function useSavedWorkflows(calendarId: string): UseSavedWorkflowsResult {
             },
           }
         }),
-      )
+      }))
     },
     [],
   )
 
   const deleteWorkflow = useCallback((id: string) => {
-    setWorkflows(prev => prev.filter(saved => saved.id !== id))
+    setState(prev => ({
+      ...prev,
+      workflows: prev.workflows.filter(saved => saved.id !== id),
+    }))
   }, [])
 
-  return { workflows, saveWorkflow, updateWorkflow, deleteWorkflow }
+  return { workflows: state.workflows, saveWorkflow, updateWorkflow, deleteWorkflow }
 }
