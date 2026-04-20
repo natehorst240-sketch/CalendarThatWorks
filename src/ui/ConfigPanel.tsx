@@ -1068,7 +1068,19 @@ export function AssetsTab({ config, onUpdate, items = [] }: any) {
     const n = assets.length + 1;
     writeAssets([
       ...assets,
-      { _key: `${Date.now()}-${n}`, id: `asset-${n}`, label: `Asset ${n}`, group: '', meta: {} },
+      {
+        _key: `${Date.now()}-${n}`,
+        id: `asset-${n}`,
+        label: `Asset ${n}`,
+        group: '',
+        meta: {
+          registrationNumber: '',
+          type: '',
+          make: '',
+          model: '',
+          limitations: '',
+        },
+      },
     ]);
   };
 
@@ -1150,6 +1162,59 @@ export function AssetsTab({ config, onUpdate, items = [] }: any) {
                 aria-label={`Sublabel for ${asset.label || asset.id}`}
               />
             </div>
+            {(() => {
+              const regValue = asset.meta?.registrationNumber ?? '';
+              const typeValue = asset.meta?.type ?? '';
+              const makeValue = asset.meta?.make ?? '';
+              const modelValue = asset.meta?.model ?? '';
+              const limitationsValue = asset.meta?.limitations ?? '';
+              const requiredFields = [
+                { key: 'registrationNumber', label: 'Registration Number', value: regValue },
+                { key: 'type',               label: 'Type',                value: typeValue },
+                { key: 'make',               label: 'Make',                value: makeValue },
+                { key: 'model',              label: 'Model',               value: modelValue },
+              ];
+              return (
+                <>
+                  {requiredFields.map(f => {
+                    const invalid = !String(f.value).trim();
+                    const errorId = `asset-${i}-${f.key}-error`;
+                    return (
+                      <div key={f.key} className={styles.assetField}>
+                        <span className={styles.assetFieldLabel}>
+                          {f.label} <span className={styles.assetFieldRequired} aria-hidden="true">*</span>
+                        </span>
+                        <input
+                          className={styles.input}
+                          value={f.value}
+                          onChange={e => updateAssetMeta(i, { [f.key]: e.target.value })}
+                          aria-label={`${f.label} for ${asset.label || asset.id}`}
+                          aria-required="true"
+                          aria-invalid={invalid || undefined}
+                          aria-describedby={invalid ? errorId : undefined}
+                          required
+                        />
+                        {invalid && (
+                          <span id={errorId} className={styles.assetFieldError} role="alert">
+                            {f.label} is required.
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className={[styles.assetField, styles.assetFieldWide].filter(Boolean).join(' ')}>
+                    <span className={styles.assetFieldLabel}>Limitations</span>
+                    <textarea
+                      className={styles.input}
+                      value={limitationsValue}
+                      onChange={e => updateAssetMeta(i, { limitations: e.target.value })}
+                      aria-label={`Limitations for ${asset.label || asset.id}`}
+                      rows={2}
+                    />
+                  </div>
+                </>
+              );
+            })()}
           </div>
           <div className={styles.assetActions}>
             <button

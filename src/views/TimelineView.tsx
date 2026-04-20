@@ -527,8 +527,17 @@ export default function TimelineView({
   }, [flatRows, totalDays, onEventClick, onDateSelect, days]);
 
   // ── Empty state ────────────────────────────────────────────────────────────
+  // When a base filter is active and the filter bar can offer recovery, keep
+  // the chrome mounted so the user can clear the filter. Without this branch
+  // the view short-circuits into a bare empty message and traps the user in
+  // the filtered view (issue #192).
+  const filterTrappedEmpty = useEmployees
+    && bases.length > 0
+    && baseFilter !== ''
+    && rows.length === 0
+    && (employees?.length ?? 0) > 0;
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !filterTrappedEmpty) {
     if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
       <div className={styles.empty}>
@@ -536,6 +545,10 @@ export default function TimelineView({
       </div>
     );
   }
+
+  const activeBaseName = filterTrappedEmpty
+    ? (bases.find(b => b.id === baseFilter)?.name ?? baseFilter)
+    : '';
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -649,6 +662,17 @@ export default function TimelineView({
                 onClick={() => setBaseFilter(prev => prev === b.id ? '' : b.id)}
               >{b.name}</button>
             ))}
+          </div>
+        )}
+
+        {filterTrappedEmpty && (
+          <div className={styles.filterEmptyState} role="status" aria-live="polite">
+            <p>No employees assigned to <strong>{activeBaseName}</strong>.</p>
+            <button
+              type="button"
+              className={styles.filterEmptyClear}
+              onClick={() => setBaseFilter('')}
+            >Show all locations</button>
           </div>
         )}
 

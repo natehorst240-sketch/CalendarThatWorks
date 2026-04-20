@@ -211,6 +211,94 @@ describe('getAssetStatus', () => {
   });
 });
 
+describe('AssetsTab — asset detail fields (#196)', () => {
+  it('new asset rows seed required meta fields with empty strings', () => {
+    const { getConfig, rerender } = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /Add asset/i }));
+    rerender();
+    const meta = getConfig().assets[0].meta;
+    expect(meta).toMatchObject({
+      registrationNumber: '',
+      type: '',
+      make: '',
+      model: '',
+      limitations: '',
+    });
+  });
+
+  it('editing Registration Number writes to meta.registrationNumber', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const input = screen.getByLabelText('Registration Number for Alpha');
+    fireEvent.change(input, { target: { value: 'N12345' } });
+    rerender();
+    expect(getConfig().assets[0].meta.registrationNumber).toBe('N12345');
+  });
+
+  it('editing Type/Make/Model writes to the matching meta fields', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    fireEvent.change(screen.getByLabelText('Type for Alpha'),  { target: { value: 'Jet' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Make for Alpha'),  { target: { value: 'Cessna' } });
+    rerender();
+    fireEvent.change(screen.getByLabelText('Model for Alpha'), { target: { value: 'CJ3' } });
+    rerender();
+    expect(getConfig().assets[0].meta).toMatchObject({
+      type: 'Jet', make: 'Cessna', model: 'CJ3',
+    });
+  });
+
+  it('editing Limitations writes to meta.limitations (optional field)', () => {
+    const { getConfig, rerender } = renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const input = screen.getByLabelText('Limitations for Alpha');
+    fireEvent.change(input, { target: { value: 'No night ops' } });
+    rerender();
+    expect(getConfig().assets[0].meta.limitations).toBe('No night ops');
+  });
+
+  it('marks empty required fields as aria-invalid with a visible error', () => {
+    renderTab({
+      initialConfig: { assets: [{ id: 'a', label: 'Alpha', meta: {} }] },
+    });
+    const reg = screen.getByLabelText('Registration Number for Alpha');
+    expect(reg).toHaveAttribute('aria-invalid', 'true');
+    expect(reg).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByText('Registration Number is required.')).toBeInTheDocument();
+  });
+
+  it('clears aria-invalid once a required field is filled in', () => {
+    const { rerender } = renderTab({
+      initialConfig: {
+        assets: [{
+          id: 'a',
+          label: 'Alpha',
+          meta: { registrationNumber: 'N1', type: 'Jet', make: 'C', model: 'CJ3' },
+        }],
+      },
+    });
+    const reg = screen.getByLabelText('Registration Number for Alpha');
+    expect(reg).not.toHaveAttribute('aria-invalid');
+    rerender();
+    expect(screen.queryByText('Registration Number is required.')).not.toBeInTheDocument();
+  });
+
+  it('legacy assets without new meta fields still render without errors', () => {
+    renderTab({
+      initialConfig: { assets: [{ id: 'legacy', label: 'Legacy', meta: { sublabel: 'old' } }] },
+    });
+    // Legacy sublabel still renders
+    expect(screen.getByLabelText('Sublabel for Legacy')).toHaveValue('old');
+    // And the required fields show up as empty (invalid) rather than crashing.
+    expect(screen.getByLabelText('Registration Number for Legacy')).toHaveValue('');
+    expect(screen.getByLabelText('Make for Legacy')).toHaveValue('');
+  });
+});
+
 describe('AssetsTab — status badge rendering', () => {
   it('shows a requested status badge when only requested bookings exist', () => {
     renderTab({

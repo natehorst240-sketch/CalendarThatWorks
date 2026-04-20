@@ -148,6 +148,38 @@
   border-color: var(--wc-accent, #0066cc);
 }
 
+.filterEmptyState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: var(--wc-text-muted, #555);
+  font-size: 13px;
+  background: var(--wc-surface, #fafafa);
+  border-bottom: 1px solid var(--wc-border, #e0e0e0);
+  position: sticky;
+  left: 0;
+}
+
+.filterEmptyState p {
+  margin: 0;
+}
+
+.filterEmptyClear {
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--wc-accent, #0066cc);
+  background: var(--wc-accent, #0066cc);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filterEmptyClear:hover {
+  filter: brightness(1.05);
+}
+
 /* ── Remove employee button ──────────────────────────────────────── */
 .removeEmpBtn {
   margin-left: auto;
