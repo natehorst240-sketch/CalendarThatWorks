@@ -20,7 +20,11 @@
  * snapshot so an Undo never jumps across unrelated edits.
  *
  * Focus trap: reuses `useFocusTrap` so Tab stays inside the dialog and
- * Escape calls `onClose`, matching ConfigPanel's pattern.
+ * Escape calls `onClose`, matching ConfigPanel's pattern. Escape is
+ * wrapped so that when the edge-guard picker is open, the first press
+ * cancels the picker (the trap attaches at the capture phase on
+ * `document`, so it would otherwise outrun the picker's own listener
+ * and discard the pending edge together with every unsaved edit).
  */
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { X, RotateCcw, Save } from 'lucide-react'
@@ -63,8 +67,6 @@ export function WorkflowBuilderModal(
 ): JSX.Element {
   const { workflow: initialWorkflow, layout: initialLayout, title, onSave, onClose } = props
 
-  const trapRef = useFocusTrap(onClose)
-
   const [draftWorkflow, setDraftWorkflow] = useState<Workflow>(initialWorkflow)
   const [draftLayout,   setDraftLayout]   = useState<WorkflowLayout>(initialLayout)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
@@ -72,6 +74,21 @@ export function WorkflowBuilderModal(
   const [pendingEdge, setPendingEdge] = useState<{ from: string; to: string } | null>(null)
   const [undoSnap, setUndoSnap] = useState<UndoSnapshot | null>(null)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+
+  // Trap's Escape wiring: cancel any open transient UI (edge-guard
+  // picker) before falling back to onClose. The trap binds on
+  // `document` at the capture phase, so without this layering it would
+  // outrun the picker's own window-level Escape handler.
+  const pendingEdgeRef = useRef(pendingEdge)
+  pendingEdgeRef.current = pendingEdge
+  const handleEscape = useCallback(() => {
+    if (pendingEdgeRef.current) {
+      setPendingEdge(null)
+      return
+    }
+    onClose()
+  }, [onClose])
+  const trapRef = useFocusTrap(handleEscape)
 
   // Validator runs on every draft change — cheap for Phase-2-sized graphs.
   const issues = useMemo(

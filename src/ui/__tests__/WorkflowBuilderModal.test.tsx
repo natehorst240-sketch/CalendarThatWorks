@@ -144,6 +144,31 @@ describe('WorkflowBuilderModal — edge creation → guard picker', () => {
     expect(picker.querySelector('[data-guard="true"]')).toBeNull()
   })
 
+  // Regression: the focus trap attaches its Escape handler on
+  // `document` in the capture phase, so without layering it would fire
+  // before the picker's own window listener and close the whole modal
+  // — discarding every unsaved edit along with the pending edge.
+  // Escape must cancel the transient picker first; only a second
+  // Escape (with no picker open) should reach onClose.
+  it('Escape cancels the open guard picker without closing the modal', () => {
+    const { onClose } = renderModal()
+    fireEvent.pointerDown(document.querySelector('[data-handle-for="approve"]')!, { pointerId: 1 })
+    fireEvent.pointerDown(document.querySelector('[data-node-id="done"]')!, {
+      pointerId: 2, clientX: 0, clientY: 0,
+    })
+    expect(screen.getByTestId('workflow-edge-guard-picker')).toBeInTheDocument()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    expect(screen.queryByTestId('workflow-edge-guard-picker')).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+    // Second Escape (no picker) now closes the modal. Focus may have
+    // moved to <body> after the picker unmounted, so put it back
+    // inside the trap before dispatching — otherwise useFocusTrap's
+    // `el.contains(activeElement)` guard no-ops the handler.
+    screen.getByTestId('wb-save').focus()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('picking a guard appends the edge to the draft workflow and closes the picker', () => {
     const { onSave } = renderModal()
     fireEvent.pointerDown(document.querySelector('[data-handle-for="approve"]')!, { pointerId: 1 })
