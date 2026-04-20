@@ -428,6 +428,20 @@ function App() {
     registerSW({
       onNeedRefresh() { setNeedsRefresh(true); },
       onOfflineReady() { console.info('[PWA] App ready to work offline.'); },
+      // Probe for a new bundle on registration and whenever the tab regains
+      // focus. Without this, a visitor with a stale SW would only pick up
+      // new bundles on the next fresh navigation. Combined with the
+      // onNeedRefresh auto-apply below this means a user who already had
+      // the pre-sidebar build cached will get bumped to the latest UI
+      // (e.g. the unified Filter/Group/Views sidebar) within seconds of
+      // re-opening the demo tab.
+      onRegisteredSW(_swUrl, r) {
+        if (!r) return;
+        void r.update();
+        const check = () => { if (!document.hidden) void r.update(); };
+        window.addEventListener('focus', check);
+        document.addEventListener('visibilitychange', check);
+      },
     })
   );
 
