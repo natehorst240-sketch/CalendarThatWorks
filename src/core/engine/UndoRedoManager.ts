@@ -23,6 +23,7 @@ import type { EngineEvent }    from './schema/eventSchema';
 import type { Assignment }     from './schema/assignmentSchema';
 import type { Dependency }     from './schema/dependencySchema';
 import type { ResourceCalendar } from './schema/resourceCalendarSchema';
+import type { ResourcePool }   from '../pools/resourcePoolSchema';
 
 // ─── Snapshot type ────────────────────────────────────────────────────────────
 
@@ -32,6 +33,13 @@ export interface EngineSnapshot {
   readonly assignments:       ReadonlyMap<string, Assignment>;
   readonly dependencies:      ReadonlyMap<string, Dependency>;
   readonly resourceCalendars: ReadonlyMap<string, ResourceCalendar>;
+  /**
+   * Resource pools (#212). Included so undo of a pool-resolved booking
+   * also reverts any round-robin cursor advance — otherwise the pool
+   * drifts and the next booking skips the member the undone booking
+   * was assigned to.
+   */
+  readonly pools:             ReadonlyMap<string, ResourcePool>;
 }
 
 export interface HistoryEntry {
@@ -153,6 +161,7 @@ export class UndoRedoManager {
       assignments:       new Map(s.assignments),
       dependencies:      new Map(s.dependencies),
       resourceCalendars: new Map(s.resourceCalendars),
+      pools:             new Map(s.pools),
     };
   }
 

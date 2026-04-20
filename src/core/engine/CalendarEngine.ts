@@ -48,6 +48,7 @@ import type { OperationResult, EventChange } from './operations/operationResult'
 import type { EngineOperation } from './schema/operationSchema';
 import type { EngineOccurrence } from './schema/occurrenceSchema';
 import type { OperationContext } from './validation/validationTypes';
+import { resolvePoolForOp } from './resolvePoolOnSubmit';
 import type {
   CalendarState,
   CalendarEngineInit,
@@ -180,6 +181,19 @@ export class CalendarEngine {
     ctx: OperationContext = {},
     opts: ApplyOptions = {},
   ): OperationResult {
+    // Pool resolve (#212): a create op with resourcePoolId is rewritten to
+    // target a concrete member before validation. Unresolvable pools surface
+    // as hard violations; the round-robin cursor advance comes back as a
+    // pool-update that we persist atomically with the booking commit.
+    const resolved = resolvePoolForOp(op, {
+      events:      this._state.events,
+      pools:       this._state.pools,
+      assignments: ctx.assignments ?? this._state.assignments,
+    });
+    if (resolved.kind === 'rejected') return resolved.result;
+    const effectiveOp = resolved.kind === 'rewritten' ? resolved.op : op;
+    const poolUpdate  = resolved.kind === 'rewritten' ? resolved.poolUpdate : undefined;
+
     // Merge engine-owned structural state into the validation context so rules
     // like dependency and overlap checking see the full picture.
     const enrichedCtx: OperationContext = {
@@ -188,15 +202,22 @@ export class CalendarEngine {
       resourceCalendars: ctx.resourceCalendars ?? this._state.resourceCalendars,
       ...ctx,
     };
-    const result = applyMutationOp(op, this._state.events, enrichedCtx, opts);
+    const result = applyMutationOp(effectiveOp, this._state.events, enrichedCtx, opts);
 
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
-      // Commit changes to state
+      // Commit event changes and (if a pool was resolved with cursor advance)
+      // the pool update in a single state swap — one _notify per mutation.
       const tx = beginTransaction(this._state.events);
       const commit = commitTransaction(tx, this._state.events, result.changes);
-      this._state = { ...this._state, events: commit.events };
+      let pools = this._state.pools;
+      if (poolUpdate) {
+        const map = new Map(pools);
+        map.set(poolUpdate.id, poolUpdate);
+        pools = map;
+      }
+      this._state = { ...this._state, events: commit.events, pools };
       this._notify();
-      this._emitBookingLifecycle(result.changes, op, ctx);
+      this._emitBookingLifecycle(result.changes, effectiveOp, ctx);
     }
 
     return result;
@@ -465,13 +486,17 @@ export class CalendarEngine {
    * Use rollbackTo(handle) to restore this snapshot.
    */
   snapshot(label?: string): TransactionHandle {
-    return beginTransaction(this._state.events, label);
+    return beginTransaction(this._state.events, { pools: this._state.pools, label });
   }
 
   /** Restore state to a previous snapshot. Notifies subscribers. */
   rollbackTo(handle: TransactionHandle): void {
     const restored = rollbackTransaction(handle);
-    this._state = { ...this._state, events: restored };
+    this._state = {
+      ...this._state,
+      events: restored.events,
+      ...(restored.pools ? { pools: restored.pools } : {}),
+    };
     this._notify();
   }
 

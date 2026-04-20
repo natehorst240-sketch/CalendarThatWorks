@@ -12,12 +12,20 @@
  */
 
 import type { EngineEvent } from '../schema/eventSchema';
+import type { ResourcePool } from '../../pools/resourcePoolSchema';
 
 // ─── Transaction handle ───────────────────────────────────────────────────────
 
 export interface TransactionHandle {
   /** Snapshot of the events map at the time the transaction began. */
   readonly snapshot: ReadonlyMap<string, EngineEvent>;
+  /**
+   * Snapshot of the pools map (#212). Included so rollback reverts any
+   * round-robin cursor advance produced by a mutation — without this,
+   * a rolled-back booking would still leave the pool skipped forward.
+   * Absent on handles built by callers that predate pool support.
+   */
+  readonly poolsSnapshot?: ReadonlyMap<string, ResourcePool>;
   /** ISO timestamp when the transaction was opened. */
   readonly openedAt: string;
   /** Optional label for debugging. */
@@ -27,18 +35,24 @@ export interface TransactionHandle {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Create a transaction handle from the current events map.
+ * Create a transaction handle from the current events map (and pools).
  *
  * @param events  The current events map to snapshot
- * @param label   Optional human-readable label for debugging
+ * @param labelOrPools  Either the legacy label (string) or an options object
+ *                      with pools + label. Overloaded to keep the 2-arg
+ *                      callsites compiling without a sweep.
  */
 export function beginTransaction(
   events: ReadonlyMap<string, EngineEvent>,
-  label?: string,
+  labelOrPools?: string | { pools?: ReadonlyMap<string, ResourcePool>; label?: string },
 ): TransactionHandle {
+  const opts = typeof labelOrPools === 'string'
+    ? { label: labelOrPools }
+    : labelOrPools ?? {};
   return {
     snapshot:  new Map(events),
+    ...(opts.pools ? { poolsSnapshot: new Map(opts.pools) } : {}),
     openedAt:  new Date().toISOString(),
-    label,
+    ...(opts.label !== undefined ? { label: opts.label } : {}),
   };
 }

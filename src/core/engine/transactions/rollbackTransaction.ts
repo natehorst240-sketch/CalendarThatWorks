@@ -1,23 +1,35 @@
 /**
  * CalendarEngine — rollback a transaction.
  *
- * Restores the events map to the snapshot captured by beginTransaction.
- * Pure function — returns the snapshot map directly.
+ * Restores the events map (and, when the handle carries one, the pools
+ * map) to the snapshot captured by beginTransaction.
+ * Pure function — returns fresh copies of the snapshotted maps.
  */
 
 import type { EngineEvent } from '../schema/eventSchema';
+import type { ResourcePool } from '../../pools/resourcePoolSchema';
 import type { TransactionHandle } from './beginTransaction';
+
+export interface RollbackResult {
+  readonly events: ReadonlyMap<string, EngineEvent>;
+  /**
+   * Only present when the handle was opened with a pools snapshot
+   * (#212). Callers that predate pool support will receive undefined
+   * here and should leave their pools map untouched.
+   */
+  readonly pools?: ReadonlyMap<string, ResourcePool>;
+}
 
 /**
  * Discard any changes made since the transaction was opened and return
- * the snapshotted events map.
+ * the snapshotted maps.
  *
  * @param tx  The transaction handle returned by beginTransaction
- * @returns   The original events map (a copy of the snapshot)
+ * @returns   The original maps (fresh copies)
  */
-export function rollbackTransaction(
-  tx: TransactionHandle,
-): ReadonlyMap<string, EngineEvent> {
-  // Return a fresh copy so the caller gets an immutable view
-  return new Map(tx.snapshot);
+export function rollbackTransaction(tx: TransactionHandle): RollbackResult {
+  return {
+    events: new Map(tx.snapshot),
+    ...(tx.poolsSnapshot ? { pools: new Map(tx.poolsSnapshot) } : {}),
+  };
 }
