@@ -89,6 +89,18 @@ describe('verifyAuditChain', () => {
     expect(verifyAuditChain(swapped).ok).toBe(false)
   })
 
+  it('detects a dropped leading hashed entry (INVALID_HEAD_PREV_HASH)', () => {
+    let h = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
+    h = appendAuditEntry(h, approve('2026-04-20T10:05:00Z'))
+    h = appendAuditEntry(h, { action: 'finalize', at: '2026-04-20T10:10:00Z' })
+    // Drop the first entry — the new head still carries its original
+    // non-empty prevHash, so the chain anchor is broken.
+    const truncated: ApprovalHistoryEntry[] = [h[1], h[2]]
+    expect(verifyAuditChain(truncated)).toMatchObject({
+      ok: false, failedIndex: 0, reason: 'INVALID_HEAD_PREV_HASH',
+    })
+  })
+
   it('skips pre-chain legacy entries at the start', () => {
     const legacy: ApprovalHistoryEntry = { action: 'submit', at: '2026-04-20T09:00:00Z' }
     const mixed = appendAuditEntry([legacy], approve('2026-04-20T10:00:00Z'))

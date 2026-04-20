@@ -27,6 +27,11 @@ export interface EngineResource {
    * governs availability.
    */
   readonly availability?: readonly AvailabilityRule[];
+  /**
+   * Opaque tenant/workspace identifier (issue #218). Optional; unset =
+   * global/shared resource visible to every tenant.
+   */
+  readonly tenantId?: string;
   readonly meta?: Readonly<Record<string, unknown>>;
 }
 

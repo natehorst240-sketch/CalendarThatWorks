@@ -54,6 +54,7 @@ export type VerifyFailureReason =
   | 'MISSING_HASH_AFTER_CHAIN_STARTED'
   | 'PREV_HASH_MISMATCH'
   | 'HASH_MISMATCH'
+  | 'INVALID_HEAD_PREV_HASH'
 
 export type VerifyAuditResult =
   | { readonly ok: true }
@@ -71,8 +72,12 @@ export type VerifyAuditResult =
  *   - An entry without `hash` is skipped *before* the chain starts.
  *   - Once any entry has `hash`, every subsequent entry must also have
  *     one — a gap after chain start is a failure.
- *   - Each hashed entry's `prevHash` must equal the prior hashed
- *     entry's `hash` (or `''` for the first hashed entry).
+ *   - The **first** hashed entry MUST declare `prevHash === ''`. This
+ *     anchor is what makes truncation of the chain head detectable —
+ *     if a leading hashed entry is dropped, the new head carries a
+ *     non-empty `prevHash` and the chain fails to verify.
+ *   - Each subsequent entry's `prevHash` must equal the prior entry's
+ *     `hash`.
  *   - Each entry's `hash` must equal `sha256(canonicalize(entry-no-hash))`.
  */
 export function verifyAuditChain(
@@ -91,9 +96,13 @@ export function verifyAuditChain(
 
     const thisPrev = e.prevHash ?? ''
     if (expectedPrev === null) {
-      // First hashed entry: seed expectation to whatever it declares so
-      // histories that adopt the chain mid-stream are honored.
-      expectedPrev = thisPrev
+      // First hashed entry must anchor with the empty prevHash. Any
+      // other value means a leading entry was dropped or the chain
+      // was forged — reject so truncation is always detectable.
+      if (thisPrev !== '') {
+        return { ok: false, failedIndex: i, reason: 'INVALID_HEAD_PREV_HASH' }
+      }
+      expectedPrev = ''
     }
     if (thisPrev !== expectedPrev) {
       return { ok: false, failedIndex: i, reason: 'PREV_HASH_MISMATCH' }

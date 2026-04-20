@@ -24,6 +24,11 @@ export interface Assignment {
    * 50 = half-time, 200 = double-booked on this resource.
    */
   readonly units: number;
+  /**
+   * Opaque tenant/workspace identifier (issue #218). Optional; unset =
+   * inherits the tenant of the joined event/resource.
+   */
+  readonly tenantId?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

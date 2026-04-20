@@ -81,6 +81,13 @@ export interface EngineEvent {
    */
   readonly constraints: readonly EventConstraint[];
 
+  // ── Tenancy (issue #218) ────────────────────────────────────────────────
+  /**
+   * Opaque tenant/workspace identifier. Optional; unset = global or
+   * legacy event. Hosts wire tenant enforcement via `src/core/tenancy`.
+   */
+  readonly tenantId?: string;
+
   // ── Arbitrary payload ───────────────────────────────────────────────────
   readonly meta: Readonly<Record<string, unknown>>;
 }
