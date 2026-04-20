@@ -5,6 +5,8 @@
  * a room, a person, a piece of equipment, etc.
  */
 
+import type { AvailabilityRule } from '../../availability/availabilityRule';
+
 // ─── Resource ─────────────────────────────────────────────────────────────────
 
 export interface EngineResource {
@@ -17,6 +19,14 @@ export interface EngineResource {
   readonly timezone?: string;
   /** Resource-specific working hours (overrides calendar-level businessHours). */
   readonly businessHours?: ResourceBusinessHours | null;
+  /**
+   * Fine-grained availability — layered on top of `businessHours`. Each
+   * rule is either a weekly `open` window or an absolute `blackout`
+   * range. Evaluated by the `availability-violation` conflict rule
+   * (#214). Optional; when absent or empty, only `businessHours`
+   * governs availability.
+   */
+  readonly availability?: readonly AvailabilityRule[];
   readonly meta?: Readonly<Record<string, unknown>>;
 }
 

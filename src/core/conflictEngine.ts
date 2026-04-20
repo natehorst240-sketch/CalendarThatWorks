@@ -19,6 +19,7 @@ import type { EngineResource } from './engine/schema/resourceSchema'
 import type { Assignment } from './engine/schema/assignmentSchema'
 import type { CategoryDef } from '../types/assets'
 import { findBlockingHold, type Hold } from './holds/holdRegistry'
+import { evaluateAvailability } from './availability/evaluateAvailability'
 import { parseHoursString } from './engine/time/dateMath'
 import { partsInTimezone } from './engine/time/timezone'
 
@@ -43,6 +44,7 @@ export type ConflictRule =
   | OutsideBusinessHoursRule
   | PolicyViolationRule
   | HoldConflictRule
+  | AvailabilityViolationRule
 
 export interface ResourceOverlapRule {
   readonly id: string
@@ -81,6 +83,19 @@ export interface OutsideBusinessHoursRule {
   readonly id: string
   readonly type: 'outside-business-hours'
   /** Defaults to 'soft' — users often book outside hours intentionally. */
+  readonly severity?: 'soft' | 'hard'
+  /** Skip when the proposed event's category matches any of these. */
+  readonly ignoreCategories?: readonly string[]
+}
+
+export interface AvailabilityViolationRule {
+  readonly id: string
+  readonly type: 'availability-violation'
+  /**
+   * Defaults to 'hard' — availability rules (maintenance windows,
+   * holidays) are typically real physical constraints. Owners can
+   * relax to 'soft' for advisory-only checks.
+   */
   readonly severity?: 'soft' | 'hard'
   /** Skip when the proposed event's category matches any of these. */
   readonly ignoreCategories?: readonly string[]
@@ -496,6 +511,40 @@ function evalPolicyViolation(
   return out
 }
 
+function evalAvailabilityViolation(
+  rule: AvailabilityViolationRule,
+  proposed: ConflictEvent,
+  resources: ReadonlyMap<string, EngineResource> | undefined,
+): Violation | null {
+  if (!resources) return null
+  const ignore = new Set(rule.ignoreCategories ?? [])
+  if (proposed.category && ignore.has(proposed.category)) return null
+
+  const resourceId = proposed.resource ?? ''
+  if (!resourceId) return null
+  const resource = resources.get(resourceId)
+  if (!resource?.availability || resource.availability.length === 0) return null
+
+  const result = evaluateAvailability({
+    window: { start: toDate(proposed.start), end: toDate(proposed.end) },
+    rules: resource.availability,
+    timezone: resource.timezone,
+    resourceName: resource.name,
+  })
+  if (result.ok === true) return null
+
+  return {
+    rule: rule.id,
+    severity: rule.severity ?? 'hard',
+    message: `"${resource.name}": ${result.message}`,
+    details: {
+      type: 'availability-violation',
+      reason: result.reason,
+      availabilityRuleId: result.ruleId,
+    },
+  }
+}
+
 function evalHoldConflict(
   rule: HoldConflictRule,
   proposed: ConflictEvent,
@@ -590,6 +639,9 @@ export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvalua
       case 'hold-conflict':
         v = evalHoldConflict(rule, proposed, holds, holderId, nowMs)
         break
+      case 'availability-violation':
+        v = evalAvailabilityViolation(rule, proposed, resources)
+        break
       default:
         break
     }
@@ -628,4 +680,5 @@ export const CONFLICT_RULE_TYPES: readonly ConflictRule['type'][] = [
   'outside-business-hours',
   'policy-violation',
   'hold-conflict',
+  'availability-violation',
 ] as const
