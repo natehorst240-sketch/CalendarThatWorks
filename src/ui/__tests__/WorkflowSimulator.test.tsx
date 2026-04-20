@@ -137,19 +137,21 @@ describe('WorkflowSimulator — variables', () => {
     expect(getButton(/^start$/i)).toBeDisabled()
   })
 
-  it('rejects a JSON array (must be an object)', () => {
+  // Regression: JSON arrays are typeof 'object', so a naive check would
+  // let `[1,2,3]` through and ship an array to advance() as variables —
+  // condition expressions that read `event.cost` would then silently
+  // resolve to undefined and take the `false` branch. Arrays must be
+  // rejected outright.
+  it('rejects a JSON array as variables (must be a plain object)', () => {
     render(<WorkflowSimulator workflow={singleApproverWorkflow} />)
-    fireEvent.change(screen.getByLabelText(/variables/i), {
-      target: { value: '[1, 2, 3]' },
-    })
-    // Arrays are typeof 'object' in JS so we filter explicitly.
-    // The simulator treats this as a parse error — Start stays disabled.
-    // (Implementation note: arrays are rejected in the memoized parser.)
-    // We don't assert the exact message, just that actions are blocked.
-    // Then we verify by typing valid JSON that actions re-enable.
-    fireEvent.change(screen.getByLabelText(/variables/i), {
-      target: { value: '{}' },
-    })
+    const field = screen.getByLabelText(/variables/i) as HTMLTextAreaElement
+    fireEvent.change(field, { target: { value: '[1, 2, 3]' } })
+    expect(field.getAttribute('aria-invalid')).toBe('true')
+    expect(getButton(/^start$/i)).toBeDisabled()
+    // Message matches the parser's explicit object requirement.
+    expect(screen.getByText(/must be a json object/i)).toBeInTheDocument()
+    // Typing valid JSON re-enables Start.
+    fireEvent.change(field, { target: { value: '{}' } })
     expect(getButton(/^start$/i)).not.toBeDisabled()
   })
 })
@@ -227,6 +229,38 @@ describe('WorkflowSimulator — onActiveNodeChange', () => {
     approve()
     // After completion, currentNodeId returns to null.
     expect(onActiveNodeChange).toHaveBeenLastCalledWith(null)
+  })
+
+  // Regression: the builder mutates workflows in-place (keeps the id,
+  // bumps nothing until save). If the reset effect only watched
+  // `workflow.id`, an in-flight simulation survives a node rename /
+  // removal and advance() starts hitting "Unknown node" failures on a
+  // stale `instance.currentNodeId`. Depending on the whole workflow
+  // reference covers both swaps and mutations.
+  it('resets the simulator when the workflow reference changes even if the id is stable', () => {
+    const onActiveNodeChange = vi.fn()
+    function MutateInPlace(): JSX.Element {
+      const [wf, setWf] = useState<Workflow>(singleApproverWorkflow)
+      return (
+        <>
+          <WorkflowSimulator workflow={wf} onActiveNodeChange={onActiveNodeChange} />
+          <button
+            data-testid="mutate-wf"
+            onClick={() => setWf({ ...wf, version: wf.version + 1 })}
+          >
+            mutate
+          </button>
+        </>
+      )
+    }
+    render(<MutateInPlace />)
+    start()
+    expect(onActiveNodeChange).toHaveBeenLastCalledWith('approve')
+    fireEvent.click(screen.getByTestId('mutate-wf'))
+    // Same id, new reference → reset fires.
+    expect(onActiveNodeChange).toHaveBeenLastCalledWith(null)
+    // Status returns to idle; Start is enabled again.
+    expect(getButton(/^start$/i)).not.toBeDisabled()
   })
 
   it('resets the active node when the workflow prop switches', () => {

@@ -62,7 +62,14 @@ export function WorkflowSimulator(
   const { variables, parseError } = useMemo(() => {
     try {
       const parsed = JSON.parse(variablesText) as unknown
-      if (parsed === null || typeof parsed !== 'object') {
+      // Arrays are typeof 'object' in JS, so filter them explicitly —
+      // otherwise `[]` slips through and `advance()` receives something
+      // that can't be indexed by `event.cost`-style condition expressions.
+      if (
+        parsed === null
+        || typeof parsed !== 'object'
+        || Array.isArray(parsed)
+      ) {
         return { variables: {}, parseError: 'Variables must be a JSON object.' }
       }
       return { variables: parsed as Record<string, unknown>, parseError: null }
@@ -116,12 +123,16 @@ export function WorkflowSimulator(
     seqRef.current = 0
   }, [])
 
-  // When the workflow itself changes (swap-to-different-template), reset
-  // so we never hand a stale instance to `advance()` against a schema
-  // whose nodes may no longer exist.
+  // When the workflow itself changes — template swap OR in-place edits
+  // that mutate nodes/edges — reset so we never hand a stale instance
+  // to `advance()` against a schema whose nodes may no longer exist.
+  // Watching `workflow.id` alone misses in-place edits that keep the id
+  // but bump `version` or rename/remove nodes (the builder's primary
+  // mode of use). Depending on the workflow reference itself covers
+  // both cases: the builder spreads a fresh object per edit.
   useEffect(() => {
     reset()
-  }, [workflow.id, reset])
+  }, [workflow, reset])
 
   const statusLabel = instance === null ? 'idle' : instance.status
 
