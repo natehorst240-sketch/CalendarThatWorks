@@ -4,9 +4,10 @@ This index is the canonical docs entrypoint for the package.
 
 ## Start here
 
-- [Setup guide](./Setup.md) — install to live calendar in 10 minutes
+- [Setup guide](./Setup.md) — install to a live calendar in about 10 minutes
+- [Contributing](./Contributing.md)
 
-## Product guides
+## Core product guides
 
 - [Schedule workflow](./ScheduleWorkflow.md)
 - [Approval workflow DSL](./Workflow.md)
@@ -15,18 +16,28 @@ This index is the canonical docs entrypoint for the package.
 - [Setup wizard](./SetupWizard.md)
 - [Data adapter](./DataAdapter.md)
 - [Resource pools](./ResourcePools.md)
+- [Location provider](./LocationProvider.md)
 
 ## Provider setup guides
 
 - [Google Calendar setup](./GoogleCalendarSetup.md)
 - [Microsoft 365 setup](./Microsoft365Setup.md)
 
-## Project and contributor docs
+## Release, roadmap, and migration docs
 
-- [Contributing](./Contributing.md)
-- [Release readiness checklist](./release-readiness.md)
 - [Roadmap](./Roadmap.md)
+- [Release readiness checklist](./release-readiness.md)
+- [v0.2 → v0.3 migration guide](./v0.2-to-v0.3-MIGRATION.md)
+- [Phase 4 migration notes](./schedule-phase4-migration-notes.md)
 - [Release notes: v0.1.0 draft](./releases/v0.1.0.md)
+
+## Engineering reference docs
+
+- [Grouping API](./GROUPING_API.md)
+- [Prompts](./Prompts.md)
+- [HIPAA security notes](./HIPAA-Security.md)
+- [Recurring schedule implementation plan](./recurring-schedule-implementation-plan.md)
+- [Recurring events engine plan](./recurring-events-engine-plan.md)
 
 ## Example references
 
@@ -34,11 +45,6 @@ This index is the canonical docs entrypoint for the package.
 - [Examples workflow matrix](../examples/WORKFLOWS.md)
 - [Microsoft 365 adapter notes](../examples/microsoft-365/README.md)
 
-## Historical implementation notes
+## Historical docs archive
 
-These are retained for engineering context and migration history:
-
-- [Recurring schedule implementation plan](./recurring-schedule-implementation-plan.md)
-- [Recurring events engine plan](./recurring-events-engine-plan.md)
-- [Phase 4 migration notes](./schedule-phase4-migration-notes.md)
-- [Generic form + Microsoft 365 roadmap (legacy)](./generic-form-and-m365-roadmap.md)
+Older sprint plans, dated reviews, and deep-dive analysis artifacts now live under [docs/archive](./archive/README.md). The archive index includes completion notes for docs where the work is done.
