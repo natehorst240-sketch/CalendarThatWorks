@@ -61,6 +61,16 @@ export {
   singleApproverWorkflow, twoTierApproverWorkflow, conditionalByCostWorkflow,
 } from './core/workflow/templates';
 
+// ── Booking holds (#211) ────────────────────────────────────────────────────
+export { createHoldRegistry, findBlockingHold } from './core/holds/holdRegistry';
+export type {
+  Hold, HoldWindow, HoldRegistry,
+  AcquireHoldInput, AcquireHoldResult, AcquireHoldError, AcquireHoldErrorCode,
+  CreateHoldRegistryOptions,
+} from './core/holds/holdRegistry';
+export { useBookingHold } from './hooks/useBookingHold';
+export type { UseBookingHoldOptions, UseBookingHoldState } from './hooks/useBookingHold';
+
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
 export type {

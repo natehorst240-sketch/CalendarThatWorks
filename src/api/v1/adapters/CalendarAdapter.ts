@@ -28,6 +28,7 @@ import type {
   ScheduleInstantiationResultV1,
 } from '../templates';
 import type { EventBus } from '../../../core/engine/eventBus';
+import type { AcquireHoldInput, AcquireHoldResult } from '../../../core/holds/holdRegistry';
 
 // ─── Change notification types ────────────────────────────────────────────────
 
@@ -133,6 +134,31 @@ export interface CalendarAdapter {
 
   /** Instantiate a schedule template into concrete master events. */
   instantiateScheduleTemplate?(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1>;
+
+  /**
+   * Acquire a short-lived soft lock on a `(resource, window)` pair
+   * (issue #211). While the hold is active, other holders that attempt
+   * the same slot see a soft `hold-conflict` violation through the
+   * conflict engine. The submit flow typically acquires on form open
+   * and releases on submit/close.
+   *
+   * Single-process hosts back this with an in-memory
+   * `createHoldRegistry()`. Multi-process hosts forward to a shared
+   * store (Redis, Postgres row lock, etc.) so sibling nodes see the
+   * hold.
+   *
+   * Returns the acquired `Hold` on success or an `AcquireHoldError`
+   * when a different holder already owns an overlapping live hold.
+   * Same-holder re-acquisition refreshes the TTL in place.
+   */
+  acquireHold?(input: AcquireHoldInput): Promise<AcquireHoldResult> | AcquireHoldResult;
+
+  /**
+   * Release a previously-acquired hold by id (issue #211). Idempotent —
+   * missing ids, already-expired holds, and double-release are silent
+   * no-ops. Safe to call on submit success and on form close.
+   */
+  releaseHold?(holdId: string): Promise<void> | void;
 
   /**
    * Subscribe to the engine's lifecycle `EventBus` (issue #216).

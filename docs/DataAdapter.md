@@ -43,6 +43,102 @@ See the [Google Calendar setup guide](./GoogleCalendarSetup.md) for the OAuth fl
 - retry/backoff for transient failures
 - audit logging for compliance workflows
 
+## Booking holds (issue #211)
+
+Two users clicking *submit* on the same slot at the same time is the classic
+booking race. The engine ships a short-lived **soft lock** ("hold") that
+reserves a `(resource, window)` pair while the form is open, so the second
+user sees a soft `hold-conflict` warning in the conflict engine output
+immediately — not a save-time failure.
+
+### Registry
+
+```ts
+import { createHoldRegistry } from 'works-calendar';
+
+const holds = createHoldRegistry(); // default 5-min TTL, auto-generated ids
+```
+
+API (`HoldRegistry`):
+- `acquire({ resourceId, window, holderId, ttlMs? })` — returns `{ ok, hold }`
+  on success or `{ ok: false, error: { code: 'CONFLICTING_HOLD' | 'INVALID_WINDOW' } }`.
+  Same-holder overlap is a TTL refresh; different-holder overlap is rejected.
+- `release(holdId)` — idempotent.
+- `active(now?)` — lazy expiry (no mutation); `prune(now?)` for explicit GC.
+
+### React hook (`useBookingHold`)
+
+The submit flow typically wires through the hook, which handles
+acquire-on-mount / release-on-unmount and re-acquires when the selected
+resource or window changes:
+
+```tsx
+import { useMemo } from 'react';
+import { createHoldRegistry, useBookingHold } from 'works-calendar';
+
+const holds = useMemo(() => createHoldRegistry(), []);
+
+function BookingForm({ resourceId, start, end, userId }) {
+  const hold = useBookingHold(holds, {
+    resourceId, start, end,
+    holderId: userId,
+    enabled: Boolean(resourceId && start && end),
+  });
+
+  if (hold.status === 'error') {
+    return <p>Someone else is currently booking this slot. Try again in a moment.</p>;
+  }
+
+  async function onSubmit() {
+    await adapter.submitEvent(/* … */);
+    hold.release(); // belt-and-suspenders; unmount also releases
+  }
+
+  return <form onSubmit={onSubmit}>{/* … */}</form>;
+}
+```
+
+### Adapter contract
+
+For multi-process deployments, adapters implement the optional
+`acquireHold / releaseHold` methods and forward to a shared store
+(Redis / row-locked DB / etc.) so sibling nodes honor the hold:
+
+```ts
+class RedisAdapter implements CalendarAdapter {
+  async acquireHold(input) {
+    const ok = await redis.set(`hold:${input.resourceId}`, input.holderId, {
+      NX: true, PX: input.ttlMs ?? 300_000,
+    });
+    if (!ok) {
+      return { ok: false, error: { code: 'CONFLICTING_HOLD', message: 'slot held elsewhere' } };
+    }
+    return {
+      ok: true,
+      hold: {
+        id: input.id ?? crypto.randomUUID(),
+        resourceId: input.resourceId,
+        window: input.window,
+        holderId: input.holderId,
+        expiresAt: new Date(Date.now() + (input.ttlMs ?? 300_000)).toISOString(),
+      },
+    };
+  }
+  async releaseHold(holdId) { await redis.del(`hold:${holdId}`); }
+  /* loadRange, createEvent, … */
+}
+```
+
+Single-process embeds can skip the contract and use `createHoldRegistry()`
+directly.
+
+### Conflict engine integration
+
+The `hold-conflict` rule dispatches to `findBlockingHold()` using
+`evaluateConflicts({ …, holds: registry.active(), holderId })`. Proposer's
+own holds are excluded; other-holder overlaps surface as a **soft**
+violation so hosts can decide whether to block the save or offer a retry.
+
 ## Lifecycle event bus (issue #216)
 
 The engine exposes a typed `EventBus` for booking and assignment lifecycle
