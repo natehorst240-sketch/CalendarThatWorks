@@ -60,3 +60,11 @@ export {
   WORKFLOW_TEMPLATES,
   singleApproverWorkflow, twoTierApproverWorkflow, conditionalByCostWorkflow,
 } from './core/workflow/templates';
+
+// ── Lifecycle event bus (#216) ──────────────────────────────────────────────
+export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
+export type {
+  EventBusChannel, BookingChannel, AssignmentChannel,
+  BookingLifecyclePayload, AssignmentLifecyclePayload,
+  EventBusPayload, EventBusHandler, EventBusUnsubscribe, EventBusOptions,
+} from './core/engine/eventBus';

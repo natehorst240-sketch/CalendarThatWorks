@@ -43,7 +43,7 @@ import {
   rollbackTransaction,
 } from './transactions/rollbackTransaction';
 import type { TransactionHandle } from './transactions/beginTransaction';
-import type { OperationResult } from './operations/operationResult';
+import type { OperationResult, EventChange } from './operations/operationResult';
 import type { EngineOperation } from './schema/operationSchema';
 import type { EngineOccurrence } from './schema/occurrenceSchema';
 import type { OperationContext } from './validation/validationTypes';
@@ -56,6 +56,13 @@ import type {
   Unsubscribe,
 } from './types';
 import type { EngineEvent } from './schema/eventSchema';
+import {
+  channelForApprovalTransition,
+  type EventBus,
+  type BookingChannel,
+  type BookingLifecyclePayload,
+} from './eventBus';
+import type { ApprovalStage } from '../../types/assets';
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 
@@ -114,9 +121,18 @@ export class CalendarEngine {
   private _assignmentsByResource: Map<string, Set<string>> = new Map();
   private _assignmentsByEvent:    Map<string, Set<string>> = new Map();
 
+  /** Optional lifecycle bus (issue #216). null when host did not wire one. */
+  private _bus: EventBus | null;
+
   constructor(init: CalendarEngineInit = {}) {
     this._state = createInitialState(init);
+    this._bus = init.bus ?? null;
     this._rebuildAssignmentIndex();
+  }
+
+  /** Lifecycle bus accessor (issue #216). Returns null when not configured. */
+  get bus(): EventBus | null {
+    return this._bus;
   }
 
   // ── Public API ──────────────────────────────────────────────────────────────
@@ -175,6 +191,7 @@ export class CalendarEngine {
       const commit = commitTransaction(tx, this._state.events, result.changes);
       this._state = { ...this._state, events: commit.events };
       this._notify();
+      this._emitBookingLifecycle(result.changes, op, ctx);
     }
 
     return result;
@@ -253,6 +270,15 @@ export class CalendarEngine {
     if (existing) this._removeFromAssignmentIndex(existing);
     this._addToAssignmentIndex(assignment);
     this._notify();
+    // New-only: replacing units on an existing join isn't a new booking, so
+    // skip the emit. Updating units is a resize-like event better modeled
+    // by a future assignment.updated channel if ever needed.
+    if (!existing && this._bus) {
+      this._bus.emit('assignment.created', {
+        assignment,
+        at: new Date().toISOString(),
+      });
+    }
   }
 
   /** Remove a single assignment by id. No-op when not found. */
@@ -264,6 +290,12 @@ export class CalendarEngine {
     this._state = { ...this._state, assignments: map };
     this._removeFromAssignmentIndex(existing);
     this._notify();
+    if (this._bus) {
+      this._bus.emit('assignment.removed', {
+        assignment: existing,
+        at: new Date().toISOString(),
+      });
+    }
   }
 
   /**
@@ -478,4 +510,100 @@ export class CalendarEngine {
       if (byE.size === 0) this._assignmentsByEvent.delete(a.eventId);
     }
   }
+
+  // ── Booking lifecycle emit (issue #216) ───────────────────────────────────
+
+  /**
+   * Fan out booking.* lifecycle events from the EventChange[] produced by
+   * applyMutation. Emits at most one channel per change:
+   *   created → booking.requested
+   *   deleted → booking.cancelled
+   *   updated → channel derived from the approval stage transition
+   *             (`null → requested`, `* → approved`, `* → finalized`,
+   *             `* → denied`). Updates that don't flip the stage are
+   *             silent — this is the behavior adapters want.
+   */
+  private _emitBookingLifecycle(
+    changes: readonly EventChange[],
+    op: EngineOperation,
+    _ctx: OperationContext,
+  ): void {
+    if (!this._bus || changes.length === 0) return;
+    const at = new Date().toISOString();
+    const sourceActionId = `op:${op.type}`;
+
+    for (const change of changes) {
+      if (change.type === 'created') {
+        const stage = readApprovalStage(change.event);
+        const actor = stage ? latestActor(stage) : undefined;
+        this._emitBooking('booking.requested', change.event, {
+          at,
+          sourceActionId,
+          ...(actor !== undefined ? { actor } : {}),
+        });
+        continue;
+      }
+      if (change.type === 'deleted') {
+        const stage = readApprovalStage(change.event);
+        const actor = stage ? latestActor(stage) : undefined;
+        this._emitBooking('booking.cancelled', change.event, {
+          at,
+          sourceActionId,
+          ...(actor !== undefined ? { actor } : {}),
+        });
+        continue;
+      }
+      // change.type === 'updated'
+      const beforeStage = readApprovalStage(change.before);
+      const afterStage  = readApprovalStage(change.after);
+      if (!afterStage) continue;
+      const channel = channelForApprovalTransition(
+        beforeStage?.stage ?? null,
+        afterStage.stage,
+      );
+      if (!channel) continue;
+      const reason = latestReason(afterStage);
+      const actor  = latestActor(afterStage);
+      this._emitBooking(channel, change.after, {
+        at,
+        sourceActionId,
+        ...(actor  !== undefined ? { actor }  : {}),
+        ...(reason !== undefined ? { reason } : {}),
+      });
+    }
+  }
+
+  private _emitBooking(
+    channel: BookingChannel,
+    event: EngineEvent,
+    extras: Omit<BookingLifecyclePayload, 'eventId' | 'eventSnapshot'>,
+  ): void {
+    if (!this._bus) return;
+    const payload: BookingLifecyclePayload = {
+      eventId: event.id,
+      eventSnapshot: event,
+      ...extras,
+    };
+    this._bus.emit(channel, payload);
+  }
+}
+
+// ─── Approval-stage helpers (module-local) ──────────────────────────────────
+
+function readApprovalStage(ev: EngineEvent | undefined): ApprovalStage | null {
+  if (!ev) return null;
+  const stage = (ev.meta as Record<string, unknown> | undefined)?.approvalStage;
+  if (!stage || typeof stage !== 'object') return null;
+  const s = stage as ApprovalStage;
+  return typeof s.stage === 'string' ? s : null;
+}
+
+function latestReason(stage: ApprovalStage): string | undefined {
+  const last = stage.history?.[stage.history.length - 1];
+  return last?.reason;
+}
+
+function latestActor(stage: ApprovalStage): string | undefined {
+  const last = stage.history?.[stage.history.length - 1];
+  return last?.actor;
 }

@@ -27,6 +27,7 @@ import type {
   ScheduleInstantiationRequestV1,
   ScheduleInstantiationResultV1,
 } from '../templates';
+import type { EventBus } from '../../../core/engine/eventBus';
 
 // ─── Change notification types ────────────────────────────────────────────────
 
@@ -132,4 +133,22 @@ export interface CalendarAdapter {
 
   /** Instantiate a schedule template into concrete master events. */
   instantiateScheduleTemplate?(request: ScheduleInstantiationRequestV1): Promise<ScheduleInstantiationResultV1>;
+
+  /**
+   * Subscribe to the engine's lifecycle `EventBus` (issue #216).
+   *
+   * Called once during adapter registration when the host has configured a
+   * `bus` on the engine. Adapters implement this to fan out
+   * `booking.requested | approved | denied | cancelled | completed` (and
+   * `assignment.created | removed`) to Slack, webhooks, billing, etc.
+   *
+   * Separate from `subscribe` (which delivers `AdapterChange` from the
+   * remote data source) because the two run in opposite directions —
+   * `subscribe` is ingress, `subscribeLifecycle` is egress.
+   *
+   * Handlers run async (next microtask) and are error-isolated — a throw
+   * in one subscriber does not affect siblings. See `docs/DataAdapter.md`
+   * for the Slack / webhook cookbook.
+   */
+  subscribeLifecycle?(bus: EventBus): void;
 }

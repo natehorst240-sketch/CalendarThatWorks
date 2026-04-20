@@ -133,4 +133,11 @@ export interface CalendarEngineInit {
   readonly cursor?: Date;
   readonly filter?: Partial<FilterState>;
   readonly config?: EngineConfig;
+  /**
+   * Optional lifecycle bus (issue #216). When supplied, the engine emits
+   * booking.requested/approved/denied/cancelled/completed and assignment
+   * lifecycle events as mutations land. Host code subscribes adapters to
+   * fan out to Slack, webhooks, billing, etc.
+   */
+  readonly bus?: import('./eventBus.js').EventBus;
 }
