@@ -10,6 +10,7 @@ import {
 import { THEMES } from '../src/styles/themes';
 import { saveProfiles } from '../src/core/profileStore';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../src/core/configSchema';
+import { loadPools, savePools } from '../src/core/pools/poolStore';
 
 /* ─── Demo profiles ─────────────────────────────────────────────── */
 const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
@@ -222,6 +223,21 @@ const FLEET_EVENTS = [
   { id: 'f12', title: 'SIM session',          start: d(11, 9),  end: dEnd(11, 9, 4), category: 'training',    resource: 'N505CD', meta: { sublabel: 'Phenom 300',    region: 'West' } },
 ];
 
+/* ─── Resource pools (#212) ─────────────────────────────────────── */
+// Demo pools group aircraft by region. Bookings that target a pool id
+// (via event.resourcePoolId) resolve to a concrete tail number at
+// submit time; the round-robin cursor persists in localStorage so a
+// refresh doesn't reset the rotation.
+const DEMO_POOLS_DEFAULT = [
+  { id: 'fleet-west',    name: 'West Fleet',    memberIds: ['N121AB', 'N505CD'],          strategy: 'round-robin'    },
+  { id: 'fleet-central', name: 'Central Fleet', memberIds: ['N88QR',  'N733XY'],          strategy: 'round-robin'    },
+  { id: 'fleet-east',    name: 'East Fleet',    memberIds: ['N901JT', 'N245LM'],          strategy: 'first-available' },
+];
+// Seed once — on subsequent loads we read the persisted pools so a
+// cursor advance from the previous session survives the reload.
+const _storedPools = loadPools(DEMO_CALENDAR_ID);
+if (_storedPools.length === 0) savePools(DEMO_CALENDAR_ID, DEMO_POOLS_DEFAULT);
+
 // Unified category palette — engineering ops + fleet ops. The calendar
 // uses a single category set across views; each event references whichever
 // category suits it (on-call / Incident / Deploy for people, training /
@@ -418,6 +434,18 @@ function App() {
   const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
   const [eventLog,     setEventLog]     = useState([]);
   const [needsRefresh, setNeedsRefresh] = useState(false);
+  // Resource pools (#212). Hydrated from localStorage so the round-robin
+  // cursor persists across reloads. WorksCalendar calls onPoolsChange
+  // after each cursor advance; we push that back to storage and state so
+  // the next mutation (or reload) sees the updated cursor.
+  const [pools, setPools] = useState(() => {
+    const persisted = loadPools(DEMO_CALENDAR_ID);
+    return persisted.length > 0 ? persisted : DEMO_POOLS_DEFAULT;
+  });
+  const handlePoolsChange = useCallback((next) => {
+    setPools(next);
+    savePools(DEMO_CALENDAR_ID, next);
+  }, []);
 
   const assetLocationProvider = useMemo(
     () => createManualLocationProvider({ resources: AIRCRAFT_RESOURCES }),
@@ -528,6 +556,8 @@ function App() {
             events={events}
             employees={employees}
             assets={AIRCRAFT_RESOURCES}
+            pools={pools}
+            onPoolsChange={handlePoolsChange}
             strictAssetFiltering={true}
             assetRequestCategories={['maintenance', 'pr', 'training', 'aircraft-movement']}
             onEmployeeAdd={handleEmployeeAdd}

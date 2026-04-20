@@ -29,6 +29,7 @@ import { CalendarContext }    from './core/CalendarContext';
 import { normalizeEvents }    from './core/eventModel';
 import { CalendarEngine }     from './core/engine/CalendarEngine.ts';
 import { UndoRedoManager }   from './core/engine/UndoRedoManager.ts';
+import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
 import { validateOperation } from './core/engine/validation/validateOperation.ts';
@@ -188,6 +189,21 @@ export type WorksCalendarProps = {
   onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
   renderAssetLocation?: (...args: unknown[]) => ReactNode;
   renderConflictBody?: (...args: unknown[]) => ReactNode;
+
+  /**
+   * Resource pools (#212). Bookings can target a pool id via
+   * `event.resourcePoolId`; the engine resolves a concrete member at
+   * submit time and advances the round-robin cursor. Hosts that care
+   * about cross-reload persistence should read the initial array from
+   * their own store and keep it in sync via `onPoolsChange`.
+   */
+  pools?: ResourcePool[];
+  /**
+   * Fires whenever the engine commits a pool state change (e.g. a
+   * round-robin cursor advance). Hosts should persist the array so the
+   * cursor survives page reloads. Omit to skip persistence entirely.
+   */
+  onPoolsChange?: (pools: ResourcePool[]) => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -409,6 +425,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onApprovalAction,
     renderAssetLocation,
     renderConflictBody,
+
+    // ── Resource pools (#212) ──
+    pools: rawPools,
+    onPoolsChange,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -734,9 +754,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const engineRef      = useRef(null);
   const undoManagerRef = useRef(null);
   const announcerRef   = useRef(null);
+  // Tracks the pools map we last emitted so subsequent engine _notify calls
+  // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
+  // advance), not on every state tick.
+  const lastPoolsRef = useRef<ReadonlyMap<string, ResourcePool> | null>(null);
   if (engineRef.current === null) {
-    engineRef.current = new CalendarEngine();
+    engineRef.current = new CalendarEngine(
+      rawPools && rawPools.length > 0 ? { pools: rawPools } : undefined,
+    );
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
+    lastPoolsRef.current = engineRef.current.state.pools;
   }
 
   // Counts how many onEventSave-triggered prop updates to suppress clear() for.
@@ -747,6 +774,28 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // Version counter: increments whenever the engine emits a state change.
   const [engineVer, tickEngine] = useReducer(n => n + 1, 0);
   useEffect(() => engineRef.current.subscribe(() => tickEngine()), []);
+
+  // Keep engine pools in sync when the host rewrites the prop (controlled
+  // pattern: demo persists to localStorage in onPoolsChange, then re-renders
+  // with the new array). Only the engine advances rrCursor, so replacing
+  // via setPools after a mutation is safe as long as the host echoed the
+  // latest onPoolsChange payload back in.
+  useEffect(() => {
+    if (!rawPools) return;
+    engineRef.current.setPools(rawPools);
+    lastPoolsRef.current = engineRef.current.state.pools;
+  }, [rawPools]);
+
+  // Emit onPoolsChange whenever the engine commits a new pools map (typically
+  // a round-robin cursor advance during applyMutation). Suppress emissions
+  // driven by the host's own setPools round-trip above.
+  useEffect(() => {
+    if (!onPoolsChange) return;
+    const current = engineRef.current.state.pools;
+    if (current === lastPoolsRef.current) return;
+    lastPoolsRef.current = current;
+    onPoolsChange(Array.from(current.values()));
+  }, [engineVer, onPoolsChange]);
 
   // Keep engine in sync with the merged+normalized event list from all sources.
   // Skip clear() when the change was triggered by our own onEventSave so the
