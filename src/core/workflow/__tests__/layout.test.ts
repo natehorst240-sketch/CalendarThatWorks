@@ -56,6 +56,62 @@ describe('layoutWorkflow — overrides', () => {
     expect(r.positions.done).toBeDefined()
     expect(r.positions.done.y).not.toBe(2000)
   })
+
+  it('ignores overrides whose workflowId does not match', () => {
+    const overrides: WorkflowLayout = {
+      workflowId: 'some-other-workflow',
+      workflowVersion: singleApproverWorkflow.version,
+      positions: { approve: { x: 1000, y: 2000 } },
+    }
+    const r = layoutWorkflow(singleApproverWorkflow, overrides)
+    expect(r.positions.approve).not.toEqual({ x: 1000, y: 2000 })
+  })
+
+  it('ignores overrides whose workflowVersion does not match', () => {
+    const overrides: WorkflowLayout = {
+      workflowId: singleApproverWorkflow.id,
+      workflowVersion: singleApproverWorkflow.version + 1,
+      positions: { approve: { x: 1000, y: 2000 } },
+    }
+    const r = layoutWorkflow(singleApproverWorkflow, overrides)
+    expect(r.positions.approve).not.toEqual({ x: 1000, y: 2000 })
+  })
+})
+
+describe('layoutWorkflow — BFS visitation-order columns', () => {
+  it('columns follow BFS order, not workflow.nodes declaration order', () => {
+    // Declare start LAST in `nodes`. If we used declaration order,
+    // `start` would land in column 2 at rank 0 — but there is no
+    // sibling at rank 0, so col must be 0.
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'start',
+      nodes: [
+        { id: 'childA', type: 'approval', assignTo: 'role:x' },
+        { id: 'childB', type: 'approval', assignTo: 'role:y' },
+        { id: 'done',   type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+        { id: 'start',  type: 'condition', expr: 'event.cost > 0' },
+      ],
+      edges: [
+        { from: 'start',  to: 'childA', when: 'true' },
+        { from: 'start',  to: 'childB', when: 'false' },
+        { from: 'childA', to: 'done',   when: 'approved' },
+        { from: 'childA', to: 'denied', when: 'denied'   },
+        { from: 'childB', to: 'done',   when: 'approved' },
+        { from: 'childB', to: 'denied', when: 'denied'   },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    // rank → y (start is above its children)
+    expect(r.positions.start.y).toBeLessThan(r.positions.childA.y)
+    expect(r.positions.start.y).toBeLessThan(r.positions.childB.y)
+    // start is alone at rank 0 → col 0 (same x as the first child).
+    expect(r.positions.start.x).toBe(r.positions.childA.x)
+    // childA visited before childB (edge declaration order) → A < B on x.
+    expect(r.positions.childA.x).toBeLessThan(r.positions.childB.x)
+    // Same rank → same y.
+    expect(r.positions.childA.y).toBe(r.positions.childB.y)
+  })
 })
 
 describe('layoutWorkflow — bounding box', () => {

@@ -42,23 +42,27 @@ export function layoutWorkflow(
   workflow: Workflow,
   overrides?: WorkflowLayout | null,
 ): LayoutResult {
-  const ranks = bfsRanks(workflow)
-  const columnsInRank = new Map<number, number>()
+  const placement = bfsPlacement(workflow)
   const auto: Record<string, NodePosition> = {}
-
   for (const node of workflow.nodes) {
-    const rank = ranks.get(node.id) ?? 0
-    const col = columnsInRank.get(rank) ?? 0
-    columnsInRank.set(rank, col + 1)
+    const p = placement.get(node.id) ?? { rank: 0, col: 0 }
     auto[node.id] = {
-      x: MARGIN + col * COLUMN_STEP,
-      y: MARGIN + rank * ROW_STEP,
+      x: MARGIN + p.col * COLUMN_STEP,
+      y: MARGIN + p.rank * ROW_STEP,
     }
   }
 
+  // Overrides are scoped: silently ignore a stale `WorkflowLayout` that
+  // was saved against a different workflow id or version. This keeps
+  // accidentally-mismatched coordinates from being rendered against
+  // the wrong graph.
+  const overridesMatch =
+    overrides != null &&
+    overrides.workflowId === workflow.id &&
+    overrides.workflowVersion === workflow.version
   const positions: Record<string, NodePosition> = {}
   for (const node of workflow.nodes) {
-    const override = overrides?.positions?.[node.id]
+    const override = overridesMatch ? overrides!.positions[node.id] : undefined
     positions[node.id] = override ?? auto[node.id]
   }
 
@@ -190,35 +194,68 @@ function selfLoopPath(
   }
 }
 
-function bfsRanks(workflow: Workflow): Map<string, number> {
-  const ranks = new Map<string, number>()
+/**
+ * BFS from `startNodeId` that assigns each node a `{rank, col}`:
+ *  - rank = depth from start (row),
+ *  - col  = zero-based index in that rank's *visitation order* (not the
+ *    `workflow.nodes` declaration order — visitation order keeps
+ *    children of the same parent horizontally adjacent).
+ *
+ * Uses an index-based queue (O(1) dequeue) and a prebuilt adjacency
+ * map so the traversal is O(V + E) — safe to call on every edit.
+ * Nodes unreachable from `startNodeId` are piled into trailing ranks
+ * (one per row) below the main graph.
+ */
+function bfsPlacement(
+  workflow: Workflow,
+): Map<string, { rank: number; col: number }> {
+  const placement = new Map<string, { rank: number; col: number }>()
   const present = new Set(workflow.nodes.map(n => n.id))
-  if (!present.has(workflow.startNodeId)) {
-    // Fall back to row 0 for all nodes so the layout is still defined.
-    workflow.nodes.forEach(n => ranks.set(n.id, 0))
-    return ranks
+
+  // Adjacency: map<from, to[]> preserving edge-declaration order.
+  const adj = new Map<string, string[]>()
+  for (const edge of workflow.edges) {
+    if (!present.has(edge.from) || !present.has(edge.to)) continue
+    let list = adj.get(edge.from)
+    if (!list) { list = []; adj.set(edge.from, list) }
+    list.push(edge.to)
   }
-  ranks.set(workflow.startNodeId, 0)
-  const queue: string[] = [workflow.startNodeId]
-  while (queue.length > 0) {
-    const id = queue.shift() as string
-    const rank = ranks.get(id) ?? 0
-    for (const edge of workflow.edges) {
-      if (edge.from !== id) continue
-      if (!present.has(edge.to)) continue
-      if (!ranks.has(edge.to)) {
-        ranks.set(edge.to, rank + 1)
-        queue.push(edge.to)
+
+  const colsInRank = new Map<number, number>()
+  let maxReachableRank = 0
+
+  if (present.has(workflow.startNodeId)) {
+    const queue: Array<{ id: string; rank: number }> = [
+      { id: workflow.startNodeId, rank: 0 },
+    ]
+    placement.set(workflow.startNodeId, { rank: 0, col: 0 })
+    colsInRank.set(0, 1)
+    for (let head = 0; head < queue.length; head++) {
+      const { id, rank } = queue[head]
+      if (rank > maxReachableRank) maxReachableRank = rank
+      const neighbors = adj.get(id)
+      if (!neighbors) continue
+      for (const to of neighbors) {
+        if (placement.has(to)) continue
+        const nextRank = rank + 1
+        const col = colsInRank.get(nextRank) ?? 0
+        colsInRank.set(nextRank, col + 1)
+        placement.set(to, { rank: nextRank, col })
+        queue.push({ id: to, rank: nextRank })
       }
     }
   }
-  // Nodes unreachable from start still need a row — pile them below.
-  let orphanRank = (Math.max(0, ...Array.from(ranks.values())) ?? 0) + 1
+
+  // Orphans: one per trailing rank, column 0. Deterministic ordering
+  // comes from workflow.nodes declaration order.
+  let orphanRank = maxReachableRank + 1
   for (const node of workflow.nodes) {
-    if (!ranks.has(node.id)) {
-      ranks.set(node.id, orphanRank)
-      orphanRank++
-    }
+    if (placement.has(node.id)) continue
+    placement.set(node.id, { rank: orphanRank, col: 0 })
+    orphanRank++
   }
-  return ranks
+  // Edge case: startNodeId wasn't in the graph at all — every node is
+  // now an orphan at its own row, which matches the previous fallback
+  // behavior of "layout is still defined".
+  return placement
 }

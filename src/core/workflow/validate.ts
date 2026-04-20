@@ -222,19 +222,34 @@ export function hasBlockingErrors(
 
 // ─── Internal helpers ─────────────────────────────────────────────────────
 
+/**
+ * BFS reachability from `startNodeId`. Uses an index-based queue (O(1)
+ * dequeue) and a pre-built `nodeIds` Set + adjacency map so the
+ * traversal is O(V + E) — the validator runs on every keystroke, so
+ * accidental O(V*E) behavior from `queue.shift()` and in-loop
+ * `findNode` scans would bite on larger graphs.
+ */
 function reachableNodeIds(workflow: Workflow): Set<string> {
   const reachable = new Set<string>()
-  if (!findNode(workflow, workflow.startNodeId)) return reachable
+  const nodeIds = new Set(workflow.nodes.map(n => n.id))
+  if (!nodeIds.has(workflow.startNodeId)) return reachable
+  const adj = new Map<string, string[]>()
+  for (const edge of workflow.edges) {
+    if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) continue
+    let list = adj.get(edge.from)
+    if (!list) { list = []; adj.set(edge.from, list) }
+    list.push(edge.to)
+  }
   const queue: string[] = [workflow.startNodeId]
   reachable.add(workflow.startNodeId)
-  while (queue.length > 0) {
-    const id = queue.shift() as string
-    for (const edge of workflow.edges) {
-      if (edge.from !== id) continue
-      if (!reachable.has(edge.to) && findNode(workflow, edge.to)) {
-        reachable.add(edge.to)
-        queue.push(edge.to)
-      }
+  for (let head = 0; head < queue.length; head++) {
+    const id = queue[head]
+    const neighbors = adj.get(id)
+    if (!neighbors) continue
+    for (const to of neighbors) {
+      if (reachable.has(to)) continue
+      reachable.add(to)
+      queue.push(to)
     }
   }
   return reachable
@@ -262,11 +277,19 @@ function capitalize(s: string): string {
 }
 
 /**
- * Parse-only syntax check for condition expressions. Calls `evaluate`
- * with an empty variable bag and surfaces only `ExpressionError` whose
- * `kind` is a genuine shape problem — variable-binding errors expected
- * at edit time (no variables yet) are suppressed by matching on
- * `err.kind`, not on message prefixes.
+ * Best-effort syntax / shape check for condition expressions.
+ *
+ * This calls `evaluate(expr, {})`, which runs the full parse + eval
+ * pipeline — it is NOT a pure parse-only check. Variable-binding
+ * errors (`undefined-variable`, `non-object`, `unsupported-value`)
+ * are expected at edit time when the user hasn't supplied vars yet,
+ * so we suppress them by matching on `ExpressionError.kind`.
+ *
+ * Everything else surfaces: literal syntax errors (`kind: 'syntax'`),
+ * type errors on constant sub-expressions (`1 + "a" * 2` → `'type'`),
+ * and unknown operators (`kind: 'unknown-operator'`). If Phase 3 adds
+ * a pure parse API we should switch to that here and reclassify this
+ * as a true syntax check.
  */
 export function validateExpressionSyntax(expr: string): string | null {
   if (!expr.trim()) return 'Expression is empty'
@@ -275,7 +298,7 @@ export function validateExpressionSyntax(expr: string): string | null {
     return null
   } catch (err) {
     if (err instanceof ExpressionError) {
-      // These kinds are purely runtime/variable-bound; ignore at edit time.
+      // Variable-bound kinds are runtime-only; ignore at edit time.
       if (err.kind === 'undefined-variable') return null
       if (err.kind === 'non-object') return null
       if (err.kind === 'unsupported-value') return null
