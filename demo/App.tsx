@@ -36,10 +36,18 @@ const DEMO_BASES = [
   { id: 'base-bos', name: 'Boston (KBOS)' },
 ];
 
-// Pre-seed config with demo-appropriate defaults if it hasn't been set yet.
-// This ensures the calendar title, default view, and theme all reflect the
-// demo context rather than the generic DEFAULT_CONFIG values.
-const storedCfg = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
+// Pre-seed config with demo-appropriate defaults. Uses a per-version seed
+// marker so we can re-apply the demo-defaults block once per version bump
+// when we want returning users to pick up new demo features (e.g. the
+// approval workflow), without clobbering arbitrary owner edits every reload.
+//
+// Bump DEMO_SEED_VERSION whenever a new block is added to the seed below
+// so existing demo visitors get the update on their next page load.
+const DEMO_SEED_VERSION = 2;
+const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
+const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
+const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
+
 if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
@@ -49,25 +57,19 @@ if (!storedCfg) {
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
-} else {
-  // Idempotent backfill: returning demo users pick up bases / approvals
-  // without clearing localStorage. Reads the RAW stored payload (not the
-  // default-merged result) so an owner who explicitly disabled approvals
-  // in Settings keeps their choice — only missing values are filled in.
-  let parsedRaw = null;
-  try { parsedRaw = JSON.parse(storedCfg); } catch {}
-  if (parsedRaw && typeof parsedRaw === 'object') {
-    const needsBases     = !Array.isArray(parsedRaw.team?.bases) || parsedRaw.team.bases.length === 0;
-    const needsApprovals = parsedRaw.approvals?.enabled === undefined;
-    if (needsBases || needsApprovals) {
-      const existing = loadConfig(DEMO_CALENDAR_ID);
-      saveConfig(DEMO_CALENDAR_ID, {
-        ...existing,
-        ...(needsBases     ? { team:      { ...existing.team,      bases: DEMO_BASES } } : {}),
-        ...(needsApprovals ? { approvals: { ...existing.approvals, enabled: true } }    : {}),
-      });
-    }
-  }
+  localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
+} else if (storedSeedVer < DEMO_SEED_VERSION) {
+  // Returning user predating the current seed version — re-apply the demo
+  // defaults for bases + approvals so the Assets-view approval flow is
+  // visible without requiring a manual localStorage wipe. Preserves
+  // everything else on the config (title, theme, per-user settings).
+  const existing = loadConfig(DEMO_CALENDAR_ID);
+  saveConfig(DEMO_CALENDAR_ID, {
+    ...existing,
+    team:      { ...existing.team,      bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
+    approvals: { ...existing.approvals, enabled: true },
+  });
+  localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
 }
 
 // Read the stored (or just-seeded) preferred theme so the ThemePicker
