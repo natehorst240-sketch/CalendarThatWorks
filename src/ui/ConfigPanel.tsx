@@ -13,6 +13,7 @@ import { THEMES } from '../styles/themes';
 import SourcePanel from './SourcePanel';
 import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
+import { getAssetStatus } from './assetStatus';
 import styles from './ConfigPanel.module.css';
 
 const TABS = [
@@ -166,7 +167,7 @@ export default function ConfigPanel({
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
-          {tab === 'assets'      && <AssetsTab       config={config} onUpdate={onUpdate} />}
+          {tab === 'assets'      && <AssetsTab       config={config} onUpdate={onUpdate} items={items} />}
           {tab === 'display'     && <DisplayTab     config={config} onUpdate={onUpdate} />}
           {tab === 'theme'       && <ThemeCustomizer theme={config.customTheme} onChange={onUpdate} />}
           {tab === 'feeds'       && (
@@ -982,7 +983,7 @@ export function CategoriesTab({ config, onUpdate }: any) {
  *            groupBy dropdowns added by ticket 10.
  *   meta   — free-form; sublabel appears under label in the asset cell.
  */
-export function AssetsTab({ config, onUpdate }: any) {
+export function AssetsTab({ config, onUpdate, items = [] }: any) {
   const assets = Array.isArray(config.assets) ? config.assets : [];
 
   const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
@@ -1024,7 +1025,9 @@ export function AssetsTab({ config, onUpdate }: any) {
         <code> event.resource</code> values.
       </p>
 
-      {assets.map((asset, i) => (
+      {assets.map((asset, i) => {
+        const status = getAssetStatus(asset.id, items);
+        return (
         <div key={asset._key ?? i} className={styles.assetRow} data-asset-id={asset.id}>
           <div className={styles.assetFields}>
             <div className={styles.assetField}>
@@ -1035,6 +1038,14 @@ export function AssetsTab({ config, onUpdate }: any) {
                 onChange={e => updateAsset(i, { label: e.target.value })}
                 aria-label={`Label for ${asset.id}`}
               />
+              <span
+                className={[styles.assetStatusBadge, styles[`assetStatusBadge_${status}`]]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-label={`Status: ${status}`}
+              >
+                {status}
+              </span>
             </div>
             <div className={styles.assetField}>
               <span className={styles.assetFieldLabel}>ID</span>
@@ -1084,7 +1095,8 @@ export function AssetsTab({ config, onUpdate }: any) {
             ><Trash2 size={13} /></button>
           </div>
         </div>
-      ))}
+        );
+      })}
 
       <button className={styles.addFieldBtn} onClick={addAsset}>
         <Plus size={13} /> Add asset

@@ -12,17 +12,18 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 
 import { AssetsTab } from '../ConfigPanel';
+import { getAssetStatus } from '../assetStatus';
 
-function renderTab({ initialConfig = {}, onUpdate }: any = {}) {
+function renderTab({ initialConfig = {}, onUpdate, items = [] }: any = {}) {
   let currentConfig = { ...initialConfig };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function'
       ? updater(currentConfig)
       : { ...currentConfig, ...updater };
   });
-  const utils = render(<AssetsTab config={currentConfig} onUpdate={update} />);
+  const utils = render(<AssetsTab config={currentConfig} onUpdate={update} items={items} />);
   const rerender = () =>
-    utils.rerender(<AssetsTab config={currentConfig} onUpdate={update} />);
+    utils.rerender(<AssetsTab config={currentConfig} onUpdate={update} items={items} />);
   return { ...utils, update, getConfig: () => currentConfig, rerender };
 }
 
@@ -142,5 +143,86 @@ describe('AssetsTab — reorder', () => {
   it('Move down is disabled on the last row', () => {
     renderTab({ initialConfig });
     expect(screen.getByRole('button', { name: 'Move Charlie down' })).toBeDisabled();
+  });
+});
+
+describe('getAssetStatus', () => {
+  const now = new Date('2026-04-20T12:00:00Z');
+  const overlapStart = new Date('2026-04-20T11:00:00Z');
+  const overlapEnd = new Date('2026-04-20T13:00:00Z');
+  const futureEnd = new Date('2026-04-20T18:00:00Z');
+
+  it('returns assigned for active overlapping bookings', () => {
+    const status = getAssetStatus('asset-1', [{
+      resource: 'asset-1',
+      start: overlapStart,
+      end: overlapEnd,
+      status: 'confirmed',
+    }], now);
+    expect(status).toBe('assigned');
+  });
+
+  it('does not treat cancelled overlapping bookings as assigned', () => {
+    const status = getAssetStatus('asset-1', [{
+      resource: 'asset-1',
+      start: overlapStart,
+      end: overlapEnd,
+      status: 'cancelled',
+    }], now);
+    expect(status).toBe('available');
+  });
+
+  it('does not treat requested overlapping bookings as assigned', () => {
+    const status = getAssetStatus('asset-1', [{
+      resource: 'asset-1',
+      start: overlapStart,
+      end: overlapEnd,
+      status: 'confirmed',
+      meta: { approvalStage: { stage: 'requested' } },
+    }], now);
+    expect(status).toBe('requested');
+  });
+
+  it('prefers assigned over requested when both are present', () => {
+    const status = getAssetStatus('asset-1', [
+      {
+        resource: 'asset-1',
+        start: overlapStart,
+        end: overlapEnd,
+        status: 'confirmed',
+        meta: { approvalStage: { stage: 'requested' } },
+      },
+      {
+        resource: 'asset-1',
+        start: overlapStart,
+        end: overlapEnd,
+        status: 'confirmed',
+        meta: { approvalStage: { stage: 'approved' } },
+      },
+      {
+        resource: 'asset-1',
+        start: new Date('2026-04-20T17:00:00Z'),
+        end: futureEnd,
+        status: 'confirmed',
+        meta: { approvalStage: { stage: 'requested' } },
+      },
+    ], now);
+    expect(status).toBe('assigned');
+  });
+});
+
+describe('AssetsTab — status badge rendering', () => {
+  it('shows a requested status badge when only requested bookings exist', () => {
+    renderTab({
+      initialConfig: { assets: [{ id: 'n100', label: 'N100', meta: {} }] },
+      items: [{
+        resource: 'n100',
+        start: new Date('2020-01-01T00:00:00Z'),
+        end: new Date('2100-01-01T00:00:00Z'),
+        status: 'confirmed',
+        meta: { approvalStage: { stage: 'requested' } },
+      }],
+    });
+    expect(screen.getByLabelText('Status: requested')).toBeInTheDocument();
   });
 });

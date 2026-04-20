@@ -12,8 +12,15 @@ import '@testing-library/jest-dom';
 
 import { TeamTab } from '../ConfigPanel';
 
-function renderTab({ initialMembers = [], onUpdate, onEmployeeAdd, onEmployeeDelete }: any = {}) {
-  let currentConfig = { team: { members: initialMembers } };
+function renderTab({
+  initialMembers = [],
+  initialRoles = [],
+  initialBases = [],
+  onUpdate,
+  onEmployeeAdd,
+  onEmployeeDelete,
+}: any = {}) {
+  let currentConfig = { team: { members: initialMembers, roles: initialRoles, bases: initialBases } };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function' ? updater(currentConfig) : { ...currentConfig, ...updater };
   });
@@ -109,5 +116,21 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     fireEvent.change(pending, { target: { value: 'Nora' } });
     fireEvent.keyDown(pending, { key: 'Enter' });
     expect(getConfig().team.members.map(m => m.id)).toEqual([5, 6]);
+  });
+
+  it('keeps role/base optional when roles and bases exist', () => {
+    const { add, getConfig } = renderTab({
+      initialRoles: ['Nurse'],
+      initialBases: [{ id: 'b-1', name: 'Main' }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Add employee/ }));
+    const input = screen.getByPlaceholderText('Employee name');
+    fireEvent.change(input, { target: { value: 'Jamie' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(getConfig().team.members[0]).toMatchObject({ id: 1, name: 'Jamie' });
+    expect(getConfig().team.members[0]).not.toHaveProperty('role');
+    expect(getConfig().team.members[0]).not.toHaveProperty('base');
   });
 });

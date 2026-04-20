@@ -24,6 +24,7 @@ This index is the canonical docs entrypoint for the package.
 - [Contributing](./Contributing.md)
 - [Release readiness checklist](./release-readiness.md)
 - [Roadmap](./Roadmap.md)
+- [Issues #192-#198 one-sprint plan](./issues-192-198-one-sprint-plan.md)
 - [Release notes: v0.1.0 draft](./releases/v0.1.0.md)
 
 ## Example references
