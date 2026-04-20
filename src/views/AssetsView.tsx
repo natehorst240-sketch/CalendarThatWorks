@@ -183,6 +183,11 @@ export default function AssetsView({
   onApprovalAction,
   resolveResourceLabel,
   strictAssetFiltering = false,
+  // Resource pools (#212). Rendered as rows at the top of the view so
+  // bookings can target "any member" instead of a specific asset. The
+  // engine resolves the pool to a concrete resourceId at submit time.
+  pools = [],
+  onPoolDateSelect,
 }: any) {
   const ctx = useCalendarContext();
 
@@ -509,13 +514,54 @@ export default function AssetsView({
     return node.children.reduce((sum, c) => sum + countEvents(c), 0);
   }, []);
 
+  // Pool rows (#212): each pool renders as a synthetic row at the top of
+  // the body so owners can book against "any member". Events shown on a
+  // pool row are the union of bookings on its members — i.e. the row
+  // reflects aggregate availability so a busy cell is obvious before
+  // the user drops a new booking on it.
+  const poolRows = useMemo(() => {
+    if (!Array.isArray(pools) || pools.length === 0) return [];
+    return pools
+      // Disabled pools are documented as "stay in history but can't be
+      // selected for new bookings" — keep them out of the row list
+      // entirely so users don't start drafts the resolver would reject
+      // as POOL_DISABLED.
+      .filter(p => p && typeof p.id === 'string' && Array.isArray(p.memberIds) && !p.disabled)
+      .map(p => {
+        const memberSet = new Set(p.memberIds);
+        // Scope to member-held events; use the raw events list (not the
+        // strictly-filtered one) so a pool row stays populated even when
+        // strictAssetFiltering hides some members.
+        const scoped = eventsProp.filter(e => e.resource != null && memberSet.has(e.resource));
+        const { events: laned, laneCount } = assignLanes(scoped, monthStart, monthEnd);
+        const rowH = Math.max(
+          laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
+          ROW_PAD * 2 + LANE_H + 16,
+        );
+        const memberLabels = p.memberIds.map(id => assetById.get(id)?.label ?? id);
+        return {
+          _type:       'poolRow',
+          key:         `__pool__${p.id}`,
+          poolId:      p.id,
+          label:       p.name || p.id,
+          sublabel:    p.strategy ? `Pool · ${p.strategy}` : 'Pool',
+          memberIds:   p.memberIds,
+          memberLabels,
+          events:      laned,
+          laneCount,
+          rowH,
+        };
+      });
+  }, [pools, eventsProp, assetById, monthStart.toISOString(), monthEnd.toISOString()]);
+
   // Flat list of rows for virtualization: interleaves groupHeader pseudo-rows
   // with asset rows scoped to the leaf group's events.
   const flatRows = useMemo(() => {
+    const prefix = poolRows;
     if (!groupTree) {
-      return resourceList.map(r => buildAssetRow(r, events));
+      return [...prefix, ...resourceList.map(r => buildAssetRow(r, events))];
     }
-    const out = [];
+    const out: any[] = [...prefix];
     const walk = (nodes, parentPath) => {
       nodes.forEach((node, i) => {
         const path = parentPath ? `${parentPath}/${node.key}` : node.key;
@@ -551,7 +597,7 @@ export default function AssetsView({
     };
     walk(groupTree, '');
     return out;
-  }, [groupTree, collapsedGroups, events, resourceList, buildAssetRow, countEvents, sortResourceKeys]);
+  }, [groupTree, collapsedGroups, events, resourceList, buildAssetRow, countEvents, sortResourceKeys, poolRows]);
 
   // ── Cumulative row offsets ─────────────────────────────────────────────────
   const rowOffsets = useMemo(() => {
@@ -631,7 +677,7 @@ export default function AssetsView({
     }
   }, [focusedCell, rowOffsets, flatRows]);
 
-  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
+  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId, isPoolRow) => {
     const maxRi = flatRows.length - 1;
     const maxDi = totalDays - 1;
     let nextRi = ri, nextDi = di;
@@ -647,13 +693,20 @@ export default function AssetsView({
       case ' ': {
         e.preventDefault();
         const hit = cellRowEvents.find(ev => ev._dayStart <= di && ev._dayEnd >= di);
-        if (hit) {
+        // On pool rows, rowEvents is the aggregate of member bookings — an
+        // occupied cell just means *some* member is busy, not that the pool
+        // itself is taken. Always route pool cells to onPoolDateSelect so
+        // the resolver can pick a free member at submit time.
+        if (hit && !isPoolRow) {
           const hitStage = getApprovalStage(hit);
           if (AUDIT_STAGES.has(hitStage)) openAudit(hit, e.currentTarget);
           else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
-          onDateSelect?.(startOfDay(dayDate), addDays(startOfDay(dayDate), 1), resourceId);
+          const from = startOfDay(dayDate);
+          const to   = addDays(startOfDay(dayDate), 1);
+          if (isPoolRow) onPoolDateSelect?.(from, to, resourceId);
+          else           onDateSelect?.(from, to, resourceId);
         }
         return;
       }
@@ -664,7 +717,7 @@ export default function AssetsView({
       lastKeyNavCell.current = true;
       setFocusedCell({ rowIdx: nextRi, dayIdx: nextDi });
     }
-  }, [flatRows.length, totalDays, onEventClick, onDateSelect, days, openAudit]);
+  }, [flatRows.length, totalDays, onEventClick, onDateSelect, onPoolDateSelect, days, openAudit]);
 
   /**
    * Header-row keyboard handling:
@@ -881,15 +934,24 @@ export default function AssetsView({
               );
             }
 
-            const { key, resource, label, sublabel, events: rowEvents, rowH } = rowData;
+            const isPool  = rowData._type === 'poolRow';
+            const { key, label, sublabel, events: rowEvents, rowH } = rowData;
+            const resource = isPool ? rowData.poolId : rowData.resource;
             const displayLabel = label ?? resource;
             const topOffset = rowOffsets[rowIdx];
-            const locationData = locations.get(resource) ?? null;
+            const locationData = isPool ? null : locations.get(resource) ?? null;
+            // Pool rows use the same sticky/event layout as asset rows but
+            // skip the location banner and carry a title-attr tooltip
+            // listing member labels so owners can verify the pool's makeup
+            // without leaving the view.
+            const memberTooltip = isPool
+              ? `Pool members:\n${(rowData.memberLabels ?? []).join('\n')}`
+              : undefined;
 
             return (
               <div
                 key={key}
-                className={styles.row}
+                className={[styles.row, isPool && styles.poolRow].filter(Boolean).join(' ')}
                 style={{
                   position: 'absolute',
                   top:      topOffset,
@@ -900,35 +962,42 @@ export default function AssetsView({
                 }}
                 role="row"
                 aria-rowindex={rowIdx + 2}
+                data-pool-id={isPool ? rowData.poolId : undefined}
               >
                 {/* Sticky asset cell — row header */}
                 <div
                   className={styles.nameCell}
                   style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
                   role="rowheader"
-                  aria-label={displayLabel}
+                  aria-label={isPool ? `Pool: ${displayLabel}` : displayLabel}
                   data-resource={resource}
+                  title={memberTooltip}
                 >
                   <div className={styles.assetMeta}>
-                    <span className={styles.assetRegistration}>{displayLabel}</span>
+                    <span className={styles.assetRegistration}>
+                      {isPool && <span className={styles.poolChip} aria-hidden="true">POOL</span>}
+                      {displayLabel}
+                    </span>
                     {sublabel && (
                       <span className={styles.assetSublabel}>{sublabel}</span>
                     )}
                   </div>
-                  <div
-                    className={styles.locationBanner}
-                    aria-label={locationData
-                      ? `Asset location: ${locationData.text} (${locationData.status})`
-                      : 'Asset location'}
-                    data-status={locationData?.status ?? 'placeholder'}
-                  >
-                    {renderAssetLocation
-                      ? renderAssetLocation(locationData, { id: resource })
-                      : locationData
-                        ? <span className={styles.locationText}>{locationData.text}</span>
-                        : <span className={styles.locationPlaceholder}>Location —</span>
-                    }
-                  </div>
+                  {!isPool && (
+                    <div
+                      className={styles.locationBanner}
+                      aria-label={locationData
+                        ? `Asset location: ${locationData.text} (${locationData.status})`
+                        : 'Asset location'}
+                      data-status={locationData?.status ?? 'placeholder'}
+                    >
+                      {renderAssetLocation
+                        ? renderAssetLocation(locationData, { id: resource })
+                        : locationData
+                          ? <span className={styles.locationText}>{locationData.text}</span>
+                          : <span className={styles.locationPlaceholder}>Location —</span>
+                      }
+                    </div>
+                  )}
                 </div>
 
                 {/* Event zone */}
@@ -963,16 +1032,34 @@ export default function AssetsView({
                         role="gridcell"
                         tabIndex={isFocused ? 0 : -1}
                         data-cell={`${rowIdx}-${di}`}
-                        aria-label={`${resource}, ${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}${cellHasEvent ? '' : ', empty — click to create'}`}
+                        aria-label={(() => {
+                          const datePart = `${format(day, 'MMMM d')}${isToday(day) ? ', today' : ''}`;
+                          if (isPool) {
+                            // Pool cells are always bookable — the resolver
+                            // picks a free member at submit time — so skip
+                            // the "empty" qualifier that would lie when the
+                            // aggregate row shows a member event.
+                            return `${displayLabel}, ${datePart}, click to book any available member`;
+                          }
+                          return `${resource}, ${datePart}${cellHasEvent ? '' : ', empty — click to create'}`;
+                        })()}
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
                         className={styles.kbCell}
                         style={{ left: di * dayColW, width: dayColW, top: 0, height: rowH }}
-                        onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId)}
+                        onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId, isPool)}
                         onClick={() => {
                           setFocusedCell({ rowIdx, dayIdx: di });
-                          if (!cellHasEvent) {
-                            onDateSelect?.(startOfDay(day), addDays(startOfDay(day), 1), resourceId);
+                          // Pool rows aggregate member bookings, so a "busy"
+                          // cell still has free members the resolver can
+                          // assign. Only the asset-row path short-circuits.
+                          if (cellHasEvent && !isPool) return;
+                          const from = startOfDay(day);
+                          const to   = addDays(startOfDay(day), 1);
+                          if (isPool) {
+                            onPoolDateSelect?.(from, to, rowData.poolId);
+                          } else {
+                            onDateSelect?.(from, to, resourceId);
                           }
                         }}
                       />

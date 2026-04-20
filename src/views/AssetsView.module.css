@@ -268,6 +268,32 @@
   background: color-mix(in srgb, var(--wc-text) 1.5%, transparent);
 }
 
+/* Pool rows (#212): synthetic "any member" rows at the top of the view.
+   Distinguish from asset rows with a subtle left accent + surface tint
+   so owners can tell at a glance which rows are virtual. */
+.poolRow {
+  background: color-mix(in srgb, var(--wc-accent, #6366f1) 4%, transparent);
+  border-left: 3px solid var(--wc-accent, #6366f1);
+}
+
+.poolRow:hover {
+  background: color-mix(in srgb, var(--wc-accent, #6366f1) 8%, transparent);
+}
+
+.poolChip {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  color: var(--wc-bg);
+  background: var(--wc-accent, #6366f1);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
 /* ── Sticky asset cell ──────────────────────────────────────────── */
 .nameCell {
   position: sticky;

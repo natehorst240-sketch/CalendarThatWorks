@@ -1446,18 +1446,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       const op = {
         type:  'create',
         event: {
-          id:         createdId,
-          title:      rawEv.title      ?? '(untitled)',
-          start:      newStart,
-          end:        newEnd,
-          allDay:     rawEv.allDay     ?? false,
-          resourceId: rawEv.resource   ?? null,
-          category:   rawEv.category   ?? null,
-          color:      rawEv.color      ?? null,
-          status:     rawEv.status     ?? 'confirmed',
-          rrule:      resolvedRrule,
-          exdates:    rawEv.exdates    ?? [],
-          meta:       rawEv.meta       ?? {},
+          id:             createdId,
+          title:          rawEv.title      ?? '(untitled)',
+          start:          newStart,
+          end:            newEnd,
+          allDay:         rawEv.allDay     ?? false,
+          resourceId:     rawEv.resource   ?? null,
+          // Pool-seeded drafts carry resourcePoolId through; the engine
+          // resolves it to a concrete resourceId at submit (#212).
+          resourcePoolId: rawEv.resourcePoolId ?? null,
+          category:       rawEv.category   ?? null,
+          color:          rawEv.color      ?? null,
+          status:         rawEv.status     ?? 'confirmed',
+          rrule:          resolvedRrule,
+          exdates:        rawEv.exdates    ?? [],
+          meta:           rawEv.meta       ?? {},
         },
         source: 'form',
       };
@@ -1873,6 +1876,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setScheduleEditorState({ emp, start: startDate, end: endDate });
   }, [configuredEmployees, hasAddButton, onDateSelect]);
 
+  // Pool cell select (AssetsView pool row, #212). The EventForm spreads
+  // the initial formEvent into its submit payload, so seeding
+  // resourcePoolId here is enough to get the engine to resolve it on
+  // save — the generic form doesn't need a pool-picker field.
+  const handlePoolDateSelect = useCallback((start, end, poolId) => {
+    if (!hasAddButton) return;
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate   = end   instanceof Date ? end   : new Date(end);
+    setFormEvent({ start: startDate, end: endDate, resourcePoolId: poolId });
+  }, [hasAddButton]);
+
   const sharedViewProps = {
     currentDate:   cal.currentDate,
     events:        visibleEvents,
@@ -2174,10 +2188,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   events={visibleEvents}
                   onEventClick={handleEventClick}
                   onDateSelect={handleScheduleDateSelect}
+                  onPoolDateSelect={handlePoolDateSelect}
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
                   categoriesConfig={categoriesConfig ?? ownerCfg.config?.categoriesConfig}
                   assets={effectiveAssets}
+                  pools={rawPools ?? []}
                   strictAssetFiltering={strictAssetFiltering}
                   resolveResourceLabel={resolveResourceLabel}
                   zoomLevel={activeAssetsZoom}
@@ -2218,7 +2234,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── Event form ── */}
         {formEvent !== null && perms.canAddEvent && (
           <EventForm
-            event={formEvent.id ? formEvent : null}
+            // Pass formEvent through (not null) for pool-seeded drafts so
+            // resourcePoolId survives the form round-trip and the engine
+            // resolves it at submit. New drafts without pool context keep
+            // the legacy behavior: start from a blank form.
+            event={formEvent.id || formEvent.resourcePoolId ? formEvent : null}
             config={ownerCfg.config}
             categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
