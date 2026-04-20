@@ -1,0 +1,239 @@
+/* ViewsPanel — saved view list with apply/save/manage actions */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Save current state button */
+.saveBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px dashed var(--wc-border-dark);
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  justify-content: center;
+}
+
+.saveBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+/* Save form (inline) */
+.saveForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  padding: 12px;
+}
+
+.saveFormRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nameInput {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 13px;
+}
+
+.nameInput:focus {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -1px;
+}
+
+.confirmBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: none;
+  background: var(--wc-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.confirmBtn:hover {
+  opacity: 0.9;
+}
+
+.cancelBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+  color: var(--wc-text-muted);
+  font-size: 12px;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+}
+
+/* Color picker row */
+.colorRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.colorLabel {
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+
+.colorDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.colorDot:hover {
+  transform: scale(1.2);
+}
+
+.colorDot.selected {
+  border-color: var(--wc-text);
+  box-shadow: 0 0 0 2px var(--wc-bg), 0 0 0 3px var(--wc-text);
+}
+
+/* View list */
+.viewList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viewItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.viewItem:hover {
+  background: var(--wc-surface);
+}
+
+.viewItem.active {
+  background: var(--wc-accent-dim);
+}
+
+.viewColor {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.viewName {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewIcon {
+  color: var(--wc-text-faint);
+  flex-shrink: 0;
+}
+
+.viewActions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.viewItem:hover .viewActions {
+  opacity: 1;
+}
+
+.viewActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  color: var(--wc-text-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.viewActionBtn:hover {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+}
+
+.viewActionBtn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--wc-danger);
+}
+
+/* Visibility toggle */
+.visibilityBtn {
+  composes: viewActionBtn;
+}
+
+.visibilityBtn.hidden {
+  color: var(--wc-text-faint);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--wc-text-faint);
+  font-size: 13px;
+}
+
+/* Rename inline input */
+.renameInput {
+  flex: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--wc-accent);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 13px;
+  font-weight: 500;
+}

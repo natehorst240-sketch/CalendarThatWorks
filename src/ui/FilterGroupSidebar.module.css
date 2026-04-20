@@ -1,0 +1,181 @@
+/* FilterGroupSidebar — slide-out panel with 3-tab navigation */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 100%;
+  z-index: 91;
+  background: var(--wc-bg);
+  border-left: 1px solid var(--wc-border);
+  box-shadow: var(--wc-shadow);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 0;
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--wc-text);
+  margin: 0;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.closeBtn:hover {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+}
+
+/* Tab strip */
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--wc-border);
+  flex-shrink: 0;
+}
+
+.tab {
+  position: relative;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  border-radius: var(--wc-radius-sm) var(--wc-radius-sm) 0 0;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab:hover {
+  color: var(--wc-text);
+  background: var(--wc-surface);
+}
+
+.tab.active {
+  color: var(--wc-accent);
+  font-weight: 600;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--wc-accent);
+  border-radius: 2px 2px 0 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--wc-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Tab content area */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Toggle button (shown in toolbar) */
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+  border-radius: var(--wc-radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.toggleBtn:hover {
+  border-color: var(--wc-border-dark);
+  color: var(--wc-text);
+}
+
+.toggleBtn.active {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+  background: var(--wc-accent-dim);
+}
+
+/* Responsive: overlay mode on narrow screens */
+@media (max-width: 1200px) {
+  .sidebar {
+    width: 320px;
+    max-width: 90vw;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    width: 100%;
+  }
+}

@@ -1,0 +1,172 @@
+/* FiltersPanel — Notion-style sentence condition rows */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conditionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Logic connector row (AND / OR) */
+.logicRow {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.logicBtn {
+  padding: 2px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.logicBtn:hover {
+  border-color: var(--wc-border-dark);
+}
+
+.logicActive {
+  background: var(--wc-accent-dim);
+  color: var(--wc-accent);
+  border-color: var(--wc-accent);
+}
+
+/* Sentence-style condition row */
+.conditionRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -1px;
+}
+
+.valueSelect {
+  flex: 1.5;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 12px;
+}
+
+.input:focus {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -1px;
+}
+
+.valueInput {
+  flex: 1.5;
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  color: var(--wc-text-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--wc-danger);
+}
+
+.removeBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Add buttons */
+.addRow {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px dashed var(--wc-border-dark);
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.addBtn:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+/* Clear all link */
+.clearRow {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.clearLink {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--wc-text-faint);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.clearLink:hover {
+  color: var(--wc-danger);
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--wc-text-faint);
+  font-size: 13px;
+}

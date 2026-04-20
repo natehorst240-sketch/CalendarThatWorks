@@ -42,6 +42,8 @@ import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
+import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
+import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
 import OwnerLock              from './ui/OwnerLock';
 import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
@@ -566,6 +568,49 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
 
+  // ── FilterGroupSidebar state ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Derive GroupLevel[] from activeGroupBy for the sidebar's GroupsPanel
+  const sidebarGroupLevels = useMemo<GroupLevel[]>(() => {
+    if (!activeGroupBy) return [];
+    if (typeof activeGroupBy === 'string') return [{ field: activeGroupBy, showEmpty: false }];
+    if (Array.isArray(activeGroupBy)) {
+      return activeGroupBy.map(item =>
+        typeof item === 'string'
+          ? { field: item, showEmpty: false }
+          : { field: item.field, showEmpty: !!item.showEmpty },
+      );
+    }
+    return [];
+  }, [activeGroupBy]);
+
+  const handleSidebarGroupLevelsChange = useCallback((levels: GroupLevel[]) => {
+    if (levels.length === 0) {
+      setActiveGroupBy(null);
+    } else if (levels.length === 1) {
+      setActiveGroupBy(levels[0].field);
+    } else {
+      setActiveGroupBy(levels.map(l => ({ field: l.field, showEmpty: l.showEmpty })));
+    }
+  }, []);
+
+  const handleSidebarFiltersChange = useCallback((filters: Record<string, unknown>) => {
+    cal.replaceFilters(filters);
+  }, [cal]);
+
+  // Keyboard shortcut: Cmd/Ctrl + / to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setSidebarOpen(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // ── Assets view: zoom level + collapse state + location provider ──
   const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
   const [activeAssetsCollapsed, setActiveAssetsCollapsed] = useState<Set<string>>(
@@ -578,6 +623,21 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     () => locationProvider ?? createManualLocationProvider(),
     [locationProvider],
   );
+
+  const handleSidebarSaveView = useCallback((name: string, color: string | null) => {
+    savedViews.saveView(name, cal.filters, {
+      color,
+      view: cal.view,
+      ...captureSavedViewFields(cal.view, {
+        groupBy: activeGroupBy,
+        sort: activeSort,
+        showAllGroups: activeShowAllGroups,
+        zoomLevel: activeAssetsZoom,
+        collapsedGroups: activeAssetsCollapsed,
+        selectedBaseIds,
+      }),
+    });
+  }, [cal, savedViews, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]);
 
   // Mark dirty when filters/view/groupBy/sort/showAllGroups/assets-state change
   // after a saved view was applied. A ref skips the first run that fires
@@ -1851,6 +1911,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             </div>
 
             <div className={styles.actions}>
+              <SidebarToggleButton
+                isOpen={sidebarOpen}
+                onClick={() => setSidebarOpen(v => !v)}
+                filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
+                groupCount={sidebarGroupLevels.length}
+              />
               {devMode && <span className={styles.devBadge}>Dev</span>}
               {(ownerCfg.isOwner || devMode) && (
                 <button
@@ -1961,33 +2027,44 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           )
         }
 
-        {/* ── Filter Bar ── */}
-        {renderFilterBar
-          ? renderFilterBar({
-              schema:        filterBarSchema,
-              filters:       cal.filters,
-              setFilter:     cal.setFilter,
-              toggleFilter:  cal.toggleFilter,
-              clearFilter:   cal.clearFilter,
-              clearAllFilters: cal.clearFilters,
-              activePills:   buildActiveFilterPills(cal.filters, filterBarSchema),
-              items:         scopedEvents,
-            })
-          : (
-            <FilterBar
-              schema={filterBarSchema}
-              filters={cal.filters}
-              items={scopedEvents}
-              onChange={cal.setFilter}
-              onClear={cal.clearFilter}
-              onClearAll={cal.clearFilters}
-              sources={sourceStore.sources}
-              groupLabels={ownerCfg.config?.filterUi?.groupLabels}
-              pillHoverTitle={pillHoverTitle}
-              onPillHoverTitleToggle={() => setPillHoverTitle(v => !v)}
-            />
-          )
-        }
+        {/* ── Filter Bar (legacy, kept for renderFilterBar override) ── */}
+        {renderFilterBar && renderFilterBar({
+          schema:        filterBarSchema,
+          filters:       cal.filters,
+          setFilter:     cal.setFilter,
+          toggleFilter:  cal.toggleFilter,
+          clearFilter:   cal.clearFilter,
+          clearAllFilters: cal.clearFilters,
+          activePills:   buildActiveFilterPills(cal.filters, filterBarSchema),
+          items:         scopedEvents,
+        })}
+
+        {/* ── View area (with sidebar overlay) ── */}
+        <FilterGroupSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          // Groups tab
+          groupLevels={sidebarGroupLevels}
+          onGroupLevelsChange={handleSidebarGroupLevelsChange}
+          sort={activeSort ?? []}
+          onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
+          showAllGroups={activeShowAllGroups}
+          onShowAllGroupsChange={setActiveShowAllGroups}
+          // Filters tab
+          schema={filterBarSchema}
+          items={scopedEvents}
+          onFiltersChange={handleSidebarFiltersChange}
+          // Views tab
+          views={savedViews.views}
+          activeViewId={savedViewActiveId}
+          isViewDirty={savedViewDirty}
+          onApplyView={handleApplyView}
+          onSaveView={handleSidebarSaveView}
+          onResaveView={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+          onUpdateView={savedViews.updateView}
+          onDeleteView={handleDeleteView}
+          onToggleViewVisibility={savedViews.toggleStripVisibility}
+        />
 
         {/* ── View area ── */}
         <div

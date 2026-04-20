@@ -1,0 +1,173 @@
+/* GroupsPanel — group-by field picker with color swatches */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.levelCard {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.levelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.levelLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fieldSelect {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fieldSelect:focus {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -1px;
+}
+
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  color: var(--wc-text-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--wc-danger);
+}
+
+/* Color swatches row */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.swatch:hover {
+  transform: scale(1.15);
+}
+
+.swatch.selected {
+  border-color: var(--wc-text);
+}
+
+/* Toggle row */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+
+.toggle {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  border: none;
+  background: var(--wc-border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.toggle.on {
+  background: var(--wc-accent);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.toggle.on::after {
+  transform: translateX(14px);
+}
+
+/* Add button */
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed var(--wc-border-dark);
+  background: none;
+  border-radius: var(--wc-radius-sm);
+  font-size: 13px;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  width: 100%;
+  justify-content: center;
+}
+
+.addBtn:hover:not(:disabled) {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.addBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--wc-text-faint);
+  font-size: 13px;
+}
+
+/* Sort section */
+.sortSection {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wc-border);
+}
