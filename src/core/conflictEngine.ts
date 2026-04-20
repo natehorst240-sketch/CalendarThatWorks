@@ -18,6 +18,7 @@ import type { Violation } from './engine/validation/validationTypes'
 import type { EngineResource } from './engine/schema/resourceSchema'
 import type { Assignment } from './engine/schema/assignmentSchema'
 import type { CategoryDef } from '../types/assets'
+import { findBlockingHold, type Hold } from './holds/holdRegistry'
 import { parseHoursString } from './engine/time/dateMath'
 import { partsInTimezone } from './engine/time/timezone'
 
@@ -41,6 +42,7 @@ export type ConflictRule =
   | CapacityOverflowRule
   | OutsideBusinessHoursRule
   | PolicyViolationRule
+  | HoldConflictRule
 
 export interface ResourceOverlapRule {
   readonly id: string
@@ -82,6 +84,17 @@ export interface OutsideBusinessHoursRule {
   readonly severity?: 'soft' | 'hard'
   /** Skip when the proposed event's category matches any of these. */
   readonly ignoreCategories?: readonly string[]
+}
+
+export interface HoldConflictRule {
+  readonly id: string
+  readonly type: 'hold-conflict'
+  /**
+   * Defaults to 'soft' — a hold is a short-lived advisory lock, not a
+   * persistent constraint. Owners can escalate to 'hard' to block
+   * submits against a held slot.
+   */
+  readonly severity?: 'soft' | 'hard'
 }
 
 export interface PolicyViolationRule {
@@ -143,6 +156,19 @@ export interface EvaluateConflictsInput {
    * deterministic tests.
    */
   readonly now?: Date | string | number
+  /**
+   * Active holds to consult for the `hold-conflict` rule (#211). When
+   * the rule is present and the proposed event's resource + window
+   * overlaps a live hold owned by a different holder, a soft violation
+   * is emitted. Ignored by every other rule.
+   */
+  readonly holds?: readonly Hold[]
+  /**
+   * Identifies the caller's session/user for the `hold-conflict` rule —
+   * the proposed event's own holds are excluded. When omitted, every
+   * matching hold is treated as "someone else's".
+   */
+  readonly holderId?: string
 }
 
 const VALID: ConflictEvaluationResult = {
@@ -470,6 +496,39 @@ function evalPolicyViolation(
   return out
 }
 
+function evalHoldConflict(
+  rule: HoldConflictRule,
+  proposed: ConflictEvent,
+  holds: readonly Hold[] | undefined,
+  holderId: string | undefined,
+  nowMs: number,
+): Violation | null {
+  if (!holds || holds.length === 0) return null
+  const ps = toDate(proposed.start)
+  const pe = toDate(proposed.end)
+  const blocker = findBlockingHold(
+    {
+      resourceId: proposed.resource ?? null,
+      window: { start: ps, end: pe },
+      holderId: holderId ?? null,
+    },
+    holds,
+    nowMs,
+  )
+  if (!blocker) return null
+  return {
+    rule: rule.id,
+    severity: rule.severity ?? 'soft',
+    message: `Another session is holding this slot until ${blocker.expiresAt}.`,
+    details: {
+      type: 'hold-conflict',
+      holdId: blocker.id,
+      holderId: blocker.holderId,
+      expiresAt: blocker.expiresAt,
+    },
+  }
+}
+
 function evalMinRest(
   rule: MinRestRule,
   proposed: ConflictEvent,
@@ -509,7 +568,7 @@ function evalMinRest(
  * pure and side-effect-free so the result is fully memoisable by caller.
  */
 export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvaluationResult {
-  const { proposed, events, rules, enabled = true, resources, assignments, categories, now } = input
+  const { proposed, events, rules, enabled = true, resources, assignments, categories, now, holds, holderId } = input
   if (!enabled || rules.length === 0) return VALID
 
   const nowMs = now !== undefined ? toDate(now).getTime() : Date.now()
@@ -527,6 +586,9 @@ export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvalua
         break
       case 'policy-violation':
         violations.push(...evalPolicyViolation(rule, proposed, categories, resources, nowMs))
+        break
+      case 'hold-conflict':
+        v = evalHoldConflict(rule, proposed, holds, holderId, nowMs)
         break
       default:
         break
@@ -565,4 +627,5 @@ export const CONFLICT_RULE_TYPES: readonly ConflictRule['type'][] = [
   'capacity-overflow',
   'outside-business-hours',
   'policy-violation',
+  'hold-conflict',
 ] as const

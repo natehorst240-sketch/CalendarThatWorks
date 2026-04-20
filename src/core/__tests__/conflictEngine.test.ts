@@ -17,6 +17,7 @@ import {
 import type { EngineResource } from '../engine/schema/resourceSchema';
 import { makeAssignment, type Assignment } from '../engine/schema/assignmentSchema';
 import type { CategoryDef } from '../../types/assets';
+import type { Hold } from '../holds/holdRegistry';
 
 const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
 
@@ -681,5 +682,75 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
     });
     expect(result.severity).toBe('soft');
     expect(result.allowed).toBe(true);
+  });
+});
+
+describe('conflictEngine — hold-conflict rule (#211)', () => {
+  const rule: ConflictRule = { id: 'hc', type: 'hold-conflict' };
+  const now = new Date(Date.UTC(2026, 3, 10, 8, 0));
+  const hold: Hold = {
+    id: 'h1',
+    resourceId: 'N100',
+    holderId: 'alice',
+    window: {
+      start: new Date(Date.UTC(2026, 3, 10, 9, 30)),
+      end:   new Date(Date.UTC(2026, 3, 10, 10, 30)),
+    },
+    expiresAt: '2026-04-10T08:05:00.000Z',
+  };
+
+  it('flags an overlapping hold from a different holder as soft', () => {
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [hold], holderId: 'bob', now,
+    });
+    expect(result.allowed).toBe(true);
+    expect(result.severity).toBe('soft');
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'hold-conflict',
+      holdId: 'h1',
+      holderId: 'alice',
+    });
+  });
+
+  it('does not flag the proposer\'s own hold', () => {
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [hold], holderId: 'alice', now,
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('ignores expired holds', () => {
+    const expired: Hold = { ...hold, expiresAt: '2026-04-10T07:00:00.000Z' };
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [expired], holderId: 'bob', now,
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('skips when holds[] is missing or empty', () => {
+    const empty = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holds: [], holderId: 'bob', now,
+    });
+    const missing = evaluateConflicts({
+      proposed: base, events: [], rules: [rule],
+      holderId: 'bob', now,
+    });
+    expect(empty.violations).toEqual([]);
+    expect(missing.violations).toEqual([]);
+  });
+
+  it('respects severity="hard" to block submits', () => {
+    const hardRule: ConflictRule = { id: 'hc-hard', type: 'hold-conflict', severity: 'hard' };
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [hardRule],
+      holds: [hold], holderId: 'bob', now,
+    });
+    expect(result.allowed).toBe(false);
+    expect(result.severity).toBe('hard');
   });
 });
