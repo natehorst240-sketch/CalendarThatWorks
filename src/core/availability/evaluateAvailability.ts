@@ -17,7 +17,7 @@
  * absolute-time ranges, zone-independent.
  */
 import { parseHoursString } from '../engine/time/dateMath'
-import { partsInTimezone } from '../engine/time/timezone'
+import { partsInTimezone, wallClockToUtc } from '../engine/time/timezone'
 import type { AvailabilityRule, BlackoutRule, WeeklyOpenRule } from './availabilityRule'
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -63,21 +63,53 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
   return aStart < bEnd && bStart < aEnd
 }
 
-function dowInZone(d: Date, tz: string): number {
-  const p = partsInTimezone(d, tz)
-  return new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()
+interface DaySegment {
+  readonly dow: number
+  /** Hour-of-day (0..24) at the start of this segment in tz. */
+  readonly startH: number
+  /** Hour-of-day (0..24) at the end of this segment in tz. */
+  readonly endH: number
 }
 
-function hourInZone(d: Date, tz: string): number {
-  const p = partsInTimezone(d, tz)
-  const h = p.hour + p.minute / 60 + p.second / 3600
-  return h
-}
+/**
+ * Split `[ws, we)` into one segment per calendar day it touches in `tz`.
+ * The first segment starts at the window's start-of-day hour and runs
+ * to the tz midnight (or `weMs`, whichever is sooner). Middle segments
+ * span 0–24. The last segment runs from 0 to the window's end-of-day
+ * hour. This is what the availability-violation conflict rule needs so
+ * multi-day bookings are validated against every touched day's open
+ * rules, not just the start day's.
+ */
+function daySegmentsInZone(ws: Date, we: Date, tz: string): DaySegment[] {
+  const segments: DaySegment[] = []
+  const endMs = we.getTime()
+  let cursorMs = ws.getTime()
+  let isFirst = true
 
-function isSameCalendarDay(a: Date, b: Date, tz: string): boolean {
-  const pa = partsInTimezone(a, tz)
-  const pb = partsInTimezone(b, tz)
-  return pa.year === pb.year && pa.month === pb.month && pa.day === pb.day
+  while (cursorMs < endMs) {
+    const cursor = new Date(cursorMs)
+    const p = partsInTimezone(cursor, tz)
+    const dow = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay()
+    // Day+1 may overflow into the next month/year — Date.UTC normalizes.
+    const nextMidnightMs = wallClockToUtc(p.year, p.month, p.day + 1, 0, 0, 0, tz).getTime()
+
+    const startH = isFirst ? p.hour + p.minute / 60 + p.second / 3600 : 0
+    const segEndMs = Math.min(endMs, nextMidnightMs)
+
+    let endH: number
+    if (segEndMs === nextMidnightMs) {
+      endH = 24
+    } else {
+      const ep = partsInTimezone(new Date(segEndMs), tz)
+      endH = ep.hour + ep.minute / 60 + ep.second / 3600
+    }
+
+    segments.push({ dow, startH, endH })
+    cursorMs = nextMidnightMs
+    isFirst = false
+  }
+
+  return segments
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────
@@ -109,43 +141,28 @@ export function evaluateAvailability(input: EvaluateAvailabilityInput): Availabi
   const openRules = input.rules.filter((r): r is WeeklyOpenRule => r.kind === 'open')
   if (openRules.length === 0) return { ok: true }
 
-  // Multi-day windows: require every touched day to contain an open rule.
-  if (!isSameCalendarDay(ws, we, tz)) {
-    // Check both endpoints + treat this as an acceptance shortcut: we
-    // don't walk every intermediate day here — if callers want strict
-    // multi-day open checks, they should split the window. The
-    // conflict-rule wrapper (availability-violation) is single-day only.
-    // Fall through to the endpoint check below.
-  }
-
-  const dow = dowInZone(ws, tz)
-  const startH = hourInZone(ws, tz)
-  const endH = hourInZone(we, tz)
-  // Midnight end means "runs to end of day".
-  const normEndH = endH === 0 && weMs > wsMs ? 24 : endH
-
-  const matchingRule = findCoveringOpenRule(openRules, dow, startH, normEndH)
-  if (matchingRule) return { ok: true }
-
-  // No single rule covers → try union of rules on the same dow.
-  if (isCoveredByUnion(openRules, dow, startH, normEndH)) {
-    return { ok: true }
-  }
-
-  const anyDow = openRules.some(r => r.days.includes(dow))
-  if (!anyDow) {
+  // Every calendar day the window touches in the resource's tz must be
+  // covered by an open rule for that segment. Single-day windows reduce
+  // to exactly one segment; multi-day windows walk the gap day-by-day.
+  for (const seg of daySegmentsInZone(ws, we, tz)) {
+    const anyDow = openRules.some(r => r.days.includes(seg.dow))
+    if (!anyDow) {
+      return {
+        ok: false,
+        reason: 'closed-day',
+        message: `Resource is closed on day ${seg.dow}.`,
+      }
+    }
+    if (findCoveringOpenRule(openRules, seg.dow, seg.startH, seg.endH)) continue
+    if (isCoveredByUnion(openRules, seg.dow, seg.startH, seg.endH)) continue
     return {
       ok: false,
-      reason: 'closed-day',
-      message: `Resource is closed on day ${dow}.`,
+      reason: 'outside-open-hours',
+      message: `Window is outside the resource's open hours on day ${seg.dow}.`,
     }
   }
 
-  return {
-    ok: false,
-    reason: 'outside-open-hours',
-    message: `Window is outside the resource's open hours.`,
-  }
+  return { ok: true }
 }
 
 function findCoveringOpenRule(

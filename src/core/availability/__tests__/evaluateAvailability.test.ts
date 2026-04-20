@@ -168,6 +168,59 @@ describe('evaluateAvailability — blackouts', () => {
   })
 })
 
+describe('evaluateAvailability — multi-day windows', () => {
+  const weekday9to5: AvailabilityRule = {
+    id: 'biz', kind: 'open', days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00',
+  }
+
+  it('rejects a window that spans a closed day', () => {
+    // 2026-04-20 Mon 10:00 → 2026-04-21 Tue 10:00 UTC.
+    // Rule says weekdays 09:00–17:00. Mon segment 10–24 exceeds 17:00,
+    // so the chain must fail. This is the regression test for the bug
+    // where only the start day's hours were checked.
+    const result = evaluateAvailability({
+      window: win('2026-04-20T10:00:00Z', '2026-04-21T10:00:00Z'),
+      rules: [weekday9to5],
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'outside-open-hours' })
+  })
+
+  it('rejects a window that spans a weekend closed day', () => {
+    // 2026-04-25 Sat 10:00 → 2026-04-26 Sun 12:00 UTC. Both days are
+    // absent from the weekday rule — the first segment already trips
+    // the closed-day branch.
+    const result = evaluateAvailability({
+      window: win('2026-04-25T10:00:00Z', '2026-04-26T12:00:00Z'),
+      rules: [weekday9to5],
+    })
+    expect(result).toMatchObject({ ok: false, reason: 'closed-day' })
+  })
+
+  it('accepts a two-day window when every touched day is 24/7 open', () => {
+    const allDay: AvailabilityRule = {
+      id: '24x7', kind: 'open', days: [0, 1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00',
+    }
+    const result = evaluateAvailability({
+      window: win('2026-04-20T10:00:00Z', '2026-04-22T10:00:00Z'),
+      rules: [allDay],
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('accepts a window that ends exactly at midnight on the same day', () => {
+    // Window Mon 10:00 → Tue 00:00 UTC: collapses to a single Mon segment
+    // 10:00–24:00. A rule 09:00–24:00 covers it.
+    const until24: AvailabilityRule = {
+      id: 'late', kind: 'open', days: [1], start: '09:00', end: '24:00',
+    }
+    const result = evaluateAvailability({
+      window: win('2026-04-20T10:00:00Z', '2026-04-21T00:00:00Z'),
+      rules: [until24],
+    })
+    expect(result.ok).toBe(true)
+  })
+})
+
 describe('evaluateAvailability — timezone awareness', () => {
   // 2026-04-19 23:30 UTC is 2026-04-20 08:30 in Tokyo (UTC+9) — a Monday morning.
   it('evaluates day-of-week in the resource timezone', () => {
