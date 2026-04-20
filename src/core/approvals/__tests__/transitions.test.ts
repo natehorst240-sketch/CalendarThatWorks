@@ -71,11 +71,17 @@ describe('transitionApproval — illegal paths', () => {
     expect(result.ok).toBe(false)
   })
 
-  it('rejects revoke on non-terminal stages', () => {
-    for (const s of ['requested', 'approved', 'pending_higher'] as const) {
+  it('rejects revoke on pre-approval stages', () => {
+    for (const s of ['requested', 'pending_higher'] as const) {
       const result = transitionApproval(stage(s), { action: 'revoke', at: AT })
       expect(result.ok).toBe(false)
     }
+  })
+
+  it('allows revoke from `approved` (matches default config allow: [finalize, revoke])', () => {
+    const result = transitionApproval(stage('approved'), { action: 'revoke', at: AT })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.stage.stage).toBe('requested')
   })
 
   it('rejects unknown stages with INVALID_STAGE', () => {

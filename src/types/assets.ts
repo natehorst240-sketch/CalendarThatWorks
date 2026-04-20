@@ -31,8 +31,16 @@ export type ApprovalStageId =
 export type ApprovalActionId =
   | 'submit' | 'approve' | 'deny' | 'downgrade' | 'finalize';
 
+/**
+ * Superset of `ApprovalActionId` that the history log records. `revoke`
+ * is a reducer-level action (reopen a terminal stage) that does not
+ * appear in the owner-configurable action menu but IS persisted in the
+ * audit trail when the reducer is invoked.
+ */
+export type ApprovalHistoryActionId = ApprovalActionId | 'revoke';
+
 export interface ApprovalHistoryEntry {
-  action: ApprovalActionId;
+  action: ApprovalHistoryActionId;
   /** ISO timestamp. */
   at: string;
   /** Actor display name or id. Optional — host may redact. */

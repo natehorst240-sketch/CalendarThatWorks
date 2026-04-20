@@ -12,6 +12,7 @@
  */
 import type {
   ApprovalActionId,
+  ApprovalHistoryActionId,
   ApprovalStage,
   ApprovalStageId,
   ApprovalHistoryEntry,
@@ -28,7 +29,7 @@ export interface TransitionError {
   readonly code: TransitionErrorCode
   readonly message: string
   readonly from?: ApprovalStageId | null
-  readonly action?: ApprovalActionId
+  readonly action?: ApprovalHistoryActionId
 }
 
 // ─── Result type (Result<T, E>) ───────────────────────────────────────────
@@ -71,7 +72,10 @@ export const LEGAL_TRANSITIONS: readonly TransitionSpec[] = [
   { from: 'pending_higher', action: 'finalize',  to: 'finalized' },
   { from: 'pending_higher', action: 'deny',      to: 'denied' },
 
-  // Terminal stages reopen via `revoke`.
+  // Mid-flow + terminal stages reopen via `revoke`. `approved` is explicitly
+  // revocable to match the shipped default action config in
+  // `src/core/configSchema.ts` (approved.allow: ['finalize', 'revoke']).
+  { from: 'approved',       action: 'revoke',    to: 'requested' },
   { from: 'finalized',      action: 'revoke',    to: 'requested' },
   { from: 'denied',         action: 'revoke',    to: 'requested' },
 ]
@@ -141,7 +145,7 @@ export function transitionApproval(
         code: 'INVALID_STAGE',
         message: `Unknown stage "${current.stage}".`,
         from: current.stage,
-        action: input.action as ApprovalActionId,
+        action: input.action,
       },
     }
   }
@@ -166,14 +170,14 @@ export function transitionApproval(
         code: 'ILLEGAL_TRANSITION',
         message: `Cannot ${input.action} from stage "${from ?? 'null'}".`,
         from,
-        action: input.action as ApprovalActionId,
+        action: input.action,
       },
     }
   }
 
   const at = input.at ?? new Date().toISOString()
   const entry: ApprovalHistoryEntry = {
-    action: input.action as ApprovalActionId,
+    action: input.action,
     at,
     ...(input.actor !== undefined ? { actor: input.actor } : {}),
     ...(input.tier !== undefined ? { tier: input.tier } : {}),
