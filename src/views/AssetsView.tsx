@@ -1087,8 +1087,33 @@ export default function AssetsView({
                     const showCaret = approvalActions.length > 0
                       && typeof onApprovalAction === 'function';
 
+                    // Pool-resolved-member disclosure (#212). On pool rows
+                    // every pill is a member event, but the pill itself
+                    // renders on the aggregate row, so hover/aria has to
+                    // spell out which concrete member it's bound to.
+                    // For events originally resolved from a pool (anywhere
+                    // in the view), surface the pool lineage so the audit
+                    // trail stays visible at a glance.
+                    const memberLabel = isPool && ev.resource
+                      ? (assetById.get(ev.resource)?.label ?? ev.resource)
+                      : null;
+                    const resolvedFromPoolId =
+                      typeof ev.meta?.resolvedFromPoolId === 'string'
+                        ? ev.meta.resolvedFromPoolId
+                        : null;
+                    const poolName = resolvedFromPoolId
+                      ? (pools.find((p: any) => p?.id === resolvedFromPoolId)?.name ?? resolvedFromPoolId)
+                      : null;
+                    const hoverTitle = [
+                      ev.title,
+                      memberLabel && `Assigned to ${memberLabel}`,
+                      poolName && `Resolved from pool: ${poolName}`,
+                    ].filter(Boolean).join(' — ') || undefined;
+
                     const ariaLabel = [
                       ev.title,
+                      memberLabel && `assigned to ${memberLabel}`,
+                      poolName && `resolved from pool ${poolName}`,
                       ev.category && `category ${ev.category}`,
                       stage && `stage ${stage.replace('_', ' ')}`,
                       ev.status && ev.status !== 'confirmed' && ev.status,
@@ -1106,6 +1131,7 @@ export default function AssetsView({
                           style={{ left, top, width, height: LANE_H, '--ev-color': evColor }}
                           onClick={onClick}
                           aria-label={ariaLabel}
+                          title={hoverTitle}
                           data-stage={stage || undefined}
                         >
                           {prefix && (

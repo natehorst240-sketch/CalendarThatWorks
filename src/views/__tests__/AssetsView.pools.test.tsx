@@ -132,6 +132,51 @@ describe('AssetsView — resource pools (issue #212)', () => {
     expect(onEventClick).not.toHaveBeenCalled();
   });
 
+  it('shows the resolved member in the hover title on pool-row pills', () => {
+    // Pool-row pills aggregate member bookings, so a viewer can't tell by
+    // looking which concrete member is on the pill. The hover title must
+    // disclose the assigned member so operators can audit utilization at
+    // a glance (#212 acceptance: "show resolved member on hover").
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      events: [
+        { id: 'e1', title: 'Charter', start: evOn(3), end: evOn(4), resource: 'N121AB' },
+      ],
+    });
+    const poolRow = screen.getByRole('rowheader', { name: 'Pool: West Fleet' }).closest('[role=row]') as HTMLElement;
+    const pill = poolRow.querySelector('button[aria-label*="Charter"]') as HTMLElement;
+    expect(pill).toBeTruthy();
+    expect(pill.getAttribute('title')).toContain('Charter');
+    expect(pill.getAttribute('title')).toContain('N121AB');
+    expect(pill.getAttribute('aria-label')).toContain('assigned to N121AB');
+  });
+
+  it('surfaces pool lineage on pills for pool-resolved events', () => {
+    // Events whose meta.resolvedFromPoolId is set were drawn from a pool;
+    // the hover title should disclose which pool they came from so the
+    // audit trail is visible without opening the event.
+    renderView({
+      assets: basicAssets,
+      pools:  [{ id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' }],
+      events: [
+        {
+          id: 'e1',
+          title: 'Charter',
+          start: evOn(3),
+          end: evOn(4),
+          resource: 'N121AB',
+          meta: { resolvedFromPoolId: 'fleet-west' },
+        },
+      ],
+    });
+    // Asset-row pill for N121AB carries the pool lineage.
+    const assetRow = screen.getByRole('rowheader', { name: 'N121AB' }).closest('[role=row]') as HTMLElement;
+    const pill = assetRow.querySelector('button[aria-label*="Charter"]') as HTMLElement;
+    expect(pill.getAttribute('title')).toContain('West Fleet');
+    expect(pill.getAttribute('aria-label')).toContain('resolved from pool West Fleet');
+  });
+
   it('does not render disabled pools as rows', () => {
     // Disabled pools stay in history but can't accept new bookings — the
     // resolver rejects them as POOL_DISABLED — so they must not render as
