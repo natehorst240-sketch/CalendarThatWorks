@@ -29,6 +29,7 @@ import {
 import type { Assignment }       from './schema/assignmentSchema';
 import type { Dependency }       from './schema/dependencySchema';
 import type { ResourceCalendar } from './schema/resourceCalendarSchema';
+import type { ResourcePool }     from '../pools/resourcePoolSchema';
 import {
   getOccurrencesInRange,
   type GetOccurrencesOptions,
@@ -79,6 +80,9 @@ export function createInitialState(init: CalendarEngineInit = {}): CalendarState
   const calMap = new Map<string, ResourceCalendar>();
   for (const c of init.resourceCalendars ?? []) calMap.set(c.id, c);
 
+  const poolMap = new Map<string, ResourcePool>();
+  for (const p of init.pools ?? []) poolMap.set(p.id, p);
+
   const defaultFilter: FilterState = {
     search: '',
     categories: new Set(),
@@ -98,6 +102,7 @@ export function createInitialState(init: CalendarEngineInit = {}): CalendarState
     assignments:       assignMap,
     dependencies:      depMap,
     resourceCalendars: calMap,
+    pools:             poolMap,
     view:     init.view   ?? 'month',
     cursor:   init.cursor ?? new Date(),
     filter,
@@ -422,6 +427,37 @@ export class CalendarEngine {
     return null;
   }
 
+  // ── Resource pool CRUD (issue #212) ──────────────────────────────────────────
+
+  /** Replace all pools atomically. Notifies subscribers once. */
+  setPools(pools: ReadonlyArray<ResourcePool>): void {
+    const map = new Map<string, ResourcePool>(pools.map(p => [p.id, p]));
+    this._state = { ...this._state, pools: map };
+    this._notify();
+  }
+
+  /** Add or replace a single pool. */
+  upsertPool(pool: ResourcePool): void {
+    const map = new Map(this._state.pools);
+    map.set(pool.id, pool);
+    this._state = { ...this._state, pools: map };
+    this._notify();
+  }
+
+  /** Remove a pool by id. No-op when not found. */
+  removePool(id: string): void {
+    if (!this._state.pools.has(id)) return;
+    const map = new Map(this._state.pools);
+    map.delete(id);
+    this._state = { ...this._state, pools: map };
+    this._notify();
+  }
+
+  /** Return the pool for the given id, or null if not registered. */
+  getPool(id: string): ResourcePool | null {
+    return this._state.pools.get(id) ?? null;
+  }
+
   // ── Transaction helpers ───────────────────────────────────────────────────────
 
   /**
@@ -454,6 +490,7 @@ export class CalendarEngine {
     readonly assignments?:       ReadonlyMap<string, Assignment>;
     readonly dependencies?:      ReadonlyMap<string, Dependency>;
     readonly resourceCalendars?: ReadonlyMap<string, ResourceCalendar>;
+    readonly pools?:             ReadonlyMap<string, ResourcePool>;
   }): void {
     this._state = {
       ...this._state,
@@ -461,6 +498,7 @@ export class CalendarEngine {
       ...(snapshot.assignments       != null && { assignments:       snapshot.assignments }),
       ...(snapshot.dependencies      != null && { dependencies:      snapshot.dependencies }),
       ...(snapshot.resourceCalendars != null && { resourceCalendars: snapshot.resourceCalendars }),
+      ...(snapshot.pools             != null && { pools:             snapshot.pools }),
     };
     if (snapshot.assignments != null) this._rebuildAssignmentIndex();
     this._notify();
