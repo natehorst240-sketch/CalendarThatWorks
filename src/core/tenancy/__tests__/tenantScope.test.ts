@@ -31,6 +31,16 @@ describe('filterByTenant', () => {
     expect(out).toEqual(['c'])
   })
 
+  it('treats tenantId=null as global (JSON-serialized unset)', () => {
+    const withNullUnset = [
+      { id: 'a', tenantId: 'red' },
+      { id: 'b', tenantId: null },
+      { id: 'c', tenantId: 'blue' },
+    ]
+    const out = filterByTenant(withNullUnset, 'red').map(i => i.id)
+    expect(out).toEqual(['a', 'b'])
+  })
+
   it('returns every item when currentTenantId is null', () => {
     const out = filterByTenant(items, null).map(i => i.id)
     expect(out).toEqual(['a', 'b', 'c', 'd'])
@@ -77,6 +87,10 @@ describe('isVisibleToTenant', () => {
   it('is true for everything when currentTenantId is null', () => {
     expect(isVisibleToTenant({ tenantId: 'red' }, null)).toBe(true)
   })
+
+  it('treats an item with tenantId=null as global', () => {
+    expect(isVisibleToTenant({ tenantId: null }, 'red')).toBe(true)
+  })
 })
 
 describe('assertSameTenant', () => {
@@ -88,6 +102,11 @@ describe('assertSameTenant', () => {
     expect(assertSameTenant({ tenantId: 'red' }, {})).toBeNull()
     expect(assertSameTenant({}, { tenantId: 'red' })).toBeNull()
     expect(assertSameTenant({}, {})).toBeNull()
+  })
+
+  it('treats tenantId=null as global on either side', () => {
+    expect(assertSameTenant({ tenantId: 'red' }, { tenantId: null })).toBeNull()
+    expect(assertSameTenant({ tenantId: null }, { tenantId: 'red' })).toBeNull()
   })
 
   it('returns a TENANT_MISMATCH error when the tenants differ', () => {
@@ -103,11 +122,16 @@ describe('assertSameTenant', () => {
 })
 
 describe('inheritTenantId', () => {
-  type Patch = { id: string; tenantId?: string }
+  type Patch = { id: string; tenantId?: string | null }
 
   it('stamps currentTenantId when patch has none', () => {
     const out = inheritTenantId<Patch>({ id: 'x' }, 'red')
     expect(out).toMatchObject({ id: 'x', tenantId: 'red' })
+  })
+
+  it('stamps currentTenantId when patch has tenantId=null', () => {
+    const out = inheritTenantId<Patch>({ id: 'x', tenantId: null }, 'red')
+    expect(out.tenantId).toBe('red')
   })
 
   it('leaves patch untouched when tenantId is already set', () => {

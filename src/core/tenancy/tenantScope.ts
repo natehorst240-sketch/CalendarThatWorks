@@ -7,7 +7,8 @@
  *
  * Model:
  *   - `EngineEvent.tenantId`, `EngineResource.tenantId`, `Assignment.tenantId`
- *     are all optional. An unset `tenantId` is interpreted as
+ *     are all optional. An unset `tenantId` — whether `undefined` or `null`
+ *     (as JSON-serialized DB rows often deliver it) — is interpreted as
  *     "global / shared / legacy" and is therefore visible to every tenant.
  *   - `filterByTenant` keeps items whose `tenantId` is null/undefined OR
  *     equal to the `currentTenantId`. Pass `null` for `currentTenantId` to
@@ -21,7 +22,7 @@
  */
 
 export interface HasTenantId {
-  readonly tenantId?: string
+  readonly tenantId?: string | null
 }
 
 // ─── Read-path filtering ──────────────────────────────────────────────────
@@ -31,7 +32,7 @@ export interface HasTenantId {
  *
  * Rules:
  *   - `currentTenantId === null` → disable filtering; return every item.
- *   - Item with no `tenantId` → always visible (global/shared).
+ *   - Item with no `tenantId` (null or undefined) → always visible (global/shared).
  *   - Item with `tenantId === currentTenantId` → visible.
  *   - Otherwise → hidden.
  */
@@ -42,7 +43,7 @@ export function filterByTenant<T extends HasTenantId>(
   if (currentTenantId === null) return Array.from(items)
   const out: T[] = []
   for (const item of items) {
-    if (item.tenantId === undefined) out.push(item)
+    if (item.tenantId == null) out.push(item)
     else if (item.tenantId === currentTenantId) out.push(item)
   }
   return out
@@ -59,7 +60,7 @@ export function filterMapByTenant<K, V extends HasTenantId>(
     return out
   }
   for (const [k, v] of items) {
-    if (v.tenantId === undefined || v.tenantId === currentTenantId) out.set(k, v)
+    if (v.tenantId == null || v.tenantId === currentTenantId) out.set(k, v)
   }
   return out
 }
@@ -70,7 +71,7 @@ export function isVisibleToTenant(
   currentTenantId: string | null,
 ): boolean {
   if (currentTenantId === null) return true
-  if (item.tenantId === undefined) return true
+  if (item.tenantId == null) return true
   return item.tenantId === currentTenantId
 }
 
@@ -88,14 +89,14 @@ export type TenantMismatchError = {
  * assigned together), verify they belong to the same tenant or at least
  * one side is global. Returns null when ok, otherwise an error record.
  *
- * Either side's `tenantId` being undefined is acceptable — global
+ * Either side's `tenantId` being null/undefined is acceptable — global
  * items cross tenant boundaries by design.
  */
 export function assertSameTenant(
   a: HasTenantId,
   b: HasTenantId,
 ): TenantMismatchError | null {
-  if (a.tenantId === undefined || b.tenantId === undefined) return null
+  if (a.tenantId == null || b.tenantId == null) return null
   if (a.tenantId === b.tenantId) return null
   return {
     code: 'TENANT_MISMATCH',
@@ -107,13 +108,15 @@ export function assertSameTenant(
 
 /**
  * Stamp `currentTenantId` onto a patch when the patch doesn't already
- * specify one. `currentTenantId === null` is a no-op (untenanted write).
+ * specify one (null and undefined are both treated as unset, matching the
+ * JSON shapes that DB layers commonly emit). `currentTenantId === null`
+ * is a no-op (untenanted write).
  */
 export function inheritTenantId<T extends HasTenantId>(
   patch: T,
   currentTenantId: string | null,
 ): T {
   if (currentTenantId === null) return patch
-  if (patch.tenantId !== undefined) return patch
+  if (patch.tenantId != null) return patch
   return { ...patch, tenantId: currentTenantId }
 }
