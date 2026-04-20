@@ -167,7 +167,7 @@ export default function FilterGroupSidebar({
         <div className={styles.header}>
           <h2 className={styles.headerTitle}>
             <SlidersHorizontal size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            Organize
+            Filters, Groups & Views
           </h2>
           <button
             className={styles.closeBtn}
@@ -286,12 +286,12 @@ export function SidebarToggleButton({
     <button
       className={[styles.toggleBtn, isOpen && styles.active].filter(Boolean).join(' ')}
       onClick={onClick}
-      aria-label={isOpen ? 'Close organize sidebar' : 'Open organize sidebar'}
+      aria-label={isOpen ? 'Close filters, groups, and views sidebar' : 'Open filters, groups, and views sidebar'}
       aria-expanded={isOpen}
-      title="Filters, grouping & saved views"
+      title="Filters, groups, and saved views"
     >
       <SlidersHorizontal size={15} />
-      <span>Organize</span>
+      <span>Filters / Groups</span>
       {totalActive > 0 && (
         <span className={styles.badge}>{totalActive}</span>
       )}

@@ -1,5 +1,5 @@
 // @ts-nocheck — demo fixture, re-typed after Phase 2 d.ts regeneration
-import { StrictMode, useState, useCallback, useMemo } from 'react';
+import { StrictMode, useState, useCallback, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import {
@@ -429,6 +429,15 @@ function App() {
     })
   );
 
+  // Keep the public demo on the latest bundle automatically so feature
+  // updates (like the unified Filter/Group/Views sidebar) are visible
+  // without requiring users to notice and click the update toast.
+  useEffect(() => {
+    if (!needsRefresh) return;
+    void updateSW(true);
+    setNeedsRefresh(false);
+  }, [needsRefresh, updateSW]);
+
   const log = (msg) => setEventLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 8));
 
   // When the owner saves config (e.g. changes preferred theme in Settings > Setup),
@@ -523,6 +532,7 @@ function App() {
             onEventClick={ev => log(`Clicked: ${ev.title}`)}
             theme={theme}
             showAddButton={true}
+            defaultOrganizeOpen={true}
             categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
             locationProvider={assetLocationProvider}
           />

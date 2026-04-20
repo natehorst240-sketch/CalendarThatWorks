@@ -159,6 +159,8 @@ export type WorksCalendarProps = {
   renderToolbar?: (api: CalendarApi) => ReactNode;
   renderFilterBar?: (...args: unknown[]) => ReactNode;
   renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
+  /** Open the Filter/Group/Views sidebar on initial render. */
+  defaultOrganizeOpen?: boolean;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   showAddButton?: boolean;
@@ -379,6 +381,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderToolbar,
     renderFilterBar,
     renderSavedViewsBar,
+    defaultOrganizeOpen = false,
     emptyState,
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
@@ -574,7 +577,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
 
   // ── FilterGroupSidebar state ──
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(defaultOrganizeOpen);
 
   // Derive GroupLevel[] from activeGroupBy for the sidebar's GroupsPanel
   const sidebarGroupLevels = useMemo<GroupLevel[]>(() => {
