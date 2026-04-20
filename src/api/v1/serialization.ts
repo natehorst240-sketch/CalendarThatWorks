@@ -50,6 +50,8 @@ export interface SerializedEvent {
   readonly title: string;
   readonly category: string | null;
   readonly resourceId: string | null;
+  /** Virtual pool ref (#212). Null on stored/resolved events. */
+  readonly resourcePoolId: string | null;
   readonly status: EngineEvent['status'];
   readonly color: string | null;
   readonly rrule: string | null;
@@ -150,6 +152,7 @@ export function serializeEvent(ev: EngineEvent): SerializedEvent {
     title:        ev.title,
     category:     ev.category,
     resourceId:   ev.resourceId,
+    resourcePoolId: ev.resourcePoolId,
     status:       ev.status,
     color:        ev.color,
     rrule:        ev.rrule,
@@ -174,6 +177,7 @@ export function deserializeEvent(raw: SerializedEvent): EngineEvent {
     title:        raw.title,
     category:     raw.category,
     resourceId:   raw.resourceId,
+    resourcePoolId: raw.resourcePoolId ?? null,
     status:       raw.status,
     color:        raw.color,
     rrule:        raw.rrule,

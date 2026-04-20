@@ -61,6 +61,13 @@ export interface EngineEvent {
   readonly title: string;
   readonly category: string | null;
   readonly resourceId: string | null;
+  /**
+   * Virtual-pool reference (issue #212). When set and `resourceId` is null,
+   * the engine resolves a concrete member at submit time and rewrites
+   * `resourceId` on the stored record. Retained on `meta.resolvedFromPoolId`
+   * for audit once resolved.
+   */
+  readonly resourcePoolId: string | null;
   readonly status: EventStatus;
   readonly color: string | null;
 
@@ -126,6 +133,7 @@ export function makeEvent(
     allDay:      false,
     category:    null,
     resourceId:  null,
+    resourcePoolId: null,
     status:      'confirmed',
     color:       null,
     rrule:       null,

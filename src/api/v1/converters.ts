@@ -118,6 +118,7 @@ export function eventV1ToEngine(ev: CalendarEventV1): EngineEvent {
     resourceId:  ev.resourceId != null ? String(ev.resourceId)
                  : ev.resource != null ? String(ev.resource)  // legacy display field fallback
                  : null,
+    resourcePoolId: ev.resourcePoolId != null ? String(ev.resourcePoolId) : null,
     status:      coerceStatus(ev.status),
     color:       typeof ev.color === 'string' ? ev.color : null,
     rrule:       hasRrule ? ev.rrule! : null,
@@ -148,6 +149,7 @@ export function engineToV1(ev: EngineEvent): CalendarEventV1 {
     category:    ev.category ?? undefined,
     color:       ev.color    ?? undefined,
     resourceId:  ev.resourceId ?? undefined,
+    resourcePoolId: ev.resourcePoolId ?? undefined,
     timezone:    ev.timezone   ?? undefined,
     status:      ev.status,
     rrule:       ev.rrule      ?? undefined,

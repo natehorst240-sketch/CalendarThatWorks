@@ -24,6 +24,7 @@ export interface RecurringEditPatch {
   readonly title?: string;
   readonly category?: string | null;
   readonly resourceId?: string | null;
+  readonly resourcePoolId?: string | null;
   readonly color?: string | null;
   readonly status?: EngineEvent['status'];
   [key: string]: unknown;
@@ -84,6 +85,7 @@ function resolveSingleEdit(
     allDay:       master.allDay,
     category:     patch.category    ?? master.category,
     resourceId:   patch.resourceId  ?? master.resourceId,
+    resourcePoolId: patch.resourcePoolId ?? master.resourcePoolId,
     status:       patch.status      ?? master.status,
     color:        patch.color       ?? master.color,
     rrule:        null,
@@ -131,6 +133,7 @@ function resolveFollowingEdit(
     allDay:     master.allDay,
     category:   patch.category   ?? master.category,
     resourceId: patch.resourceId ?? master.resourceId,
+    resourcePoolId: patch.resourcePoolId ?? master.resourcePoolId,
     status:     patch.status     ?? master.status,
     color:      patch.color      ?? master.color,
     rrule:      master.rrule,   // same rule, new start anchor
@@ -209,8 +212,9 @@ function resolveSeriesEdit(
     ...master,
     ...(patch.title      !== undefined && { title:      patch.title }),
     ...(patch.category   !== undefined && { category:   patch.category }),
-    ...(patch.resourceId !== undefined && { resourceId: patch.resourceId }),
-    ...(patch.color      !== undefined && { color:      patch.color }),
+    ...(patch.resourceId     !== undefined && { resourceId:     patch.resourceId }),
+    ...(patch.resourcePoolId !== undefined && { resourcePoolId: patch.resourcePoolId }),
+    ...(patch.color          !== undefined && { color:          patch.color }),
     ...(patch.status     !== undefined && { status:     patch.status }),
     // For series edits, time changes adjust the master start/end
     // (keeping duration) which shifts all unexpanded occurrences.

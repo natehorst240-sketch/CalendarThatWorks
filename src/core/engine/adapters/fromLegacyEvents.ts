@@ -23,6 +23,8 @@ export interface LegacyEvent {
   color?: string | null;
   /** Old resource field — becomes resourceId in EngineEvent. */
   resource?: string | null;
+  /** Virtual pool ref (#212). Passthrough when present on migrated payloads. */
+  resourcePoolId?: string | null;
   status?: string;
   rrule?: string | null;
   exdates?: Array<Date | string>;
@@ -89,6 +91,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     title:         raw.title ?? '(untitled)',
     category:      raw.category ?? null,
     resourceId:    raw.resource ?? null,
+    resourcePoolId: raw.resourcePoolId ?? null,
     status:        STATUS_MAP[raw.status ?? ''] ?? 'confirmed',
     color:         raw.color ?? null,
     rrule:         hasRrule ? raw.rrule! : null,

@@ -56,6 +56,7 @@ export function detachOccurrence(
     allDay:     master.allDay,
     category:   master.category,
     resourceId: master.resourceId,
+    resourcePoolId: master.resourcePoolId,
     status:     master.status,
     color:      master.color,
     meta:       master.meta,

@@ -57,6 +57,8 @@ export interface CalendarState {
   readonly dependencies:     ReadonlyMap<string, import('./schema/dependencySchema.js').Dependency>;
   /** Per-resource working-time exception calendars. */
   readonly resourceCalendars: ReadonlyMap<string, import('./schema/resourceCalendarSchema.js').ResourceCalendar>;
+  /** Virtual resource pools (#212). Resolved to concrete members at submit time. */
+  readonly pools: ReadonlyMap<string, import('../pools/resourcePoolSchema.js').ResourcePool>;
   readonly view:    CalendarView;
   /** The "anchor" date — used to compute the visible range for the current view. */
   readonly cursor:  Date;
@@ -128,6 +130,7 @@ export interface CalendarEngineInit {
   readonly assignments?:       ReadonlyArray<import('./schema/assignmentSchema.js').Assignment>;
   readonly dependencies?:      ReadonlyArray<import('./schema/dependencySchema.js').Dependency>;
   readonly resourceCalendars?: ReadonlyArray<import('./schema/resourceCalendarSchema.js').ResourceCalendar>;
+  readonly pools?:             ReadonlyArray<import('../pools/resourcePoolSchema.js').ResourcePool>;
   readonly view?:   CalendarView;
   /** Defaults to today. */
   readonly cursor?: Date;
