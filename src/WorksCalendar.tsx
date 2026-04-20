@@ -1464,8 +1464,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         },
         source: 'form',
       };
-      applyEngineOp(op, () => {
-        const savedPayload = getSavedEventPayload(createdId, rawEv, { id: createdId });
+      applyEngineOp(op, (result) => {
+        // applyCreate generates its own engine id, so look the saved
+        // record up by the id the engine actually assigned — otherwise
+        // pool-resolved events fall through to the fallback payload,
+        // which still carries resource: null from the form (#212).
+        const createdChange = result?.changes?.find((c: any) => c.type === 'created');
+        const engineId = createdChange?.event?.id ?? createdId;
+        const savedPayload = getSavedEventPayload(engineId, rawEv, { id: engineId });
         if (savedPayload) onEventSave?.(savedPayload);
         setFormEvent(null);
       });
