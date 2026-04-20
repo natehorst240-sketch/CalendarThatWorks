@@ -2261,6 +2261,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {ownerCfg.configOpen && (
           <ConfigPanel
             config={ownerCfg.config}
+            calendarId={calendarId}
             categories={categories}
             resources={resources}
             schema={schema}
