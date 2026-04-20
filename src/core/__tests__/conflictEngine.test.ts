@@ -16,6 +16,7 @@ import {
 } from '../conflictEngine';
 import type { EngineResource } from '../engine/schema/resourceSchema';
 import { makeAssignment, type Assignment } from '../engine/schema/assignmentSchema';
+import type { CategoryDef } from '../../types/assets';
 
 const day = (d: number, h = 9, m = 0) => new Date(2026, 3, d, h, m);
 
@@ -492,5 +493,193 @@ describe('conflictEngine — outside-business-hours rule', () => {
     const resources = withHours({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' });
     const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
     expect(result.violations).toEqual([]);
+  });
+});
+
+describe('conflictEngine — policy-violation rule (#213)', () => {
+  const rule: ConflictRule = { id: 'pol', type: 'policy-violation' };
+
+  const categoryMap = (policy: CategoryDef['policy']): Map<string, CategoryDef> =>
+    new Map([[
+      'flight',
+      { id: 'flight', label: 'Flight', color: '#000', policy } as CategoryDef,
+    ]]);
+
+  it('skips silently when the category has no policy', () => {
+    const categories = categoryMap(undefined);
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('skips silently when categories map is not provided', () => {
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], now: day(10, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags min-lead-time violation as hard', () => {
+    const categories = categoryMap({ minLeadTimeMinutes: 120 });
+    // "now" is 30 min before the event start — lead is only 30 min.
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 8, 30),
+    });
+    expect(result.allowed).toBe(false);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'policy-violation',
+      check: 'min-lead-time',
+      requiredMinutes: 120,
+    });
+  });
+
+  it('passes min-lead-time when lead is exactly the required minutes', () => {
+    const categories = categoryMap({ minLeadTimeMinutes: 60 });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 8, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags max-duration when event exceeds the cap', () => {
+    // base event is 2h (9–11); cap is 60 min.
+    const categories = categoryMap({ maxDurationMinutes: 60 });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 0),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'policy-violation',
+      check: 'max-duration',
+      maxMinutes: 60,
+    });
+  });
+
+  it('ignores max-duration set to 0 (disabled)', () => {
+    const categories = categoryMap({ maxDurationMinutes: 0 });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags max-advance when event is farther out than allowed', () => {
+    // Event is April 10; allowed 3 days; now is April 1 ⇒ 9 days out.
+    const categories = categoryMap({ maxAdvanceDays: 3 });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(1, 0),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'policy-violation',
+      check: 'max-advance',
+      maxDays: 3,
+    });
+  });
+
+  it('passes max-advance when within the window', () => {
+    const categories = categoryMap({ maxAdvanceDays: 30 });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(1, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('flags blackout-dates when the event start falls on a blackout', () => {
+    const categories = categoryMap({ blackoutDates: ['2026-04-10'] });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(9, 0),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({
+      type: 'policy-violation',
+      check: 'blackout-dates',
+      blackoutDate: '2026-04-10',
+    });
+  });
+
+  it('ignores blackout-dates that don\'t match the event day', () => {
+    const categories = categoryMap({ blackoutDates: ['2026-04-11', '2026-12-25'] });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(9, 0),
+    });
+    expect(result.violations).toEqual([]);
+  });
+
+  it('uses the resource timezone when deriving the blackout key', () => {
+    // 2026-04-10 23:30 UTC is 2026-04-11 in Tokyo — only the Tokyo-side
+    // blackout should fire.
+    const resources = new Map<string, EngineResource>([[
+      'N100',
+      { id: 'N100', name: 'Tokyo', timezone: 'Asia/Tokyo' } as EngineResource,
+    ]]);
+    const categories = categoryMap({ blackoutDates: ['2026-04-11'] });
+    const proposed: ConflictEvent = {
+      ...base,
+      start: new Date(Date.UTC(2026, 3, 10, 23, 30)),
+      end:   new Date(Date.UTC(2026, 3, 10, 23, 45)),
+    };
+    const result = evaluateConflicts({
+      proposed, events: [], rules: [rule], categories, resources,
+      now: new Date(Date.UTC(2026, 3, 10, 0, 0)),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].details).toMatchObject({ blackoutDate: '2026-04-11' });
+  });
+
+  it('aggregates multiple sub-check violations into separate entries', () => {
+    const categories = categoryMap({
+      minLeadTimeMinutes: 120,
+      maxDurationMinutes: 30,
+    });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [rule], categories,
+      now: day(10, 8, 30),
+    });
+    expect(result.violations).toHaveLength(2);
+    const checks = result.violations.map(v =>
+      (v.details as { check: string } | undefined)?.check,
+    ).sort();
+    expect(checks).toEqual(['max-duration', 'min-lead-time']);
+  });
+
+  it('honors the `checks` allowlist — only runs listed sub-checks', () => {
+    const ruleLeadOnly: ConflictRule = {
+      id: 'pol-lead', type: 'policy-violation', checks: ['min-lead-time'],
+    };
+    const categories = categoryMap({
+      minLeadTimeMinutes: 120,
+      maxDurationMinutes: 30,
+    });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [ruleLeadOnly], categories,
+      now: day(10, 8, 30),
+    });
+    expect(result.violations).toHaveLength(1);
+    expect((result.violations[0].details as { check: string }).check).toBe('min-lead-time');
+  });
+
+  it('respects severity override to "soft"', () => {
+    const softRule: ConflictRule = {
+      id: 'pol-soft', type: 'policy-violation', severity: 'soft',
+    };
+    const categories = categoryMap({ blackoutDates: ['2026-04-10'] });
+    const result = evaluateConflicts({
+      proposed: base, events: [], rules: [softRule], categories,
+      now: day(9, 0),
+    });
+    expect(result.severity).toBe('soft');
+    expect(result.allowed).toBe(true);
   });
 });
