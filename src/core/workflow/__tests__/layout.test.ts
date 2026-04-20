@@ -32,11 +32,13 @@ describe('layoutWorkflow — BFS-leveled', () => {
     }
   })
 
-  it('size covers all nodes + margin', () => {
+  it('size + origin cover all nodes (forms a valid SVG viewBox)', () => {
     const r = layoutWorkflow(twoTierApproverWorkflow)
     for (const p of Object.values(r.positions)) {
-      expect(r.size.w).toBeGreaterThanOrEqual(p.x + NODE_WIDTH)
-      expect(r.size.h).toBeGreaterThanOrEqual(p.y + NODE_HEIGHT)
+      expect(p.x).toBeGreaterThanOrEqual(r.origin.x)
+      expect(p.y).toBeGreaterThanOrEqual(r.origin.y)
+      expect(p.x + NODE_WIDTH).toBeLessThanOrEqual(r.origin.x + r.size.w)
+      expect(p.y + NODE_HEIGHT).toBeLessThanOrEqual(r.origin.y + r.size.h)
     }
   })
 })
@@ -53,6 +55,55 @@ describe('layoutWorkflow — overrides', () => {
     // Other nodes fall back to BFS positions.
     expect(r.positions.done).toBeDefined()
     expect(r.positions.done.y).not.toBe(2000)
+  })
+})
+
+describe('layoutWorkflow — bounding box', () => {
+  it('origin + size cover negative-coordinate overrides', () => {
+    const overrides: WorkflowLayout = {
+      workflowId: singleApproverWorkflow.id,
+      workflowVersion: singleApproverWorkflow.version,
+      positions: { approve: { x: -200, y: -120 } },
+    }
+    const r = layoutWorkflow(singleApproverWorkflow, overrides)
+    // origin must be at least as far left/up as the dragged node.
+    expect(r.origin.x).toBeLessThanOrEqual(-200)
+    expect(r.origin.y).toBeLessThanOrEqual(-120)
+    // and the box must reach the dragged node's far edges.
+    expect(r.origin.x + r.size.w).toBeGreaterThanOrEqual(-200 + NODE_WIDTH)
+    expect(r.origin.y + r.size.h).toBeGreaterThanOrEqual(-120 + NODE_HEIGHT)
+    // every node (override or BFS-default) fits inside the box.
+    for (const p of Object.values(r.positions)) {
+      expect(p.x).toBeGreaterThanOrEqual(r.origin.x)
+      expect(p.y).toBeGreaterThanOrEqual(r.origin.y)
+      expect(p.x + NODE_WIDTH).toBeLessThanOrEqual(r.origin.x + r.size.w)
+      expect(p.y + NODE_HEIGHT).toBeLessThanOrEqual(r.origin.y + r.size.h)
+    }
+  })
+
+  it('bounding box includes back-edge detour channel', () => {
+    const wf: Workflow = {
+      id: 'cycle', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'b', type: 'approval', assignTo: 'role:y' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'b', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+        { from: 'b', to: 'a', when: 'denied' },
+        { from: 'b', to: 'done', when: 'approved' },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    const backEdge = r.edgePaths.find(e => e.from === 'b' && e.to === 'a')
+    expect(backEdge).toBeDefined()
+    // Back-edge channel sits left of every node; origin.x must be at
+    // least that far left so the detour isn't clipped.
+    const minNodeX = Math.min(...Object.values(r.positions).map(p => p.x))
+    expect(r.origin.x).toBeLessThan(minNodeX)
   })
 })
 

@@ -31,6 +31,9 @@ export interface EdgePath {
 
 export interface LayoutResult {
   readonly positions: Readonly<Record<string, NodePosition>>
+  /** Top-left corner of the bounding box covering all nodes + edges. */
+  readonly origin: NodePosition
+  /** Width and height from `origin`. Consumers wire both into an SVG viewBox. */
   readonly size: { readonly w: number; readonly h: number }
   readonly edgePaths: readonly EdgePath[]
 }
@@ -59,13 +62,6 @@ export function layoutWorkflow(
     positions[node.id] = override ?? auto[node.id]
   }
 
-  let maxX = 0
-  let maxY = 0
-  for (const pos of Object.values(positions)) {
-    if (pos.x + NODE_WIDTH > maxX) maxX = pos.x + NODE_WIDTH
-    if (pos.y + NODE_HEIGHT > maxY) maxY = pos.y + NODE_HEIGHT
-  }
-
   const edgePaths: EdgePath[] = workflow.edges.map(edge => {
     const a = positions[edge.from]
     const b = positions[edge.to]
@@ -79,11 +75,56 @@ export function layoutWorkflow(
         : forwardEdgePath(edge, a, b)
   })
 
+  // Bounding box covers node rectangles AND edge-path extremes
+  // (back-edge detour channels + self-loop bulges can exit the node
+  // grid). Track both min and max so negative coordinates from
+  // user-dragged overrides aren't clipped by consumers sizing the SVG.
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const pos of Object.values(positions)) {
+    if (pos.x < minX) minX = pos.x
+    if (pos.y < minY) minY = pos.y
+    if (pos.x + NODE_WIDTH > maxX) maxX = pos.x + NODE_WIDTH
+    if (pos.y + NODE_HEIGHT > maxY) maxY = pos.y + NODE_HEIGHT
+  }
+  for (const path of edgePaths) {
+    for (const pt of extremesOfPath(path.d)) {
+      if (pt.x < minX) minX = pt.x
+      if (pt.y < minY) minY = pt.y
+      if (pt.x > maxX) maxX = pt.x
+      if (pt.y > maxY) maxY = pt.y
+    }
+  }
+  if (!Number.isFinite(minX)) { minX = 0; minY = 0; maxX = 0; maxY = 0 }
+
   return {
     positions,
-    size: { w: maxX + MARGIN, h: maxY + MARGIN },
+    origin: { x: minX - MARGIN, y: minY - MARGIN },
+    size: { w: (maxX - minX) + 2 * MARGIN, h: (maxY - minY) + 2 * MARGIN },
     edgePaths,
   }
+}
+
+/**
+ * Extract the absolute `(x, y)` pairs from an SVG path `d` string so
+ * we can expand the bounding box to cover edge-only geometry (back-edge
+ * channels, self-loop arcs). Handles the command set we emit: `M L C`.
+ */
+function extremesOfPath(d: string): readonly NodePosition[] {
+  if (!d) return []
+  const pts: NodePosition[] = []
+  // Split on M/L/C commands and parse number pairs.
+  const tokens = d.trim().split(/[MLC]/i).filter(t => t.trim().length > 0)
+  for (const t of tokens) {
+    const nums = t.trim().split(/[\s,]+/).map(Number).filter(n => !Number.isNaN(n))
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      pts.push({ x: nums[i], y: nums[i + 1] })
+    }
+  }
+  return pts
 }
 
 export function snapToGrid(value: number): number {
