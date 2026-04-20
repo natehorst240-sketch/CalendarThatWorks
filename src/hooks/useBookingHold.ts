@@ -149,6 +149,10 @@ export function useBookingHold(
       const prev = heldIdRef.current!;
       heldIdRef.current = null;
       releaseHoldSafely(provider, prev);
+      // Clear the stale hold object before we attempt the new acquire —
+      // if the acquire fails we'd otherwise leave `hold` pointing at the
+      // just-released object, misleading submit/UI code that keys off it.
+      setHold(null);
     }
 
     let cancelled = false;

@@ -127,6 +127,30 @@ describe('useBookingHold — conflict + error handling', () => {
     expect(result.current.hold).toBeNull();
   });
 
+  it('clears the prior hold when re-acquire fails (no stale reference)', async () => {
+    const provider = mkProvider();
+    const { result, rerender } = renderHook(
+      ({ resourceId }: { resourceId: string }) =>
+        useBookingHold(provider, { resourceId, start: WIN.start, end: WIN.end, holderId: 'alice' }),
+      { initialProps: { resourceId: 'room-a' } },
+    );
+    await waitFor(() => expect(result.current.status).toBe('held'));
+
+    // Pre-seed a conflicting hold on room-b from a different holder, then
+    // swap the resource. The prior (room-a) hold must be cleared even
+    // though the new (room-b) acquire fails.
+    provider._reg.acquire({
+      resourceId: 'room-b',
+      window: WIN,
+      holderId: 'bob',
+    });
+
+    rerender({ resourceId: 'room-b' });
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(result.current.hold).toBeNull();
+    expect(result.current.error?.code).toBe('CONFLICTING_HOLD');
+  });
+
   it('same-holder re-acquire refreshes TTL (registry semantics)', async () => {
     const provider = mkProvider();
     // Acquire directly first …
