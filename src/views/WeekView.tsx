@@ -288,6 +288,9 @@ export default function WeekView({
       : ev.status === 'tentative' ? styles.tentative : '';
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
     const display   = ev.meta?._display ?? {};
+    const isUltraCompact = height < 42;
+    const isCompact = height < 72;
+    const timeRangeLabel = `${format(ev.start, 'h:mm a')} - ${format(ev.end, 'h:mm a')}`;
 
     const inner = ctx?.renderEvent
       ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
@@ -297,6 +300,8 @@ export default function WeekView({
       <div key={ev.id} data-event="1"
         className={[
           styles.event, statusClass,
+          isCompact && styles.eventCompact,
+          isUltraCompact && styles.eventUltraCompact,
           isDimmed && styles.dragging,
           ctx?.editMode && styles.editModeEvent,
         ].filter(Boolean).join(' ')}
@@ -316,10 +321,19 @@ export default function WeekView({
           aria-hidden="true" />
         {inner ?? (
           <>
-            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>Title: {ev.title}</span>
-            <span className={styles.evTime}>Start: {format(ev.start, 'h:mm a')}</span>
-            <span className={styles.evTime}>End: {format(ev.end, 'h:mm a')}</span>
-            <span className={styles.evMeta}>Resource: {pillResource(ev)}</span>
+            <span className={styles.evTitle} style={{ fontWeight: display.bold ? '700' : undefined }}>
+              {ev.title}
+            </span>
+            {isUltraCompact ? null : (
+              <span className={styles.evTimeRange}>{timeRangeLabel}</span>
+            )}
+            {isCompact ? null : (
+              <>
+                <span className={styles.evTime}>Start: {format(ev.start, 'h:mm a')}</span>
+                <span className={styles.evTime}>End: {format(ev.end, 'h:mm a')}</span>
+                <span className={styles.evMeta}>Resource: {pillResource(ev)}</span>
+              </>
+            )}
           </>
         )}
         <div className={styles.resizeHandle}

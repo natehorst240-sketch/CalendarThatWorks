@@ -69,6 +69,19 @@ describe('WeekView off-hours event clipping', () => {
     expect(screen.getByRole('button', { name: /Event normal/i })).toBeInTheDocument();
   });
 
+  it('keeps short-event titles readable without verbose prefixes', () => {
+    const ev = {
+      ...makeEvent('short', d(2026, 4, 6, 10), d(2026, 4, 6, 11)),
+      title: 'Type rating',
+    };
+    renderWeek([ev]);
+    const btn = screen.getByRole('button', { name: /Type rating/i });
+    expect(btn).toBeInTheDocument();
+    expect(screen.queryByText('Title: Type rating')).not.toBeInTheDocument();
+    expect(screen.getByText('Type rating')).toBeInTheDocument();
+    expect(screen.getByText(/10:00 AM - 11:00 AM/)).toBeInTheDocument();
+  });
+
   it('clips event that starts before dayStart but ends inside the window', () => {
     const ev = makeEvent('overlap', d(2026, 4, 6, 4), d(2026, 4, 6, 9));
     renderWeek([ev]);
