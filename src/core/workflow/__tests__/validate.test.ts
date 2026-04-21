@@ -335,6 +335,14 @@ describe('validateWorkflow — notify channel + template rules (issue #223)', ()
     expect(issues.some(i => i.code === 'unknown-channel')).toBe(false)
   })
 
+  it('skips unknown-channel check when knownChannels is an empty array', () => {
+    // Regression: callers passing a not-yet-populated registry should
+    // not see every notify node flagged as unknown.
+    const wf = withNotify('hi', 'anything-goes')
+    const issues = validateWorkflow(wf, { knownChannels: [] })
+    expect(issues.some(i => i.code === 'unknown-channel')).toBe(false)
+  })
+
   it('accepts a notify with a registered channel cleanly', () => {
     const wf = withNotify('hi', 'slack')
     const issues = validateWorkflow(wf, { knownChannels: ['slack'] })

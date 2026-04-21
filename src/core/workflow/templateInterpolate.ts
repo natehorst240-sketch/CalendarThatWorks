@@ -45,8 +45,6 @@ export function interpolateTemplate(
   template: string,
   variables: Readonly<Record<string, unknown>>,
 ): string {
-  if (template.indexOf('{{') < 0 && template.indexOf('\\{\\{') < 0) return template
-
   let out = ''
   let i = 0
   while (i < template.length) {

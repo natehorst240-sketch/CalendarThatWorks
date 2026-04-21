@@ -62,7 +62,7 @@ export function validateWorkflow(
   options: ValidateWorkflowOptions = {},
 ): readonly ValidationIssue[] {
   const issues: ValidationIssue[] = []
-  const knownChannels = options.knownChannels
+  const knownChannels = options.knownChannels && options.knownChannels.length > 0
     ? new Set(options.knownChannels)
     : null
 

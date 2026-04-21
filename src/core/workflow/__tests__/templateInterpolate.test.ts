@@ -55,6 +55,12 @@ describe('interpolateTemplate — escapes', () => {
     const out = interpolateTemplate('\\{\\{raw\\}\\} vs {{ name }}', { name: 'Alice' })
     expect(out).toBe('{{raw}} vs Alice')
   })
+
+  it('renders standalone \\}\\} escapes even without any {{ token', () => {
+    // Regression: fast-path previously returned unchanged when the only
+    // escapes were closing braces, leaving the backslashes in output.
+    expect(interpolateTemplate('x \\}\\} y', {})).toBe('x }} y')
+  })
 })
 
 describe('interpolateTemplate — errors', () => {
