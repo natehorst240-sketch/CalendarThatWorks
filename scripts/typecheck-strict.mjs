@@ -61,8 +61,12 @@ const MIGRATED_PATHS = [
   'src/hooks/useFocusTrap.ts',
   'src/hooks/useTouchDnd.ts',
   'src/hooks/usePermissions.ts',
-  // Stage 4a PR2
+  // Stage 4a PR2 / Stage 5 PR6
   'src/ui/ConfigPanel.tsx',
+  // Stage 5 PR7
+  'src/views/DayView.tsx',
+  'src/views/AgendaView.tsx',
+  'src/views/MonthView.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

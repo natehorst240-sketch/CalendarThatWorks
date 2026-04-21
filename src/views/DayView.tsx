@@ -1,4 +1,4 @@
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import {
   format, isToday, isSameDay, getHours, getMinutes,
@@ -36,12 +36,12 @@ export default function DayView({
   const gridRef = useRef<HTMLDivElement | null>(null);
   const days    = useMemo(() => [currentDate], [currentDate]);
 
-  const hours = [];
+  const hours: number[] = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
   // Slot hours: exclude last boundary label (each slot spans h to h+1)
   const slotHours = useMemo(() => {
-    const arr = [];
+    const arr: number[] = [];
     for (let h = dayStart; h < dayEnd; h++) arr.push(h);
     return arr;
   }, [dayStart, dayEnd]);
@@ -125,12 +125,12 @@ export default function DayView({
   // ── Drag ────────────────────────────────────────────────────────────────
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
-  const handleGridPointerDown = useCallback((e) => {
+  const handleGridPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || !ctx?.permissions?.canAddEvent) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
   }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
 
-  const handleGridPointerMove = useCallback((e) => {
+  const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
   }, [drag.onPointerMove]);
 
@@ -172,15 +172,15 @@ export default function DayView({
             role="button" tabIndex={0}
             aria-label={ariaLabel}
             onClick={onClick}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+            onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles.resizeHandleTop}
-              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
             {custom}
             <div className={styles.resizeHandle}
-              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+              onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
           </div>
         );
@@ -194,17 +194,17 @@ export default function DayView({
         role="button" tabIndex={0}
         aria-label={ariaLabel}
         onClick={onClick}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+        onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         <span className={styles.evTitle}>{ev.title}</span>
         <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
         <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );

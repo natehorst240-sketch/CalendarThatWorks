@@ -53,7 +53,7 @@ without the ratchet update is tracked as **Partially complete**.
 - Define per-PR `any` budget
 - Add checklist to migration doc
 
-**Status:** ✅ Completed (2026-04-21)
+**Status:** 🟡 Partially complete (2026-04-21)
 
 **Decision recorded in `docs/TypeScriptStrictMigration.md`:**
 - **Path A is locked** for this roadmap (continue into Stage 5).
@@ -71,7 +71,7 @@ without the ratchet update is tracked as **Partially complete**.
 - UI data shapes
 - Loose but intentional boundary types
 
-**Status:** ✅ Completed (2026-04-21)
+**Status:** 🟡 Partially complete (2026-04-21)
 
 **Shipped in this PR:**
 - Added shared UI boundary types in `src/types/ui.ts`:
@@ -148,7 +148,7 @@ Goal: Structured data typing
 
 Goal: Handle complex state + flows
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Removed implicit `any` from workflow-tab mutators by introducing explicit local draft/patch types in `src/ui/ConfigPanel.tsx` for:
@@ -159,8 +159,8 @@ Goal: Handle complex state + flows
 - Tightened `SmartViewsTab` edit/delete state and `handleUpdate` callback signature with explicit id/filter/conditions types.
 - Added explicit type narrowing for workflow tab select/file-input handlers (approval quorum, request field type, conflict rule type/severity, profile image upload result) to prevent broad `string`/`unknown` writes.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
+**Completion updates in this PR:**
+- Confirmed `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` (Stage 4a PR2 / Stage 5 PR6 coverage).
 
 ---
 
@@ -171,7 +171,7 @@ Goal: Handle complex state + flows
 
 Goal: Low-risk view typing
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Replaced file-level view-prop `any` in `DayView`, `AgendaView`, and `MonthView` with explicit boundary prop types (dates, callbacks, and config slices) to document the small-view public seams.
@@ -179,8 +179,8 @@ Goal: Low-risk view typing
 - Tightened local state typing in `AgendaView` (collapsed group set, drag/drop refs, drop patch shape) and removed implicit numeric arithmetic on `Date` values by sorting via `getTime()`.
 - Added explicit DOM/ref typing in `DayView` (grid ref + focus target) and retained compatibility with existing render/drag/color pipelines via narrow, intentional casts at integration points.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
+**Completion updates in this PR:**
+- Added `src/views/DayView.tsx`, `src/views/AgendaView.tsx`, and `src/views/MonthView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 
 ---
 
