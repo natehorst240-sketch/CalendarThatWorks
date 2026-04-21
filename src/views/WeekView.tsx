@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   startOfWeek, endOfWeek, eachDayOfInterval,
   format, isSameDay, isToday,
@@ -11,6 +12,7 @@ import { hoursInTimezone } from '../core/engine/time/timezone';
 import { layoutOverlaps, layoutSpans } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import type { CalendarViewEvent } from '../types/ui';
 import styles from './WeekView.module.css';
 
 const SPAN_H    = 34;
@@ -18,16 +20,38 @@ const SPAN_GAP  = 3;
 const MAX_SPANS = 4;
 const GUTTER_W  = 56;
 
-function isMultiDay(ev) {
+type WeekDisplayConfig = { dayStart?: number; dayEnd?: number };
+type WeekConfig = { display?: WeekDisplayConfig };
+type WeekViewProps = {
+  currentDate: Date;
+  events: CalendarViewEvent[];
+  onEventClick?: (event: CalendarViewEvent) => void;
+  onEventMove?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  onEventResize?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  onDateSelect?: (start: Date, end: Date) => void;
+  config?: WeekConfig;
+  weekStartDay?: Day;
+};
+type AllDayGhost = { ev: CalendarViewEvent; startCol: number; endCol: number };
+type AllDayDragState = {
+  ev: CalendarViewEvent;
+  spanStartCol: number;
+  spanEndCol: number;
+  spanWidth: number;
+  clickOffset: number;
+  colWidth: number;
+};
+
+function isMultiDay(ev: CalendarViewEvent): boolean {
   return ev.allDay || !isSameDay(ev.start, ev.end);
 }
 
-function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function clamp(v: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, v)); }
 
 export default function WeekView({
   currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect,
   config, weekStartDay = 0,
-}: { currentDate: Date; events: any; onEventClick?: any; onEventMove?: any; onEventResize?: any; onDateSelect?: any; config?: any; weekStartDay?: Day } & Record<string, any>) {
+}: WeekViewProps): JSX.Element {
   const ctx = useCalendarContext();
   const dayStart   = config?.display?.dayStart ?? 6;
   const dayEnd     = config?.display?.dayEnd   ?? 22;
@@ -35,8 +59,8 @@ export default function WeekView({
   const pxPerHour  = 64;
   const bizHours   = ctx?.businessHours ?? null;
 
-  const gridRef    = useRef(null);
-  const allDayRef  = useRef(null);
+  const gridRef    = useRef<HTMLDivElement | null>(null);
+  const allDayRef  = useRef<HTMLDivElement | null>(null);
   // Tracks whether the most recent pointer-up was a real drag (not a click).
   // Used to guard onClick handlers so a just-finished drag doesn't fire onEventClick.
   const wasDragRef = useRef(false);
@@ -49,7 +73,7 @@ export default function WeekView({
     if (!lastKeyNavSlot.current || !gridRef.current) return;
     lastKeyNavSlot.current = false;
     const { dayIdx, hourIdx } = focusedSlot;
-    const el = gridRef.current.querySelector(`[data-slot="${dayIdx}-${hourIdx}"]`);
+    const el = gridRef.current.querySelector(`[data-slot="${dayIdx}-${hourIdx}"]`) as HTMLElement | null;
     el?.focus({ preventScroll: false });
   }, [focusedSlot]);
 
@@ -64,13 +88,13 @@ export default function WeekView({
 
   // Slot hours = hours that have a full 1-hour slot below them
   const slotHours = useMemo(() => {
-    const arr = [];
+    const arr: number[] = [];
     for (let h = dayStart; h < dayEnd; h++) arr.push(h);
     return arr;
   }, [dayStart, dayEnd]);
 
   // ── Slot keyboard navigation ───────────────────────────────────────────────
-  const handleSlotKeyDown = useCallback((e, di, hi, slotStart, slotEnd) => {
+  const handleSlotKeyDown = useCallback((e: ReactKeyboardEvent, di: number, hi: number, slotStart: Date, slotEnd: Date) => {
     const maxDi = days.length - 1;
     const maxHi = slotHours.length - 1;
     let nextDi = di, nextHi = hi;
@@ -101,9 +125,9 @@ export default function WeekView({
   const overflowTrapRef = useFocusTrap(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
 
   const { allDayEvents, timedEvents } = useMemo(() => {
-    const allDay = [];
-    const timed  = [];
-    events.forEach(ev => (isMultiDay(ev) ? allDay : timed).push(ev));
+    const allDay: CalendarViewEvent[] = [];
+    const timed: CalendarViewEvent[] = [];
+    events.forEach((ev) => (isMultiDay(ev) ? allDay : timed).push(ev));
     return { allDayEvents: allDay, timedEvents: timed };
   }, [events]);
 
@@ -117,7 +141,7 @@ export default function WeekView({
   const overflowCount = allDayLanes > MAX_SPANS ? allDayLanes - MAX_SPANS : 0;
 
   const timedByDay = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, CalendarViewEvent[]>();
     days.forEach(day => {
       const key    = format(day, 'yyyy-MM-dd');
       const dayEvs = timedEvents.filter(e => isSameDay(e.start, day));
@@ -126,10 +150,10 @@ export default function WeekView({
     return map;
   }, [days, timedEvents]);
 
-  const hours = [];
+  const hours: number[] = [];
   for (let h = dayStart; h <= dayEnd; h++) hours.push(h);
 
-  function isBizHour(h, day) {
+  function isBizHour(h: number, day: Date): boolean {
     if (!bizHours) return true;
     const bizDays = bizHours.days ?? [1, 2, 3, 4, 5];
     return bizDays.includes(day.getDay()) && h >= bizHours.start && h < bizHours.end;
@@ -137,7 +161,7 @@ export default function WeekView({
 
   const displayTz = ctx?.displayTimezone ?? null;
 
-  function eventPosition(start, end) {
+  function eventPosition(start: Date, end: Date): { top: number; height: number } | null {
     const startH = displayTz ? hoursInTimezone(start, displayTz) : getHours(start) + getMinutes(start) / 60;
     const endH   = displayTz ? hoursInTimezone(end,   displayTz) : getHours(end)   + getMinutes(end)   / 60;
     const startMin = (startH - dayStart) * 60;
@@ -160,13 +184,13 @@ export default function WeekView({
   // ── Timed-grid drag ───────────────────────────────────────────────────────
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
-  const handleGridPointerDown = useCallback((e) => {
+  const handleGridPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     if (!ctx?.permissions?.canAddEvent) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
   }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
 
-  const handleGridPointerMove = useCallback((e) => {
+  const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
   }, [drag.onPointerMove]);
 
@@ -187,10 +211,10 @@ export default function WeekView({
 
   // Single click on an empty time slot → create a 1-hour event at that time.
   // Drags are excluded via wasDragRef (set true in handleGridPointerUp for real drags).
-  const handleGridClick = useCallback((e) => {
+  const handleGridClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     if (wasDragRef.current) return;
     if (!ctx?.permissions?.canAddEvent) return;
-    if (e.target.closest('[data-event]')) return; // click was on an event, not empty space
+    if ((e.target as HTMLElement | null)?.closest?.('[data-event]')) return; // click was on an event, not empty space
     const rect = gridRef.current.getBoundingClientRect();
     const colWidth = (rect.width - GUTTER_W) / days.length;
     const relX = e.clientX - rect.left - GUTTER_W;
@@ -204,11 +228,11 @@ export default function WeekView({
   }, [ctx?.permissions?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
 
   // ── All-day bar drag ──────────────────────────────────────────────────────
-  const allDayDragRef  = useRef(null);
-  const allDayGhostRef = useRef(null);
-  const [allDayGhost, setAllDayGhost] = useState(null);
+  const allDayDragRef  = useRef<AllDayDragState | null>(null);
+  const allDayGhostRef = useRef<AllDayGhost | null>(null);
+  const [allDayGhost, setAllDayGhost] = useState<AllDayGhost | null>(null);
 
-  function updateAllDayGhost(next) {
+  function updateAllDayGhost(next: AllDayGhost | null): void {
     allDayGhostRef.current = next;
     setAllDayGhost(prev => {
       if (!next && !prev) return prev;
@@ -219,7 +243,7 @@ export default function WeekView({
     });
   }
 
-  function startAllDayBarDrag(ev, e, spanStartCol, spanEndCol) {
+  function startAllDayBarDrag(ev: CalendarViewEvent, e: ReactPointerEvent<HTMLButtonElement>, spanStartCol: number, spanEndCol: number): void {
     e.preventDefault();
     e.stopPropagation();
     const grid     = allDayRef.current;
@@ -237,7 +261,7 @@ export default function WeekView({
     updateAllDayGhost({ ev, startCol: spanStartCol, endCol: spanEndCol });
   }
 
-  function handleAllDayPointerMove(e) {
+  function handleAllDayPointerMove(e: ReactPointerEvent<HTMLDivElement>): void {
     const d = allDayDragRef.current;
     if (!d) return;
     const rect       = allDayRef.current.getBoundingClientRect();
@@ -265,17 +289,17 @@ export default function WeekView({
   // ── Renderers ─────────────────────────────────────────────────────────────
 
 
-  function formatPillDate(date) {
+  function formatPillDate(date: Date): string {
     return format(date, 'M/d h:mma');
   }
 
-  function pillResource(ev) {
+  function pillResource(ev: CalendarViewEvent): string {
     return ev.resource || 'Unassigned';
   }
 
-  function renderTimedEvent(ev) {
+  function renderTimedEvent(ev: CalendarViewEvent): JSX.Element | null {
     const isDimmed = drag.draggedId === ev.id;
-    const color    = resolveColor(ev, ctx?.colorRules);
+    const color    = resolveColor(ev as any, ctx?.colorRules);
     const onClick  = () => !wasDragRef.current && onEventClick?.(ev);
     const pos = eventPosition(ev.start, ev.end);
     if (!pos) return null;
@@ -287,13 +311,13 @@ export default function WeekView({
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
-    const display   = ev.meta?._display ?? {};
+    const display = (ev.meta as Record<string, any> | undefined)?._display ?? {};
     const isUltraCompact = height < 42;
     const isCompact = height < 72;
     const timeRangeLabel = `${format(ev.start, 'h:mm a')} - ${format(ev.end, 'h:mm a')}`;
 
     const inner = ctx?.renderEvent
-      ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
+      ? ctx.renderEvent(ev as any, { view: 'week', isCompact: false, onClick, color })
       : null;
 
     return (
@@ -314,10 +338,10 @@ export default function WeekView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as any, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as any, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         {inner ?? (
           <>
@@ -337,13 +361,13 @@ export default function WeekView({
           </>
         )}
         <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as any, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );
   }
 
-  function renderGhost(day) {
+  function renderGhost(day: Date): JSX.Element | null {
     const g = drag.ghost;
     if (!g || !isSameDay(g.start, day)) return null;
     const pos = eventPosition(g.start, g.end);
@@ -359,7 +383,7 @@ export default function WeekView({
       left  = '2px';
       width = 'calc(100% - 4px)';
     }
-    const color = g.ev ? resolveColor(g.ev, ctx?.colorRules) : undefined;
+    const color = g.ev ? resolveColor(g.ev as any, ctx?.colorRules) : undefined;
     return (
       <div key="ghost" className={[styles.ghost, !g.ev && styles.ghostCreate].filter(Boolean).join(' ')}
         aria-hidden="true"
@@ -409,7 +433,7 @@ export default function WeekView({
             {allDaySpans
               .filter(s => s.lane < MAX_SPANS)
               .map(({ ev, startCol, endCol, lane, continuesBefore, continuesAfter }) => {
-                const color = resolveColor(ev, ctx?.colorRules);
+                const color = resolveColor(ev as any, ctx?.colorRules);
                 const pctLeft  = (startCol / 7) * 100;
                 const pctWidth = ((endCol - startCol + 1) / 7) * 100;
                 const statusClass = ev.status === 'cancelled' ? styles.cancelled
@@ -453,7 +477,7 @@ export default function WeekView({
             {/* All-day drag ghost */}
             {allDayGhost && (() => {
               const g = allDayGhost;
-              const color = resolveColor(g.ev, ctx?.colorRules);
+              const color = resolveColor(g.ev as any, ctx?.colorRules);
               return (
                 <div key="allday-ghost" className={styles.allDayGhost} aria-hidden="true"
                   style={{
@@ -501,7 +525,7 @@ export default function WeekView({
                     {allDaySpans
                       .filter(s => s.lane >= MAX_SPANS)
                       .map(({ ev }) => {
-                        const color = resolveColor(ev, ctx?.colorRules);
+                        const color = resolveColor(ev as any, ctx?.colorRules);
                         return (
                           <button
                             key={ev.id}
