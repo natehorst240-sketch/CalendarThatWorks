@@ -27,8 +27,6 @@ This index is the canonical docs entrypoint for the package.
 
 - [Roadmap](./Roadmap.md)
 - [Release readiness checklist](./release-readiness.md)
-- [v0.2 → v0.3 migration guide](./v0.2-to-v0.3-MIGRATION.md)
-- [Phase 4 migration notes](./schedule-phase4-migration-notes.md)
 - [Release notes: v0.1.0 draft](./releases/v0.1.0.md)
 
 ## Engineering reference docs
@@ -37,8 +35,6 @@ This index is the canonical docs entrypoint for the package.
 - [Prompts](./Prompts.md)
 - [HIPAA security notes](./HIPAA-Security.md)
 - [Bundle size audit](./bundle-size-audit.md)
-- [Recurring schedule implementation plan](./recurring-schedule-implementation-plan.md)
-- [Recurring events engine plan](./recurring-events-engine-plan.md)
 
 ## Example references
 
