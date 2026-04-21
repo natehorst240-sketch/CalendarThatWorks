@@ -48,6 +48,18 @@ If ANY of these fail → PR is NOT DONE.
 - Define per-PR `any` budget
 - Add checklist to migration doc
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Decision recorded in `docs/TypeScriptStrictMigration.md`:**
+- **Path A is locked** for this roadmap (continue into Stage 5).
+- Stage 5 PR order is fixed as PRs 4 → 12 below.
+- Stage 5 per-PR `any` budget is fixed to keep ratchet pressure:
+  - PR 4–8, 10: max **+4** each
+  - PR 9 (TimelineView isolated): max **+6**
+  - PR 11 (WorksCalendar phase 2): max **+3**
+  - PR 12 (final ratchet): **0 net new `any`** (cleanup only)
+- Stage-level cap remains ≤ 40 additional `any` sites.
+
 ### PR 2 — Shared UI Types
 - Event handler types
 - Shared props

@@ -162,6 +162,26 @@ Two legitimate paths:
 
 This decision is explicitly on the plan to prevent the failure mode where scope expansion is assumed rather than chosen.
 
+#### Stage 4 decision record (locked 2026-04-21)
+
+- **Selected path: Path A (continue into Stage 5 UI migration).**
+- Stage 5 execution order is locked to the sprint plan sequence:
+  1. PR 4 — ConfigPanel (Simple Tabs)
+  2. PR 5 — ConfigPanel (Data Tabs)
+  3. PR 6 — ConfigPanel (Workflow Tabs)
+  4. PR 7 — Small Views
+  5. PR 8 — Medium Views
+  6. PR 9 — TimelineView (isolated)
+  7. PR 10 — WorksCalendar (Phase 1)
+  8. PR 11 — WorksCalendar (Phase 2)
+  9. PR 12 — Final Ratchet
+- **Per-PR `any` budget (Stage 5):**
+  - PR 4–8, PR 10: max **+4** each
+  - PR 9: max **+6** (explicit complexity exception)
+  - PR 11: max **+3**
+  - PR 12: **0 net new `any`** (cleanup/ratchet only)
+- Stage 5 cumulative cap is unchanged: **≤ 40 additional `any`**.
+
 ---
 
 ### Stage 5 — UI slice (conditional on Stage 4 → Path A)
@@ -179,6 +199,25 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 - Running `any` count within budget (target: ≤ 40 additional in stage 5).
 
 **Sizing:** 4–6 weeks.
+
+### Stage 5 PR checklist template (required in every PR description)
+
+- **What was typed**
+  - Files/components touched
+  - New named types/interfaces introduced
+- **What was intentionally left loose**
+  - Exact location(s)
+  - Why tightening is deferred
+- **New `any` introduced**
+  - Count delta (`+N / -N / net`)
+  - Justification per site (or “none”)
+  - Confirm within per-PR budget
+- **Risk level**
+  - Low / Medium / High with one-sentence rationale
+- **Validation**
+  - `npm run type-check:strict` result
+  - Root advisory `tsc --noEmit` result
+  - Tests run for touched scope
 
 ---
 
