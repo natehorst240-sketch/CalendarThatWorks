@@ -182,7 +182,8 @@ describe('BaseGanttView — person rows', () => {
       accountableManagers: [{ title: 'Site Manager' }],
     }];
     wrap({ bases, employees });
-    expect(screen.getByText('Site Manager')).toBeInTheDocument();
+    // Title renders in both the base header manager list and the person row badge.
+    expect(screen.getAllByText('Site Manager').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders a tel: link for an employee phone number', () => {
@@ -257,13 +258,16 @@ describe('BaseGanttView — selectedBaseIds filtering', () => {
 
   it('shows all bases when selectedBaseIds is empty', () => {
     wrap({ bases, selectedBaseIds: [] });
-    expect(screen.getByText('Alpha Base')).toBeInTheDocument();
-    expect(screen.getByText('Bravo Base')).toBeInTheDocument();
+    // Each name appears in both the picker chip and the base group header.
+    expect(screen.getAllByText('Alpha Base').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Bravo Base').length).toBeGreaterThanOrEqual(2);
   });
 
   it('shows only selected bases when selectedBaseIds is set', () => {
     wrap({ bases, selectedBaseIds: ['b1'] });
-    expect(screen.getByText('Alpha Base')).toBeInTheDocument();
-    expect(screen.queryByText('Bravo Base')).toBeNull();
+    // Alpha Base: picker chip + group header (selected → group rendered).
+    expect(screen.getAllByText('Alpha Base').length).toBeGreaterThanOrEqual(2);
+    // Bravo Base: picker chip only — group body is filtered out.
+    expect(screen.getAllByText('Bravo Base')).toHaveLength(1);
   });
 });
