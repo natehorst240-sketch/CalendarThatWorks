@@ -1,0 +1,49 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: 999px;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.chip:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: 2px;
+}
+
+.chipActive {
+  background: color-mix(in srgb, var(--wc-accent) 18%, var(--wc-surface));
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}

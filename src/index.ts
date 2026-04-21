@@ -38,6 +38,8 @@ export {
   default as CalendarExternalForm,
   SUPPORTED_EXTERNAL_FORM_FIELD_TYPES,
 } from './ui/CalendarExternalForm';
+export { default as FocusChips, DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
+export type { FocusChipDef, FocusChipsProps } from './ui/FocusChips';
 export { default as CalendarErrorBoundary } from './ui/CalendarErrorBoundary';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter';
 export { parseICS, fetchAndParseICS }     from './core/icalParser';

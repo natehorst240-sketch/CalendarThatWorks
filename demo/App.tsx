@@ -32,15 +32,29 @@ import {
 const DEMO_CALENDAR_ID = 'air-ems-demo';
 
 /* ─── Profiles (saved filter sets in the profile bar) ──────────── */
+// Sprint 3 (issue #268 Task 5): seed the 6 required operational saved
+// views so the ProfileBar lights up with meaningful chips out of the
+// box. The filter/grouping wiring is intentionally light-touch for now
+// — each view sets category filters that match its label; the View-tab
+// perspective preset does the heavy grouping lifting.
 const DEMO_PROFILES = [
-  { id: 'p1', name: 'Full Ops',          color: '#0ea5e9', filters: { categories: [],            resources: [], search: '' }, view: 'schedule' },
-  { id: 'p2', name: 'Pilots',            color: '#3b82f6', filters: { categories: ['shift'],     resources: [], search: '' }, view: 'schedule' },
-  { id: 'p3', name: 'Medical Crew',      color: '#10b981', filters: { categories: ['shift'],     resources: [], search: '' }, view: 'schedule' },
-  { id: 'p4', name: 'Mechanics On-Call', color: '#f97316', filters: { categories: ['on-call'],   resources: [], search: '' }, view: 'schedule' },
-  { id: 'p5', name: 'Fleet',             color: '#8b5cf6', filters: { categories: [],            resources: [], search: '' }, view: 'assets'   },
+  { id: 'p-by-base',        name: 'By Base',              color: '#0ea5e9', filters: { categories: [],              resources: [], search: '' }, view: 'base'     },
+  { id: 'p-dispatch-board', name: 'Dispatch Board',       color: '#6366f1', filters: { categories: ['dispatch'],    resources: [], search: '' }, view: 'schedule' },
+  { id: 'p-maintenance',    name: 'Maintenance Coverage', color: '#f97316', filters: { categories: ['maintenance'], resources: [], search: '' }, view: 'assets'   },
+  { id: 'p-flight-crew',    name: 'Flight Crew',          color: '#3b82f6', filters: { categories: ['shift'],       resources: [], search: '' }, view: 'schedule' },
+  { id: 'p-requests',       name: 'Requests',             color: '#10b981', filters: { categories: ['request'],     resources: [], search: '' }, view: 'agenda'   },
+  { id: 'p-mission',        name: 'Mission Timeline',     color: '#a855f7', filters: { categories: ['mission'],     resources: [], search: '' }, view: 'schedule' },
 ];
-const stored = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
-if (!stored || stored === '[]') saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
+// Reseed profiles on first load AND when DEMO_SEED_VERSION bumps so
+// returning visitors pick up new profile-list changes (like the Sprint 3
+// rename from "Full Ops / Pilots / …" to the 6 issue-required views).
+const storedProfiles = localStorage.getItem(`wc-profiles-${DEMO_CALENDAR_ID}`);
+const storedProfileSeedVer = Number(localStorage.getItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`) ?? 0);
+const PROFILES_SEED_VERSION = 2;
+if (!storedProfiles || storedProfiles === '[]' || storedProfileSeedVer < PROFILES_SEED_VERSION) {
+  saveProfiles(DEMO_CALENDAR_ID, DEMO_PROFILES);
+  localStorage.setItem(`wc-demo-profiles-v-${DEMO_CALENDAR_ID}`, String(PROFILES_SEED_VERSION));
+}
 
 /* ─── Bases ─────────────────────────────────────────────────────── */
 const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
@@ -445,6 +459,7 @@ function App() {
             showAddButton={true}
             categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
             locationProvider={assetLocationProvider}
+            focusChips
           />
         </div>
       </div>
