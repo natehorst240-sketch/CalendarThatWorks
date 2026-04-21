@@ -71,6 +71,8 @@ const MIGRATED_PATHS = [
   'src/views/WeekView.tsx',
   'src/views/AssetsView.tsx',
   'src/views/BaseGanttView.tsx',
+  // Stage 5 PR9
+  'src/views/TimelineView.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

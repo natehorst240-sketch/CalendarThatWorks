@@ -20,6 +20,12 @@
  *   scrollbar is correct and each row is absolutely positioned at its offset.
  */
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import type {
+  DragEvent as ReactDragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  TouchEvent as ReactTouchEvent,
+} from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isToday, isWeekend,
@@ -31,6 +37,7 @@ import styles from './TimelineView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd';
 import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
+import type { CalendarViewEvent } from '../types/ui';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -45,21 +52,50 @@ const OVERSCAN_ROWS    = 3;
 const COVERAGE_PILL_H  = 22;   // px — height of shift-coverage status pills
 const COVERAGE_BAND    = COVERAGE_PILL_H + 6; // pill + gap above next band
 
+type LooseEvent = CalendarViewEvent & {
+  [k: string]: any;
+  meta?: Record<string, any>;
+  resource?: string | null;
+  category?: string | null;
+};
+
+type TimelineEmployee = { id: string; name: string; color?: string; role?: string; base?: string; avatar?: string; [k: string]: any };
+type TimelineBase = { id: string; name: string };
+
+interface TimelineViewProps {
+  currentDate: Date;
+  events: LooseEvent[];
+  onEventClick?: (event: LooseEvent) => void;
+  onEventGroupChange?: (event: LooseEvent, patch: { resource: string | null }) => void;
+  onDateSelect?: (start: Date, end: Date, resourceId?: string | null) => void;
+  employees?: TimelineEmployee[];
+  onCallCategory?: string;
+  onEmployeeAdd?: (employee: { id: string; name: string; role?: string; base?: string }) => void;
+  onEmployeeDelete?: (employeeId: string) => void;
+  onShiftStatusChange?: (event: LooseEvent, status: 'pto' | 'unavailable' | null) => void;
+  onCoverageAssign?: (event: LooseEvent, employeeId: string | null) => void;
+  onEmployeeAction?: (employeeId: string, action: Record<string, unknown>) => void;
+  groupBy?: any;
+  sort?: unknown;
+  roles?: string[];
+  bases?: TimelineBase[];
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getInitials(name) {
+function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
   return parts.length >= 2
     ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase()
     : name.slice(0, 2).toUpperCase();
 }
 
-function employeeColor(emp, idx) {
+function employeeColor(emp: TimelineEmployee, idx: number) {
   if (emp.color) return emp.color;
   return `hsl(${Math.round((idx * 137.508) % 360)}, 55%, 45%)`;
 }
 
-function assignLanes(events, monthStart, monthEnd) {
+function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
   const clipped = events
     .filter(e => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
     .map(e => ({
@@ -80,14 +116,14 @@ function assignLanes(events, monthStart, monthEnd) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
       if (laneEnd[i] < ev._dayStart) {
-        ev._lane = i;
+        (ev as any)._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
         break;
       }
     }
     if (!placed) {
-      ev._lane = laneEnd.length;
+      (ev as any)._lane = laneEnd.length;
       laneEnd.push(ev._dayEnd);
     }
   }
@@ -99,7 +135,7 @@ function assignLanes(events, monthStart, monthEnd) {
 // tagged via category (legacy seed events) or via meta.kind / meta.onCall
 // (events created by ScheduleEditorForm or mirrored coverage).  Used so the
 // shift-status pills render for user-created shifts, not just seeded ones.
-function isShiftOrOnCallLikeEvent(ev, onCallCategory) {
+function isShiftOrOnCallLikeEvent(ev: LooseEvent, onCallCategory: string) {
   const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
   return ev?.category === onCallCategory
     || ev?.meta?.onCall === true
@@ -126,7 +162,7 @@ export default function TimelineView({
   sort,
   roles = [],
   bases = [],
-}: any) {
+}: TimelineViewProps) {
   const ctx        = useCalendarContext();
 
   // ── Shift coverage menu state ─────────────────────────────────────────────
@@ -136,7 +172,7 @@ export default function TimelineView({
   const shiftMenuRef = useRef(null);
   const coverMenuRef = useRef(null);
 
-  const triggerEmployeeAction = useCallback((empId, action, options = {}) => {
+  const triggerEmployeeAction = useCallback((empId: string, action: string | Record<string, unknown>, options: Record<string, unknown> = {}) => {
     if (!onEmployeeAction) return false;
     onEmployeeAction(empId, typeof action === 'string' ? { type: action, ...options } : action);
     return true;
@@ -145,7 +181,7 @@ export default function TimelineView({
   const anyMenuOpen = !!(shiftMenu || coverMenu);
   useEffect(() => {
     if (!anyMenuOpen) return;
-    function handler(e) {
+    function handler(e: globalThis.MouseEvent) {
       if (shiftMenuRef.current && !shiftMenuRef.current.contains(e.target)) setShiftMenu(null);
       if (coverMenuRef.current && !coverMenuRef.current.contains(e.target)) setCoverMenu(null);
     }
@@ -191,7 +227,7 @@ export default function TimelineView({
     onStart: ({ ev, sourceRowKey }) => { dragRef.current = { ev, sourceRowKey }; },
     onOver:  (dropEl) => {
       const key = dropEl?.getAttribute('data-wc-drop') ?? null;
-      setDropTargetKey(prev => (prev === key ? prev : key));
+      setDropTargetKey((prev: string | null) => (prev === key ? prev : key));
     },
     onDrop:  (dropEl, { ev, sourceRowKey }) => {
       dragRef.current = null;
@@ -337,17 +373,17 @@ export default function TimelineView({
       });
     }
 
-    return resourceList.map(resource => {
+    return resourceList.map((resource: string) => {
       const resEvents = events.filter(
         e => (e.resource ?? '(Unassigned)') === resource,
       );
       const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
       const rowH = laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2;
-      return {
-        key: resource, emp: null, empIdx: 0, resource,
-        events: laned, laneCount,
-        rowH, baseH: rowH, coveringPills: [], hasStatusPills: false,
-      };
+        return {
+          key: resource, emp: null as TimelineEmployee | null, empIdx: 0, resource,
+          events: laned, laneCount,
+          rowH, baseH: rowH, coveringPills: [] as Array<{ ev: LooseEvent; origEmpName: string; _dayStart: number; _dayEnd: number }>, hasStatusPills: false,
+        };
     });
   }, [useEmployees, displayEmployees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
 
@@ -367,17 +403,17 @@ export default function TimelineView({
     if (!isGrouped) return [];
     return rows.map(row => {
       const base = useEmployees ? (row.emp || {}) : (row.events?.[0] || {});
-      return { ...base, meta: base.meta || {}, __row: row };
+      return { ...base, meta: (base as any).meta || {}, __row: row };
     });
   }, [isGrouped, rows, useEmployees]);
 
   const groupTree = useMemo(() => {
     if (!isGrouped) return [];
-    return buildGroupTree(pseudoEvents, groupBy);
+    return buildGroupTree(pseudoEvents as any, groupBy as any);
   }, [isGrouped, pseudoEvents, groupBy]);
 
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
-  const toggleGroup = useCallback((path) => {
+  const toggleGroup = useCallback((path: string) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
@@ -390,15 +426,15 @@ export default function TimelineView({
     if (!isGrouped || rows.length === 0 || groupTree.length === 0) {
       return { flatRows: rows, groupOrder: [] };
     }
-    const out = [];
-    const order = [];
-    const countLeaves = (node) => {
+    const out: any[] = [];
+    const order: string[] = [];
+    const countLeaves = (node: any) => {
       if (node.children.length === 0) return node.events.length;
       let s = 0;
       for (const c of node.children) s += countLeaves(c);
       return s;
     };
-    const walk = (nodes, parentPath) => {
+    const walk = (nodes: any[], parentPath: string) => {
       for (const node of nodes) {
         const path = parentPath ? `${parentPath}/${node.key}` : node.key;
         order.push(path);
@@ -479,7 +515,7 @@ export default function TimelineView({
     }
   }, [focusedCell, rowOffsets]);
 
-  const handleCellKeyDown = useCallback((e, ri, di, cellRowEvents, resourceId) => {
+  const handleCellKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>, ri: number, di: number, cellRowEvents: LooseEvent[], resourceId?: string | null) => {
     const maxRi = flatRows.length - 1;
     const maxDi = totalDays - 1;
     let nextRi = ri, nextDi = di;
@@ -730,7 +766,7 @@ export default function TimelineView({
             const rowClassName  = [styles.row, isDropTarget && styles.dropTarget].filter(Boolean).join(' ');
 
             const onRowDragOver = rowDndEnabled
-              ? (e) => {
+              ? (e: ReactDragEvent<HTMLDivElement>) => {
                   if (!dragRef.current) return;
                   e.preventDefault();
                   if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
@@ -741,7 +777,7 @@ export default function TimelineView({
               ? () => { if (dropTargetKey === key) setDropTargetKey(null); }
               : undefined;
             const onRowDrop = rowDndEnabled
-              ? (e) => {
+              ? (e: ReactDragEvent<HTMLDivElement>) => {
                   e.preventDefault();
                   const drag = dragRef.current;
                   dragRef.current = null;
@@ -876,7 +912,7 @@ export default function TimelineView({
                   {days.map((day, di) => {
                     const isFocused    = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
                     const resourceId   = emp ? emp.id : resource;
-                    const cellHasEvent = rowEvents.some(ev => ev._dayStart <= di && ev._dayEnd >= di);
+                    const cellHasEvent = rowEvents.some((ev: LooseEvent) => ev._dayStart <= di && ev._dayEnd >= di);
                     return (
                       <div
                         key={`kbcell-${di}`}
@@ -900,11 +936,11 @@ export default function TimelineView({
                   })}
 
                   {/* Event bars */}
-                  {rowEvents.map(ev => {
+                  {rowEvents.map((ev: LooseEvent) => {
                     const isOnCall = ev.category === onCallCategory || ev.meta?.onCall === true;
                     const evColor  = isOnCall
-                      ? (color ?? resolveColor(ev, ctx?.colorRules))
-                      : resolveColor(ev, ctx?.colorRules);
+                      ? (color ?? resolveColor(ev as any, ctx?.colorRules))
+                      : resolveColor(ev as any, ctx?.colorRules);
 
                     const left    = ev._dayStart * DAY_W + 2;
                     const width   = Math.max(DAY_W - 4, (ev._dayEnd - ev._dayStart + 1) * DAY_W - 4);
@@ -920,7 +956,7 @@ export default function TimelineView({
                     // stay draggable too — dragging is separate from clicking.
                     const evDndEnabled = rowDndEnabled;
                     const onEvDragStart = evDndEnabled
-                      ? (e) => {
+                      ? (e: ReactDragEvent<HTMLButtonElement | HTMLDivElement>) => {
                           dragRef.current = { ev, sourceRowKey: key };
                           if (e.dataTransfer) {
                             e.dataTransfer.effectAllowed = 'move';
@@ -932,7 +968,7 @@ export default function TimelineView({
                       ? () => { dragRef.current = null; setDropTargetKey(null); }
                       : undefined;
                     const onEvTouchStart = evDndEnabled
-                      ? (e) => bindTouchDnd(e, { ev, sourceRowKey: key })
+                      ? (e: ReactTouchEvent<HTMLButtonElement | HTMLDivElement>) => bindTouchDnd(e, { ev, sourceRowKey: key })
                       : undefined;
 
                     if (ctx?.renderEvent) {
@@ -988,10 +1024,10 @@ export default function TimelineView({
                           </button>
                           <button
                             className={[styles.shiftStatusBtn, hasStatus && styles.hasStatus].filter(Boolean).join(' ')}
-                            onClick={e => {
+                            onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setShiftMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                              setShiftMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
                             }}
                             title="Shift-only availability shortcut"
                             aria-label="Set shift availability"
@@ -1029,8 +1065,8 @@ export default function TimelineView({
 
                   {/* ── Shift coverage status pills (below event lanes) ── */}
                   {rowEvents
-                    .filter(ev => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.shiftStatus)
-                    .map(ev => {
+                    .filter((ev: LooseEvent) => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.shiftStatus)
+                    .map((ev: LooseEvent) => {
                       const reqStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : ev.start;
                       const reqEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : ev.end;
                       // Use startOfDay (matches assignLanes) so this pill spans the same
@@ -1052,10 +1088,10 @@ export default function TimelineView({
                             key={`sp-${ev.id}`}
                             className={[styles.coveragePill, styles.coveragePillCovered].join(' ')}
                             style={{ left, top, width, height: COVERAGE_PILL_H }}
-                            onClick={e => {
+                            onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setCoverMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                              setCoverMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
                             }}
                             title={`Shift covered by ${coveredByName}`}
                             aria-label={`Shift covered by ${coveredByName} — click to edit coverage`}
@@ -1069,10 +1105,10 @@ export default function TimelineView({
                           key={`sp-${ev.id}`}
                           className={[styles.coveragePill, styles.coveragePillUncovered].join(' ')}
                           style={{ left, top, width, height: COVERAGE_PILL_H }}
-                          onClick={e => {
+                          onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             const rect = e.currentTarget.getBoundingClientRect();
-                            setCoverMenu(prev => prev?.ev?.id === ev.id ? null : { ev, rect });
+                            setCoverMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
                           }}
                           aria-label="Shift not covered — click to assign coverage"
                           title="Click to assign coverage"
@@ -1084,7 +1120,7 @@ export default function TimelineView({
                   }
 
                   {/* ── Covering-for pills (for the employee covering someone else) ── */}
-                  {coveringPills.map(({ ev: covEv, origEmpName, _dayStart, _dayEnd }) => {
+                  {coveringPills.map(({ ev: covEv, origEmpName, _dayStart, _dayEnd }: { ev: LooseEvent; origEmpName: string; _dayStart: number; _dayEnd: number }) => {
                     const left  = _dayStart * DAY_W + 2;
                     const width = Math.max(DAY_W - 4, (_dayEnd - _dayStart + 1) * DAY_W - 4);
                     const top   = baseH + 3 + (hasStatusPills ? COVERAGE_BAND : 0);
@@ -1202,7 +1238,7 @@ export default function TimelineView({
         <EmployeeActionCard
           emp={empCard.emp}
           anchorRect={empCard.rect}
-          onAction={action => onEmployeeAction(empCard.emp.id, action)}
+          onAction={(action: Record<string, unknown>) => onEmployeeAction(empCard.emp.id, action)}
           onClose={() => setEmpCard(null)}
         />
       )}

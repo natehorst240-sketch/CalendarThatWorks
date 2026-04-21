@@ -206,6 +206,16 @@ Goal: Layout + shared logic typing
 
 Goal: Contain complexity
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Removed the file-level `: any` props seam in `src/views/TimelineView.tsx` and replaced it with explicit `TimelineViewProps` plus named local boundary aliases (`LooseEvent`, `TimelineEmployee`, `TimelineBase`) so exported view inputs are typed without tightening downstream callers.
+- Added explicit parameter types to Timeline-local helpers and interaction handlers (lane assignment, row DnD, keyboard cell navigation, coverage/menu callbacks) to eliminate implicit callback `any` in the isolated Timeline path while preserving existing runtime behavior.
+- Kept intentional looseness at cross-module seams (`buildGroupTree`, `resolveColor`, and dynamic `meta` payloads) via narrow boundary casts so typing does not cascade into unmigrated files.
+
+**Completion updates in this PR:**
+- Added `src/views/TimelineView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` so PR 9 is ratchet-enforced per the Stage 5 status rule.
+
 ---
 
 ### PR 10 — WorksCalendar (Phase 1)
