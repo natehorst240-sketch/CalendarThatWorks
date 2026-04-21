@@ -225,6 +225,64 @@ describe('advance — notify emission', () => {
     expect(notifyEvt).toMatchObject({ channel: 'email', template: 'hi' })
     expect(r.instance.status).toBe('completed')
   })
+
+  it('interpolates {{ }} tokens against variables into a message field', () => {
+    const wf: Workflow = {
+      id: 'notify-interp', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel: 'slack', template: 'Hi {{ actor.name }}, cost ${{ event.cost }}' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [{ from: 'n', to: 'done' }],
+    }
+    const r = advance({
+      workflow: wf, instance: null, action: { type: 'start' }, at: AT,
+      variables: { actor: { name: 'Alice' }, event: { cost: 750 } },
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const notifyEvt = r.emit.find(e => e.type === 'notify')
+    expect(notifyEvt).toMatchObject({
+      channel: 'slack',
+      template: 'Hi {{ actor.name }}, cost ${{ event.cost }}',
+      message: 'Hi Alice, cost $750',
+    })
+  })
+
+  it('omits message when the notify node has no template', () => {
+    const wf: Workflow = {
+      id: 'notify-bare', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel: 'slack' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [{ from: 'n', to: 'done' }],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const notifyEvt = r.emit.find(e => e.type === 'notify')
+    expect(notifyEvt).not.toHaveProperty('message')
+    expect(notifyEvt).not.toHaveProperty('template')
+  })
+
+  it('fails the workflow when a template references an undefined variable', () => {
+    const wf: Workflow = {
+      id: 'notify-bad', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel: 'slack', template: 'Hi {{ actor.name }}' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [{ from: 'n', to: 'done' }],
+    }
+    const r = advance({
+      workflow: wf, instance: null, action: { type: 'start' }, at: AT,
+      variables: {},
+    }) as { ok: false; error: string; instance: WorkflowInstance; emit: readonly unknown[] }
+    expect(r.ok).toBe(false)
+    expect(r.instance.status).toBe('failed')
+    expect(r.error).toMatch(/actor\.name/)
+  })
 })
 
 describe('advance — failure modes', () => {

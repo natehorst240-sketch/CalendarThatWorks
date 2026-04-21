@@ -3,6 +3,7 @@ import {
   validateWorkflow,
   hasBlockingErrors,
   validateExpressionSyntax,
+  validateTemplateSyntax,
 } from '../validate'
 import {
   WORKFLOW_TEMPLATES,
@@ -299,6 +300,93 @@ describe('hasBlockingErrors', () => {
       { code: 'no-terminal-node' as const, severity: 'error' as const, message: 'y' },
     ]
     expect(hasBlockingErrors(issues)).toBe(true)
+  })
+})
+
+describe('validateWorkflow — notify channel + template rules (issue #223)', () => {
+  function withNotify(template: string | undefined, channel = 'slack'): Workflow {
+    return {
+      id: 'nf', version: 1, trigger: 'on_submit', startNodeId: 'n',
+      nodes: [
+        { id: 'n', type: 'notify', channel, ...(template !== undefined ? { template } : {}) },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [{ from: 'n', to: 'done' }],
+    }
+  }
+
+  it('flags empty channel as error', () => {
+    const wf = withNotify(undefined, '')
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'empty-channel' && i.severity === 'error')).toBe(true)
+  })
+
+  it('warns when notify uses an unregistered channel (given knownChannels)', () => {
+    const wf = withNotify('hi', 'teams')
+    const issues = validateWorkflow(wf, { knownChannels: ['slack', 'email'] })
+    const issue = issues.find(i => i.code === 'unknown-channel')
+    expect(issue?.severity).toBe('warning')
+    expect(issue?.nodeId).toBe('n')
+  })
+
+  it('skips unknown-channel check when knownChannels is omitted', () => {
+    const wf = withNotify('hi', 'anything-goes')
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'unknown-channel')).toBe(false)
+  })
+
+  it('accepts a notify with a registered channel cleanly', () => {
+    const wf = withNotify('hi', 'slack')
+    const issues = validateWorkflow(wf, { knownChannels: ['slack'] })
+    expect(issues.some(i => i.code === 'unknown-channel')).toBe(false)
+    expect(issues.some(i => i.code === 'empty-channel')).toBe(false)
+  })
+
+  it('flags unterminated {{ }} tokens in templates', () => {
+    const wf = withNotify('hi {{ actor.name')
+    const issues = validateWorkflow(wf)
+    const issue = issues.find(i => i.code === 'template-syntax')
+    expect(issue?.severity).toBe('error')
+    expect(issue?.nodeId).toBe('n')
+  })
+
+  it('flags expression syntax errors inside template tokens', () => {
+    const wf = withNotify('{{ 1 + }}')
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'template-syntax' && i.severity === 'error')).toBe(true)
+  })
+
+  it('does not flag templates that reference unbound variables', () => {
+    // edit-time: vars aren't supplied; undefined-variable is expected.
+    const wf = withNotify('Hi {{ actor.name }}')
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'template-syntax')).toBe(false)
+  })
+
+  it('does not flag templates with no tokens', () => {
+    const wf = withNotify('plain text')
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'template-syntax')).toBe(false)
+  })
+})
+
+describe('validateTemplateSyntax', () => {
+  it('returns null for clean templates (even with unbound vars)', () => {
+    expect(validateTemplateSyntax('')).toBeNull()
+    expect(validateTemplateSyntax('Hi {{ actor.name }}')).toBeNull()
+    expect(validateTemplateSyntax('no tokens')).toBeNull()
+  })
+
+  it('reports unterminated tokens', () => {
+    expect(validateTemplateSyntax('hi {{ name')).not.toBeNull()
+  })
+
+  it('reports empty tokens', () => {
+    expect(validateTemplateSyntax('{{ }}')).not.toBeNull()
+  })
+
+  it('reports expression syntax errors inside tokens', () => {
+    expect(validateTemplateSyntax('{{ 1 + }}')).not.toBeNull()
   })
 })
 

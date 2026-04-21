@@ -13,6 +13,7 @@
  * active between actions.
  */
 import { evaluateBool, ExpressionError } from './expression'
+import { interpolateTemplate, TemplateError } from './templateInterpolate'
 import {
   findNode,
   resolveNextEdge,
@@ -38,7 +39,16 @@ export type WorkflowAction =
 export type WorkflowEmitEvent =
   | { readonly type: 'node_entered'; readonly nodeId: string; readonly at: string }
   | { readonly type: 'node_exited';  readonly nodeId: string; readonly at: string; readonly signal: EdgeGuard }
-  | { readonly type: 'notify';       readonly nodeId: string; readonly channel: string; readonly template?: string; readonly at: string }
+  | {
+      readonly type: 'notify';
+      readonly nodeId: string;
+      readonly channel: string;
+      readonly at: string;
+      /** Authored template string (pre-interpolation). */
+      readonly template?: string;
+      /** Rendered message after `{{ }}` interpolation against `variables`. */
+      readonly message?: string;
+    }
   | { readonly type: 'workflow_completed'; readonly outcome: WorkflowOutcome; readonly at: string }
   | { readonly type: 'workflow_failed'; readonly nodeId: string; readonly reason: string; readonly at: string }
 
@@ -147,7 +157,9 @@ export function advance(input: AdvanceInput): AdvanceResult {
       }
     }
   } catch (err) {
-    const reason = err instanceof ExpressionError ? err.message : String(err)
+    const reason = err instanceof ExpressionError || err instanceof TemplateError
+      ? err.message
+      : String(err)
     const nodeId = state.currentNodeId ?? '<none>'
     state.status = 'failed'
     state.emit.push({ type: 'workflow_failed', nodeId, reason, at })
@@ -275,12 +287,16 @@ function autoAdvance(
     }
 
     if (node.type === 'notify') {
+      const message = node.template !== undefined
+        ? interpolateTemplate(node.template, vars)
+        : undefined
       state.emit.push({
         type: 'notify',
         nodeId: node.id,
         channel: node.channel,
-        ...(node.template !== undefined ? { template: node.template } : {}),
         at,
+        ...(node.template !== undefined ? { template: node.template } : {}),
+        ...(message !== undefined ? { message } : {}),
       })
       exitCurrent(state, 'default', at)
       if (!followEdge(workflow, state, 'default', at)) return

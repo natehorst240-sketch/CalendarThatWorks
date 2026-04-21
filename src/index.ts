@@ -52,6 +52,20 @@ export type {
 export { useWorkflowTicker } from './hooks/useWorkflowTicker';
 export type { UseWorkflowTickerOptions } from './hooks/useWorkflowTicker';
 export { evaluate as evaluateExpression, evaluateBool as evaluateExpressionBool, ExpressionError } from './core/workflow/expression';
+export { interpolateTemplate, tryInterpolateTemplate, TemplateError } from './core/workflow/templateInterpolate';
+export {
+  createChannelRegistry, dispatchWorkflowEvents,
+  createSlackChannel, createEmailChannel, createWebhookChannel,
+} from './core/workflow/channels';
+export type {
+  WorkflowChannelAdapter, WorkflowChannelRegistry,
+  ChannelDispatchPayload, ChannelDispatchOutcome, WorkflowDispatchReport,
+  SlackChannelOptions, EmailChannelOptions, WebhookChannelOptions,
+} from './core/workflow/channels';
+export { validateWorkflow, validateExpressionSyntax, validateTemplateSyntax, hasBlockingErrors } from './core/workflow/validate';
+export type {
+  ValidationCode, ValidationIssue, ValidationSeverity, ValidateWorkflowOptions,
+} from './core/workflow/validate';
 export type {
   Workflow, WorkflowNode, WorkflowEdge, WorkflowInstance, WorkflowInstanceStatus,
   WorkflowHistoryEntry, WorkflowOutcome, WorkflowTrigger, EdgeGuard,

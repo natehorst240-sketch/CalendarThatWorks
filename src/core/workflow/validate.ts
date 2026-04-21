@@ -10,6 +10,7 @@
  * semantic contract cannot drift.
  */
 import { evaluate, ExpressionError } from './expression'
+import { interpolateTemplate, TemplateError } from './templateInterpolate'
 import {
   findNode,
   resolveNextEdge,
@@ -35,6 +36,9 @@ export type ValidationCode =
   | 'terminal-has-outgoing'
   | 'timeout-edge-missing'
   | 'sla-without-on-timeout'
+  | 'template-syntax'
+  | 'unknown-channel'
+  | 'empty-channel'
 
 export interface ValidationIssue {
   readonly code: ValidationCode
@@ -44,10 +48,23 @@ export interface ValidationIssue {
   readonly edgeIndex?: number
 }
 
+export interface ValidateWorkflowOptions {
+  /**
+   * Channel ids the host has registered adapters for. When provided,
+   * `unknown-channel` warnings flag notify nodes whose `channel` isn't
+   * in this list. Omit (or pass empty) to skip the check.
+   */
+  readonly knownChannels?: readonly string[]
+}
+
 export function validateWorkflow(
   workflow: Workflow,
+  options: ValidateWorkflowOptions = {},
 ): readonly ValidationIssue[] {
   const issues: ValidationIssue[] = []
+  const knownChannels = options.knownChannels
+    ? new Set(options.knownChannels)
+    : null
 
   // 1. unique node ids
   const seen = new Set<string>()
@@ -245,6 +262,39 @@ export function validateWorkflow(
     }
   }
 
+  // 14. notify templates + channels (issue #223)
+  for (const node of workflow.nodes) {
+    if (node.type !== 'notify') continue
+
+    if (!node.channel || node.channel.trim().length === 0) {
+      issues.push({
+        code: 'empty-channel',
+        severity: 'error',
+        message: `Notify "${node.id}" has no channel`,
+        nodeId: node.id,
+      })
+    } else if (knownChannels && !knownChannels.has(node.channel)) {
+      issues.push({
+        code: 'unknown-channel',
+        severity: 'warning',
+        message: `Notify "${node.id}" uses channel "${node.channel}" which has no registered adapter`,
+        nodeId: node.id,
+      })
+    }
+
+    if (node.template !== undefined) {
+      const syntaxError = validateTemplateSyntax(node.template)
+      if (syntaxError) {
+        issues.push({
+          code: 'template-syntax',
+          severity: 'error',
+          message: `Notify "${node.id}": ${syntaxError}`,
+          nodeId: node.id,
+        })
+      }
+    }
+  }
+
   return issues
 }
 
@@ -332,6 +382,35 @@ function capitalize(s: string): string {
  * a pure parse API we should switch to that here and reclassify this
  * as a true syntax check.
  */
+/**
+ * Best-effort syntax check for notify templates.
+ *
+ * Calls `interpolateTemplate(template, {})`, which runs the real
+ * token + expression pipeline. Since no variables are bound at edit
+ * time, `undefined-variable` / `non-object` expression errors are
+ * suppressed (they're expected). Everything else — unterminated
+ * `{{ }}`, empty tokens, expression syntax errors inside a token —
+ * surfaces as a human-readable string so the builder can render a
+ * badge next to the offending node.
+ */
+export function validateTemplateSyntax(template: string): string | null {
+  try {
+    interpolateTemplate(template, {})
+    return null
+  } catch (err) {
+    if (err instanceof TemplateError) {
+      const cause = err.cause
+      if (cause instanceof ExpressionError) {
+        if (cause.kind === 'undefined-variable') return null
+        if (cause.kind === 'non-object') return null
+        if (cause.kind === 'unsupported-value') return null
+      }
+      return err.message
+    }
+    return String(err)
+  }
+}
+
 export function validateExpressionSyntax(expr: string): string | null {
   if (!expr.trim()) return 'Expression is empty'
   try {
