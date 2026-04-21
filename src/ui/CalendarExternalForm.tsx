@@ -85,16 +85,18 @@ export default function CalendarExternalForm({
   onSuccess,
   onError,
 }: any) {
+  // Validate eagerly in the component body (before hooks) so errors throw
+  // synchronously from render() and are catchable by tests / error boundaries.
   const safeAdapter = ensureAdapter(adapter);
-  const normalizedFields = useMemo(() => normalizeFields(fields), [fields]);
+  const normalizedFields = normalizeFields(fields);
 
   const mergedInitialValues = useMemo(() => {
-    const fromFields = normalizedFields.reduce((acc, field) => {
+    const fromFields = normalizeFields(fields).reduce((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
     return { ...fromFields, ...initialValues };
-  }, [normalizedFields, initialValues]);
+  }, [fields, initialValues]);
 
   const [values, setValues] = useState(mergedInitialValues);
   const [errors, setErrors] = useState({});
