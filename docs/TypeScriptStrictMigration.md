@@ -12,10 +12,10 @@ Plan for migrating the codebase to `strict: true` without the failure mode from 
 "strictNullChecks": false
 ```
 
-Measured in the prior session:
+Measured in Stage 0 (2026-04-21) against `tsconfig.json` + `noImplicitAny: true` with dependencies installed:
 
-- `noImplicitAny` would produce ~1,973 real implicit-any diagnostics (after filtering module-resolution noise).
-- `strictNullChecks` has **not** been measured. Typical ratio in codebases that ignored nulls is 2–4× the implicit-any count, so a working estimate is 4,000–8,000 sites.
+- **1,466 real implicit-any diagnostics** (TS7005, TS7006, TS7011, TS7018, TS7023, TS7031, TS7034, TS7053). The prior session's ~1,973 figure was measured before intermediate TS migration PRs landed.
+- `strictNullChecks` has **not** been measured. Typical ratio in codebases that ignored nulls is 2–4× the implicit-any count, so a working estimate is 3,000–6,000 sites.
 
 This roadmap covers `noImplicitAny` in stages 0–6 and parks `strictNullChecks` as a separate epic that does **not** start until stage 6 is done.
 
@@ -46,7 +46,7 @@ This roadmap covers `noImplicitAny` in stages 0–6 and parks `strictNullChecks`
 
 ## Stages
 
-### Stage 0 — Baseline & mechanism
+### Stage 0 — Baseline & mechanism — ✅ Completed 2026-04-21
 
 **Goal:** land the migration infrastructure with zero code changes.
 
@@ -56,12 +56,13 @@ Tasks:
 - Wire `typecheck:strict` into CI as a blocking job.
 - Run per-directory error counts under `noImplicitAny: true` and publish them in this doc's "Measured per-directory counts" section.
 
-**Exit criteria:**
-- `npm run typecheck:strict` exists and passes (empty include → trivially green).
-- CI runs the strict job on every PR.
-- Per-directory baseline numbers are committed to this doc.
+**What shipped:**
+- `tsconfig.strict.json` extends root with `noImplicitAny: true`, anchored on `src/types/globals.d.ts` (TS requires at least one input; `.d.ts` anchor means Stage 0 enforces strict on a trivially-typed file only).
+- `npm run type-check:strict` script.
+- `type-check-strict` job in `.github/workflows/ci.yml` as a blocking check.
+- Baseline per-directory measurements in the table below.
 
-**Sizing:** ~1 day.
+**Sizing:** ~1 day. Actual: ~1 day.
 
 ---
 
@@ -197,24 +198,34 @@ Stages 3–6 are explicitly out of scope for Sprint 3. If stage 2 finishes faste
 
 ## Measured per-directory counts
 
-_Populated during stage 0. Empty until then._
+Counts are `tsc --noEmit` diagnostics under `noImplicitAny: true`, filtered to real implicit-any codes (TS7005/7006/7011/7018/7023/7031/7034/7053). Measured 2026-04-21.
 
-| Directory | Implicit-any count | Notes |
-|---|---|---|
-| `src/types/**` | _tbd_ | |
-| `src/index.ts` | _tbd_ | |
-| `src/core/**` | _tbd_ | |
-| `src/filters/**` | _tbd_ | |
-| `src/grouping/**` | _tbd_ | |
-| `src/export/**` | _tbd_ | |
-| `src/external/**` | _tbd_ | |
-| `src/api/**` | _tbd_ | |
-| `src/providers/**` | _tbd_ | |
-| `src/hooks/**` | _tbd_ | |
-| `src/ui/**` | _tbd_ | |
-| `src/views/**` | _tbd_ | |
-| `WorksCalendar.tsx` | _tbd_ | |
-| `demo/**` | _tbd_ | |
+| Directory | Stage | Implicit-any count | Notes |
+|---|---|---|---|
+| `src/types/**` | 1 | **0** | Already strict-clean. |
+| `src/index.ts` | 1 | **0** | Already strict-clean. |
+| `src/core/**` | 2 | 183 | Concentrated in legacy top-level files (`icalParser.ts`, `csvParser.ts`, `validator.ts`, `scheduleMutations.ts`, `layout.ts`). `src/core/{engine,approvals,availability,holds,pools,tenancy,workflow}/**` are **already strict-clean** — do not need migration. |
+| `src/filters/**` | 2 | 54 | |
+| `src/grouping/**` | 2 | 46 | |
+| `src/export/**` | 2 | 10 | |
+| `src/external/**` | 2 | 2 | |
+| `src/api/**` | 3 | 4 | Almost free. |
+| `src/providers/**` | 3 | **0** | Already strict-clean. |
+| `src/hooks/**` | 3 | 295 | Top offender: `useDrag.ts` (34), `useSavedViews.ts` (29), `useSourceStore.ts` (24). |
+| `src/ui/**` | 5 | 414 | Top offender: `ConfigPanel.tsx` (151). |
+| `src/views/**` | 5 | 322 | Top offenders: `TimelineView.tsx` (73), `AssetsView.tsx` (58), `WeekView.tsx` (47), `MonthView.tsx` (38), `AgendaView.tsx` (33). |
+| `WorksCalendar.tsx` | 5 | 113 | Single 2000+-line root component. |
+| `demo/**` | 5 | **0** | Already strict-clean. |
+| `src/**/__tests__/**` | — | 23 | Scattered; migrate alongside their subject module. |
+| **Total** | — | **1,466** | |
+
+### Notable findings
+
+- **Stage 1 is free.** `src/types` and `src/index.ts` already pass `noImplicitAny`. Stage 1 is a pure infrastructure flip — add them to `tsconfig.strict.json`'s `files`/`include`.
+- **The newer engine code is already typed.** Everything in `src/core/` subdirectories (`engine`, `approvals`, `availability`, `holds`, `pools`, `tenancy`, `workflow`) — most of the work from the past ~6 months of PRs — is already strict-clean. Stage 2's 295 total sites are concentrated in the older top-level `src/core/*.ts` files.
+- **Stage 3 total (299) is essentially `src/hooks/**`.** `src/api` and `src/providers` together contribute 4 sites.
+- **`src/ui/ConfigPanel.tsx` (151) and `src/WorksCalendar.tsx` (113) together are ~18% of the whole repo's implicit-any surface.** Worth considering whether those two files get their own sub-stage inside stage 5.
+- **Rough stage totals:** Stage 1 = 0, Stage 2 = 295, Stage 3 = 299, Stage 5 = 849. Sprint 3 target (stages 0–2) = **295 total sites** — well within the 3–4 week envelope, probably closer to 1.5–2 weeks.
 
 ## Running `any`-budget ledger
 
