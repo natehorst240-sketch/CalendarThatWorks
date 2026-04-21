@@ -52,7 +52,7 @@
     "preview": "vite preview --config vite.demo.config.ts",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
-    "type-check:strict": "tsc --noEmit -p tsconfig.strict.json",
+    "type-check:strict": "node scripts/typecheck-strict.mjs",
     "prepublishOnly": "npm run test && npm run build"
   },
   "peerDependencies": {

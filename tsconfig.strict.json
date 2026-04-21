@@ -3,10 +3,10 @@
   "compilerOptions": {
     "noImplicitAny": true
   },
-  "files": [
-    "src/types/globals.d.ts"
+  "include": [
+    "src",
+    "demo"
   ],
-  "include": [],
   "exclude": [
     "node_modules",
     "dist",

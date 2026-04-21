@@ -30,19 +30,14 @@ This roadmap covers `noImplicitAny` in stages 0–6 and parks `strictNullChecks`
 
 ## Mechanism
 
-**Side config, not root flip.** Root `tsconfig.json` stays as-is until stage 6. Migration is tracked in `tsconfig.strict.json`:
+**Side config + filter script, not root flip.** Root `tsconfig.json` stays as-is until stage 6. Migration is tracked in two files:
 
-```jsonc
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noImplicitAny": true
-  },
-  "include": []
-}
-```
+1. `tsconfig.strict.json` — extends the root, sets `noImplicitAny: true`, and includes the **whole** `src` + `demo` tree. This is deliberate: `tsc` typechecks transitively (any file imported by an included file is also typechecked), so a narrow `include` does *not* isolate strictness. Running strict over the whole repo is the only way to get accurate diagnostics.
+2. `scripts/typecheck-strict.mjs` — runs `tsc -p tsconfig.strict.json`, parses diagnostics, and **fails only on implicit-any codes (TS7005/7006/7011/7018/7023/7031/7034/7053) in a `MIGRATED_PATHS` allowlist**. Everything outside the allowlist is reported by the existing advisory `type-check` job but does not block the strict job.
 
-`include` grows one slice at a time. A new `npm run typecheck:strict` script runs `tsc -p tsconfig.strict.json`. CI runs the strict typecheck as a blocking job alongside the existing typecheck, so migrated directories cannot regress.
+`MIGRATED_PATHS` in the script grows one slice at a time. `npm run type-check:strict` invokes the script. CI runs it as a blocking job alongside the advisory `type-check` job, so migrated directories cannot regress.
+
+**Why this mechanism instead of narrow `include`:** the original plan assumed `include: ["src/types/**"]` in `tsconfig.strict.json` would enforce strictness on that directory only. In practice, once you import *any* other file from the included set, tsc typechecks the transitive closure under strict, flooding with errors from unmigrated code. Path-level ratchet via a filter script is the practical way to get per-directory enforcement out of a program-level typechecker.
 
 ## Stages
 
@@ -57,26 +52,29 @@ Tasks:
 - Run per-directory error counts under `noImplicitAny: true` and publish them in this doc's "Measured per-directory counts" section.
 
 **What shipped:**
-- `tsconfig.strict.json` extends root with `noImplicitAny: true`, anchored on `src/types/globals.d.ts` (TS requires at least one input; `.d.ts` anchor means Stage 0 enforces strict on a trivially-typed file only).
-- `npm run type-check:strict` script.
+- `tsconfig.strict.json` extends root with `noImplicitAny: true` and includes the whole `src` + `demo` tree.
+- `scripts/typecheck-strict.mjs` runs `tsc` under the strict config, filters diagnostics to implicit-any codes in a `MIGRATED_PATHS` allowlist, and fails only on those.
+- `npm run type-check:strict` invokes the filter script.
 - `type-check-strict` job in `.github/workflows/ci.yml` as a blocking check.
 - Baseline per-directory measurements in the table below.
+
+**Mechanism pivot during Stage 1:** the Stage 0 commit (`2082cf9`) used a narrow `include` on `src/types/globals.d.ts`. That approach is fragile — once `src/index.ts` or any non-leaf file enters the include, `tsc` pulls in the transitive closure under strict. Stage 1 replaced the narrow-include approach with the filter-script ratchet described in the Mechanism section above. Previous mechanism is preserved in git history.
 
 **Sizing:** ~1 day. Actual: ~1 day.
 
 ---
 
-### Stage 1 — Types slice: `src/types/**` + `src/index.ts`
+### Stage 1 — Types slice: `src/types/**` + `src/index.ts` — ✅ Completed 2026-04-21
 
 **Goal:** prove the pattern on the smallest possible slice.
 
-**Exit criteria:**
-- `src/types/**` and `src/index.ts` in `tsconfig.strict.json` include.
-- Zero explicit `any` added.
-- `typecheck:strict` green.
-- Merged to `main`.
+**What shipped:**
+- `src/types/` and `src/index.ts` added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
+- Zero `any` added (both paths were already strict-clean in the Stage 0 baseline).
+- `npm run type-check:strict` green.
+- Also surfaced and fixed the mechanism flaw (see Stage 0 "Mechanism pivot" note). This is the actual value Stage 1 delivered — the migration bit was free; the architecture correction was not.
 
-**Sizing:** 2–3 days. If this slice takes more than a week, the whole plan needs re-scoping.
+**Sizing:** 2–3 days estimated. Actual: same day as Stage 0, because Stage 0 measurement showed both paths were already clean.
 
 ---
 
@@ -90,7 +88,7 @@ Tasks:
 - Track the running count of explicit `any` sites in this doc.
 
 **Exit criteria:**
-- All listed directories in `tsconfig.strict.json` include.
+- All listed directories added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 - `typecheck:strict` green.
 - Running `any` count within budget (target: ≤ 20 across stage 2 total).
 
@@ -109,7 +107,7 @@ Tasks:
 - React hook return types must be explicit.
 
 **Exit criteria:**
-- All listed directories in `tsconfig.strict.json` include.
+- All listed directories added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 - `typecheck:strict` green.
 - Running `any` count within budget (target: ≤ 20 additional in stage 3).
 
@@ -145,7 +143,7 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 - Sub-split aggressively: expect one PR per ~3–5 view files.
 
 **Exit criteria:**
-- All listed paths in `tsconfig.strict.json` include.
+- All listed paths added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 - `typecheck:strict` green.
 - Running `any` count within budget (target: ≤ 40 additional in stage 5).
 
@@ -159,7 +157,7 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 
 Tasks:
 - Move `"noImplicitAny": true` into `tsconfig.json`.
-- Delete `tsconfig.strict.json` and `npm run typecheck:strict`.
+- Delete `tsconfig.strict.json`, `scripts/typecheck-strict.mjs`, and `npm run type-check:strict`.
 - Collapse the CI jobs back to one.
 
 **Exit criteria:**
@@ -176,10 +174,10 @@ Does not start until stage 6 is complete. Will get its own staged roadmap, sized
 
 ## Drift control
 
-Once a directory is in `tsconfig.strict.json`:
+Once a path is in `MIGRATED_PATHS` (in `scripts/typecheck-strict.mjs`):
 
-- CI blocks any PR that introduces `noImplicitAny` violations in that directory.
-- New files in that directory must typecheck strict from day one.
+- CI blocks any PR that introduces `noImplicitAny` violations in that path.
+- New files under that path must typecheck strict from day one.
 - Reviewers should reject unexplained `any` additions.
 
 This ratchet is what makes the staged approach safe: we don't have to finish to keep the gains.
@@ -221,7 +219,7 @@ Counts are `tsc --noEmit` diagnostics under `noImplicitAny: true`, filtered to r
 
 ### Notable findings
 
-- **Stage 1 is free.** `src/types` and `src/index.ts` already pass `noImplicitAny`. Stage 1 is a pure infrastructure flip — add them to `tsconfig.strict.json`'s `files`/`include`.
+- **Stage 1 is free.** `src/types` and `src/index.ts` already pass `noImplicitAny`. Stage 1 is a pure ratchet flip — add them to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 - **The newer engine code is already typed.** Everything in `src/core/` subdirectories (`engine`, `approvals`, `availability`, `holds`, `pools`, `tenancy`, `workflow`) — most of the work from the past ~6 months of PRs — is already strict-clean. Stage 2's 295 total sites are concentrated in the older top-level `src/core/*.ts` files.
 - **Stage 3 total (299) is essentially `src/hooks/**`.** `src/api` and `src/providers` together contribute 4 sites.
 - **`src/ui/ConfigPanel.tsx` (151) and `src/WorksCalendar.tsx` (113) together are ~18% of the whole repo's implicit-any surface.** Worth considering whether those two files get their own sub-stage inside stage 5.
