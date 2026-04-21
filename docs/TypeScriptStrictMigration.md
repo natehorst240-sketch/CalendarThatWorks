@@ -78,7 +78,7 @@ Tasks:
 
 ---
 
-### Stage 2 — Core & pure engine-adjacent
+### Stage 2 — Core & pure engine-adjacent — ✅ Completed 2026-04-21
 
 **Scope:** `src/core/**`, `src/filters/**`, `src/grouping/**`, `src/export/**`, `src/external/**`.
 
@@ -87,14 +87,23 @@ Tasks:
 - Sub-split by directory if any directory exceeds ~150 diagnostics.
 - Track the running count of explicit `any` sites in this doc.
 
-**Exit criteria:**
-- All listed directories added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
-- `typecheck:strict` green.
-- Running `any` count within budget (target: ≤ 20 across stage 2 total).
+**What shipped:**
+- Three commits landing the five directories in logical batches:
+  - `6222f2e` — `src/external/**` + `src/export/**` (2 + 10 sites; boundary slices, 0 `any` added).
+  - `0525f6d` — `src/core/**` (183 sites; largest batch — `icalParser.ts`, `csvParser.ts`, `validator.ts`, `scheduleMutations.ts`, `layout.ts`, `scheduleOverlap.ts`, `scheduleModel.ts`, `configSchema.ts`, `supabase.ts`).
+  - `15857b8` — `src/grouping/**` + `src/filters/**` (46 + 54 sites).
+- Structural "-like" types for dynamic event shapes (`ScheduleEventLike`, `OverlapEventLike`, `LayoutEvent`, `ValidatorEvent`, `ShiftEventLike`, `FilterItem`) rather than importing the canonical `NormalizedEvent` — this prevents typing from cascading into unmigrated test callsites that construct partial stub events.
+- Boundary types at consumer-facing edges use `Record<string, any>` (e.g. `loadConfig()` return, `FilterItem`) to avoid forcing narrowing on unmigrated callers. Internal-only helpers use `Record<string, unknown>`.
+- `npm run type-check:strict` green across all 7 migrated paths; full 1,911-test suite passes.
 
-**Sizing:** 2–3 weeks.
+**Lessons learned:**
+- **Tightening public signatures cascades.** The first pass on `layout.ts` imported `NormalizedEvent`, which broke `layout.test.ts` where tests construct partial `{ start, end, allDay }` stubs. Loosening the public parameter to a local `LayoutEvent = { start: Date; end: Date; allDay?: boolean; [k: string]: unknown }` kept the ratchet green without requiring test rewrites. **Rule for future stages:** when a public function is consumed by unmigrated code, prefer a loose structural parameter type over importing the canonical domain type. Tighten later, as part of the relevant stage's own migration.
+- **`Record<string, any>` vs `Record<string, unknown>` is a real choice, not a default.** Using `unknown` on `loadConfig()` return surfaced TS2339 in `configSchema.test.ts` where the test does dotted access like `config.approvals.enabled`. Widened to `any` at that specific seam. The general rule: `unknown` is correct, but until the call-site is migrated, `any` at the boundary prevents downstream breakage.
+- **Transitive typechecking pulls in more than expected.** Once `src/core/` was in the allowlist, several tests in `src/core/__tests__/` failed under strict even though tests are not in the allowlist — because `tsc` typechecks the whole graph, and implicit-any in a test file blocks the production module under its own strict check. Resolved by annotating a small number of test-file helpers (`const d = (iso: string) => ...`, `function makeEvent(...)`) — not by adding test paths to the allowlist.
 
-**Decision point at end of stage:** compare actual velocity to estimate. If ≥ 2× over, re-scope stages 3–6 before continuing.
+**Stage 2 sizing outcome:** estimated 2–3 weeks. Actual: **same day as Stage 1** (one focused session), because the per-directory measurements from Stage 0 surfaced that most of the ~295 diagnostics were concentrated in ~10 files and most were mechanical (function parameter annotations). The estimate was calibrated against a world where strict-null-checks were also in scope; for `noImplicitAny` alone against measured counts, the effort was ~10× lower.
+
+**Decision point outcome:** actual velocity ≫ estimate (well under 2× over — more like 10× under). Stages 3–6 continue as planned; no re-scoping required.
 
 ---
 
@@ -232,6 +241,23 @@ _Populated as stages complete._
 | Stage | Added `any` count | Running total | Budget |
 |---|---|---|---|
 | 1 | 0 | 0 | 0 |
-| 2 | _tbd_ | _tbd_ | 20 |
+| 2 | +1 (production) | 1 | 20 |
 | 3 | _tbd_ | _tbd_ | 40 |
 | 5 | _tbd_ | _tbd_ | 80 |
+
+### Stage 2 `any` accounting (2026-04-21)
+
+Measurement: count of `any` tokens matching `/:\s*any\b|:\s*any\[\]|<any>|\bas any\b|Record<string,\s*any>/` in each migrated directory, before Stage 2 (`2082cf9`) vs after (`HEAD`), restricted to non-test files.
+
+| Directory | Before | After | Delta |
+|---|---|---|---|
+| `src/core/**` | 9 | 7 | **−2** |
+| `src/external/**` | 0 | 0 | 0 |
+| `src/export/**` | 0 | 0 | 0 |
+| `src/grouping/**` | 1 | 0 | **−1** |
+| `src/filters/**` | 31 | 35 | **+4** |
+| **Total** | 41 | 42 | **+1** |
+
+The `core` and `grouping` directories ended up with *fewer* `any`s than they started — pre-existing `any` annotations were replaced with real types as a side effect of the migration. The net `+4` in `filters` comes from loose typing at the schema / config boundary (`Record<string, any>` for config objects that feed unmigrated UI callers, `field: any` on helpers that accept `FilterField` variants). All additions are deliberate boundary-protection as described in the "What shipped" note above, not shortcuts.
+
+Test files (`__tests__/**`) added `any` annotations on stub/helper callbacks (e.g. `(r: any) => r.emp?.role`) — not counted against the production budget, but worth tracking: ~10 added. These will be revisited when individual test modules are tightened in later stages (or never, if we accept stub events as an explicit escape-hatch pattern in tests).
