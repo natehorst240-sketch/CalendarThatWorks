@@ -1,3 +1,4 @@
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -7,7 +8,7 @@ import {
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
-import type { CalendarViewEvent } from '../types/ui';
+import type { NormalizedEvent } from '../types/events';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;
@@ -15,16 +16,16 @@ const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
 const OVERFLOW_TRACK_H = SPAN_H + 4;
 
-function isMultiDay(ev) {
+function isMultiDay(ev: NormalizedEvent) {
   if (ev.allDay) return true;
   return !isSameDay(startOfDay(ev.start), displayEndDay(ev));
 }
 
 type MonthViewProps = {
   currentDate: Date;
-  events: CalendarViewEvent[];
-  onEventClick?: (event: CalendarViewEvent) => void;
-  onEventMove?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  events: NormalizedEvent[];
+  onEventClick?: (event: NormalizedEvent) => void;
+  onEventMove?: (event: NormalizedEvent, newStart: Date, newEnd: Date) => void;
   onDateSelect?: (start: Date, end: Date) => void;
   config?: {
     display?: {
@@ -40,16 +41,25 @@ export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
 }: MonthViewProps) {
-  const [popoverState, setPopoverState] = useState(null);
-  const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
+  const [popoverState, setPopoverState] = useState<{ day: Date; anchorRect: DOMRect } | null>(null);
+  const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(
     () => (typeof window === 'undefined' ? 1024 : window.innerWidth),
   );
   // Hover projection panel state (positioned above hovered month-view pills).
-  const [titleHover, setTitleHover] = useState(null);
+  const [titleHover, setTitleHover] = useState<{
+    title: string;
+    color: string;
+    x: number;
+    y: number;
+    dates: string;
+    category: string | null;
+    resource: string | null;
+    notes: string | null;
+  } | null>(null);
   // Keyboard-focused day cell (roving tabindex pattern).
   const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
-  const gridRef = useRef(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const ctx = useCalendarContext();
 
   // Sync focusedDay when the parent navigates to a new month.
@@ -68,13 +78,15 @@ export default function MonthView({
   useEffect(() => {
     if (!popoverState) return undefined;
 
-    function handlePointerDown(e) {
-      if (e.target.closest?.('[data-month-popover], [data-month-more-trigger]')) return;
+    function handlePointerDown(e: MouseEvent) {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('[data-month-popover], [data-month-more-trigger]')) return;
       setPopoverState(null);
     }
 
-    function handleDismiss(e) {
-      if (e.type === 'keydown' && e.key !== 'Escape') return;
+    function handleDismiss(e: Event) {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
       setPopoverState(null);
     }
 
@@ -98,13 +110,13 @@ export default function MonthView({
     if (!lastKeyNav.current || !gridRef.current) return;
     lastKeyNav.current = false;
     const key = format(focusedDay, 'yyyy-MM-dd');
-    const cell = gridRef.current.querySelector(`[data-date="${key}"]`);
+    const cell = gridRef.current.querySelector<HTMLElement>(`[data-date="${key}"]`);
     cell?.focus({ preventScroll: false });
   }, [focusedDay]);
 
   // Arrow-key navigation handler attached to each gridcell.
-  const handleCellKeyDown = useCallback((e, day) => {
-    let next = null;
+  const handleCellKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>, day: Date) => {
+    let next: Date | null = null;
     switch (e.key) {
       case 'ArrowLeft':  next = subDays(day, 1);  break;
       case 'ArrowRight': next = addDays(day, 1);  break;
@@ -131,17 +143,17 @@ export default function MonthView({
   }, [weekStartDay, onDateSelect]);
 
   // ── Drag state ───────────────────────────────────────────────────────────
-  const dragRef    = useRef(null); // { ev, moved, targetDay }
-  const [dragTarget, setDragTarget] = useState(null); // Date | null
+  const dragRef    = useRef<{ ev: NormalizedEvent; moved: boolean; targetDay: Date | null } | null>(null); // { ev, moved, targetDay }
+  const [dragTarget, setDragTarget] = useState<Date | null>(null); // Date | null
 
-  function startPillDrag(ev, e) {
+  function startPillDrag(ev: NormalizedEvent, e: ReactPointerEvent<HTMLElement>) {
     if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
   }
 
-  function handleCellPointerEnter(day) {
+  function handleCellPointerEnter(day: Date) {
     const d = dragRef.current;
     if (!d) return;
     d.moved     = true;
@@ -185,14 +197,14 @@ export default function MonthView({
   }, [currentDate, weekStartDay]);
 
   const { multiDay, singleDay } = useMemo(() => {
-    const multi = [];
-    const single = [];
+    const multi: NormalizedEvent[] = [];
+    const single: NormalizedEvent[] = [];
     events.forEach(ev => (isMultiDay(ev) ? multi : single).push(ev));
     return { multiDay: multi, singleDay: single };
   }, [events]);
 
   const singleByDay = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, NormalizedEvent[]>();
     singleDay.forEach(ev => {
       const key = format(ev.start, 'yyyy-MM-dd');
       if (!map.has(key)) map.set(key, []);
@@ -224,7 +236,7 @@ export default function MonthView({
     return { dayNumTrackH: 32, weekRowMinH: 120, weekRowHoverMinH: 150 };
   }, [viewportWidth]);
 
-  function buildHoverProjection(ev, color, rect) {
+  function buildHoverProjection(ev: NormalizedEvent, color: string, rect: DOMRect) {
     const dates = ev.allDay
       ? (isSameDay(ev.start, ev.end)
         ? format(ev.start, 'EEE, MMM d')
@@ -233,7 +245,8 @@ export default function MonthView({
         ? `${format(ev.start, 'EEE, MMM d, h:mm a')} – ${format(ev.end, 'h:mm a')}`
         : `${format(ev.start, 'EEE, MMM d, h:mm a')} – ${format(ev.end, 'EEE, MMM d, h:mm a')}`);
 
-    const notes = ev.notes ?? ev.meta?.notes ?? ev._raw?.notes ?? '';
+    const rawNotes = (ev._raw as { notes?: unknown } | undefined)?.notes;
+    const notes = ev.meta?.notes ?? rawNotes ?? '';
 
     return {
       title: ev.title,
@@ -247,7 +260,7 @@ export default function MonthView({
     };
   }
 
-  const getPopoverEvents = useCallback((day) => {
+  const getPopoverEvents = useCallback((day: Date): NormalizedEvent[] => {
     const dayStart = startOfDay(day);
     const dayKey = format(day, 'yyyy-MM-dd');
     const spanningEvents = multiDay.filter((ev) => dayStart >= startOfDay(ev.start) && dayStart <= displayEndDay(ev));
@@ -282,15 +295,15 @@ export default function MonthView({
   }, [popoverState]);
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev, extra: { onAfterClick?: () => void } = {}, weekIdx = null) {
+  function renderPill(ev: NormalizedEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
     const statusClass = ev.status === 'cancelled' ? styles.cancelled
       : ev.status === 'tentative' ? styles.tentative : '';
-    const display     = ev.meta?._display ?? {};
+    const display = (ev.meta?._display as { bold?: boolean; large?: boolean } | undefined) ?? {};
 
-    function handlePillMouseEnter(e) {
+    function handlePillMouseEnter(e: ReactMouseEvent<HTMLElement>) {
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
       if (pillHoverTitle) {
         const r = e.currentTarget.getBoundingClientRect();

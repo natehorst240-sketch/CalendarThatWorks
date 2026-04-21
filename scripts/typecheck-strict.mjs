@@ -61,6 +61,8 @@ const MIGRATED_PATHS = [
   'src/hooks/useFocusTrap.ts',
   'src/hooks/useTouchDnd.ts',
   'src/hooks/usePermissions.ts',
+  // Stage 4a PR2
+  'src/ui/ConfigPanel.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:
