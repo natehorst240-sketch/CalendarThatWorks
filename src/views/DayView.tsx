@@ -7,20 +7,32 @@ import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { hoursInTimezone } from '../core/engine/time/timezone';
 import { layoutOverlaps } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
+import type { NormalizedEvent } from '../types/events';
+import type { CalendarViewEvent } from '../types/ui';
 import styles from './DayView.module.css';
 
 const GUTTER_W = 56;
 
+type DayViewProps = {
+  currentDate: Date;
+  events: CalendarViewEvent[];
+  onEventClick?: (event: CalendarViewEvent) => void;
+  onEventMove?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  onEventResize?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  onDateSelect?: (start: Date, end: Date) => void;
+  config?: { display?: { dayStart?: number; dayEnd?: number } };
+};
+
 export default function DayView({
   currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect, config,
-}: any) {
+}: DayViewProps) {
   const ctx = useCalendarContext();
   const dayStart  = config?.display?.dayStart ?? 6;
   const dayEnd    = config?.display?.dayEnd   ?? 22;
   const pxPerHour = 64;
   const bizHours  = ctx?.businessHours ?? null;
 
-  const gridRef = useRef(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const days    = useMemo(() => [currentDate], [currentDate]);
 
   const hours = [];
@@ -40,7 +52,7 @@ export default function DayView({
   useEffect(() => {
     if (!lastKeyNavSlot.current || !gridRef.current) return;
     lastKeyNavSlot.current = false;
-    const el = gridRef.current.querySelector(`[data-slot="${focusedHour}"]`);
+    const el = gridRef.current.querySelector<HTMLElement>(`[data-slot="${focusedHour}"]`);
     el?.focus({ preventScroll: false });
   }, [focusedHour]);
 
@@ -83,7 +95,7 @@ export default function DayView({
   const nowTop  = (nowHour - dayStart) * pxPerHour;
   const showNow = isToday(currentDate) && nowHour >= dayStart && nowHour < dayEnd;
 
-  function eventPosition(start, end) {
+  function eventPosition(start: Date, end: Date) {
     const startH = displayTz ? hoursInTimezone(start, displayTz) : getHours(start) + getMinutes(start) / 60;
     const endH   = displayTz ? hoursInTimezone(end,   displayTz) : getHours(end)   + getMinutes(end)   / 60;
     const startMin = (startH - dayStart) * 60;
@@ -98,7 +110,7 @@ export default function DayView({
     };
   }
 
-  function isBizHour(h) {
+  function isBizHour(h: number) {
     if (!bizHours) return true;
     const bizDays = bizHours.days ?? [1, 2, 3, 4, 5];
     return bizDays.includes(currentDate.getDay()) && h >= bizHours.start && h < bizHours.end;
@@ -129,9 +141,9 @@ export default function DayView({
   }, [drag.onPointerUp, onEventMove, onEventResize, onDateSelect]);
 
   // ── Renderers ─────────────────────────────────────────────────────────
-  function renderEvent(ev) {
+  function renderEvent(ev: CalendarViewEvent) {
     const isDimmed = drag.draggedId === ev.id;
-    const color    = resolveColor(ev, ctx?.colorRules);
+    const color    = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
     const onClick  = () => !isDimmed && onEventClick?.(ev);
     const pos = eventPosition(ev.start, ev.end);
     if (!pos) return null;
@@ -145,7 +157,7 @@ export default function DayView({
     const ariaLabel = `${ev.title}, ${format(ev.start, 'h:mm a')} to ${format(ev.end, 'h:mm a')}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
 
     if (ctx?.renderEvent) {
-      const custom = ctx.renderEvent(ev, { view: 'day', isCompact: false, onClick, color });
+      const custom = ctx.renderEvent(ev as NormalizedEvent, { view: 'day', isCompact: false, onClick, color });
       if (custom != null) {
         return (
           <div key={ev.id} data-event="1"
@@ -155,14 +167,14 @@ export default function DayView({
             aria-label={ariaLabel}
             onClick={onClick}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-            onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
+            onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           >
             <div className={styles.resizeHandleTop}
-              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
             {custom}
             <div className={styles.resizeHandle}
-              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+              onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
               aria-hidden="true" />
           </div>
         );
@@ -177,16 +189,16 @@ export default function DayView({
         aria-label={ariaLabel}
         onClick={onClick}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev, e, gridRef.current, days, GUTTER_W); }}
+        onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startMove(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
       >
         <div className={styles.resizeHandleTop}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResizeTop(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
         <span className={styles.evTitle}>{ev.title}</span>
         <span className={styles.evTime}>{format(ev.start, 'h:mm a')} – {format(ev.end, 'h:mm a')}</span>
         {ev.resource && numCols === 1 && <span className={styles.evMeta}>{ev.resource}</span>}
         <div className={styles.resizeHandle}
-          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev, e, gridRef.current, days, GUTTER_W); }}
+          onPointerDown={e => { if (e.button !== 0 || !ctx?.permissions?.canDrag) return; e.stopPropagation(); drag.startResize(ev as NormalizedEvent, e, gridRef.current, days, GUTTER_W); }}
           aria-hidden="true" />
       </div>
     );
@@ -238,7 +250,7 @@ export default function DayView({
           </div>
           <div className={styles.allDayEvents} role="gridcell" aria-label="All-day events">
             {allDayEvs.map(ev => {
-              const color = resolveColor(ev, ctx?.colorRules);
+              const color = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
               const ariaLabel = `${ev.title}${ev.category ? `, ${ev.category}` : ''}${ev.status && ev.status !== 'confirmed' ? `, ${ev.status}` : ''}`;
               return (
                 <button key={ev.id} className={styles.allDayPill} style={{ '--ev-color': color }}

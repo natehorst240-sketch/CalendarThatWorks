@@ -7,6 +7,7 @@ import {
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
+import type { CalendarViewEvent } from '../types/ui';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;
@@ -19,10 +20,26 @@ function isMultiDay(ev) {
   return !isSameDay(startOfDay(ev.start), displayEndDay(ev));
 }
 
+type MonthViewProps = {
+  currentDate: Date;
+  events: CalendarViewEvent[];
+  onEventClick?: (event: CalendarViewEvent) => void;
+  onEventMove?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
+  onDateSelect?: (start: Date, end: Date) => void;
+  config?: {
+    display?: {
+      showWeekNumbers?: boolean;
+      enlargeMonthRowOnHover?: boolean;
+    };
+  };
+  weekStartDay?: Day;
+  pillHoverTitle?: boolean;
+} & Record<string, unknown>;
+
 export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
-}: { currentDate: Date; events: any; onEventClick?: any; onEventMove?: any; onDateSelect?: any; config?: any; weekStartDay?: Day; pillHoverTitle?: boolean } & Record<string, any>) {
+}: MonthViewProps) {
   const [popoverState, setPopoverState] = useState(null);
   const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
   const [viewportWidth, setViewportWidth] = useState(

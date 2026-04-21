@@ -7,8 +7,31 @@ import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay } from '../core/layout';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd';
+import type { GroupByInput } from '../hooks/useNormalizedConfig.ts';
+import type { NormalizedEvent } from '../types/events';
+import type { CalendarViewEvent } from '../types/ui';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import styles from './AgendaView.module.css';
+
+type GroupTreeNode = {
+  key: string;
+  label: string;
+  field: string;
+  depth: number;
+  events: CalendarViewEvent[];
+  children: GroupTreeNode[];
+};
+
+type AgendaViewProps = {
+  currentDate: Date;
+  events: CalendarViewEvent[];
+  onEventClick?: (event: CalendarViewEvent) => void;
+  onEventGroupChange?: (event: CalendarViewEvent, patch: Record<string, string | null>) => void;
+  groupBy?: GroupByInput;
+  sort?: unknown;
+  showAllGroups?: boolean;
+  employees?: Array<{ id?: string; name?: string; displayName?: string }>;
+};
 
 export default function AgendaView({
   currentDate,
@@ -19,7 +42,7 @@ export default function AgendaView({
   sort,
   showAllGroups = false,
   employees,
-}: any) {
+}: AgendaViewProps) {
   const ctx = useCalendarContext();
 
   // Resolve resource IDs (e.g. "emp-sarah") to display names (e.g. "Sarah Chen").
@@ -59,7 +82,7 @@ export default function AgendaView({
           day,
           events: hasSort
             ? dayEvents
-            : [...dayEvents].sort((a, b) => a.start - b.start),
+            : [...dayEvents].sort((a, b) => a.start.getTime() - b.start.getTime()),
         };
       })
       .filter(g => g.events.length > 0);
@@ -71,12 +94,12 @@ export default function AgendaView({
     if (!groupBy) return null;
     return grouped.map(({ day, events: dayEvents }) => ({
       day,
-      tree: buildGroupTree(dayEvents, groupBy),
+      tree: buildGroupTree(dayEvents as never, groupBy),
     }));
   }, [grouped, groupBy]);
 
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
-  const toggleGroup = useCallback((path) => {
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const toggleGroup = useCallback((path: string) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
@@ -87,17 +110,17 @@ export default function AgendaView({
 
   // Active drag state: tracks the event being dragged and its native leaf path
   // so onDrop handlers can decide whether to emit a change.
-  const dragRef = useRef(null);
-  const [dropTargetPath, setDropTargetPath] = useState(null);
+  const dragRef = useRef<{ ev: CalendarViewEvent; nativePath: string | null } | null>(null);
+  const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
 
   // Walk a tree along a slashed path (relative to parentPath/day) and collect
   // the { field: value } patch implied by landing in that leaf. "(Ungrouped)"
   // keys map to null to clear the field.
-  const resolveDropPatch = useCallback((tree, targetPath, dayKey) => {
+  const resolveDropPatch = useCallback((tree: GroupTreeNode[] | null, targetPath: string | null, dayKey: string) => {
     if (!tree || !targetPath) return null;
     const parts = targetPath.split('/');
     if (parts[0] === dayKey) parts.shift();
-    const patch = {};
+    const patch: Record<string, string | null> = {};
     let level = tree;
     for (const keyPart of parts) {
       const match = level.find(g => g.key === keyPart);
@@ -130,9 +153,9 @@ export default function AgendaView({
     onCancel: () => { dragRef.current = null; setDropTargetPath(null); },
   });
 
-  function renderEventItem(ev, opts: { crossGroup?: boolean; sourceLabel?: string | null; nativePath?: string | null; dayTree?: any; dayKey?: string | null } = {}) {
+  function renderEventItem(ev: CalendarViewEvent, opts: { crossGroup?: boolean; sourceLabel?: string | null; nativePath?: string | null; dayTree?: GroupTreeNode[] | null; dayKey?: string | null } = {}) {
     const { crossGroup = false, sourceLabel = null, nativePath = null, dayTree = null, dayKey = null } = opts;
-    const color = resolveColor(ev, ctx?.colorRules);
+    const color = resolveColor(ev as NormalizedEvent, ctx?.colorRules);
     const evStartDay = startOfDay(ev.start);
     const rawEndDay  = displayEndDay(ev);
     const evEndDay   = rawEndDay < evStartDay ? evStartDay : rawEndDay;
@@ -167,7 +190,7 @@ export default function AgendaView({
       : undefined;
 
     if (ctx?.renderEvent) {
-      const custom = ctx.renderEvent(ev, { view: 'agenda', isCompact: true, onClick, color });
+      const custom = ctx.renderEvent(ev as NormalizedEvent, { view: 'agenda', isCompact: true, onClick, color });
       if (custom != null) {
         return (
           <div

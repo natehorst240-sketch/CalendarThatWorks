@@ -157,6 +157,14 @@ Goal: Handle complex state + flows
 
 Goal: Low-risk view typing
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Replaced file-level view-prop `any` in `DayView`, `AgendaView`, and `MonthView` with explicit boundary prop types (dates, callbacks, and config slices) to document the small-view public seams.
+- Added a shared `CalendarViewEvent` boundary shape in `src/types/ui.ts` and re-exported it from `src/index.ts` for consistent low-risk view typing.
+- Tightened local state typing in `AgendaView` (collapsed group set, drag/drop refs, drop patch shape) and removed implicit numeric arithmetic on `Date` values by sorting via `getTime()`.
+- Added explicit DOM/ref typing in `DayView` (grid ref + focus target) and retained compatibility with existing render/drag/color pipelines via narrow, intentional casts at integration points.
+
 ---
 
 ### PR 8 — Medium Views

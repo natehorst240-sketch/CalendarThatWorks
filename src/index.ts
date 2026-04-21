@@ -15,6 +15,7 @@ export type {
   SavedViewUpdateHandler,
   SourceDraft,
   ScheduleTemplateDraft,
+  CalendarViewEvent,
   UpdateConfig,
 } from './types/ui';
 

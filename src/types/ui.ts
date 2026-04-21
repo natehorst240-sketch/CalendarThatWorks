@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { EventStatus } from './events';
 
 export type AnyRecord = Record<string, any>;
 
@@ -101,3 +102,17 @@ export interface ConfigPanelProps {
 export type InputChangeHandler = (value: string) => void;
 export type ToggleHandler = (next: boolean) => void;
 export type RenderOptional = ReactNode | null;
+
+export interface CalendarViewEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  allDay?: boolean;
+  category?: string | null;
+  resource?: string | null;
+  status?: EventStatus;
+  meta?: Record<string, unknown>;
+  _col?: number;
+  _numCols?: number;
+}
