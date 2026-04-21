@@ -298,6 +298,78 @@ describe('advance — history bookkeeping', () => {
   })
 })
 
+describe('advance — timeout action', () => {
+  const slaEscalate: Workflow = {
+    id: 'sla-escalate',
+    version: 1,
+    trigger: 'on_submit',
+    startNodeId: 'a',
+    nodes: [
+      { id: 'a', type: 'approval', assignTo: 'role:manager', slaMinutes: 15, onTimeout: 'escalate' },
+      { id: 'escalated', type: 'approval', assignTo: 'role:director' },
+      { id: 'done', type: 'terminal', outcome: 'finalized' },
+      { id: 'denied', type: 'terminal', outcome: 'denied' },
+    ],
+    edges: [
+      { from: 'a', to: 'done', when: 'approved' },
+      { from: 'a', to: 'denied', when: 'denied' },
+      { from: 'a', to: 'escalated', when: 'timeout' },
+      { from: 'escalated', to: 'done', when: 'approved' },
+      { from: 'escalated', to: 'denied', when: 'denied' },
+    ],
+  }
+
+  it('escalate routes down the timeout edge', () => {
+    const s1 = advance({ workflow: slaEscalate, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({
+      workflow: slaEscalate,
+      instance: s1.instance,
+      action: { type: 'timeout' },
+      at: '2026-04-20T10:30:00.000Z',
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.currentNodeId).toBe('escalated')
+    const aExit = r.instance.history.find(h => h.nodeId === 'a')
+    expect(aExit?.signal).toBe('timeout')
+    expect(aExit?.reason).toMatch(/SLA timeout/)
+  })
+
+  it('auto-approve reuses the approved edge', () => {
+    const wf: Workflow = {
+      ...slaEscalate,
+      nodes: slaEscalate.nodes.map(n =>
+        n.id === 'a' && n.type === 'approval'
+          ? { ...n, onTimeout: 'auto-approve' as const }
+          : n,
+      ),
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({
+      workflow: wf,
+      instance: s1.instance,
+      action: { type: 'timeout' },
+      at: '2026-04-20T10:30:00.000Z',
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('finalized')
+  })
+
+  it('rejects timeout when not on an awaiting approval', () => {
+    const r = advance({
+      workflow: slaEscalate,
+      instance: null,
+      action: { type: 'timeout' },
+      at: AT,
+    })
+    expect(r.ok).toBe(false)
+  })
+})
+
 describe('advance — purity', () => {
   it('does not mutate the input instance', () => {
     const s1 = advance({ workflow: singleApprover, instance: null, action: { type: 'start' }, at: AT })

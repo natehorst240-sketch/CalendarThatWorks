@@ -6,7 +6,7 @@
  * Options are filtered to just those the source node can legally emit:
  *
  *   - `condition`  → true / false / default
- *   - `approval`   → approved / denied / default
+ *   - `approval`   → approved / denied / default (+ `timeout` when slaMinutes set)
  *   - `notify`     → default
  *   - `terminal`   → (no outgoing edges; picker should not be invoked)
  *
@@ -26,6 +26,12 @@ export interface AnchorRect {
 
 export interface WorkflowEdgeGuardPickerProps {
   readonly sourceType: WorkflowNode['type']
+  /**
+   * Whether the source approval has `slaMinutes > 0`. Only consulted
+   * when `sourceType === 'approval'` — the `timeout` option is added
+   * iff true, matching the validator's `isGuardLegal` rule.
+   */
+  readonly sourceHasSla?: boolean
   readonly anchorRect?: AnchorRect
   readonly onPick: (guard: EdgeGuard) => void
   readonly onCancel: () => void
@@ -36,19 +42,26 @@ const GUARD_LABELS: Readonly<Record<EdgeGuard, string>> = {
   'false': 'false',
   'approved': 'approved',
   'denied': 'denied',
+  'timeout': 'timeout (SLA)',
   'default': 'default (fallback)',
 }
 
 /**
  * Exported for unit tests + the canvas (which hides the handle on
  * terminal nodes so this returns [] for defensive callers only).
+ *
+ * `options.hasSla` unlocks the `timeout` option for approval sources.
  */
 export function guardsForSource(
   sourceType: WorkflowNode['type'],
+  options?: { readonly hasSla?: boolean },
 ): readonly EdgeGuard[] {
   switch (sourceType) {
     case 'condition': return ['true', 'false', 'default']
-    case 'approval':  return ['approved', 'denied', 'default']
+    case 'approval':
+      return options?.hasSla
+        ? ['approved', 'denied', 'timeout', 'default']
+        : ['approved', 'denied', 'default']
     case 'notify':    return ['default']
     case 'terminal':  return []
   }
@@ -57,9 +70,9 @@ export function guardsForSource(
 export function WorkflowEdgeGuardPicker(
   props: WorkflowEdgeGuardPickerProps,
 ): JSX.Element | null {
-  const { sourceType, anchorRect, onPick, onCancel } = props
+  const { sourceType, sourceHasSla, anchorRect, onPick, onCancel } = props
   const ref = useRef<HTMLDivElement | null>(null)
-  const guards = guardsForSource(sourceType)
+  const guards = guardsForSource(sourceType, { hasSla: sourceHasSla })
 
   // Escape + click-outside dismissal. Registered only while mounted;
   // parent unmounts the picker after the first pick or cancel.

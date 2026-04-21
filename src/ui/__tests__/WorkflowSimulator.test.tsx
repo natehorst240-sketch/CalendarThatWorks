@@ -286,3 +286,46 @@ describe('WorkflowSimulator — onActiveNodeChange', () => {
     expect(onActiveNodeChange).toHaveBeenLastCalledWith(null)
   })
 })
+
+describe('WorkflowSimulator — sim clock', () => {
+  const slaWorkflow: Workflow = {
+    id: 'sla', version: 1, trigger: 'on_submit', startNodeId: 'm',
+    nodes: [
+      { id: 'm', type: 'approval', assignTo: 'role:manager', slaMinutes: 30, onTimeout: 'escalate' },
+      { id: 'd', type: 'approval', assignTo: 'role:director' },
+      { id: 'ok', type: 'terminal', outcome: 'finalized' },
+      { id: 'no', type: 'terminal', outcome: 'denied' },
+    ],
+    edges: [
+      { from: 'm', to: 'ok', when: 'approved' },
+      { from: 'm', to: 'no', when: 'denied' },
+      { from: 'm', to: 'd', when: 'timeout' },
+      { from: 'd', to: 'ok', when: 'approved' },
+      { from: 'd', to: 'no', when: 'denied' },
+    ],
+  }
+
+  it('renders advance-clock buttons', () => {
+    render(<WorkflowSimulator workflow={slaWorkflow} />)
+    expect(screen.getByTestId('sim-advance-5m')).toBeInTheDocument()
+    expect(screen.getByTestId('sim-advance-15m')).toBeInTheDocument()
+    expect(screen.getByTestId('sim-advance-60m')).toBeInTheDocument()
+  })
+
+  it('advancing the clock past SLA fires timeout and escalates', () => {
+    render(<WorkflowSimulator workflow={slaWorkflow} />)
+    start()
+    expect(screen.getByTestId('sim-current-node').textContent).toMatch(/@ m/)
+    // Two 15m jumps = 30m; tick then fires the timeout and moves to 'd'.
+    fireEvent.click(screen.getByTestId('sim-advance-15m'))
+    fireEvent.click(screen.getByTestId('sim-advance-15m'))
+    expect(screen.getByTestId('sim-current-node').textContent).toMatch(/@ d/)
+  })
+
+  it('advancing the clock under SLA does not fire timeout', () => {
+    render(<WorkflowSimulator workflow={slaWorkflow} />)
+    start()
+    fireEvent.click(screen.getByTestId('sim-advance-5m'))
+    expect(screen.getByTestId('sim-current-node').textContent).toMatch(/@ m/)
+  })
+})

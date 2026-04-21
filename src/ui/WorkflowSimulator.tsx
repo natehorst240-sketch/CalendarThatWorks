@@ -17,7 +17,7 @@
  *   or failed actions — nothing that short-circuits on invalid variables.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { advance } from '../core/workflow/advance'
+import { advance, tick } from '../core/workflow/advance'
 import type {
   WorkflowAction,
   WorkflowEmitEvent,
@@ -29,6 +29,12 @@ import type {
 import styles from './WorkflowSimulator.module.css'
 
 export const STEP_CAP = 100
+
+/** Fixed sim-clock epoch so every simulator run starts at the same wall
+ * clock. Real host time is irrelevant in the authoring UI — what matters
+ * is the delta between actions and clock jumps. */
+const SIM_EPOCH_ISO = '2026-01-01T09:00:00.000Z'
+const CLOCK_JUMPS_MINUTES: readonly number[] = [5, 15, 60]
 
 const DEFAULT_VARIABLES = JSON.stringify(
   { event: { cost: 1000 }, actor: { role: 'director' } },
@@ -57,6 +63,7 @@ export function WorkflowSimulator(
   const [denyReason, setDenyReason] = useState<string>('')
   const [stepCount, setStepCount] = useState<number>(0)
   const [lastError, setLastError] = useState<string | null>(null)
+  const [simClockMs, setSimClockMs] = useState<number>(Date.parse(SIM_EPOCH_ISO))
   const seqRef = useRef<number>(0)
 
   const { variables, parseError } = useMemo(() => {
@@ -102,7 +109,8 @@ export function WorkflowSimulator(
 
   const dispatch = useCallback((action: WorkflowAction): void => {
     if (atCap) return
-    const result = advance({ workflow, instance, action, variables })
+    const at = new Date(simClockMs).toISOString()
+    const result = advance({ workflow, instance, action, variables, at })
     // Count every action the user fires, even failed ones — pathological
     // graphs can generate a stream of `ok:false` that still deserves a cap.
     setStepCount(n => n + 1)
@@ -112,7 +120,23 @@ export function WorkflowSimulator(
       return [...prev, ...additions]
     })
     setLastError(result.ok === false ? result.error : null)
-  }, [workflow, instance, variables, atCap])
+  }, [workflow, instance, variables, atCap, simClockMs])
+
+  const advanceClock = useCallback((minutes: number): void => {
+    if (atCap) return
+    const nextMs = simClockMs + minutes * 60_000
+    setSimClockMs(nextMs)
+    if (!instance) return
+    const result = tick(workflow, instance, new Date(nextMs).toISOString())
+    if (!result) return
+    setStepCount(n => n + 1)
+    setInstance(result.instance)
+    setEmitLog(prev => {
+      const additions = result.emit.map(e => ({ seq: seqRef.current++, event: e }))
+      return [...prev, ...additions]
+    })
+    setLastError(result.ok === false ? result.error : null)
+  }, [workflow, instance, simClockMs, atCap])
 
   const reset = useCallback((): void => {
     setInstance(null)
@@ -120,6 +144,7 @@ export function WorkflowSimulator(
     setDenyReason('')
     setStepCount(0)
     setLastError(null)
+    setSimClockMs(Date.parse(SIM_EPOCH_ISO))
     seqRef.current = 0
   }, [])
 
@@ -227,6 +252,33 @@ export function WorkflowSimulator(
           placeholder="Required to enable Deny"
           onChange={e => setDenyReason(e.target.value)}
         />
+      </div>
+
+      <div className={styles.section} data-testid="sim-clock">
+        <h4 className={styles.sectionTitle}>Sim clock</h4>
+        <div className={styles.clockRow}>
+          <span className={styles.clockValue} data-testid="sim-clock-value">
+            {new Date(simClockMs).toISOString()}
+          </span>
+        </div>
+        <div className={styles.actions}>
+          {CLOCK_JUMPS_MINUTES.map(m => (
+            <button
+              key={m}
+              type="button"
+              className={styles.buttonSecondary}
+              onClick={() => advanceClock(m)}
+              disabled={atCap}
+              data-testid={`sim-advance-${m}m`}
+            >
+              +{m}m
+            </button>
+          ))}
+        </div>
+        <span className={styles.hint}>
+          Advances the simulator clock. If the current approval has
+          an SLA and the elapsed time crosses it, a timeout action fires.
+        </span>
       </div>
 
       {atCap && (

@@ -77,9 +77,43 @@ export const conditionalByCostWorkflow: Workflow = {
   ],
 }
 
+/**
+ * Manager approves within 60 minutes, otherwise the request escalates
+ * to a director. Demonstrates Phase-3 SLA timers + timeout edges
+ * (issue #222): `slaMinutes` sets the countdown, `onTimeout: 'escalate'`
+ * picks behavior, and the `timeout` edge routes the escalation.
+ */
+export const slaEscalationWorkflow: Workflow = {
+  id: 'sla-escalation',
+  version: 1,
+  trigger: 'on_submit',
+  startNodeId: 'manager',
+  nodes: [
+    {
+      id: 'manager',
+      type: 'approval',
+      assignTo: 'role:manager',
+      label: 'Manager approval (60m SLA)',
+      slaMinutes: 60,
+      onTimeout: 'escalate',
+    },
+    { id: 'director', type: 'approval', assignTo: 'role:director', label: 'Director escalation' },
+    { id: 'done',     type: 'terminal', outcome: 'finalized' },
+    { id: 'denied',   type: 'terminal', outcome: 'denied' },
+  ],
+  edges: [
+    { from: 'manager',  to: 'done',     when: 'approved' },
+    { from: 'manager',  to: 'denied',   when: 'denied'   },
+    { from: 'manager',  to: 'director', when: 'timeout'  },
+    { from: 'director', to: 'done',     when: 'approved' },
+    { from: 'director', to: 'denied',   when: 'denied'   },
+  ],
+}
+
 /** Ordered list of all shipped templates — drives the ConfigPanel picker. */
 export const WORKFLOW_TEMPLATES: readonly Workflow[] = [
   singleApproverWorkflow,
   twoTierApproverWorkflow,
   conditionalByCostWorkflow,
+  slaEscalationWorkflow,
 ]

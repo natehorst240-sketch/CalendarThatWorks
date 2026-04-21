@@ -18,6 +18,7 @@ import {
   resolveNextEdge,
   type EdgeGuard,
   type Workflow,
+  type WorkflowApprovalNode,
   type WorkflowHistoryEntry,
   type WorkflowInstance,
   type WorkflowOutcome,
@@ -30,6 +31,7 @@ export type WorkflowAction =
   | { readonly type: 'approve'; readonly actor?: string; readonly reason?: string }
   | { readonly type: 'deny';    readonly actor?: string; readonly reason: string }
   | { readonly type: 'cancel';  readonly actor?: string; readonly reason?: string }
+  | { readonly type: 'timeout' }
 
 // ─── Emitted events ───────────────────────────────────────────────────────
 
@@ -123,6 +125,26 @@ export function advance(input: AdvanceInput): AdvanceResult {
         state.outcome = 'cancelled'
         state.emit.push({ type: 'workflow_completed', outcome: 'cancelled', at })
         break
+
+      case 'timeout': {
+        const node = state.currentNodeId ? findNode(workflow, state.currentNodeId) : undefined
+        if (!node || node.type !== 'approval' || state.status !== 'awaiting') {
+          return finalize(base, state,
+            `timeout requires an awaiting approval node; current="${state.currentNodeId}" status=${state.status}`)
+        }
+        const behavior = node.onTimeout ?? 'escalate'
+        // `escalate` walks a dedicated `timeout` edge; `auto-approve` /
+        // `auto-deny` reuse the standard approved/denied edges so the
+        // workflow author doesn't have to double-wire.
+        const signal: EdgeGuard =
+          behavior === 'escalate'    ? 'timeout'
+          : behavior === 'auto-approve' ? 'approved'
+          : 'denied'
+        exitCurrent(state, signal, at, { reason: `SLA timeout (${behavior})` })
+        if (!followEdge(workflow, state, signal, at)) break
+        autoAdvance(workflow, state, vars, at)
+        break
+      }
     }
   } catch (err) {
     const reason = err instanceof ExpressionError ? err.message : String(err)
@@ -292,4 +314,68 @@ function finalize(
   error: string,
 ): AdvanceResult {
   return { ok: false, error, instance: assemble(base, state), emit: state.emit }
+}
+
+// ─── Tick (SLA timers — issue #222) ──────────────────────────────────────
+
+/**
+ * Pure check: has the currently-awaited approval step exceeded its SLA?
+ *
+ * Returns an `AdvanceResult` (the product of firing a `{ type: 'timeout' }`
+ * action) when the active approval node has `slaMinutes` set AND the
+ * elapsed time since `history[-1].enteredAt` is at least that many
+ * minutes. Returns `null` in every other case — not awaiting, no
+ * `slaMinutes`, no `enteredAt`, or the SLA hasn't elapsed yet.
+ *
+ * Pure + side-effect-free: the host drives it with a scheduler
+ * (`setInterval`, cron, server-side tick). Two consecutive calls with
+ * the same `nowIso` produce the same result.
+ */
+export function tick(
+  workflow: Workflow,
+  instance: WorkflowInstance,
+  nowIso: string,
+): AdvanceResult | null {
+  const node = activeApprovalNode(workflow, instance)
+  if (!node) return null
+  if (typeof node.slaMinutes !== 'number' || node.slaMinutes <= 0) return null
+
+  const enteredAt = latestEnteredAt(instance, node.id)
+  if (!enteredAt) return null
+
+  const enteredMs = Date.parse(enteredAt)
+  const nowMs = Date.parse(nowIso)
+  if (!Number.isFinite(enteredMs) || !Number.isFinite(nowMs)) return null
+  const elapsedMs = nowMs - enteredMs
+  if (elapsedMs < node.slaMinutes * 60_000) return null
+
+  return advance({
+    workflow,
+    instance,
+    action: { type: 'timeout' },
+    at: nowIso,
+  })
+}
+
+function activeApprovalNode(
+  workflow: Workflow,
+  instance: WorkflowInstance,
+): WorkflowApprovalNode | null {
+  if (instance.status !== 'awaiting' || !instance.currentNodeId) return null
+  const node = findNode(workflow, instance.currentNodeId)
+  if (!node || node.type !== 'approval') return null
+  return node
+}
+
+function latestEnteredAt(
+  instance: WorkflowInstance,
+  nodeId: string,
+): string | null {
+  for (let i = instance.history.length - 1; i >= 0; i--) {
+    const entry = instance.history[i]
+    if (entry.nodeId !== nodeId) continue
+    if (entry.exitedAt !== undefined) continue
+    return entry.enteredAt
+  }
+  return null
 }

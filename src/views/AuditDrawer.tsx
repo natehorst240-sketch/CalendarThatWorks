@@ -6,10 +6,11 @@
  * append entries via the onApprovalAction callback (calendar emits, host
  * persists, re-renders with updated history).
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import styles from './AuditDrawer.module.css';
 import ApprovalActionMenu from '../ui/ApprovalActionMenu';
+import { findNode } from '../core/workflow/workflowSchema';
 
 /**
  * Formats an ISO timestamp as a locale-aware date + time string. Returns the
@@ -35,8 +36,50 @@ const ACTION_LABELS = {
   finalize:  'Finalized',
 };
 
-export default function AuditDrawer({ event, onClose, approvalsConfig, onAction }: any) {
+/**
+ * Compute SLA pill data from a workflow definition + running instance.
+ * Returns null when inapplicable (no instance, not awaiting, no SLA, or
+ * the active node isn't in the workflow anymore).
+ */
+function computeSlaPill(workflow, workflowInstance, nowMs) {
+  if (!workflow || !workflowInstance) return null;
+  if (workflowInstance.status !== 'awaiting') return null;
+  const nodeId = workflowInstance.currentNodeId;
+  if (!nodeId) return null;
+  const node = findNode(workflow, nodeId);
+  if (!node || node.type !== 'approval') return null;
+  if (typeof node.slaMinutes !== 'number' || node.slaMinutes <= 0) return null;
+  const history = workflowInstance.history ?? [];
+  let enteredAt = null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const h = history[i];
+    if (h.nodeId === nodeId && h.exitedAt === undefined) { enteredAt = h.enteredAt; break; }
+  }
+  if (!enteredAt) return null;
+  const enteredMs = Date.parse(enteredAt);
+  if (!Number.isFinite(enteredMs)) return null;
+  const slaMs = node.slaMinutes * 60_000;
+  const remainingMs = enteredMs + slaMs - nowMs;
+  return {
+    remainingMs,
+    slaMinutes: node.slaMinutes,
+    onTimeout: node.onTimeout ?? 'escalate',
+    expired: remainingMs <= 0,
+  };
+}
+
+function formatRemaining(ms) {
+  const abs = Math.abs(ms);
+  const totalMinutes = Math.max(0, Math.round(abs / 60_000));
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: any) {
   const closeRef = useRef(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (!event) return;
@@ -45,6 +88,17 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [event, onClose]);
+
+  // Re-render once per 30s so the SLA countdown stays current while the
+  // drawer is open. Only runs when an SLA pill is actually visible —
+  // cheaper than a global interval.
+  const workflowInstance = event?.meta?.workflowInstance;
+  const sla = computeSlaPill(workflow, workflowInstance, nowMs);
+  useEffect(() => {
+    if (!sla) return;
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [sla !== null]);
 
   if (!event) return null;
 
@@ -69,6 +123,18 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction 
             {stageData?.stage && (
               <span className={styles.stageTag} data-stage={stageData.stage}>
                 {stageData.stage.replace('_', ' ')}
+              </span>
+            )}
+            {sla && (
+              <span
+                className={styles.slaPill}
+                data-testid="audit-sla-pill"
+                data-sla-expired={sla.expired ? 'true' : 'false'}
+                title={`SLA ${sla.slaMinutes}m · onTimeout=${sla.onTimeout}`}
+              >
+                {sla.expired
+                  ? `SLA elapsed +${formatRemaining(sla.remainingMs)}`
+                  : `SLA ${formatRemaining(sla.remainingMs)} left`}
               </span>
             )}
             {stageData?.stage && typeof onAction === 'function' && (

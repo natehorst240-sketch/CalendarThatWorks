@@ -216,7 +216,10 @@ function ApprovalFields({
             }
           }}
         />
-        <span className={styles.hint}>Phase-3 feature; stored but not yet enforced.</span>
+        <span className={styles.hint}>
+          When elapsed, the interpreter fires a timeout action using the
+          behavior below. Add a <code>timeout</code> edge for escalate.
+        </span>
       </div>
 
       <div className={styles.field}>

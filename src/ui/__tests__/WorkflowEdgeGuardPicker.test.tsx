@@ -21,6 +21,45 @@ describe('guardsForSource', () => {
   it('terminal → empty list', () => {
     expect(guardsForSource('terminal')).toEqual([])
   })
+  it('approval with SLA → includes timeout', () => {
+    expect(guardsForSource('approval', { hasSla: true })).toEqual([
+      'approved', 'denied', 'timeout', 'default',
+    ])
+  })
+  it('approval without SLA → no timeout', () => {
+    expect(guardsForSource('approval', { hasSla: false })).toEqual([
+      'approved', 'denied', 'default',
+    ])
+  })
+  it('hasSla only affects approval sources', () => {
+    expect(guardsForSource('condition', { hasSla: true })).toEqual(['true', 'false', 'default'])
+    expect(guardsForSource('notify',    { hasSla: true })).toEqual(['default'])
+  })
+})
+
+describe('WorkflowEdgeGuardPicker — timeout option', () => {
+  it('shows timeout button when sourceHasSla is true', () => {
+    render(
+      <WorkflowEdgeGuardPicker
+        sourceType="approval"
+        sourceHasSla
+        onPick={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    expect(document.querySelector('[data-guard="timeout"]')).toBeInTheDocument()
+  })
+
+  it('hides timeout button when sourceHasSla is false', () => {
+    render(
+      <WorkflowEdgeGuardPicker
+        sourceType="approval"
+        onPick={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    expect(document.querySelector('[data-guard="timeout"]')).toBeNull()
+  })
 })
 
 describe('WorkflowEdgeGuardPicker — rendering', () => {

@@ -55,6 +55,22 @@
 .stageTag[data-stage="finalized"]      { background: color-mix(in srgb, var(--wc-success, #059669) 20%, transparent); color: var(--wc-success, #059669); }
 .stageTag[data-stage="requested"]      { background: color-mix(in srgb, var(--wc-accent, #2563eb) 15%, transparent); color: var(--wc-accent, #2563eb); }
 
+.slaPill {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wc-accent, #2563eb) 15%, transparent);
+  color: var(--wc-accent, #2563eb);
+}
+.slaPill[data-sla-expired="true"] {
+  background: color-mix(in srgb, var(--wc-danger, #dc2626) 15%, transparent);
+  color: var(--wc-danger, #dc2626);
+}
+
 .closeBtn {
   background: transparent;
   border: none;

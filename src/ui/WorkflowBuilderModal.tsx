@@ -187,9 +187,14 @@ export function WorkflowBuilderModal(
     [pendingEdge, clearUndo],
   )
 
-  const pendingEdgeSourceType: WorkflowNode['type'] | null = pendingEdge
-    ? draftWorkflow.nodes.find(n => n.id === pendingEdge.from)?.type ?? null
+  const pendingEdgeSource: WorkflowNode | null = pendingEdge
+    ? draftWorkflow.nodes.find(n => n.id === pendingEdge.from) ?? null
     : null
+  const pendingEdgeSourceType = pendingEdgeSource?.type ?? null
+  const pendingEdgeSourceHasSla =
+    pendingEdgeSource?.type === 'approval'
+    && typeof pendingEdgeSource.slaMinutes === 'number'
+    && pendingEdgeSource.slaMinutes > 0
 
   // ─── Save ────────────────────────────────────────────────────────────────
 
@@ -271,6 +276,7 @@ export function WorkflowBuilderModal(
             {pendingEdge && pendingEdgeSourceType && (
               <WorkflowEdgeGuardPicker
                 sourceType={pendingEdgeSourceType}
+                sourceHasSla={pendingEdgeSourceHasSla}
                 onPick={commitPendingEdge}
                 onCancel={() => setPendingEdge(null)}
               />

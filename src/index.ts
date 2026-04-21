@@ -45,20 +45,24 @@ export { DEFAULT_CATEGORIES }             from './types/assets.ts';
 export { transitionApproval, legalActionsFrom, LEGAL_TRANSITIONS } from './core/approvals/transitions';
 export type { TransitionInput, TransitionResult, TransitionError, TransitionErrorCode } from './core/approvals/transitions';
 export { verifyAuditChain, appendAuditEntry } from './core/approvals/auditChain';
-export { advance as advanceWorkflow } from './core/workflow/advance';
+export { advance as advanceWorkflow, tick as tickWorkflow } from './core/workflow/advance';
 export type {
   WorkflowAction, WorkflowEmitEvent, AdvanceInput, AdvanceResult,
 } from './core/workflow/advance';
+export { useWorkflowTicker } from './hooks/useWorkflowTicker';
+export type { UseWorkflowTickerOptions } from './hooks/useWorkflowTicker';
 export { evaluate as evaluateExpression, evaluateBool as evaluateExpressionBool, ExpressionError } from './core/workflow/expression';
 export type {
   Workflow, WorkflowNode, WorkflowEdge, WorkflowInstance, WorkflowInstanceStatus,
   WorkflowHistoryEntry, WorkflowOutcome, WorkflowTrigger, EdgeGuard,
   WorkflowConditionNode, WorkflowApprovalNode, WorkflowNotifyNode, WorkflowTerminalNode,
+  TimeoutBehavior,
 } from './core/workflow/workflowSchema';
 export { findNode as findWorkflowNode, resolveNextEdge as resolveWorkflowEdge } from './core/workflow/workflowSchema';
 export {
   WORKFLOW_TEMPLATES,
   singleApproverWorkflow, twoTierApproverWorkflow, conditionalByCostWorkflow,
+  slaEscalationWorkflow,
 } from './core/workflow/templates';
 
 // ── Booking holds (#211) ────────────────────────────────────────────────────

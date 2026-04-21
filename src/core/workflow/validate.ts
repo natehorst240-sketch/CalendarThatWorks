@@ -33,6 +33,8 @@ export type ValidationCode =
   | 'illegal-guard-for-source'
   | 'expression-syntax'
   | 'terminal-has-outgoing'
+  | 'timeout-edge-missing'
+  | 'sla-without-on-timeout'
 
 export interface ValidationIssue {
   readonly code: ValidationCode
@@ -211,6 +213,38 @@ export function validateWorkflow(
     }
   }
 
+  // 13. SLA / timeout wiring on approval nodes (issue #222)
+  for (const node of workflow.nodes) {
+    if (node.type !== 'approval') continue
+    const hasSla = typeof node.slaMinutes === 'number' && node.slaMinutes > 0
+    if (!hasSla) continue
+    if (node.onTimeout === undefined) {
+      // SLA is declared but no behavior is configured — the interpreter
+      // defaults to 'escalate' which would error at runtime if no
+      // timeout edge exists. Warn now so authors catch this in the
+      // builder.
+      issues.push({
+        code: 'sla-without-on-timeout',
+        severity: 'warning',
+        message: `Approval "${node.id}" sets slaMinutes but no onTimeout — defaults to 'escalate'`,
+        nodeId: node.id,
+      })
+    }
+    if ((node.onTimeout ?? 'escalate') === 'escalate') {
+      const hasTimeoutEdge = workflow.edges.some(
+        e => e.from === node.id && e.when === 'timeout',
+      )
+      if (!hasTimeoutEdge) {
+        issues.push({
+          code: 'timeout-edge-missing',
+          severity: 'error',
+          message: `Approval "${node.id}" with onTimeout='escalate' needs an outgoing edge with when: 'timeout'`,
+          nodeId: node.id,
+        })
+      }
+    }
+  }
+
   return issues
 }
 
@@ -258,7 +292,14 @@ function reachableNodeIds(workflow: Workflow): Set<string> {
 function isGuardLegal(node: WorkflowNode, guard: EdgeGuard): boolean {
   switch (node.type) {
     case 'condition': return guard === 'true' || guard === 'false'
-    case 'approval':  return guard === 'approved' || guard === 'denied'
+    case 'approval':
+      if (guard === 'approved' || guard === 'denied') return true
+      // `timeout` is only legal when the approval declares an SLA —
+      // without one, the interpreter can never fire a timeout from
+      // this node, so the edge would be dead code.
+      return guard === 'timeout'
+        && typeof node.slaMinutes === 'number'
+        && node.slaMinutes > 0
     case 'notify':    return guard === 'default'
     case 'terminal':  return false
   }

@@ -74,7 +74,7 @@ export type WorkflowNode =
  * the signal emitted by the previous node:
  *
  *   - `condition`  → 'true' | 'false'
- *   - `approval`   → 'approved' | 'denied'
+ *   - `approval`   → 'approved' | 'denied' | 'timeout' (when slaMinutes set)
  *   - `notify`     → 'default'
  *   - `terminal`   → (no outgoing edges)
  *
@@ -86,6 +86,7 @@ export type EdgeGuard =
   | 'false'
   | 'approved'
   | 'denied'
+  | 'timeout'
   | 'default'
 
 export interface WorkflowEdge {

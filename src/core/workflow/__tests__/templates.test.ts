@@ -10,6 +10,7 @@ import {
   singleApproverWorkflow,
   twoTierApproverWorkflow,
   conditionalByCostWorkflow,
+  slaEscalationWorkflow,
   WORKFLOW_TEMPLATES,
 } from '../templates'
 
@@ -150,12 +151,44 @@ describe('conditionalByCostWorkflow', () => {
   })
 })
 
+describe('slaEscalationWorkflow', () => {
+  it('manager approve path finalizes without escalation', () => {
+    const s = advance({ workflow: slaEscalationWorkflow, instance: null, action: { type: 'start' }, at: AT })
+    if (!s.ok) throw new Error('start')
+    const r = advance({
+      workflow: slaEscalationWorkflow,
+      instance: s.instance,
+      action: { type: 'approve', actor: 'mgr' },
+      at: AT,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.outcome).toBe('finalized')
+  })
+
+  it('timeout action routes to the director', () => {
+    const s = advance({ workflow: slaEscalationWorkflow, instance: null, action: { type: 'start' }, at: AT })
+    if (!s.ok) throw new Error('start')
+    const r = advance({
+      workflow: slaEscalationWorkflow,
+      instance: s.instance,
+      action: { type: 'timeout' },
+      at: '2026-04-20T10:01:00.000Z',
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('awaiting')
+    expect(r.instance.currentNodeId).toBe('director')
+  })
+})
+
 describe('WORKFLOW_TEMPLATES registry', () => {
-  it('includes all three shipped templates in the expected order', () => {
+  it('includes all shipped templates in the expected order', () => {
     expect(WORKFLOW_TEMPLATES).toEqual([
       singleApproverWorkflow,
       twoTierApproverWorkflow,
       conditionalByCostWorkflow,
+      slaEscalationWorkflow,
     ])
   })
 

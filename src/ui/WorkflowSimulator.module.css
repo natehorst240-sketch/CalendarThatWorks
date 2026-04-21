@@ -238,3 +238,16 @@
 .historyTable tbody tr:last-child td {
   border-bottom: none;
 }
+
+.clockRow {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+}
+
+.clockValue {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--wc-text, #111827);
+}

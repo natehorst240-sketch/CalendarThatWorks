@@ -167,3 +167,66 @@ describe('AuditDrawer — inline approval actions', () => {
     expect(onAction).toHaveBeenCalledWith('revoke');
   });
 });
+
+describe('AuditDrawer — SLA countdown pill (#222)', () => {
+  const workflow = {
+    id: 'sla-esc',
+    version: 1,
+    trigger: 'on_submit',
+    startNodeId: 'm',
+    nodes: [
+      { id: 'm', type: 'approval', assignTo: 'role:manager', slaMinutes: 60, onTimeout: 'escalate' },
+      { id: 'ok', type: 'terminal', outcome: 'finalized' },
+      { id: 'no', type: 'terminal', outcome: 'denied' },
+    ],
+    edges: [
+      { from: 'm', to: 'ok', when: 'approved' },
+      { from: 'm', to: 'no', when: 'denied' },
+    ],
+  };
+
+  function makeEvent(enteredAt: string, status = 'awaiting') {
+    return {
+      id: 'ev-sla',
+      title: 'SLA test',
+      meta: {
+        workflowInstance: {
+          workflowId: 'sla-esc',
+          workflowVersion: 1,
+          status,
+          currentNodeId: 'm',
+          history: [{ nodeId: 'm', enteredAt }],
+        },
+      },
+    };
+  }
+
+  it('shows countdown pill when SLA has not elapsed', () => {
+    vi.setSystemTime(new Date('2026-04-20T10:30:00.000Z'));
+    render(<AuditDrawer event={makeEvent('2026-04-20T10:00:00.000Z')} onClose={vi.fn()} workflow={workflow} />);
+    const pill = screen.getByTestId('audit-sla-pill');
+    expect(pill).toBeInTheDocument();
+    expect(pill.getAttribute('data-sla-expired')).toBe('false');
+    expect(pill.textContent).toMatch(/SLA.*left/i);
+    vi.useRealTimers();
+  });
+
+  it('shows expired pill when SLA has elapsed', () => {
+    vi.setSystemTime(new Date('2026-04-20T11:30:00.000Z'));
+    render(<AuditDrawer event={makeEvent('2026-04-20T10:00:00.000Z')} onClose={vi.fn()} workflow={workflow} />);
+    const pill = screen.getByTestId('audit-sla-pill');
+    expect(pill.getAttribute('data-sla-expired')).toBe('true');
+    expect(pill.textContent).toMatch(/elapsed/i);
+    vi.useRealTimers();
+  });
+
+  it('omits the pill when no workflow prop is passed', () => {
+    render(<AuditDrawer event={makeEvent('2026-04-20T10:00:00.000Z')} onClose={vi.fn()} />);
+    expect(screen.queryByTestId('audit-sla-pill')).toBeNull();
+  });
+
+  it('omits the pill when instance is not awaiting', () => {
+    render(<AuditDrawer event={makeEvent('2026-04-20T10:00:00.000Z', 'completed')} onClose={vi.fn()} workflow={workflow} />);
+    expect(screen.queryByTestId('audit-sla-pill')).toBeNull();
+  });
+});

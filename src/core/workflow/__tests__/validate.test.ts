@@ -198,6 +198,80 @@ describe('validateWorkflow — rules', () => {
     expect(issues.some(i => i.code === 'expression-syntax')).toBe(true)
   })
 
+  it('flags approvals with onTimeout=escalate but no timeout edge', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x', slaMinutes: 30, onTimeout: 'escalate' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'timeout-edge-missing' && i.severity === 'error')).toBe(true)
+  })
+
+  it('accepts auto-approve approvals without a timeout edge', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x', slaMinutes: 30, onTimeout: 'auto-approve' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+      ],
+    }
+    const errors = validateWorkflow(wf).filter(i => i.severity === 'error')
+    expect(errors).toEqual([])
+  })
+
+  it('warns when slaMinutes is set but onTimeout is not', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x', slaMinutes: 30 },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+        { id: 'esc', type: 'approval', assignTo: 'role:d' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+        { from: 'a', to: 'esc', when: 'timeout' },
+        { from: 'esc', to: 'done', when: 'approved' },
+        { from: 'esc', to: 'denied', when: 'denied' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    const warn = issues.find(i => i.code === 'sla-without-on-timeout')
+    expect(warn?.severity).toBe('warning')
+  })
+
+  it('flags timeout guard on approval without slaMinutes as illegal', () => {
+    const wf: Workflow = {
+      id: 'w', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+        { from: 'a', to: 'denied', when: 'timeout' },
+      ],
+    }
+    const issues = validateWorkflow(wf)
+    expect(issues.some(i => i.code === 'illegal-guard-for-source')).toBe(true)
+  })
+
   it('flags terminals that carry outgoing edges (warning)', () => {
     const wf: Workflow = {
       ...singleApproverWorkflow,
