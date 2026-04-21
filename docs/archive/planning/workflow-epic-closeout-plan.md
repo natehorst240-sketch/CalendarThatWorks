@@ -1,3 +1,5 @@
+> **Status: HISTORICAL** — Epic #219 and all sub-issues (#220–#223) closed 2026-04-21. Do not treat as active work.
+
 # Workflow DSL — Sprint Plan to Close Epic #219
 
 ## Context
@@ -349,11 +351,9 @@ worth the overhead.**
 
 Status:
 
-1. ⏳ Verify #220, #221, #222, #223 are all closed. (Pending — happens
-   once the Sprint 2 PR merges with `Closes #223` in the body.)
-2. ⏳ Post a summary comment on #219 linking each sub-issue's landing
-   PR + commit hashes.
-3. ⏳ Close #219 (auto-closes via PR body).
+1. ✅ #220, #221, #222, #223 all closed (closed 2026-04-21).
+2. ✅ Summary comment posted on #219.
+3. ✅ #219 closed as completed (2026-04-21).
 4. ✅ Updated `README.md` feature list — SLA timers, parallel/join
    approvals with quorum, and pluggable notification channels.
 5. ✅ Added `docs/bundle-size-audit.md` with the post-P4 snapshot;

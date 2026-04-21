@@ -1,3 +1,5 @@
+> **Status: HISTORICAL** — Recurring schedule work shipped. Do not treat as active work.
+
 # Recurring Schedule Templates — Implementation Plan
 
 ## Goal

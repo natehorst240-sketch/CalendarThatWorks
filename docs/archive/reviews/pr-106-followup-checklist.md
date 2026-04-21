@@ -1,3 +1,5 @@
+> **Status: COMPLETE** — Issue #98 closed 2026-04-16. All wiring shipped.
+
 # PR 106 follow-up checklist for issue #98
 
 This branch exists to track the remaining wiring work after PR #106.

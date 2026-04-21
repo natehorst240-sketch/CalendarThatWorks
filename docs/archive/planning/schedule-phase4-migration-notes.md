@@ -1,3 +1,5 @@
+> **Status: HISTORICAL** — Phase 4 shipped. Retained for reference only.
+
 # Schedule Templates Phase 4 — Migration Notes
 
 Phase 4 introduces optional operational hardening APIs for Add Schedule flows.

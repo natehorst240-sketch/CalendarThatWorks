@@ -1,3 +1,5 @@
+> **Status: HISTORICAL** — Recurring events engine shipped. Do not treat as active work.
+
 # Recurring Events Engine + Template-Based Event/Schedule Creation Plan
 
 This project already has a strong recurrence foundation in the engine layer (`expandOccurrences`, `splitSeries`, `detachOccurrence`, and recurring edit scope resolution). This plan describes what it would take to:
