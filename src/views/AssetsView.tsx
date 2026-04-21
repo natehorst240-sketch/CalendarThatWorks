@@ -18,6 +18,7 @@
  *     (5 states per Phase 0 contract).
  */
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isToday, isWeekend,
@@ -31,6 +32,10 @@ import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import AuditDrawer from './AuditDrawer';
 import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
+import type { CalendarViewEvent } from '../types/ui';
+import type { GroupByInput } from '../hooks/useNormalizedConfig';
+import type { AssetsZoomLevel, LocationData, LocationProvider } from '../types/assets';
+import type { ResourcePool } from '../core/pools/resourcePoolSchema';
 
 const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 
@@ -49,6 +54,105 @@ const DAY_PX_PER_DAY = 80;
 const APPROVAL_STAGES = new Set([
   'requested', 'approved', 'finalized', 'pending_higher', 'denied',
 ]);
+
+type AssetMeta = {
+  sublabel?: string;
+  [k: string]: unknown;
+};
+
+type AssetRowDef = {
+  id: string;
+  label?: string;
+  group?: string;
+  meta?: AssetMeta;
+};
+
+type AssetsViewEvent = CalendarViewEvent & {
+  color?: string;
+  meta?: Record<string, unknown> & {
+    sublabel?: string;
+    assetSublabel?: string;
+    approvalStage?: { stage?: string };
+    resolvedFromPoolId?: string;
+  };
+  _dayStart?: number;
+  _dayEnd?: number;
+  _lane?: number;
+};
+
+interface AssetsViewProps {
+  currentDate: Date;
+  events: AssetsViewEvent[];
+  onEventClick?: (event: AssetsViewEvent) => void;
+  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
+  groupBy?: GroupByInput;
+  onGroupByChange?: (value: GroupByInput) => void;
+  categoriesConfig?: { categories?: Array<{ id?: string; color?: string }>; pillStyle?: string };
+  locationProvider?: LocationProvider | null;
+  renderAssetLocation?: (locationData: LocationData | null, asset: { id: string }) => ReactNode;
+  collapsedGroups?: Set<string> | string[];
+  onCollapsedGroupsChange?: (next: Set<string>) => void;
+  assets?: AssetRowDef[];
+  onEditAssets?: () => void;
+  onRequestAsset?: () => void;
+  approvalsConfig?: unknown;
+  onApprovalAction?: (event: AssetsViewEvent, action: string) => void;
+  resolveResourceLabel?: (resourceId: string) => string;
+  strictAssetFiltering?: boolean;
+  zoomLevel?: string;
+  onZoomChange?: (zoom: AssetsZoomLevel) => void;
+  pools?: readonly ResourcePool[];
+  onPoolDateSelect?: (start: Date, end: Date, poolId: string) => void;
+}
+
+type AssetRow = {
+  _type: 'assetRow';
+  key: string;
+  resource: string;
+  label: string;
+  sublabel: string | null;
+  events: AssetsViewEvent[];
+  laneCount: number;
+  rowH: number;
+  groupPath?: string;
+};
+
+type PoolRow = {
+  _type: 'poolRow';
+  key: string;
+  poolId: string;
+  label: string;
+  sublabel: string;
+  memberIds: readonly string[];
+  memberLabels: string[];
+  events: AssetsViewEvent[];
+  laneCount: number;
+  rowH: number;
+};
+
+type GroupHeaderRow = {
+  _type: 'groupHeader';
+  groupPath: string;
+  groupLabel: string;
+  field: string;
+  depth: number;
+  collapsed: boolean;
+  count: number;
+  posInSet: number;
+  setSize: number;
+  rowH: number;
+};
+
+type FlatRow = AssetRow | PoolRow | GroupHeaderRow;
+
+type GroupTreeNode = {
+  key: string;
+  label: string;
+  field: string;
+  depth: number;
+  events: AssetsViewEvent[];
+  children?: GroupTreeNode[];
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +220,7 @@ function buildCategoryColorMap(categoriesConfig) {
  * through to CSS default).
  */
 function resolveAssetColor(ev, categoryColorMap, colorRules) {
-  const ruleColor = resolveColor(ev, colorRules);
+  const ruleColor = resolveColor(ev as never, colorRules);
   if (ruleColor) return ruleColor;
   if (ev.category && categoryColorMap.has(ev.category)) {
     return categoryColorMap.get(ev.category);
@@ -188,7 +292,7 @@ export default function AssetsView({
   // engine resolves the pool to a concrete resourceId at submit time.
   pools = [],
   onPoolDateSelect,
-}: any) {
+}: AssetsViewProps) {
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState(null);
@@ -427,7 +531,7 @@ export default function AssetsView({
    * Row height is computed from the laned events so rows stay tight when
    * most events are filtered into a different group bucket.
    */
-  const buildAssetRow = useCallback((resource, subsetEvents) => {
+  const buildAssetRow = useCallback((resource: string, subsetEvents: AssetsViewEvent[]): AssetRow => {
     // "(Unassigned)" bucket catches any event whose resource isn't in the
     // registry (or is missing entirely). Registry rows keep exact-id match.
     const matchesRow = assetRegistry
@@ -481,11 +585,11 @@ export default function AssetsView({
 
   const groupTree = useMemo(() => {
     if (!isGrouped) return null;
-    return buildGroupTree(events, groupBy);
+    return buildGroupTree(events as never, groupBy);
   }, [isGrouped, events, groupBy]);
 
   // Collapse state — controlled via props when provided, otherwise local.
-  const [collapsedLocal, setCollapsedLocal] = useState(() => new Set());
+  const [collapsedLocal, setCollapsedLocal] = useState<Set<string>>(() => new Set());
   const collapsedControlled = collapsedGroupsProp instanceof Set
     ? collapsedGroupsProp
     : (Array.isArray(collapsedGroupsProp) ? new Set(collapsedGroupsProp) : null);
@@ -520,14 +624,14 @@ export default function AssetsView({
   // reflects aggregate availability so a busy cell is obvious before
   // the user drops a new booking on it.
   const poolRows = useMemo(() => {
-    if (!Array.isArray(pools) || pools.length === 0) return [];
+    if (!Array.isArray(pools) || pools.length === 0) return [] as PoolRow[];
     return pools
       // Disabled pools are documented as "stay in history but can't be
       // selected for new bookings" — keep them out of the row list
       // entirely so users don't start drafts the resolver would reject
       // as POOL_DISABLED.
       .filter(p => p && typeof p.id === 'string' && Array.isArray(p.memberIds) && !p.disabled)
-      .map(p => {
+      .map((p): PoolRow => {
         const memberSet = new Set(p.memberIds);
         // Scope to member-held events; use the raw events list (not the
         // strictly-filtered one) so a pool row stays populated even when
@@ -556,13 +660,13 @@ export default function AssetsView({
 
   // Flat list of rows for virtualization: interleaves groupHeader pseudo-rows
   // with asset rows scoped to the leaf group's events.
-  const flatRows = useMemo(() => {
+  const flatRows = useMemo<FlatRow[]>(() => {
     const prefix = poolRows;
     if (!groupTree) {
       return [...prefix, ...resourceList.map(r => buildAssetRow(r, events))];
     }
-    const out: any[] = [...prefix];
-    const walk = (nodes, parentPath) => {
+    const out: FlatRow[] = [...prefix];
+    const walk = (nodes: GroupTreeNode[], parentPath: string) => {
       nodes.forEach((node, i) => {
         const path = parentPath ? `${parentPath}/${node.key}` : node.key;
         const collapsed = collapsedGroups.has(path);
@@ -595,7 +699,7 @@ export default function AssetsView({
         }
       });
     };
-    walk(groupTree, '');
+    walk(groupTree as GroupTreeNode[], '');
     return out;
   }, [groupTree, collapsedGroups, events, resourceList, buildAssetRow, countEvents, sortResourceKeys, poolRows]);
 
@@ -1102,7 +1206,7 @@ export default function AssetsView({
                         ? ev.meta.resolvedFromPoolId
                         : null;
                     const poolName = resolvedFromPoolId
-                      ? (pools.find((p: any) => p?.id === resolvedFromPoolId)?.name ?? resolvedFromPoolId)
+                      ? (pools.find((p) => p?.id === resolvedFromPoolId)?.name ?? resolvedFromPoolId)
                       : null;
                     const hoverTitle = [
                       ev.title,

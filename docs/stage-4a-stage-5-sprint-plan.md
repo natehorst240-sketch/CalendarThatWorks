@@ -191,6 +191,14 @@ Goal: Low-risk view typing
 
 Goal: Layout + shared logic typing
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Replaced broad file-level view props with explicit medium-view boundary prop types for `WeekView`, `AssetsView`, and `BaseGanttView` so callback contracts, config slices, and resource/grouping inputs are typed at the component seam.
+- Added targeted local layout/domain aliases for lane-packing and row virtualization flows (day-span offsets, grouped row records, pool-row/resource-row metadata) to keep the layout engine strict without over-tightening unrelated modules.
+- Removed medium-view implicit callback parameter `any` in keyboard, pointer, and toolbar handlers by typing event/cell/group action paths and constrained select/toggle values.
+- Kept intentional boundary looseness only at cross-module metadata seams (e.g., dynamic `meta.*` keys) with narrow casts/records where needed to avoid widening `any` through shared UI paths.
+
 ---
 
 ### PR 9 — TimelineView (ISOLATED)
