@@ -1,11 +1,28 @@
 # Workflow DSL
 
-_Phase 1 — JSON-only interpreter. Issue #219._
+_Epic #219 — phases 1–4 all shipped (JSON interpreter, visual builder,
+SLA timers, parallel/channels)._
 
 WorksCalendar ships a declarative, versioned approval workflow engine that
 supersedes the hard-coded single/two-tier approval flow. Owners describe
 the flow as a JSON graph of nodes and edges; a pure interpreter advances
 it in lockstep with the existing approval state machine.
+
+## What shipped across phases 1–4
+
+- **Phase 1** — the JSON schema, expression evaluator, interpreter,
+  approval integration, and starter templates (below).
+- **Phase 2 (#220, #221)** — in-app visual builder: SVG canvas,
+  inspector, guard picker, validator, simulator, persistence.
+  Accessible at ConfigPanel → Approval Flows.
+- **Phase 3 (#222)** — SLA timers on approval nodes with
+  `onTimeout: 'escalate' | 'deny' | 'approve'` behavior, driven by a
+  host-side `tickWorkflow()` call (see `useWorkflowTicker`).
+- **Phase 4 (#223)** — `parallel` + `join` nodes with
+  `requireAll` / `requireAny` / `requireN` quorum modes, plus a
+  pluggable channel registry (`createChannelRegistry`) with built-in
+  Slack / email / webhook adapters and Mustache-style template
+  interpolation for notify payloads.
 
 ## What shipped in Phase 1
 
@@ -34,8 +51,10 @@ it in lockstep with the existing approval state machine.
 | Type        | Purpose                                    | Exit signal            |
 |-------------|--------------------------------------------|------------------------|
 | `condition` | Branch on an expression                    | `'true'` / `'false'`   |
-| `approval`  | Wait for approve/deny from an assignee     | `'approved'` / `'denied'` |
-| `notify`    | Fire a `notify` emit event, then fall through | `'default'`        |
+| `approval`  | Wait for approve/deny from an assignee (optional SLA + `onTimeout`) | `'approved'` / `'denied'` / `'timeout'` |
+| `notify`    | Dispatch via a channel adapter, then fall through | `'default'`     |
+| `parallel`  | Fan out to N branches; quorum is set by `mode` (`requireAll` / `requireAny` / `requireN`) | — (branches rejoin at the paired `join`) |
+| `join`      | Gate the paired parallel's continuation until quorum is met | `'default'` |
 | `terminal`  | End the flow with an `outcome`             | — (no outgoing edges)  |
 
 Edge resolution prefers an exact `when` match over a `default` edge
@@ -138,21 +157,14 @@ nodes can fan out without the workflow engine caring about transport.
 | `singleApproverWorkflow`       | One approval → finalized or denied.                       |
 | `twoTierApproverWorkflow`      | Manager → director chain, IHC-style.                      |
 | `conditionalByCostWorkflow`    | Cheap requests finalize; `event.cost > 500` requires a director then notifies ops. |
+| `slaEscalationWorkflow`        | Manager approval with a 60-minute SLA that escalates to a director on timeout (#222). |
+| `parallelSecurityAndFinanceApproval` | Fan out to security + finance approvals in parallel, rejoin once both vote, notify ops, finalize (#223). |
 
 Import from `works-calendar/workflow`:
 
 ```ts
 import { WORKFLOW_TEMPLATES } from 'works-calendar'
 ```
-
-## Planned phases
-
-- **Phase 2** — visual `WorkflowBuilder` editor in ConfigPanel (drag-drop
-  canvas, node inspector, JSON import/export).
-- **Phase 3** — SLA timers + escalation; scheduled `tick` action fed by
-  host-side cron/queue.
-- **Phase 4** — `parallel` node (N-of-M approvals), pluggable notify
-  channels.
 
 ## Related
 

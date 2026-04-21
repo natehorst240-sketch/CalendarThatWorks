@@ -343,19 +343,25 @@ Open PR, body "Closes #223."
 
 ## Sprint 3 — Close the epic · Closes #219
 
-**Effort: ~½ day. Fresh branch: `claude/workflow-epic-close` (only if
-docs/readme updates remain).**
+**Folded into the Sprint 2 PR on `claude/workflow-p4-parallel` — the
+docs updates are small enough that a separate PR + branch was not
+worth the overhead.**
 
-If Sprint 2's PR body says `Closes #219`, this sprint collapses to a
-GitHub close-out:
+Status:
 
-1. Verify #220, #221, #222, #223 are all closed.
-2. Post a summary comment on #219 linking each sub-issue's landing
+1. ⏳ Verify #220, #221, #222, #223 are all closed. (Pending — happens
+   once the Sprint 2 PR merges with `Closes #223` in the body.)
+2. ⏳ Post a summary comment on #219 linking each sub-issue's landing
    PR + commit hashes.
-3. Close #219 (auto-closes via PR body, or manually).
-4. Update the `README.md` feature list — workflow engine ships with
-   SLA timers, parallel approvals, and pluggable channels.
-5. Update `docs/bundle-size-audit.md` with the final post-P4 snapshot.
+3. ⏳ Close #219 (auto-closes via PR body).
+4. ✅ Updated `README.md` feature list — SLA timers, parallel/join
+   approvals with quorum, and pluggable notification channels.
+5. ✅ Added `docs/bundle-size-audit.md` with the post-P4 snapshot;
+   the Phase-2 audit is preserved under `docs/archive/analysis/` as
+   the prior baseline.
+6. ✅ Updated `docs/Workflow.md` — removed "Planned phases", marked
+   all four phases as shipped, and refreshed the node-type and
+   starter-template tables for P3/P4 additions.
 
 ---
 

@@ -12,7 +12,7 @@ WorksCalendar is an embeddable React calendar focused on **real scheduling workf
 - External intake form component (`CalendarExternalForm`)
 - Themeable UI with optional packaged themes
 - Data adapter pattern for backend-agnostic integrations
-- Declarative approval workflows (conditions, multi-tier approvals, notifications) with a sandboxed expression language
+- Declarative approval workflows with a sandboxed expression language — multi-tier approvals, SLA timers + escalation, parallel branches with quorum joins (`requireAll` / `requireAny` / `requireN`), and pluggable notification channels (Slack, email, webhook, or your own adapter)
 - **Written in strict TypeScript**; ships with generated `.d.ts` so consumer types stay in lockstep with the implementation
 
 ## New here? Start with the [Setup guide](./docs/Setup.md)
