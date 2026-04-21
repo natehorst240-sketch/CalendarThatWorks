@@ -9,7 +9,7 @@ export type SavedViewFilters = Record<string, unknown>;
 export type SavedViewDraft = {
   id: string;
   name: string;
-  filters: SavedViewFilters;
+  filters?: SavedViewFilters;
   color?: string | null;
   view?: string | null;
   conditions?: unknown[] | null;

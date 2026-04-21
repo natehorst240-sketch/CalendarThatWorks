@@ -10,7 +10,13 @@ import {
   APPROVAL_STAGE_IDS,
   APPROVAL_ACTIONS,
 } from '../core/configSchema';
-import type { ConfigPanelProps, ConfigPanelTabId } from '../types/ui';
+import type {
+  AnyRecord,
+  ConfigPanelProps,
+  ConfigPanelTabId,
+  SavedViewDraft,
+  UpdateConfig,
+} from '../types/ui';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -72,6 +78,39 @@ function sectionContaining(tabId: ConfigPanelTabId | string) {
 
 const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
 
+type ConfigPanelSectionProps = {
+  config: AnyRecord;
+  onUpdate: UpdateConfig;
+};
+
+type SmartViewsTabProps = {
+  categories: string[];
+  resources: string[];
+  schema?: AnyRecord[] | AnyRecord;
+  items?: AnyRecord[];
+  onSaveView?: ConfigPanelProps['onSaveView'];
+  savedViews?: SavedViewDraft[];
+  onUpdateView?: ConfigPanelProps['onUpdateView'];
+  onDeleteView?: ConfigPanelProps['onDeleteView'];
+  initialEditingId?: string | null;
+};
+
+type TeamTabProps = ConfigPanelSectionProps & {
+  onEmployeeAdd?: ConfigPanelProps['onEmployeeAdd'];
+  onEmployeeDelete?: ConfigPanelProps['onEmployeeDelete'];
+};
+
+type TemplateTabProps = {
+  templates: NonNullable<ConfigPanelProps['scheduleTemplates']>;
+  onCreate?: ConfigPanelProps['onCreateScheduleTemplate'];
+  onDelete?: ConfigPanelProps['onDeleteScheduleTemplate'];
+  error?: string | null;
+};
+
+type AssetsTabProps = ConfigPanelSectionProps & {
+  items?: AnyRecord[];
+};
+
 export default function ConfigPanel({
   config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
   savedViews, onUpdateView, onDeleteView,
@@ -96,9 +135,9 @@ export default function ConfigPanel({
   );
   // Open the section containing the active tab; allow others to be expanded
   // independently. Re-keys when `tab` changes so deep-links auto-expand.
-  const [openSections, setOpenSections] = useState(() => ({ [sectionContaining(tab)]: true }));
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [sectionContaining(tab)]: true }));
   const trapRef = useFocusTrap(onClose);
-  const tabRefs = useRef({});
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     if (initialTab && TABS.some(t => t.id === initialTab)) {
@@ -120,7 +159,7 @@ export default function ConfigPanel({
     });
   }, [tab]);
 
-  function toggleSection(sid) {
+  function toggleSection(sid: string) {
     setOpenSections(prev => ({ ...prev, [sid]: !prev[sid] }));
   }
 
@@ -250,7 +289,7 @@ export default function ConfigPanel({
   );
 }
 
-function SetupTab({ config, onUpdate }: any) {
+function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
   // Stored `preferredTheme` may be a legacy id (e.g. 'corporate', 'ocean')
   // for upgraded calendars. Normalize for the aria-pressed/selected match
   // so the active card still highlights after the theme-system rewrite.
@@ -310,9 +349,20 @@ function SetupTab({ config, onUpdate }: any) {
   );
 }
 
-export function SmartViewsTab({ categories, resources, schema, items, onSaveView, savedViews = [], onUpdateView, onDeleteView, initialEditingId }: any) {
+export function SmartViewsTab({
+  categories,
+  resources,
+  schema = [],
+  items = [],
+  onSaveView,
+  savedViews = [],
+  onUpdateView,
+  onDeleteView,
+  initialEditingId,
+}: SmartViewsTabProps) {
   const [editingId,   setEditingId]   = useState(initialEditingId ?? null);
   const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
+  const builderSchema = Array.isArray(schema) ? schema : [];
 
   const editingView = editingId ? savedViews.find(v => v.id === editingId) : null;
 
@@ -388,7 +438,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
       </p>
       <AdvancedFilterBuilder
         key={editingId ?? '__new__'}
-        schema={schema}
+        schema={builderSchema}
         items={items}
         categories={categories ?? []}
         resources={resources ?? []}
@@ -403,7 +453,7 @@ export function SmartViewsTab({ categories, resources, schema, items, onSaveView
   );
 }
 
-export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: any) {
+export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: TeamTabProps) {
   const teamMembers = config.team?.members ?? [];
   const roles       = config.team?.roles   ?? [];
   const bases       = config.team?.bases   ?? [];
@@ -719,7 +769,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: a
   );
 }
 
-function TemplateTab({ templates, onCreate, onDelete, error }: any) {
+function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps) {
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState('team');
   const [title, setTitle] = useState('');
@@ -808,7 +858,7 @@ function TemplateTab({ templates, onCreate, onDelete, error }: any) {
 }
 
 /* ----- HoverCard tab ----- */
-function HoverCardTab({ config, onUpdate }: any) {
+function HoverCardTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const hc = config.hoverCard;
   const toggle = (key) =>
     onUpdate(c => ({ ...c, hoverCard: { ...c.hoverCard, [key]: !c.hoverCard[key] } }));
@@ -836,7 +886,7 @@ function HoverCardTab({ config, onUpdate }: any) {
 }
 
 /* ----- EventFields tab ----- */
-function EventFieldsTab({ config, categories, onUpdate }: any) {
+function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProps & { categories: string[] }) {
   const [selCat, setSelCat] = useState(categories[0] || '');
   const [newCat, setNewCat] = useState('');
 
@@ -926,7 +976,7 @@ function EventFieldsTab({ config, categories, onUpdate }: any) {
  * { categories: DEFAULT_CATEGORIES }`. Category hue drives AssetsView pill
  * color; id is the key referenced by event.category.
  */
-export function CategoriesTab({ config, onUpdate }: any) {
+export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const current = config.categoriesConfig ?? { categories: DEFAULT_CATEGORIES };
   const cats = current.categories ?? [];
   const pillStyle = current.pillStyle ?? 'hue';
@@ -1104,12 +1154,12 @@ function createDraftAsset(nextIndex) {
   };
 }
 
-export function AssetsTab({ config, onUpdate, items = [] }: any) {
+export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
   const assets = Array.isArray(config.assets) ? config.assets : [];
   // Draft row for new asset creation. Kept in local state so partially-filled
   // rows never enter config.assets — the only entry point is saveDraft(),
   // which requires all four of registrationNumber/type/make/model (#196).
-  const [draftAsset, setDraftAsset] = useState<any>(null);
+  const [draftAsset, setDraftAsset] = useState<AnyRecord | null>(null);
 
   const writeAssets = (next) => onUpdate(c => ({ ...c, assets: next }));
 
@@ -1431,7 +1481,7 @@ export function AssetsTab({ config, onUpdate, items = [] }: any) {
 }
 
 /* ----- Display tab ----- */
-function DisplayTab({ config, onUpdate }: any) {
+function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const d = config.display;
   const labels = config.filterUi?.groupLabels ?? {};
   const set = (key, val) => onUpdate(c => ({ ...c, display: { ...c.display, [key]: val } }));
@@ -1615,7 +1665,7 @@ const STAGE_LABELS = {
  *   approvals.rules   — per-stage `{ allow: ApprovalAction[], prefix }`.
  *   approvals.labels  — per-action button copy shown to approvers.
  */
-export function ApprovalsTab({ config, onUpdate }: any) {
+export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const approvals = config.approvals ?? {};
   const enabled   = !!approvals.enabled;
   const tiers     = Array.isArray(approvals.tiers) ? approvals.tiers : [];
@@ -1830,7 +1880,7 @@ const REQUEST_FIELD_TYPES = [
  * the RequestForm renderer's built-in handlers — adding a new type means
  * updating both sides.
  */
-export function RequestFormTab({ config, onUpdate }: any) {
+export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const schema = config.requestForm ?? {};
   const fields = Array.isArray(schema.fields) ? schema.fields : [];
 
@@ -1962,7 +2012,7 @@ export function RequestFormTab({ config, onUpdate }: any) {
  *   category-mutex   — listed categories cannot coexist on one resource.
  *   min-rest         — minimum gap (in minutes) between same-resource events.
  */
-export function ConflictsTab({ config, onUpdate }: any) {
+export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const conflicts = config.conflicts ?? {};
   const enabled   = !!conflicts.enabled;
   const rules     = Array.isArray(conflicts.rules) ? conflicts.rules : [];
@@ -2089,7 +2139,7 @@ export function ConflictsTab({ config, onUpdate }: any) {
 }
 
 /* ----- Access tab ----- */
-function AccessTab({ config, onUpdate }: any) {
+function AccessTab({ config, onUpdate }: ConfigPanelSectionProps) {
   return (
     <div className={styles.section}>
       <p className={styles.sectionDesc}>Optionally require a password to view this calendar.</p>
