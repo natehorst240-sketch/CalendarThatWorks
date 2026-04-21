@@ -1,6 +1,13 @@
-function buildSingleAccessor(fieldName, mode) {
+type AccessorRow = {
+  emp?: Record<string, unknown> & { meta?: Record<string, unknown> };
+  events?: Array<Record<string, unknown> & { meta?: Record<string, unknown> }>;
+};
+
+export type FieldAccessor = (row: AccessorRow) => unknown;
+
+function buildSingleAccessor(fieldName: string, mode: string): FieldAccessor {
   if (mode === 'employee') {
-    return (row) => {
+    return (row: AccessorRow) => {
       const val = row.emp?.[fieldName];
       if (val != null) return val;
       return row.emp?.meta?.[fieldName] ?? null;
@@ -8,7 +15,7 @@ function buildSingleAccessor(fieldName, mode) {
   }
 
   // resource mode: read from first event's fields
-  return (row) => {
+  return (row: AccessorRow) => {
     const firstEvent = row.events?.[0];
     if (!firstEvent) return null;
     const val = firstEvent[fieldName];
@@ -22,7 +29,7 @@ function buildSingleAccessor(fieldName, mode) {
  *   "role"                 → single accessor fn
  *   ["role", "shift"]      → array of accessor fns (one per grouping level)
  */
-export function buildFieldAccessor(fieldName, mode): any {
+export function buildFieldAccessor(fieldName: string | string[], mode: string): FieldAccessor | FieldAccessor[] {
   if (Array.isArray(fieldName)) {
     return fieldName.map(f => buildSingleAccessor(f, mode));
   }

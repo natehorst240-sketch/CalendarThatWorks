@@ -20,7 +20,9 @@
  *   any          + not_contains → accumulate into { __not: true, values: Set }
  *   unknown field/operator    → skipped gracefully
  */
-export function conditionsToFilters(conditions, schema: Array<{ key: string; type: string }>) {
+type Condition = { id?: string; field: string; operator: string; value: unknown; logic?: string };
+
+export function conditionsToFilters(conditions: Condition[], schema: Array<{ key: string; type: string }>) {
   const schemaMap = new Map<string, { key: string; type: string }>(schema.map(f => [f.key, f]))
   const result: Record<string, any> = {}
 
@@ -74,9 +76,12 @@ export function conditionsToFilters(conditions, schema: Array<{ key: string; typ
  * Validate that every condition's field key exists in the schema.
  * Returns { valid: boolean, invalidKeys: string[] }.
  */
-export function conditionsMatchSchema(conditions, schema) {
-  const knownKeys = new Set(schema.map(f => f.key))
-  const invalidKeys = []
+export function conditionsMatchSchema(
+  conditions: Condition[],
+  schema: Array<{ key: string }>,
+): { valid: boolean; invalidKeys: string[] } {
+  const knownKeys = new Set(schema.map((f: { key: string }) => f.key))
+  const invalidKeys: string[] = []
 
   for (const cond of conditions) {
     if (!knownKeys.has(cond.field) && !invalidKeys.includes(cond.field)) {

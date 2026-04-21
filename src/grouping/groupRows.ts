@@ -1,12 +1,15 @@
 const UNGROUPED = '(Ungrouped)';
 
-function bucketize(items, accessor) {
-  const map = new Map();
+type Accessor = (item: unknown) => unknown;
+type Row = Record<string, unknown>;
+
+function bucketize(items: Row[], accessor: Accessor): { map: Map<string, Row[]>; order: string[] } {
+  const map = new Map<string, Row[]>();
   for (const item of items) {
     const val = accessor(item);
     const key = val != null && val !== '' ? String(val) : UNGROUPED;
     if (!map.has(key)) map.set(key, []);
-    map.get(key).push(item);
+    map.get(key)!.push(item);
   }
   // Insertion order preserved; (Ungrouped) always sorts last.
   const order = [...map.keys()].sort((a, b) => {
@@ -17,7 +20,16 @@ function bucketize(items, accessor) {
   return { map, order };
 }
 
-function emitLevel(items, accessors, level, parentPath, collapsedGroups, groupHeaderHeight, groupOrder, flatRows) {
+function emitLevel(
+  items: Row[],
+  accessors: Accessor[],
+  level: number,
+  parentPath: string,
+  collapsedGroups: Set<string>,
+  groupHeaderHeight: number,
+  groupOrder: string[],
+  flatRows: Row[],
+): void {
   if (level >= accessors.length) {
     flatRows.push(...items);
     return;
@@ -54,12 +66,15 @@ function emitLevel(items, accessors, level, parentPath, collapsedGroups, groupHe
  * the input rows. Header rows carry `depth` (0 = top-level) and a
  * slash-joined `groupKey` path for collapse-state addressing.
  */
-export function groupRows(rows, options: {
-  groupBy?: unknown
-  fieldAccessor?: unknown
-  collapsedGroups?: Set<string>
-  groupHeaderHeight?: number
-} = {}) {
+export function groupRows(
+  rows: Row[],
+  options: {
+    groupBy?: unknown;
+    fieldAccessor?: Accessor | Accessor[];
+    collapsedGroups?: Set<string>;
+    groupHeaderHeight?: number;
+  } = {},
+): { flatRows: Row[]; groupOrder: string[] } {
   const {
     groupBy,
     fieldAccessor,
@@ -71,13 +86,13 @@ export function groupRows(rows, options: {
     return { flatRows: rows, groupOrder: [] };
   }
 
-  const accessors = Array.isArray(fieldAccessor) ? fieldAccessor : [fieldAccessor];
+  const accessors: Accessor[] = Array.isArray(fieldAccessor) ? fieldAccessor : [fieldAccessor];
   if (accessors.length === 0) {
     return { flatRows: rows, groupOrder: [] };
   }
 
-  const flatRows = [];
-  const groupOrder = [];
+  const flatRows: Row[] = [];
+  const groupOrder: string[] = [];
   emitLevel(rows, accessors, 0, '', collapsedGroups, groupHeaderHeight, groupOrder, flatRows);
   return { flatRows, groupOrder };
 }

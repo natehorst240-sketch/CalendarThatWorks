@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { groupRows } from '../groupRows';
 
-const rows = [
+type TestRow = Record<string, any>;
+
+const rows: TestRow[] = [
   { id: 1, emp: { role: 'Nurse' } },
   { id: 2, emp: { role: 'Nurse' } },
   { id: 3, emp: { role: 'Doctor' } },
@@ -10,7 +12,7 @@ const rows = [
   { id: 6, emp: { role: null } },
 ];
 
-const fieldAccessor = (row) => row.emp?.role ?? null;
+const fieldAccessor = (row: any) => row.emp?.role ?? null;
 
 describe('groupRows', () => {
   it('groups rows by field value', () => {
@@ -22,7 +24,7 @@ describe('groupRows', () => {
 
   it('interleaves headers and members correctly', () => {
     const { flatRows } = groupRows(rows, { groupBy: 'role', fieldAccessor });
-    const nurseHeader = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === 'Nurse');
+    const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader).toBeDefined();
     expect(nurseHeader.count).toBe(3);
     const doctorHeader = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === 'Doctor');
@@ -35,7 +37,7 @@ describe('groupRows', () => {
       fieldAccessor,
       collapsedGroups: new Set(['Nurse']),
     });
-    const nurseHeader = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === 'Nurse');
+    const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader.collapsed).toBe(true);
     const nurseMembers = flatRows.filter(r => !r._type && r.emp?.role === 'Nurse');
     expect(nurseMembers.length).toBe(0);
@@ -75,8 +77,8 @@ describe('groupRows', () => {
       { id: 4, emp: { role: 'Doctor', shift: 'Day'   } },
       { id: 5, emp: { role: 'Doctor', shift: 'Night' } },
     ];
-    const roleAcc  = (r) => r.emp.role;
-    const shiftAcc = (r) => r.emp.shift;
+    const roleAcc  = (r: any) => r.emp.role;
+    const shiftAcc = (r: any) => r.emp.shift;
 
     it('produces nested headers with depth metadata', () => {
       const { flatRows, groupOrder } = groupRows(nestedRows, {

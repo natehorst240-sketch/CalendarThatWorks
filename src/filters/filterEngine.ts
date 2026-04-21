@@ -23,8 +23,15 @@ import { isEmptyFilterValue }    from './filterState';
  * @param [schema]
  * @returns {object[]}
  */
-export function applyFilters(items, filters = {}, schema: any[] = DEFAULT_FILTER_SCHEMA) {
-  return items.filter(item =>
+type FilterItem = Record<string, any>;
+type FilterState = Record<string, any>;
+
+export function applyFilters(
+  items: FilterItem[],
+  filters: FilterState = {},
+  schema: any[] = DEFAULT_FILTER_SCHEMA,
+): FilterItem[] {
+  return items.filter((item: FilterItem) =>
     schema.every(field => {
       const value = filters[field.key];
       if (isEmptyFilterValue(value)) return true;
@@ -46,10 +53,10 @@ export function applyFilters(items, filters = {}, schema: any[] = DEFAULT_FILTER
 
 // ── Built-in matching helpers ─────────────────────────────────────────────────
 
-function _defaultMatch(itemValue, filterValue, fieldType) {
+function _defaultMatch(itemValue: unknown, filterValue: unknown, fieldType: string): boolean {
   switch (fieldType) {
     case 'multi-select': {
-      const set = filterValue instanceof Set ? filterValue : new Set(filterValue ?? []);
+      const set = filterValue instanceof Set ? filterValue : new Set((filterValue as Iterable<unknown>) ?? []);
       return set.has(itemValue);
     }
     case 'select':
@@ -64,7 +71,7 @@ function _defaultMatch(itemValue, filterValue, fieldType) {
   }
 }
 
-function _matchDateRange(item, range) {
+function _matchDateRange(item: FilterItem, range: { start?: Date; end?: Date } | null | undefined): boolean {
   if (!range) return true;
   const { start, end } = range;
   if (!start && !end) return true;
@@ -79,7 +86,7 @@ function _matchDateRange(item, range) {
   );
 }
 
-function _matchSearch(item, query) {
+function _matchSearch(item: FilterItem, query: string | null | undefined): boolean {
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase();
   if (item.title?.toLowerCase().includes(q))    return true;
@@ -94,23 +101,23 @@ function _matchSearch(item, query) {
 // ── Option extractors ─────────────────────────────────────────────────────────
 
 /** Extract unique sorted categories from an event list. */
-export function getCategories(events): string[] {
+export function getCategories(events: FilterItem[]): string[] {
   const set = new Set<string>();
-  events.forEach(e => { if (e.category) set.add(e.category); });
+  events.forEach((e: FilterItem) => { if (e.category) set.add(e.category); });
   return [...set].sort();
 }
 
 /** Extract unique sorted resources from an event list. */
-export function getResources(events): string[] {
+export function getResources(events: FilterItem[]): string[] {
   const set = new Set<string>();
-  events.forEach(e => { if (e.resource) set.add(e.resource); });
+  events.forEach((e: FilterItem) => { if (e.resource) set.add(e.resource); });
   return [...set].sort();
 }
 
 /** Extract unique { id, label } source pairs from an event list. */
-export function getSources(events) {
-  const map = new Map();
-  events.forEach(e => {
+export function getSources(events: FilterItem[]): Array<{ id: string; label: string }> {
+  const map = new Map<string, { id: string; label: string }>();
+  events.forEach((e: FilterItem) => {
     if (e._sourceId && !map.has(e._sourceId)) {
       map.set(e._sourceId, { id: e._sourceId, label: e._sourceLabel ?? e._sourceId });
     }

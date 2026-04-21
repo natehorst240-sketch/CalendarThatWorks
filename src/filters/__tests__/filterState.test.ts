@@ -142,7 +142,7 @@ describe('buildActiveFilterPills', () => {
   it('uses field.pillLabel when provided', () => {
     const schema = [{
       key: 'status', type: 'multi-select',
-      pillLabel: (v) => `Status: ${v}`,
+      pillLabel: (v: unknown) => `Status: ${v}`,
     }];
     const pills = buildActiveFilterPills({ status: new Set(['open']) }, schema);
     expect(pills[0].displayValue).toBe('Status: open');
@@ -186,7 +186,7 @@ describe('buildActiveFilterPills', () => {
   it('uses pillLabel on select field', () => {
     const schema = [{
       key: 'status', label: 'Status', type: 'select',
-      pillLabel: (v) => `Status: ${v}`,
+      pillLabel: (v: unknown) => `Status: ${v}`,
     }];
     const pills = buildActiveFilterPills({ status: 'open' }, schema);
     expect(pills[0].displayValue).toBe('Status: open');
@@ -343,7 +343,7 @@ describe('buildFilterSummary', () => {
   it('pillLabel overrides are respected', () => {
     const schema = [{
       key: 'categories', label: 'Category', type: 'multi-select',
-      pillLabel: (v) => `Cat: ${v}`,
+      pillLabel: (v: unknown) => `Cat: ${v}`,
     }];
     const result = buildFilterSummary({ categories: ['Meeting'] }, schema);
     expect(result[0].displayValues).toEqual(['Cat: Meeting']);

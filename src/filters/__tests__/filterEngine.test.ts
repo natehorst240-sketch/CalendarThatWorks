@@ -9,7 +9,7 @@ import {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const ev = (overrides) => ({
+const ev = (overrides: any) => ({
   id:       overrides.id ?? 'e1',
   title:    overrides.title ?? 'Event',
   start:    overrides.start ?? new Date('2026-04-10T09:00'),
@@ -186,7 +186,7 @@ describe('applyFilters — custom schema', () => {
       key: 'status',
       label: 'Status',
       type: 'multi-select',
-      predicate: (item, value) =>
+      predicate: (item: any, value: any) =>
         value instanceof Set ? value.has(item.status) : value.includes(item.status),
     },
     {

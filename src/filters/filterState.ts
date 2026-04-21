@@ -12,7 +12,7 @@ import { DEFAULT_FILTER_SCHEMA } from './filterSchema';
  * Return true when a filter value should be treated as "not active".
  * Handles Sets, arrays, strings, and null/undefined.
  */
-export function isEmptyFilterValue(value) {
+export function isEmptyFilterValue(value: unknown): boolean {
   if (value == null) return true;
   if (value instanceof Set) return value.size === 0;
   if (Array.isArray(value)) return value.length === 0;
@@ -24,7 +24,7 @@ export function isEmptyFilterValue(value) {
  * Return the "cleared" (inactive) default value for a FilterField.
  * Uses field.defaultValue when provided, otherwise derives from field.type.
  */
-export function clearFilterValue(field) {
+export function clearFilterValue(field: { type?: string; defaultValue?: unknown } | null | undefined): unknown {
   if (!field) return undefined;
   if (field.defaultValue !== undefined) return field.defaultValue;
   switch (field.type) {
@@ -41,7 +41,7 @@ export function clearFilterValue(field) {
  * Return true when at least one schema field has a non-empty value in `filters`.
  * Mirrors the derivation used in FilterBar so the saved-views header can share it.
  */
-export function hasActiveFilters(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+export function hasActiveFilters(filters: Record<string, unknown> | null | undefined, schema: any[] = DEFAULT_FILTER_SCHEMA): boolean {
   if (!filters) return false;
   return schema.some(field => !isEmptyFilterValue(filters[field.key]));
 }
@@ -77,8 +77,8 @@ export function createInitialFilters(schema: any[] = DEFAULT_FILTER_SCHEMA): any
  * @param {Record<string, unknown>} filters
  * @param schema
  */
-export function buildActiveFilterPills(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
-  const pills = [];
+export function buildActiveFilterPills(filters: Record<string, any>, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+  const pills: Array<{ key: string; fieldLabel: string; value: unknown; displayValue: string }> = [];
   for (const field of schema) {
     const value = filters[field.key];
     if (isEmptyFilterValue(value)) continue;
@@ -130,15 +130,15 @@ export function buildActiveFilterPills(filters, schema: any[] = DEFAULT_FILTER_S
  * @param schema
  * @returns {Array<{ key: string, label: string, type: string, displayValues: string[] }>}
  */
-export function buildFilterSummary(filters, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+export function buildFilterSummary(filters: Record<string, unknown> | null | undefined, schema: any[] = DEFAULT_FILTER_SCHEMA) {
   if (!filters) return [];
 
-  const fieldMap = new Map();
+  const fieldMap = new Map<string, any>();
   for (const field of schema) {
     fieldMap.set(field.key, field);
   }
 
-  const items = [];
+  const items: Array<{ key: string; label: string; type: string; displayValues: string[] }> = [];
 
   // Walk schema fields first (preserves schema ordering)
   for (const field of schema) {
@@ -175,13 +175,14 @@ export function buildFilterSummary(filters, schema: any[] = DEFAULT_FILTER_SCHEM
 // ── Internal helpers for buildFilterSummary ────────────────────────────────────
 
 /** Check if a value should be treated as inactive/empty for summary purposes. */
-function isSummaryEmpty(value) {
+function isSummaryEmpty(value: unknown): boolean {
   if (value == null || value === '') return true;
   if (value instanceof Set) return value.size === 0;
   if (Array.isArray(value)) return value.length === 0;
   // date-range objects with no start and no end
   if (typeof value === 'object' && !(value instanceof Date)) {
-    return !value.start && !value.end;
+    const v = value as { start?: unknown; end?: unknown };
+    return !v.start && !v.end;
   }
   return false;
 }
@@ -190,9 +191,9 @@ function isSummaryEmpty(value) {
  * Look up the display label for a value from a field's options list.
  * Returns the option label if found, otherwise null.
  */
-function lookupOptionLabel(field, rawValue) {
+function lookupOptionLabel(field: { options?: Array<{ value: unknown; label: string }> }, rawValue: unknown): string | null {
   if (!field.options) return null;
-  const opt = field.options.find(o => o.value === rawValue);
+  const opt = field.options.find((o: { value: unknown; label: string }) => o.value === rawValue);
   return opt ? opt.label : null;
 }
 
@@ -200,7 +201,7 @@ function lookupOptionLabel(field, rawValue) {
  * Resolve a single raw value to its display string, respecting
  * pillLabel > options lookup > String fallback.
  */
-function resolveDisplayValue(field, rawValue) {
+function resolveDisplayValue(field: any, rawValue: unknown): string {
   if (field.pillLabel) return field.pillLabel(rawValue);
   const optLabel = lookupOptionLabel(field, rawValue);
   if (optLabel) return optLabel;
@@ -210,9 +211,9 @@ function resolveDisplayValue(field, rawValue) {
 /**
  * Format a date value (Date object or ISO string) as a short readable string.
  */
-function formatDate(d) {
+function formatDate(d: unknown): string | null {
   if (!d) return null;
-  const date = d instanceof Date ? d : new Date(d);
+  const date = d instanceof Date ? d : new Date(d as string | number);
   if (isNaN(date.getTime())) return String(d);
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -221,11 +222,11 @@ function formatDate(d) {
  * Produce the displayValues array for a single field + value pair.
  * Returns string[] (may be empty if the value is effectively inactive).
  */
-function formatFieldValue(field, value) {
+function formatFieldValue(field: any, value: unknown): string[] {
   switch (field.type) {
     case 'multi-select': {
       const items = value instanceof Set ? [...value] : Array.isArray(value) ? value : [value];
-      return items.map(v => resolveDisplayValue(field, v));
+      return items.map((v: unknown) => resolveDisplayValue(field, v));
     }
 
     case 'select': {
@@ -240,8 +241,9 @@ function formatFieldValue(field, value) {
     case 'date-range': {
       // value may be { start, end } with Date objects or ISO strings
       if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-        const startStr = formatDate(value.start);
-        const endStr   = formatDate(value.end);
+        const v = value as { start?: unknown; end?: unknown };
+        const startStr = formatDate(v.start);
+        const endStr   = formatDate(v.end);
         if (startStr && endStr) return [`${startStr} \u2013 ${endStr}`];
         if (startStr)           return [`From ${startStr}`];
         if (endStr)             return [`Until ${endStr}`];

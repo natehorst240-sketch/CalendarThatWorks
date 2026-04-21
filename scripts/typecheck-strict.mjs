@@ -24,6 +24,8 @@ const MIGRATED_PATHS = [
   'src/external/',
   'src/export/',
   'src/core/',
+  'src/grouping/',
+  'src/filters/',
 ];
 
 // Implicit-any diagnostic codes. See:
