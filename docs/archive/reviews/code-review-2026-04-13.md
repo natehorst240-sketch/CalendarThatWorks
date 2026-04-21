@@ -17,12 +17,11 @@ This review covered repository-level delivery processes (test setup, QA automati
 - **Fix implemented:** added explicit Vitest `include` and `exclude` patterns so `npm test` runs only unit/component tests under `src/`.
 - **Process improvement:** keep `npm test` for fast local feedback; reserve `npm run test:browser` for Playwright.
 
-### 2) Missing explicit dependency for Testing Library DOM (High) ⚠️ Not fixed in this branch
+### 2) Missing explicit dependency for Testing Library DOM (High) ✅ Fixed
 
 - **What was weak:** test runs fail with `Cannot find module '@testing-library/dom'` from `@testing-library/react`.
 - **Impact:** all React Testing Library suites fail at import stage.
-- **Recommended fix:** add `@testing-library/dom` as a dev dependency and refresh lockfile.
-- **Why not fixed here:** registry access policy in this environment returned `403 Forbidden` during install.
+- **Fix implemented:** `@testing-library/dom` v10.4.0 added as a dev dependency; all RTL suites pass.
 
 ### 3) QA reviewer script had environment-specific endpoint and key defaults (Medium) ✅ Fixed
 
@@ -39,39 +38,23 @@ This review covered repository-level delivery processes (test setup, QA automati
 
 ## UX/UI weak points and recommendations
 
-### A) Event form complexity concentration (Medium)
+### A) Event form complexity concentration (Medium) ✅ Fixed
 
-- `EventForm` currently mixes recurrence rule building, template application, category management, validation, and dynamic schema rendering in one component.
-- **Risk:** increased cognitive load and regression risk for future UX changes.
-- **Recommendation:** split into focused hooks/components:
-  - `useEventDraftState`
-  - `RecurrenceSection`
-  - `CategorySection`
-  - `CustomFieldsSection`
+- `EventForm` was split into `useEventDraftState`, `<RecurrenceSection>`, `<CategorySection>`, and `<CustomFieldsSection>`. `EventForm.tsx` is now layout/wiring only. Unit + regression tests added for each section.
 
-### B) Native `confirm(...)` for destructive action (Medium)
+### B) Native `confirm(...)` for destructive action (Medium) ✅ Fixed
 
-- Delete flow in `EventForm` uses browser `confirm()`.
-- **Risk:** inconsistent styling/accessibility behavior across embedded environments.
-- **Recommendation:** replace with an in-app confirm dialog component tied to the existing focus trap and design system.
+- Replaced with `<ConfirmDialog>` component using the existing focus trap and design system tokens. No native `confirm()` calls remain in `EventForm.tsx`.
 
-### C) Focus trap edge cases (Low/Medium)
+### C) Focus trap edge cases (Low/Medium) ✅ Fixed
 
-- `useFocusTrap` is generally solid, but selector list does not explicitly exclude hidden/inert elements.
-- **Recommendation:** filter candidates by visibility/interactivity (`offsetParent`, `aria-hidden`, `inert`) before cycling focus.
+- `useFocusTrap.ts` now filters candidates via `isVisible()`, which excludes `hidden`, `[hidden]`, `aria-hidden="true"` subtrees, `inert`, `display:none`, `visibility:hidden`, and zero-client-rect elements. Feature-detect for `inert` with `aria-hidden` fallback included.
 
-### D) Form labels and control associations (Medium)
+### D) Form labels and control associations (Medium) ✅ Fixed
 
-- Several labels in `EventForm` are wrapper text without explicit `htmlFor` + input `id` pairs.
-- **Recommendation:** standardize explicit associations for stronger a11y tooling support and clearer SR behavior.
+- All interactive controls in `EventForm.tsx` and other modal forms use explicit `htmlFor`/`id` pairs.
 
-## Prioritized next steps
+## All next steps resolved ✅
 
-1. Add `@testing-library/dom` and verify `npm test` passes fully.
-2. Add CI split gates:
-   - unit/component (`npm test`)
-   - browser E2E (`npm run test:browser`)
-3. Refactor `EventForm` into smaller sections + add regression tests around recurrence/custom-field interactions.
-4. Replace delete `confirm()` with themed modal.
-5. Expand focus trap tests for hidden/disabled/inert focusable descendants.
+All five prioritized next steps from this review are complete as of 2026-04-21.
 
