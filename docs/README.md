@@ -36,6 +36,7 @@ This index is the canonical docs entrypoint for the package.
 - [Grouping API](./GROUPING_API.md)
 - [Prompts](./Prompts.md)
 - [HIPAA security notes](./HIPAA-Security.md)
+- [Bundle size audit](./bundle-size-audit.md)
 - [Recurring schedule implementation plan](./recurring-schedule-implementation-plan.md)
 - [Recurring events engine plan](./recurring-events-engine-plan.md)
 
