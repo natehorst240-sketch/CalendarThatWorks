@@ -66,6 +66,17 @@ If ANY of these fail → PR is NOT DONE.
 - UI data shapes
 - Loose but intentional boundary types
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Added shared UI boundary types in `src/types/ui.ts`:
+  - `ConfigPanelProps` + `ConfigPanelTabId`
+  - Saved-view seam types (`SavedViewDraft`, `SaveViewOptions`, handlers)
+  - Source/template draft shapes
+  - Shared event/update handler aliases (`UpdateConfig`, `InputChangeHandler`, `ToggleHandler`)
+- Switched `ConfigPanel` from file-level props `: any` to `ConfigPanelProps`.
+- Re-exported shared UI types from `src/index.ts` for downstream consumers.
+
 ### PR 3 — ConfigPanel Seam
 - Create `ConfigPanelProps`
 - Type top-level state

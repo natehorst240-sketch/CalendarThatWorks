@@ -6,6 +6,17 @@
 export * from './api/v1/index';
 
 export type { WorksCalendarEvent, NormalizedEvent, EventStatus } from './types/events';
+export type {
+  ConfigPanelProps,
+  ConfigPanelTabId,
+  SaveViewHandler,
+  SaveViewOptions,
+  SavedViewDraft,
+  SavedViewUpdateHandler,
+  SourceDraft,
+  ScheduleTemplateDraft,
+  UpdateConfig,
+} from './types/ui';
 
 export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as TimelineView }        from './views/TimelineView';

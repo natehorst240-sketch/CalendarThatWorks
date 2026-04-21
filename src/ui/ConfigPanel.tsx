@@ -10,6 +10,7 @@ import {
   APPROVAL_STAGE_IDS,
   APPROVAL_ACTIONS,
 } from '../core/configSchema';
+import type { ConfigPanelProps, ConfigPanelTabId } from '../types/ui';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -65,7 +66,7 @@ const SECTIONS = [
   { id: 'access',     label: 'Access',     tabs: ['access'] },
 ];
 
-function sectionContaining(tabId) {
+function sectionContaining(tabId: ConfigPanelTabId | string) {
   return SECTIONS.find(s => s.tabs.includes(tabId))?.id ?? SECTIONS[0].id;
 }
 
@@ -89,8 +90,8 @@ export default function ConfigPanel({
   // Per-calendar scope for workflow persistence. Defaults to 'default'
   // so hosts that don't multiplex calendars still get stable storage.
   calendarId = 'default',
-}: any) {
-  const [tab, setTab] = useState(() =>
+}: ConfigPanelProps) {
+  const [tab, setTab] = useState<string>(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
   );
   // Open the section containing the active tab; allow others to be expanded
