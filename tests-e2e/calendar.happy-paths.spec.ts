@@ -48,9 +48,11 @@ test.describe('WorksCalendar happy paths', () => {
   });
 
   test('can drag an event in month view without crashing', async ({ page }) => {
-    // Schedule-workflow events (on-call, shift, PTO, …) are scoped to the
-    // Schedule tab now, so drag a non-schedule event from Month view instead.
-    const event = page.getByRole('button', { name: /Daily Standup.*Meeting/i }).first();
+    // Schedule-workflow events (shift, on-call, PTO, …) are scoped to the
+    // Schedule tab now, so drag a non-schedule event from Month view. The
+    // Air EMS demo renders dispatch shifts (category 'dispatch', resource
+    // null) on Month.
+    const event = page.getByRole('button', { name: /Dispatch Day Shift/i }).first();
     await expect(event).toBeVisible();
 
     const sourceBox = await event.boundingBox();
@@ -71,7 +73,7 @@ test.describe('WorksCalendar happy paths', () => {
     await page.mouse.up();
 
     await expect(page.getByTestId('works-calendar')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Daily Standup.*Meeting/i }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /Dispatch Day Shift/i }).first()).toBeVisible();
   });
 
   test('can create a recurring event from the add-event modal', async ({ page }) => {
@@ -105,8 +107,10 @@ test.describe('WorksCalendar happy paths', () => {
     // Dialog auto-opens on successful auth (SHA-256 check is async, give it time).
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible({ timeout: 10000 });
 
-    // The Setup tab should be active by default, click the Ocean theme
-    await page.getByRole('button', { name: /Ocean/i }).click();
+    // The Setup tab should be active by default, click the Corporate Dark
+    // theme (after issue #268 the theme list is family × mode; corporate-dark
+    // resolves to the historical 'ocean' CSS selector via resolveCssTheme).
+    await page.getByRole('button', { name: /Corporate Dark/i }).click();
 
     // Close the settings panel
     await page.getByLabel('Close settings').click();

@@ -16,7 +16,7 @@ import { expect, test } from '@playwright/test';
  */
 
 // Must match the calendarId threaded through <WorksCalendar> in demo/App.tsx.
-const STORAGE_KEY = 'wc-saved-workflows-ihc-oncall-demo';
+const STORAGE_KEY = 'wc-saved-workflows-air-ems-demo';
 
 async function authenticateAsOwner(page: import('@playwright/test').Page): Promise<void> {
   await page.getByLabel('Owner settings').click();

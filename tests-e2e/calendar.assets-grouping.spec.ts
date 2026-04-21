@@ -8,7 +8,7 @@
  */
 import { test, expect } from '@playwright/test';
 
-const DEMO_CALENDAR_ID = 'ihc-oncall-demo';
+const DEMO_CALENDAR_ID = 'air-ems-demo';
 const SAVED_VIEWS_KEY = `wc-saved-views-${DEMO_CALENDAR_ID}`;
 
 test.describe('WorksCalendar Assets view', () => {
