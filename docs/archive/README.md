@@ -27,6 +27,7 @@ This directory stores historical planning notes, one-off analyses, and dated rev
 - [pr-106-followup-checklist](./reviews/pr-106-followup-checklist.md) — ✅ Completed
 - [code-review-2026-04-13](./reviews/code-review-2026-04-13.md) — ✅ Completed
 - [sprints-code-review-2026-04-13](./reviews/sprints-code-review-2026-04-13.md) — ✅ Completed
+- [typescript-migration-lessons-2026-04-21](./reviews/typescript-migration-lessons-2026-04-21.md) — 🗄️ Archived
 
 ## Analysis artifacts
 
