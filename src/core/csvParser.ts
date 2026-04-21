@@ -42,7 +42,9 @@ export const DATE_FORMATS = [
  * Parse CSV text → { headers: string[], rows: Record<string, string>[] }
  * Handles quoted fields, embedded commas, and \" escapes.
  */
-export function parseCSV(text) {
+type CsvRow = Record<string, string>;
+
+export function parseCSV(text: string): { headers: string[]; rows: CsvRow[] } {
   const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalized.split('\n');
 
@@ -51,12 +53,12 @@ export function parseCSV(text) {
   if (firstNonBlank === -1) return { headers: [], rows: [] };
 
   const headers = _parseLine(lines[firstNonBlank]).map(h => h.trim());
-  const rows = [];
+  const rows: CsvRow[] = [];
 
   for (let i = firstNonBlank + 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const values = _parseLine(lines[i]);
-    const row = {};
+    const row: CsvRow = {};
     headers.forEach((h, j) => { row[h] = (values[j] ?? '').trim(); });
     rows.push(row);
   }
@@ -64,8 +66,8 @@ export function parseCSV(text) {
   return { headers, rows };
 }
 
-function _parseLine(line) {
-  const fields = [];
+function _parseLine(line: string): string[] {
+  const fields: string[] = [];
   let current = '';
   let inQuotes = false;
 
@@ -88,7 +90,7 @@ function _parseLine(line) {
 // ── Auto-suggest mapping ──────────────────────────────────────────────────────
 
 /** Keywords that indicate each event field when matched against a CSV header. */
-const FIELD_HINTS = {
+const FIELD_HINTS: Record<string, string[]> = {
   title:    ['title', 'name', 'summary', 'subject', 'event', 'headline'],
   start:    ['start', 'begin', 'from', 'startdate', 'starttime', 'date'],
   end:      ['end', 'finish', 'to', 'enddate', 'endtime', 'until', 'thru', 'through'],
@@ -104,7 +106,7 @@ const FIELD_HINTS = {
  * Given a list of CSV column headers, return a best-guess field mapping.
  * Returns a Record<EventField, string> where value is the matched header.
  */
-export function suggestMapping(headers): Record<string, string> {
+export function suggestMapping(headers: string[]): Record<string, string> {
   const mapping: Record<string, string> = {};
   const used = new Set<string>();
 
@@ -133,9 +135,25 @@ export function suggestMapping(headers): Record<string, string> {
  *
  * Returns { events: CalendarEventV1[], errors: { row, index, message }[] }
  */
-export function mapToEvents(rows, mapping, dateFormat = 'auto') {
-  const events = [];
-  const errors = [];
+type EventShape = {
+  title: string;
+  start: Date;
+  end?: Date;
+  allDay?: boolean;
+  category?: string;
+  resource?: string;
+  status?: string;
+  color?: string;
+  id: string;
+};
+
+export function mapToEvents(
+  rows: CsvRow[],
+  mapping: Record<string, string>,
+  dateFormat: string = 'auto',
+): { events: EventShape[]; errors: Array<{ row: CsvRow; index: number; message: string }> } {
+  const events: EventShape[] = [];
+  const errors: Array<{ row: CsvRow; index: number; message: string }> = [];
   let autoId = 1;
 
   rows.forEach((row, index) => {
@@ -172,21 +190,22 @@ export function mapToEvents(rows, mapping, dateFormat = 'auto') {
       };
 
       events.push(event);
-    } catch (err: any) {
-      errors.push({ row, index: index + 2, message: err.message }); // +2: 1-based + header row
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      errors.push({ row, index: index + 2, message }); // +2: 1-based + header row
     }
   });
 
   return { events, errors };
 }
 
-function _field(row, header) {
+function _field(row: CsvRow, header: string | undefined): string {
   return header ? (row[header] ?? '') : '';
 }
 
 // ── Date parsing ──────────────────────────────────────────────────────────────
 
-function _parseDate(value, format) {
+function _parseDate(value: string, format: string): Date | null {
   const v = value.trim();
   if (!v) return null;
 
@@ -208,11 +227,11 @@ function _parseDate(value, format) {
   return new Date(v);
 }
 
-function _looksISO(v) {
+function _looksISO(v: string): boolean {
   return /^\d{4}-\d{2}-\d{2}/.test(v);
 }
 
-function _parseMDY(v) {
+function _parseMDY(v: string): Date {
   // MM/DD/YYYY or MM/DD/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
   const parts = datePart.split('/');
@@ -222,7 +241,7 @@ function _parseMDY(v) {
   return new Date(iso);
 }
 
-function _parseDMY(v) {
+function _parseDMY(v: string): Date {
   // DD/MM/YYYY or DD/MM/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
   const parts = datePart.split('/');
@@ -236,7 +255,9 @@ function _parseDMY(v) {
 
 const PRESETS_KEY = 'wc-csv-presets';
 
-export function loadPresets() {
+type Preset = { id: string; [key: string]: unknown };
+
+export function loadPresets(): Preset[] {
   try {
     return JSON.parse(localStorage.getItem(PRESETS_KEY) ?? '[]');
   } catch {
@@ -244,7 +265,7 @@ export function loadPresets() {
   }
 }
 
-export function savePreset(preset) {
+export function savePreset(preset: Preset): void {
   const presets = loadPresets();
   const existing = presets.findIndex(p => p.id === preset.id);
   if (existing >= 0) presets[existing] = preset;
@@ -252,7 +273,7 @@ export function savePreset(preset) {
   try { localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); } catch {}
 }
 
-export function deletePreset(id) {
+export function deletePreset(id: string): void {
   const presets = loadPresets().filter(p => p.id !== id);
   try { localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); } catch {}
 }

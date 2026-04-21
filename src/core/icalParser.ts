@@ -13,17 +13,20 @@
  */
 
 const DAY_MS = 86_400_000;
-const DAYS = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+const DAYS: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
 // ─── Low-level helpers ─────────────────────────────────────────────────────
 
+type ByDay = { n: number | null; day: number };
+type ICSProps = Record<string, { value: string; params: string } | string[]>;
+
 /** Unfold RFC 5545 line continuations (CRLF + LWSP). */
-function unfold(text) {
+function unfold(text: string): string {
   return text.replace(/\r?\n[ \t]/g, '');
 }
 
 /** Parse an ICS date/datetime string → Date (local). */
-function parseICSDate(str) {
+function parseICSDate(str: string | null | undefined): Date | null {
   if (!str) return null;
   const s = str.trim();
   if (s.length === 8) {
@@ -47,20 +50,20 @@ function parseICSDate(str) {
 }
 
 /** Parse ISO 8601 duration string → milliseconds. */
-function parseDuration(dur) {
+function parseDuration(dur: string | null | undefined): number {
   if (!dur) return 0;
   const m = dur.match(/P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?/);
   if (!m) return 0;
   const [, w, dd, h, mi, s] = m;
-  return (parseInt(w  || 0) * 7 * DAY_MS)
-       + (parseInt(dd || 0) * DAY_MS)
-       + (parseInt(h  || 0) * 3_600_000)
-       + (parseInt(mi || 0) * 60_000)
-       + (parseInt(s  || 0) * 1_000);
+  return (parseInt(w  || '0', 10) * 7 * DAY_MS)
+       + (parseInt(dd || '0', 10) * DAY_MS)
+       + (parseInt(h  || '0', 10) * 3_600_000)
+       + (parseInt(mi || '0', 10) * 60_000)
+       + (parseInt(s  || '0', 10) * 1_000);
 }
 
 /** Parse RRULE string "FREQ=WEEKLY;BYDAY=MO,WE" → plain object. */
-function parseRRule(str) {
+function parseRRule(str: string): Record<string, string> {
   const rule: Record<string, string> = {};
   str.split(';').forEach(part => {
     const eq = part.indexOf('=');
@@ -70,7 +73,7 @@ function parseRRule(str) {
 }
 
 /** Convert a Date to a simple day-key for deduplication. */
-function dayKey(dt) {
+function dayKey(dt: Date): string {
   return `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
 }
 
@@ -82,7 +85,13 @@ function dayKey(dt) {
  *
  * Exported so useOccurrences can expand native recurring events.
  */
-export function expandRRule(dtstart, rruleStr, exdates, rangeStart, rangeEnd) {
+export function expandRRule(
+  dtstart: Date,
+  rruleStr: string,
+  exdates: Date[] | null | undefined,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Date[] {
   const rule     = parseRRule(rruleStr);
   const freq     = rule.FREQ;
   if (!freq) return [new Date(dtstart)];
@@ -95,19 +104,19 @@ export function expandRRule(dtstart, rruleStr, exdates, rangeStart, rangeEnd) {
     : new Date(rangeEnd);
 
   // Parse BYDAY: "MO,FR" or "1MO,-1FR"
-  const byDays = rule.BYDAY
+  const byDays: ByDay[] | null = rule.BYDAY
     ? rule.BYDAY.split(',').map(s => {
         const m = s.match(/^([+-]?\d*)([A-Z]{2})$/);
         return m ? { n: m[1] ? parseInt(m[1], 10) : null, day: DAYS[m[2]] } : null;
-      }).filter(Boolean)
+      }).filter((bd): bd is ByDay => bd !== null)
     : null;
 
-  const byMonthDays = rule.BYMONTHDAY ? rule.BYMONTHDAY.split(',').map(Number) : null;
-  const byMonths    = rule.BYMONTH    ? rule.BYMONTH.split(',').map(Number) : null;
+  const byMonthDays: number[] | null = rule.BYMONTHDAY ? rule.BYMONTHDAY.split(',').map(Number) : null;
+  const byMonths: number[] | null    = rule.BYMONTH    ? rule.BYMONTH.split(',').map(Number) : null;
 
   const exSet = new Set((exdates || []).map(d => dayKey(d)));
 
-  const results = [];
+  const results: Date[] = [];
   let count = 0;
   let period = new Date(dtstart);
 
@@ -127,11 +136,18 @@ export function expandRRule(dtstart, rruleStr, exdates, rangeStart, rangeEnd) {
     period = advancePeriod(period, freq, interval);
   }
 
-  return results.sort((a, b) => a - b);
+  return results.sort((a, b) => a.getTime() - b.getTime());
 }
 
 /** Generate the concrete occurrence dates within a single recurrence period. */
-function getCandidatesForPeriod(period, freq, byDays, byMonthDays, byMonths, dtstart) {
+function getCandidatesForPeriod(
+  period: Date,
+  freq: string,
+  byDays: ByDay[] | null,
+  byMonthDays: number[] | null,
+  byMonths: number[] | null,
+  dtstart: Date,
+): Date[] {
   // No modifiers → the period itself is the occurrence
   if (!byDays && !byMonthDays) {
     if (byMonths && !byMonths.includes(period.getMonth() + 1)) return [];
@@ -178,10 +194,15 @@ function getCandidatesForPeriod(period, freq, byDays, byMonthDays, byMonths, dts
 }
 
 /** Find the nth (or every) occurrence of a weekday in a given month. */
-function nthWeekdayOfMonth(year, month, bd, hms) {
+function nthWeekdayOfMonth(
+  year: number,
+  month: number,
+  bd: ByDay,
+  hms: [number, number, number],
+): Date[] {
   if (bd.n === null) {
     // Every occurrence
-    const days = [];
+    const days: Date[] = [];
     const d = new Date(year, month, 1);
     while (d.getMonth() === month) {
       if (d.getDay() === bd.day) days.push(new Date(year, month, d.getDate(), ...hms, 0));
@@ -215,7 +236,7 @@ function nthWeekdayOfMonth(year, month, bd, hms) {
 }
 
 /** Advance a period by one recurrence interval. */
-function advancePeriod(dt, freq, interval) {
+function advancePeriod(dt: Date, freq: string, interval: number): Date {
   const next = new Date(dt);
   switch (freq) {
     case 'DAILY':   next.setDate(next.getDate() + interval);             break;
@@ -229,8 +250,8 @@ function advancePeriod(dt, freq, interval) {
 // ─── Property parsing ──────────────────────────────────────────────────────
 
 /** Parse a VEVENT's raw lines into a property map. */
-function parseBlock(lines) {
-  const props = {};
+function parseBlock(lines: string[]): ICSProps {
+  const props: ICSProps = {};
   for (const line of lines) {
     const ci = line.indexOf(':');
     if (ci < 0) continue;
@@ -243,7 +264,7 @@ function parseBlock(lines) {
 
     if (key === 'EXDATE' || key === 'RDATE') {
       if (!props[key]) props[key] = [];
-      props[key].push(...value.split(',').map(s => s.trim()));
+      (props[key] as string[]).push(...value.split(',').map(s => s.trim()));
     } else {
       props[key] = { value: value.trim(), params };
     }
@@ -251,8 +272,16 @@ function parseBlock(lines) {
   return props;
 }
 
-function val(props, key) { return props[key]?.value ?? null; }
-function isDateOnly(props, key) { return (props[key]?.params ?? '').includes('VALUE=DATE'); }
+function val(props: ICSProps, key: string): string | null {
+  const entry = props[key];
+  if (entry && !Array.isArray(entry)) return entry.value ?? null;
+  return null;
+}
+function isDateOnly(props: ICSProps, key: string): boolean {
+  const entry = props[key];
+  if (entry && !Array.isArray(entry)) return (entry.params ?? '').includes('VALUE=DATE');
+  return false;
+}
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
@@ -265,7 +294,7 @@ function isDateOnly(props, key) { return (props[key]?.params ?? '').includes('VA
  * @param {Date}   [options.rangeEnd]   - End of expansion window   (default: 2 years from now)
  * @returns {import('../index.d.ts').WorksCalendarEvent[]}
  */
-export function parseICS(text, options: { rangeStart?: Date; rangeEnd?: Date } = {}) {
+export function parseICS(text: string, options: { rangeStart?: Date; rangeEnd?: Date } = {}): Record<string, unknown>[] {
   const today = new Date();
   const rangeStart = options.rangeStart ?? new Date(today.getFullYear() - 1, 0, 1);
   const rangeEnd   = options.rangeEnd   ?? new Date(today.getFullYear() + 2, 11, 31);
@@ -273,9 +302,9 @@ export function parseICS(text, options: { rangeStart?: Date; rangeEnd?: Date } =
   const unfolded = unfold(text);
   const lines    = unfolded.split(/\r?\n/).filter(l => l.trim());
 
-  const events  = [];
+  const events: Record<string, unknown>[] = [];
   let inEvent   = false;
-  let evLines   = [];
+  let evLines: string[] = [];
 
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') { inEvent = true; evLines = []; continue; }
@@ -292,7 +321,11 @@ export function parseICS(text, options: { rangeStart?: Date; rangeEnd?: Date } =
 }
 
 /** Parse one VEVENT block → 0..N WorksCalendarEvent objects (N>1 for recurring). */
-function parseVEvent(lines, rangeStart, rangeEnd) {
+function parseVEvent(
+  lines: string[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): Record<string, unknown>[] | null {
   const props = parseBlock(lines);
 
   const uid        = val(props, 'UID') || `ical-${Math.random().toString(36).slice(2)}`;
@@ -311,7 +344,7 @@ function parseVEvent(lines, rangeStart, rangeEnd) {
   const dtStart = parseICSDate(dtStartStr);
   if (!dtStart) return null;
 
-  let dtEnd;
+  let dtEnd: Date | null;
   if (dtEndStr) {
     dtEnd = parseICSDate(dtEndStr);
   } else if (durationStr) {
@@ -324,8 +357,9 @@ function parseVEvent(lines, rangeStart, rangeEnd) {
 
   const durationMs = (dtEnd || new Date(dtStart.getTime() + 3_600_000)).getTime() - dtStart.getTime();
 
-  const exdateStrs = props['EXDATE'] || [];
-  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => parseICSDate(s.trim())).filter(Boolean);
+  const exdateEntry = props['EXDATE'];
+  const exdateStrs: string[] = Array.isArray(exdateEntry) ? exdateEntry : [];
+  const exdates = exdateStrs.flatMap(s => s.split(',')).map(s => parseICSDate(s.trim())).filter((d): d is Date => d !== null);
 
   let status = 'confirmed';
   if (statusRaw === 'TENTATIVE') status = 'tentative';
@@ -337,7 +371,7 @@ function parseVEvent(lines, rangeStart, rangeEnd) {
 
   const category = categories?.split(',')[0]?.trim() || null;
 
-  const makeEvent = (start, idx) => ({
+  const makeEvent = (start: Date, idx: number): Record<string, unknown> => ({
     id:       idx > 0 ? `${uid}-r${idx}` : uid,
     title:    summary,
     start,
@@ -366,7 +400,10 @@ function parseVEvent(lines, rangeStart, rangeEnd) {
  * @param {object} [options]
  * @returns {Promise<import('../index.d.ts').WorksCalendarEvent[]>}
  */
-export async function fetchAndParseICS(url, options = {}) {
+export async function fetchAndParseICS(
+  url: string,
+  options: { rangeStart?: Date; rangeEnd?: Date } = {},
+): Promise<Record<string, unknown>[]> {
   const res = await fetch(url.replace(/^webcal:\/\//i, 'https://'));
   if (!res.ok) throw new Error(`ICS fetch failed: ${res.status} ${res.statusText}`);
   const text = await res.text();

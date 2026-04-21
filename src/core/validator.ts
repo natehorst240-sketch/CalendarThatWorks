@@ -25,8 +25,51 @@
 
 // ─── Individual rules ──────────────────────────────────────────────────────────
 
+type ValidatorEvent = {
+  id?: string;
+  title?: string;
+  resource?: unknown;
+  allDay?: boolean;
+  start?: Date;
+  end?: Date;
+} | null | undefined;
+
+type Change = {
+  type?: string;
+  event?: ValidatorEvent;
+  newStart: Date;
+  newEnd: Date;
+  resource?: unknown;
+};
+
+type BlockedWindow = {
+  resource?: unknown;
+  start: Date | string | number;
+  end: Date | string | number;
+  reason?: string;
+};
+
+type BusinessHours = {
+  days?: number[];
+  start: number;
+  end: number;
+};
+
+type ValidatorContext = {
+  events?: Array<NonNullable<ValidatorEvent> & { end: Date; start: Date }>;
+  businessHours?: BusinessHours;
+  blockedWindows?: BlockedWindow[];
+};
+
+type Violation = {
+  rule: string;
+  severity: 'soft' | 'hard';
+  message: string;
+  conflictingEvent?: unknown;
+};
+
 /** Duration must be positive. */
-function checkInvalidDuration({ newStart, newEnd }) {
+function checkInvalidDuration({ newStart, newEnd }: Change, _ctx: ValidatorContext): Violation | null {
   if (newEnd.getTime() <= newStart.getTime()) {
     return {
       rule:     'invalid-duration',
@@ -38,7 +81,10 @@ function checkInvalidDuration({ newStart, newEnd }) {
 }
 
 /** Event must not overlap a declared blocked window. */
-function checkBlockedWindow({ event, newStart, newEnd, resource: changeResource }, { blockedWindows = [] }) {
+function checkBlockedWindow(
+  { event, newStart, newEnd, resource: changeResource }: Change,
+  { blockedWindows = [] }: ValidatorContext,
+): Violation | null {
   if (!blockedWindows.length) return null;
   const resource = event?.resource ?? changeResource ?? null;
 
@@ -65,7 +111,10 @@ function checkBlockedWindow({ event, newStart, newEnd, resource: changeResource 
  * Resource-scoped overlap: warn when two timed events for the same resource
  * overlap.  Skipped when no resource is set (unscoped events may freely overlap).
  */
-function checkOverlap({ event, newStart, newEnd, resource: changeResource }, { events = [] }) {
+function checkOverlap(
+  { event, newStart, newEnd, resource: changeResource }: Change,
+  { events = [] }: ValidatorContext,
+): Violation | null {
   const resource = event?.resource ?? changeResource ?? null;
   if (!resource) return null;
 
@@ -89,10 +138,13 @@ function checkOverlap({ event, newStart, newEnd, resource: changeResource }, { e
  * Warn when a timed event falls outside the configured business hours.
  * All-day events and events spanning ≥24 h are skipped.
  */
-function checkBusinessHours({ event, newStart, newEnd }, { businessHours }) {
+function checkBusinessHours(
+  { event, newStart, newEnd }: Change,
+  { businessHours }: ValidatorContext,
+): Violation | null {
   if (!businessHours) return null;
   if (event?.allDay) return null;
-  if (newEnd - newStart >= 24 * 60 * 60 * 1000) return null; // multi-day
+  if (newEnd.getTime() - newStart.getTime() >= 24 * 60 * 60 * 1000) return null; // multi-day
 
   const bizDays = businessHours.days ?? [1, 2, 3, 4, 5];
   if (!bizDays.includes(newStart.getDay())) {
@@ -134,8 +186,16 @@ const RULES = [
  * @param {{ events?: object[], businessHours?: object, blockedWindows?: object[] }} context
  * @returns {{ allowed: boolean, severity: 'none'|'soft'|'hard', violations: object[], suggestedChange: null }}
  */
-export function validateChange(change, context: { events?: any[]; businessHours?: any; blockedWindows?: any[] } = {}) {
-  const violations = RULES.map(r => r(change, context as any)).filter(Boolean);
+export function validateChange(
+  change: Change,
+  context: ValidatorContext = {},
+): {
+  allowed: boolean;
+  severity: 'none' | 'soft' | 'hard';
+  violations: Violation[];
+  suggestedChange: null;
+} {
+  const violations = RULES.map(r => r(change, context)).filter((v): v is Violation => v !== null);
   const hasHard    = violations.some(v => v.severity === 'hard');
   const hasSoft    = violations.some(v => v.severity === 'soft');
   return {

@@ -1,10 +1,25 @@
 import { isCoveringEvent, isOpenShiftEvent } from './scheduleModel';
 
-export function resolveEventId(ev) {
+type MutableMeta = Record<string, unknown>;
+
+type ShiftEventLike = {
+  id?: string;
+  _eventId?: string;
+  title?: string;
+  start?: unknown;
+  end?: unknown;
+  resource?: unknown;
+  employeeId?: unknown;
+  meta?: MutableMeta;
+  category?: unknown;
+  kind?: unknown;
+} | null | undefined;
+
+export function resolveEventId(ev: ShiftEventLike): string {
   return String(ev?._eventId ?? ev?.id ?? '');
 }
 
-export function findLinkedOpenShifts(events, shiftEvent) {
+export function findLinkedOpenShifts(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventLike[] {
   const shiftId = resolveEventId(shiftEvent);
   if (!shiftId) return [];
   return events.filter((candidate) => {
@@ -16,7 +31,7 @@ export function findLinkedOpenShifts(events, shiftEvent) {
   });
 }
 
-export function findLinkedMirroredCoverage(events, shiftEvent) {
+export function findLinkedMirroredCoverage(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventLike[] {
   const shiftId = resolveEventId(shiftEvent);
   if (!shiftId) return [];
   return events.filter(
@@ -25,8 +40,11 @@ export function findLinkedMirroredCoverage(events, shiftEvent) {
   );
 }
 
-export function buildShiftStatusMeta(shiftEvent, { status, openShiftId }: { status?: any; openShiftId?: any }) {
-  const nextMeta = { ...(shiftEvent?.meta ?? {}) };
+export function buildShiftStatusMeta(
+  shiftEvent: ShiftEventLike,
+  { status, openShiftId }: { status?: unknown; openShiftId?: unknown },
+): MutableMeta {
+  const nextMeta: MutableMeta = { ...(shiftEvent?.meta ?? {}) };
   if (status) {
     nextMeta.shiftStatus = status;
     if (openShiftId) nextMeta.openShiftId = String(openShiftId);
@@ -38,7 +56,11 @@ export function buildShiftStatusMeta(shiftEvent, { status, openShiftId }: { stat
   return nextMeta;
 }
 
-export function buildCoverageMeta(shiftEvent, coveringEmployeeId, openShiftId) {
+export function buildCoverageMeta(
+  shiftEvent: ShiftEventLike,
+  coveringEmployeeId: unknown,
+  openShiftId: unknown,
+): MutableMeta {
   return {
     ...(shiftEvent?.meta ?? {}),
     coveredBy: String(coveringEmployeeId),
@@ -46,12 +68,16 @@ export function buildCoverageMeta(shiftEvent, coveringEmployeeId, openShiftId) {
   };
 }
 
-export function buildOpenShiftPatch(existingOpenShift, shiftEvent, reason) {
+export function buildOpenShiftPatch(
+  existingOpenShift: ShiftEventLike,
+  shiftEvent: ShiftEventLike,
+  reason: string,
+): Record<string, unknown> {
   const shiftId = resolveEventId(shiftEvent);
   return {
     title: `Open: ${shiftEvent?.title ?? 'Shift'}`,
-    start: shiftEvent?.start instanceof Date ? shiftEvent.start : new Date(shiftEvent?.start),
-    end: shiftEvent?.end instanceof Date ? shiftEvent.end : new Date(shiftEvent?.end),
+    start: shiftEvent?.start instanceof Date ? shiftEvent.start : new Date(shiftEvent?.start as string | number),
+    end: shiftEvent?.end instanceof Date ? shiftEvent.end : new Date(shiftEvent?.end as string | number),
     resource: null,
     meta: {
       ...(existingOpenShift?.meta ?? {}),

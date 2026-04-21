@@ -2,12 +2,13 @@
  * eventModel.js — Normalize any incoming event shape into a consistent internal format.
  */
 import { parseISO, isValid, addHours } from 'date-fns';
+import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 
 let _idCounter = 0;
 function uid() { return `wc-${++_idCounter}`; }
 
 /** Parse anything into a Date (or null). */
-function toDate(val) {
+function toDate(val: unknown): Date | null {
   if (!val) return null;
   if (val instanceof Date) return isValid(val) ? val : null;
   if (typeof val === 'number') { const d = new Date(val); return isValid(d) ? d : null; }
@@ -19,9 +20,9 @@ const CATEGORY_COLORS = [
   '#3b82f6','#f59e0b','#ef4444','#10b981',
   '#8b5cf6','#ec4899','#06b6d4','#f97316',
 ];
-const _catColorMap = new Map();
+const _catColorMap = new Map<string, string>();
 let _catColorIdx = 0;
-function categoryColor(cat) {
+function categoryColor(cat: string | null | undefined): string {
   if (!cat) return CATEGORY_COLORS[0];
   if (!_catColorMap.has(cat)) {
     const idx = _catColorIdx++;
@@ -33,13 +34,13 @@ function categoryColor(cat) {
       : `hsl(${Math.round((idx * 137.508) % 360)}, 62%, 45%)`;
     _catColorMap.set(cat, color);
   }
-  return _catColorMap.get(cat);
+  return _catColorMap.get(cat)!;
 }
 
 /**
  * Normalize a raw event object into the internal event shape.
  */
-export function normalizeEvent(raw) {
+export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
   const start = toDate(raw.start) || new Date();
   const end   = toDate(raw.end)   || addHours(start, 1);
 
@@ -66,7 +67,7 @@ export function normalizeEvent(raw) {
 /**
  * Normalize an array of raw events.
  */
-export function normalizeEvents(rawList) {
+export function normalizeEvents(rawList: WorksCalendarEvent[] | null | undefined): NormalizedEvent[] {
   if (!Array.isArray(rawList)) return [];
   return rawList.map(normalizeEvent);
 }

@@ -23,6 +23,7 @@ const MIGRATED_PATHS = [
   // Stage 2
   'src/external/',
   'src/export/',
+  'src/core/',
 ];
 
 // Implicit-any diagnostic codes. See:

@@ -15,7 +15,7 @@ export const SCHEDULE_KINDS = Object.freeze({
   COVERING: 'covering',
 });
 
-const KIND_ALIASES = Object.freeze({
+const KIND_ALIASES: Record<string, string> = Object.freeze({
   oncall: SCHEDULE_KINDS.ON_CALL,
   'on_call': SCHEDULE_KINDS.ON_CALL,
   openshift: SCHEDULE_KINDS.OPEN_SHIFT,
@@ -23,24 +23,36 @@ const KIND_ALIASES = Object.freeze({
   'covering-shift': SCHEDULE_KINDS.COVERING,
 });
 
-export function normalizeScheduleKind(rawKind) {
+type ScheduleEventLike = {
+  kind?: unknown;
+  category?: unknown;
+  meta?: {
+    kind?: unknown;
+    onCall?: unknown;
+    coveredBy?: unknown;
+    status?: unknown;
+    shiftStatus?: unknown;
+  };
+} | null | undefined;
+
+export function normalizeScheduleKind(rawKind: unknown): string {
   const normalized = String(rawKind ?? '').trim().toLowerCase();
   if (!normalized) return '';
   return KIND_ALIASES[normalized] ?? normalized;
 }
 
-export function isOpenShiftEvent(ev) {
+export function isOpenShiftEvent(ev: ScheduleEventLike): boolean {
   const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
   const category = String(ev?.category ?? '').toLowerCase();
   return kind === SCHEDULE_KINDS.OPEN_SHIFT || category === SCHEDULE_KINDS.OPEN_SHIFT;
 }
 
-export function isCoveringEvent(ev) {
+export function isCoveringEvent(ev: ScheduleEventLike): boolean {
   const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
   return kind === SCHEDULE_KINDS.COVERING;
 }
 
-export function isShiftOrOnCallEvent(ev, onCallCategory = 'on-call') {
+export function isShiftOrOnCallEvent(ev: ScheduleEventLike, onCallCategory: string = 'on-call'): boolean {
   const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
   const category = String(ev?.category ?? '').toLowerCase();
   return kind === SCHEDULE_KINDS.SHIFT
@@ -49,7 +61,7 @@ export function isShiftOrOnCallEvent(ev, onCallCategory = 'on-call') {
     || category === String(onCallCategory).toLowerCase();
 }
 
-export function isCoveredShift(ev) {
+export function isCoveredShift(ev: ScheduleEventLike): boolean {
   return !!ev?.meta?.coveredBy
     || ev?.meta?.status === 'covered'
     || ev?.meta?.shiftStatus === 'covered';
@@ -65,7 +77,7 @@ const SCHEDULE_WORKFLOW_KINDS = new Set([
   SCHEDULE_KINDS.OPEN_SHIFT, SCHEDULE_KINDS.COVERING,
 ]);
 
-export function isScheduleWorkflowEvent(ev): boolean {
+export function isScheduleWorkflowEvent(ev: ScheduleEventLike): boolean {
   if (!ev) return false;
   const kind = normalizeScheduleKind(ev?.meta?.kind ?? ev?.kind);
   if (kind && SCHEDULE_WORKFLOW_KINDS.has(kind)) return true;

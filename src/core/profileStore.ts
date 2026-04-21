@@ -3,13 +3,13 @@
  * that `useSavedViews` migrates from on first load.
  */
 
-export function saveProfiles(calendarId, profiles) {
+export function saveProfiles(calendarId: string, profiles: unknown): void {
   try {
     localStorage.setItem(`wc-profiles-${calendarId}`, JSON.stringify(profiles));
   } catch {}
 }
 
-export function loadProfiles(calendarId) {
+export function loadProfiles(calendarId: string): unknown {
   try {
     const raw = localStorage.getItem(`wc-profiles-${calendarId}`);
     return raw ? JSON.parse(raw) : [];

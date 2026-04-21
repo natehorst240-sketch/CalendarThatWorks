@@ -3,6 +3,7 @@
  * Avoids prop-drilling renderEvent, colorRules, businessHours, etc.
  */
 import { createContext, useContext } from 'react';
+import type { NormalizedEvent } from '../types/events';
 
 export const CalendarContext = createContext(null);
 
@@ -15,18 +16,28 @@ export function useCalendarContext() {
  * Rules are checked in order; first match wins.
  * Falls back to ev.color if no rule matches or colorRules is empty.
  */
-export function resolveColor(ev, colorRules) {
+export function resolveColor(
+  ev: NormalizedEvent,
+  colorRules: Array<Record<string, unknown>> | undefined,
+): string | undefined {
   if (colorRules?.length) {
     for (const rule of colorRules) {
       try {
         // Function rule shape: { when: (event) => boolean, color }
-        if (typeof rule?.when === 'function') {
-          if (rule.when(ev)) return rule.color;
+        const when = rule?.when;
+        if (typeof when === 'function') {
+          if (when(ev)) {
+            return typeof rule.color === 'string' ? rule.color : undefined;
+          }
           continue;
         }
         // Declarative rule shape: { field: 'category', value: 'Incident', color }
-        if (rule && typeof rule === 'object' && typeof rule.field === 'string' && 'value' in rule) {
-          if (ev?.[rule.field] === rule.value) return rule.color;
+        const field = rule?.field;
+        if (typeof field === 'string' && 'value' in rule) {
+          const evRecord = ev as unknown as Record<string, unknown>;
+          if (evRecord[field] === rule.value) {
+            return typeof rule.color === 'string' ? rule.color : undefined;
+          }
         }
       } catch (_) { /* ignore rule errors */ }
     }

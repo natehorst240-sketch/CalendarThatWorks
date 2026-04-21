@@ -29,12 +29,14 @@ export const DEFAULT_CUSTOM_THEME = {
   },
 };
 
-export function mergeTheme(base, patch) {
-  const next = { ...base };
+type ThemeObject = Record<string, unknown>;
+
+export function mergeTheme(base: ThemeObject, patch: ThemeObject | null | undefined): ThemeObject {
+  const next: ThemeObject = { ...base };
   for (const key of Object.keys(patch || {})) {
-    const value = patch[key];
+    const value = (patch as ThemeObject)[key];
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      next[key] = mergeTheme(base[key] ?? {}, value);
+      next[key] = mergeTheme((base[key] as ThemeObject) ?? {}, value as ThemeObject);
     } else if (value !== undefined) {
       next[key] = value;
     }
@@ -42,13 +44,19 @@ export function mergeTheme(base, patch) {
   return next;
 }
 
-export function normalizeCustomTheme(theme) {
-  return mergeTheme(DEFAULT_CUSTOM_THEME, theme || {});
+export function normalizeCustomTheme(theme: ThemeObject | null | undefined): ThemeObject {
+  return mergeTheme(DEFAULT_CUSTOM_THEME as ThemeObject, theme || {});
 }
 
-export function customThemeToCssVars(themeInput) {
+export function customThemeToCssVars(themeInput: ThemeObject | null | undefined): Record<string, string | number> | undefined {
   if (!themeInput || (typeof themeInput === 'object' && Object.keys(themeInput).length === 0)) return undefined;
-  const theme = normalizeCustomTheme(themeInput);
+  const theme = normalizeCustomTheme(themeInput) as {
+    colors: Record<string, string>;
+    typography: { fontFamily: string; headingFontFamily?: string; monoFontFamily?: string; baseSize: number };
+    spacing: { density: number };
+    borders: { radius: number; radiusSm: number; borderWidth: number };
+    shadows: { elevation: number };
+  };
   const e = Math.max(0, Number(theme.shadows.elevation) || 0);
   const density = Math.max(0.8, Math.min(1.2, Number(theme.spacing.density) || 1));
 

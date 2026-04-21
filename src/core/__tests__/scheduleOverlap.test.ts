@@ -7,7 +7,7 @@ import { intervalsOverlap, detectShiftConflicts, buildOpenShiftEvent } from '../
 // ─── intervalsOverlap ─────────────────────────────────────────────────────────
 
 describe('intervalsOverlap', () => {
-  const d = (iso) => new Date(iso);
+  const d = (iso: string) => new Date(iso);
 
   it('returns true when intervals overlap in the middle', () => {
     expect(intervalsOverlap(
@@ -49,7 +49,7 @@ describe('intervalsOverlap', () => {
 
 describe('detectShiftConflicts', () => {
   const empId = 'emp-1';
-  const d = (iso) => new Date(iso);
+  const d = (iso: string) => new Date(iso);
 
   function makeShift(overrides = {}) {
     return {
@@ -167,7 +167,7 @@ describe('detectShiftConflicts', () => {
 // ─── buildOpenShiftEvent ──────────────────────────────────────────────────────
 
 describe('buildOpenShiftEvent', () => {
-  const d = (iso) => new Date(iso);
+  const d = (iso: string) => new Date(iso);
 
   const shiftEvent = {
     id:       'shift-42',

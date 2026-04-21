@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { displayEndDay, layoutSpans } from '../layout';
 
-function makeEvent(start, end, allDay = false) {
+function makeEvent(start: Date, end: Date, allDay: boolean = false) {
   return {
     id: `${start.toISOString()}-${end.toISOString()}-${allDay ? 'all' : 'timed'}`,
     title: 'ev',

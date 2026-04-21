@@ -26,9 +26,22 @@ import { createId } from './createId';
  * @param {Date} bEnd
  * @returns {boolean}
  */
-export function intervalsOverlap(aStart, aEnd, bStart, bEnd) {
+export function intervalsOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
+
+type OverlapEventLike = {
+  id?: string;
+  _eventId?: string;
+  resource?: unknown;
+  employeeId?: unknown;
+  start?: unknown;
+  end?: unknown;
+  title?: string;
+  meta?: Record<string, unknown>;
+  category?: unknown;
+  kind?: unknown;
+};
 
 // ─── Core detection ───────────────────────────────────────────────────────────
 
@@ -50,7 +63,13 @@ export function detectShiftConflicts({
   requestEnd,
   allEvents,
   onCallCategory = 'on-call',
-}) {
+}: {
+  employeeId: string;
+  requestStart: Date;
+  requestEnd: Date;
+  allEvents: OverlapEventLike[];
+  onCallCategory?: string;
+}): { conflictingEvents: OverlapEventLike[]; hasConflict: boolean } {
   if (!employeeId || !requestStart || !requestEnd || !Array.isArray(allEvents)) {
     return { conflictingEvents: [], hasConflict: false };
   }
@@ -73,8 +92,8 @@ export function detectShiftConflicts({
     // should not keep regenerating open-shift work.
     if (isCoveredShift(ev)) return false;
 
-    const evStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
-    const evEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
+    const evStart = ev.start instanceof Date ? ev.start : new Date(ev.start as string | number);
+    const evEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end   as string | number);
     if (Number.isNaN(evStart.getTime()) || Number.isNaN(evEnd.getTime())) return false;
 
     const overlaps = intervalsOverlap(requestStart, requestEnd, evStart, evEnd);
@@ -100,14 +119,22 @@ export function detectShiftConflicts({
  * @param {string} [params.openShiftCategory] — category for open-shift events (default 'open-shift')
  * @returns {object} openShiftEvent
  */
-export function buildOpenShiftEvent({ shiftEvent, reason, openShiftCategory = 'open-shift' }) {
+export function buildOpenShiftEvent({
+  shiftEvent,
+  reason,
+  openShiftCategory = 'open-shift',
+}: {
+  shiftEvent: OverlapEventLike;
+  reason: string;
+  openShiftCategory?: string;
+}): Record<string, unknown> {
   const sourceShiftId = String(shiftEvent._eventId ?? shiftEvent.id ?? 'shift');
   const id = createId(`open-${sourceShiftId}`);
   return {
     id,
     title:    `Open: ${shiftEvent.title ?? 'Shift'}`,
-    start:    shiftEvent.start instanceof Date ? shiftEvent.start : new Date(shiftEvent.start),
-    end:      shiftEvent.end   instanceof Date ? shiftEvent.end   : new Date(shiftEvent.end),
+    start:    shiftEvent.start instanceof Date ? shiftEvent.start : new Date(shiftEvent.start as string | number),
+    end:      shiftEvent.end   instanceof Date ? shiftEvent.end   : new Date(shiftEvent.end   as string | number),
     category: openShiftCategory,
     resource: null,    // unassigned — no covering employee yet
     color:    '#f59e0b', // amber — visually distinct "needs coverage" colour

@@ -32,7 +32,7 @@ export const APPROVAL_ACTIONS = Object.freeze([
   'revoke',
 ]);
 
-function defaultApprovalRules() {
+function defaultApprovalRules(): Record<string, { allow: string[]; prefix: string }> {
   return {
     requested:      { allow: ['approve', 'deny'], prefix: 'Req' },
     pending_higher: { allow: ['approve', 'deny'], prefix: 'Pend' },
@@ -42,7 +42,7 @@ function defaultApprovalRules() {
   };
 }
 
-export const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG: Record<string, any> = {
   title: 'My WorksCalendar',
   schemaVersion: CONFIG_SCHEMA_VERSION,
 
@@ -174,26 +174,29 @@ export const DEFAULT_CONFIG = {
   },
 };
 
-function mergeDeep(target, source) {
-  const out = { ...target };
+type ConfigObject = Record<string, any>;
+
+function mergeDeep(target: ConfigObject, source: ConfigObject): ConfigObject {
+  const out: ConfigObject = { ...target };
   for (const key of Object.keys(source)) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-      out[key] = mergeDeep(target[key] ?? {}, source[key]);
+    const sourceValue = source[key];
+    if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
+      out[key] = mergeDeep(target[key] ?? {}, sourceValue);
     } else {
-      out[key] = source[key];
+      out[key] = sourceValue;
     }
   }
   return out;
 }
 
-export function loadConfig(calendarId) {
+export function loadConfig(calendarId: string): ConfigObject {
   const key = `wc-config-${calendarId}`;
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return DEFAULT_CONFIG;
+    if (!raw) return DEFAULT_CONFIG as ConfigObject;
 
     const parsed = JSON.parse(raw);
-    const merged = mergeDeep(DEFAULT_CONFIG, parsed);
+    const merged = mergeDeep(DEFAULT_CONFIG as ConfigObject, parsed);
 
     // Migrate older setup-only data into live config fields.
     if (parsed?.wizardData?.calendarName && !parsed?.title) {
@@ -225,11 +228,11 @@ export function loadConfig(calendarId) {
 
     return merged;
   } catch {
-    return DEFAULT_CONFIG;
+    return DEFAULT_CONFIG as ConfigObject;
   }
 }
 
-export function saveConfig(calendarId, config) {
+export function saveConfig(calendarId: string, config: unknown): void {
   const key = `wc-config-${calendarId}`;
   try {
     localStorage.setItem(key, JSON.stringify(config));
