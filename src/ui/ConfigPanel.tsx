@@ -140,6 +140,64 @@ type AssetDraft = {
 };
 type AssetPatch = Partial<Omit<AssetDraft, 'meta'>>;
 type AssetMetaPatch = Partial<AssetMeta>;
+type SmartViewFilters = Record<string, unknown>;
+type ManagerAssignment = { title?: string; phone?: string };
+type TeamBaseDraft = { id: string; name: string };
+type TeamMemberDraft = {
+  id: number;
+  name?: string;
+  color?: string;
+  avatar?: string | null;
+  role?: string;
+  base?: string;
+  phone?: string;
+  accountableManagers?: ManagerAssignment[];
+};
+type TeamConfigPatch = {
+  members?: TeamMemberDraft[];
+  roles?: string[];
+  bases?: TeamBaseDraft[];
+  locationLabel?: string;
+};
+type ApprovalStageId = (typeof APPROVAL_STAGE_IDS)[number];
+type ApprovalActionId = (typeof APPROVAL_ACTIONS)[number];
+type ApprovalTierDraft = {
+  id: string;
+  label: string;
+  requires: 'any' | 'all';
+  roles: string[];
+};
+type ApprovalStageRuleDraft = { allow: ApprovalActionId[]; prefix: string };
+type ApprovalLabelsDraft = Partial<Record<ApprovalActionId, string>>;
+type ApprovalsPatch = {
+  enabled?: boolean;
+  tiers?: ApprovalTierDraft[];
+  rules?: Partial<Record<ApprovalStageId, ApprovalStageRuleDraft>>;
+  labels?: ApprovalLabelsDraft;
+};
+type RequestFieldType = (typeof REQUEST_FIELD_TYPES)[number]['value'];
+type RequestFieldDraft = {
+  key: string;
+  label: string;
+  type: RequestFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: string;
+};
+type RequestFormPatch = { fields?: RequestFieldDraft[] };
+type ConflictRuleType = (typeof CONFLICT_RULE_TYPES)[number];
+type ConflictRuleDraft = {
+  id: string;
+  type: ConflictRuleType;
+  severity?: 'hard' | 'soft';
+  categories?: string[];
+  minutes?: number;
+  ignoreCategories?: string[];
+};
+type ConflictsPatch = {
+  enabled?: boolean;
+  rules?: ConflictRuleDraft[];
+};
 
 export default function ConfigPanel({
   config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
@@ -390,13 +448,18 @@ export function SmartViewsTab({
   onDeleteView,
   initialEditingId,
 }: SmartViewsTabProps) {
-  const [editingId,   setEditingId]   = useState(initialEditingId ?? null);
-  const [confirmDel,  setConfirmDel]  = useState(null); // id to confirm deletion
+  const [editingId, setEditingId] = useState<string | null>(initialEditingId ?? null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null); // id to confirm deletion
   const builderSchema = Array.isArray(schema) ? schema : [];
 
   const editingView = editingId ? savedViews.find(v => v.id === editingId) : null;
 
-  const handleUpdate = (id, name, filters, conditions) => {
+  const handleUpdate = (
+    id: string,
+    name: string,
+    filters: SmartViewFilters,
+    conditions: SavedViewDraft['conditions'],
+  ) => {
     onUpdateView?.(id, { name, filters: serializeFilters(filters), conditions });
     setEditingId(null);
   };
@@ -484,14 +547,14 @@ export function SmartViewsTab({
 }
 
 export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: TeamTabProps) {
-  const teamMembers = config.team?.members ?? [];
-  const roles       = config.team?.roles   ?? [];
-  const bases       = config.team?.bases   ?? [];
+  const teamMembers = (config.team?.members ?? []) as TeamMemberDraft[];
+  const roles = (config.team?.roles ?? []) as string[];
+  const bases = (config.team?.bases ?? []) as TeamBaseDraft[];
 
   // ── Pending new member ──────────────────────────────────────────────────────
   const [pendingName, setPendingName] = useState('');
   const [isAdding,    setIsAdding]    = useState(false);
-  const pendingInputRef = useRef(null);
+  const pendingInputRef = useRef<HTMLInputElement | null>(null);
 
   // ── Role management ─────────────────────────────────────────────────────────
   const [newRole, setNewRole] = useState('');
@@ -503,13 +566,13 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     if (isAdding) pendingInputRef.current?.focus();
   }, [isAdding]);
 
-  const updateTeam = (patch) => onUpdate(c => ({
+  const updateTeam = (patch: TeamConfigPatch) => onUpdate(c => ({
     ...c,
     team: { ...(c.team ?? {}), ...patch },
     setup: { ...(c.setup ?? {}), completed: true },
   }));
 
-  const updateMembers = (nextMembers) => updateTeam({ members: nextMembers });
+  const updateMembers = (nextMembers: TeamMemberDraft[]) => updateTeam({ members: nextMembers });
 
   // ── Role helpers ────────────────────────────────────────────────────────────
   const addRole = () => {
@@ -519,7 +582,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     setNewRole('');
   };
 
-  const removeRole = (r) => {
+  const removeRole = (r: string) => {
     updateTeam({ roles: roles.filter(x => x !== r) });
   };
 
@@ -532,13 +595,13 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     setNewBaseName('');
   };
 
-  const removeBase = (id) => {
+  const removeBase = (id: string) => {
     updateTeam({ bases: bases.filter(b => b.id !== id) });
     // clear any members assigned to the removed base
     updateMembers(teamMembers.map(m => m.base === id ? { ...m, base: undefined } : m));
   };
 
-  const renameBase = (id, name) => {
+  const renameBase = (id: string, name: string) => {
     updateTeam({ bases: bases.map(b => b.id === id ? { ...b, name } : b) });
   };
 
@@ -559,21 +622,24 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     setIsAdding(false);
   };
 
-  const updateMember = (id, patch) => {
+  const updateMember = (id: number, patch: Partial<TeamMemberDraft>) => {
     updateMembers(teamMembers.map((member) => (member.id === id ? { ...member, ...patch } : member)));
   };
 
-  const removeMember = (id) => {
+  const removeMember = (id: number) => {
     updateMembers(teamMembers.filter((member) => member.id !== id));
     onEmployeeDelete?.(id);
   };
 
-  const handleProfileUpload = (memberId, e) => {
+  const handleProfileUpload = (memberId: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      updateMember(memberId, { avatar: ev.target.result });
+      const nextAvatar = ev.target?.result;
+      if (typeof nextAvatar === 'string') {
+        updateMember(memberId, { avatar: nextAvatar });
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -657,11 +723,11 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
         const managers: Array<{ title?: string; phone?: string }> =
           Array.isArray(member.accountableManagers) ? member.accountableManagers : [];
 
-        const setManagers = (next) => updateMember(member.id, { accountableManagers: next });
+        const setManagers = (next: ManagerAssignment[]) => updateMember(member.id, { accountableManagers: next });
         const addManager = () => setManagers([...managers, { title: '', phone: '' }]);
-        const updateManager = (idx, patch) =>
+        const updateManager = (idx: number, patch: Partial<ManagerAssignment>) =>
           setManagers(managers.map((m, i) => (i === idx ? { ...m, ...patch } : m)));
-        const removeManager = (idx) => setManagers(managers.filter((_, i) => i !== idx));
+        const removeManager = (idx: number) => setManagers(managers.filter((_, i) => i !== idx));
 
         return (
           <div key={member.id} className={styles.memberBlock}>
@@ -1699,33 +1765,33 @@ const STAGE_LABELS = {
  *   approvals.labels  — per-action button copy shown to approvers.
  */
 export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const approvals = config.approvals ?? {};
+  const approvals = (config.approvals ?? {}) as ApprovalsPatch;
   const enabled   = !!approvals.enabled;
-  const tiers     = Array.isArray(approvals.tiers) ? approvals.tiers : [];
-  const rules     = approvals.rules ?? {};
-  const labels    = approvals.labels ?? {};
+  const tiers = Array.isArray(approvals.tiers) ? approvals.tiers : [];
+  const rules = approvals.rules ?? {};
+  const labels = approvals.labels ?? {};
 
-  const patch = (next) => onUpdate(c => ({
+  const patch = (next: ApprovalsPatch) => onUpdate(c => ({
     ...c,
     approvals: { ...(c.approvals ?? {}), ...next },
   }));
 
-  const writeTiers = (next) => patch({ tiers: next });
-  const writeRules = (next) => patch({ rules: next });
-  const writeLabels = (next) => patch({ labels: next });
+  const writeTiers = (next: ApprovalTierDraft[]) => patch({ tiers: next });
+  const writeRules = (next: Partial<Record<ApprovalStageId, ApprovalStageRuleDraft>>) => patch({ rules: next });
+  const writeLabels = (next: ApprovalLabelsDraft) => patch({ labels: next });
 
   const addTier = () => {
     const n = tiers.length + 1;
     writeTiers([...tiers, { id: `tier-${n}`, label: `Tier ${n}`, requires: 'any', roles: [] }]);
   };
 
-  const updateTier = (idx, delta) => {
+  const updateTier = (idx: number, delta: Partial<ApprovalTierDraft>) => {
     writeTiers(tiers.map((t, i) => (i === idx ? { ...t, ...delta } : t)));
   };
 
-  const removeTier = (idx) => writeTiers(tiers.filter((_, i) => i !== idx));
+  const removeTier = (idx: number) => writeTiers(tiers.filter((_, i) => i !== idx));
 
-  const moveTier = (idx, delta) => {
+  const moveTier = (idx: number, delta: number) => {
     const target = idx + delta;
     if (target < 0 || target >= tiers.length) return;
     const next = [...tiers];
@@ -1734,7 +1800,7 @@ export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
     writeTiers(next);
   };
 
-  const toggleAction = (stage, action) => {
+  const toggleAction = (stage: ApprovalStageId, action: ApprovalActionId) => {
     const stageRule = rules[stage] ?? { allow: [], prefix: '' };
     const allow = stageRule.allow ?? [];
     const next  = allow.includes(action)
@@ -1743,7 +1809,7 @@ export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
     writeRules({ ...rules, [stage]: { ...stageRule, allow: next } });
   };
 
-  const setStagePrefix = (stage, prefix) => {
+  const setStagePrefix = (stage: ApprovalStageId, prefix: string) => {
     const stageRule = rules[stage] ?? { allow: [], prefix: '' };
     writeRules({ ...rules, [stage]: { ...stageRule, prefix } });
   };
@@ -1793,7 +1859,7 @@ export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
             <select
               className={styles.select}
               value={tier.requires ?? 'any'}
-              onChange={e => updateTier(i, { requires: e.target.value })}
+              onChange={e => updateTier(i, { requires: e.target.value as ApprovalTierDraft['requires'] })}
               aria-label={`Quorum for ${tier.label || tier.id}`}
             >
               <option value="any">Any approver</option>
@@ -1914,15 +1980,15 @@ const REQUEST_FIELD_TYPES = [
  * updating both sides.
  */
 export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const schema = config.requestForm ?? {};
+  const schema = (config.requestForm ?? {}) as RequestFormPatch;
   const fields = Array.isArray(schema.fields) ? schema.fields : [];
 
-  const patch = (next) => onUpdate(c => ({
+  const patch = (next: RequestFormPatch) => onUpdate(c => ({
     ...c,
     requestForm: { ...(c.requestForm ?? {}), ...next },
   }));
 
-  const writeFields = (next) => patch({ fields: next });
+  const writeFields = (next: RequestFieldDraft[]) => patch({ fields: next });
 
   const addField = () => {
     const n = fields.length + 1;
@@ -1932,12 +1998,12 @@ export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
     ]);
   };
 
-  const updateField = (idx, delta) =>
+  const updateField = (idx: number, delta: Partial<RequestFieldDraft>) =>
     writeFields(fields.map((f, i) => (i === idx ? { ...f, ...delta } : f)));
 
-  const removeField = (idx) => writeFields(fields.filter((_, i) => i !== idx));
+  const removeField = (idx: number) => writeFields(fields.filter((_, i) => i !== idx));
 
-  const moveField = (idx, delta) => {
+  const moveField = (idx: number, delta: number) => {
     const target = idx + delta;
     if (target < 0 || target >= fields.length) return;
     const next = [...fields];
@@ -1973,7 +2039,7 @@ export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
           <select
             className={styles.select}
             value={field.type}
-            onChange={e => updateField(i, { type: e.target.value })}
+            onChange={e => updateField(i, { type: e.target.value as RequestFieldType })}
             aria-label={`Type for ${field.label || field.key}`}
           >
             {REQUEST_FIELD_TYPES.map(t => (
@@ -2046,16 +2112,16 @@ export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
  *   min-rest         — minimum gap (in minutes) between same-resource events.
  */
 export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const conflicts = config.conflicts ?? {};
+  const conflicts = (config.conflicts ?? {}) as ConflictsPatch;
   const enabled   = !!conflicts.enabled;
   const rules     = Array.isArray(conflicts.rules) ? conflicts.rules : [];
 
-  const patch = (next) => onUpdate(c => ({
+  const patch = (next: ConflictsPatch) => onUpdate(c => ({
     ...c,
     conflicts: { ...(c.conflicts ?? {}), ...next },
   }));
 
-  const writeRules = (next) => patch({ rules: next });
+  const writeRules = (next: ConflictRuleDraft[]) => patch({ rules: next });
 
   const addRule = () => {
     const n = rules.length + 1;
@@ -2065,11 +2131,11 @@ export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
     ]);
   };
 
-  const updateRule = (idx, delta) => {
+  const updateRule = (idx: number, delta: Partial<ConflictRuleDraft>) => {
     writeRules(rules.map((r, i) => (i === idx ? { ...r, ...delta } : r)));
   };
 
-  const removeRule = (idx) => writeRules(rules.filter((_, i) => i !== idx));
+  const removeRule = (idx: number) => writeRules(rules.filter((_, i) => i !== idx));
 
   return (
     <div className={styles.section}>
@@ -2102,7 +2168,7 @@ export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
           <select
             className={styles.select}
             value={rule.type}
-            onChange={e => updateRule(i, { type: e.target.value })}
+            onChange={e => updateRule(i, { type: e.target.value as ConflictRuleType })}
             aria-label={`Type for rule ${rule.id}`}
           >
             {CONFLICT_RULE_TYPES.map(type => (
@@ -2112,7 +2178,7 @@ export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
           <select
             className={styles.select}
             value={rule.severity ?? 'hard'}
-            onChange={e => updateRule(i, { severity: e.target.value })}
+            onChange={e => updateRule(i, { severity: e.target.value as ConflictRuleDraft['severity'] })}
             aria-label={`Severity for rule ${rule.id}`}
           >
             <option value="hard">hard</option>

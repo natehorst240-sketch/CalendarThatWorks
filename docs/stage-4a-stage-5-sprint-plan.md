@@ -137,6 +137,17 @@ Goal: Structured data typing
 
 Goal: Handle complex state + flows
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Removed implicit `any` from workflow-tab mutators by introducing explicit local draft/patch types in `src/ui/ConfigPanel.tsx` for:
+  - Team members/bases/manager assignment updates
+  - Approval tiers/stage rules/labels
+  - Request form field schema updates
+  - Conflict rule registry updates
+- Tightened `SmartViewsTab` edit/delete state and `handleUpdate` callback signature with explicit id/filter/conditions types.
+- Added explicit type narrowing for workflow tab select/file-input handlers (approval quorum, request field type, conflict rule type/severity, profile image upload result) to prevent broad `string`/`unknown` writes.
+
 ---
 
 ### PR 7 — Small Views
