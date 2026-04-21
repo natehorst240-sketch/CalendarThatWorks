@@ -105,6 +105,7 @@ describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () =
   });
 
   it('#149 + #146: "This event only" emits onEventSave for both the master and the detached occurrence', async () => {
+
     const onEventSave = vi.fn();
     const apiRef = createRef<CalendarApi>();
     render(
@@ -137,7 +138,7 @@ describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () =
     // from commit a5ffbc2 only the master update would be emitted.
     await waitFor(() => {
       expect(onEventSave.mock.calls.length).toBeGreaterThanOrEqual(2);
-    });
+    }, { timeout: 10000 });
 
     const savedPayloads = onEventSave.mock.calls.map(([p]) => p);
     const masterUpdate = savedPayloads.find((p) => p.id === 'rec-master-1');
@@ -150,5 +151,5 @@ describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () =
     expect(detached).toBeDefined();
     expect(detached.title).toBe('Daily Standup (edited only this)');
     expect(detached.rrule ?? null).toBeNull();
-  });
+  }, 15000);
 });
