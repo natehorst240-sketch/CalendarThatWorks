@@ -24,6 +24,7 @@ import {
 import { Phone } from 'lucide-react';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import styles from './BaseGanttView.module.css';
+import type { CalendarViewEvent } from '../types/ui';
 
 const NAME_W   = 240;
 const LANE_H   = 24;
@@ -50,18 +51,14 @@ type EmployeeDef = {
 type AssetDef = {
   id: string;
   label?: string;
-  meta?: { base?: string | null; sublabel?: string } | null;
+  meta?: { base?: string | null; sublabel?: string; [k: string]: unknown } | null;
 };
 
-interface BaseGanttEvent {
-  id?: string;
-  title?: string;
-  start: Date;
-  end: Date;
+interface BaseGanttEvent extends Omit<CalendarViewEvent, 'id' | 'title' | 'meta'> {
+  id: string;
+  title: string;
   color?: string;
-  category?: string | null;
-  resource?: string | null;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 interface LanedEvent extends BaseGanttEvent {
@@ -129,8 +126,8 @@ export default function BaseGanttView({
   onBaseSelectionChange,
 }: {
   currentDate: Date
-  events: any[]
-  onEventClick?: (ev: any) => void
+  events: BaseGanttEvent[]
+  onEventClick?: (ev: BaseGanttEvent) => void
   employees?: EmployeeDef[]
   assets?: AssetDef[]
   bases?: BaseDef[]
@@ -255,7 +252,7 @@ export default function BaseGanttView({
       const left   = ev._dayStart * DAY_PX;
       const width  = Math.max((ev._dayEnd - ev._dayStart + 1) * DAY_PX - 4, 8);
       const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
-      const bg     = resolveColor(ev as any, ctx.colorRules) || ev.color || 'var(--wc-accent)';
+      const bg     = resolveColor(ev as never, ctx.colorRules) || ev.color || 'var(--wc-accent)';
       return (
         <button
           key={ev.id ?? `${ev.title}-${idx}`}
