@@ -14,6 +14,11 @@ import styles from './GroupsPanel.module.css';
 
 const MAX_LEVELS = 3;
 
+// Issue #268 relabels the grouping builder so owners understand it as a
+// hierarchy, not a numeric stack. Level 1 is the "Primary View" (root),
+// 2+ are "Secondary"/"Tertiary".
+const LEVEL_LABELS = ['Primary View', 'Secondary', 'Tertiary'];
+
 const GROUP_PALETTE = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
@@ -105,7 +110,7 @@ export default function GroupsPanel({
         return (
           <div key={index} className={styles.levelCard}>
             <div className={styles.levelHeader}>
-              <span className={styles.levelLabel}>Level {index + 1}</span>
+              <span className={styles.levelLabel}>{LEVEL_LABELS[index] ?? `Level ${index + 1}`}</span>
               <select
                 className={styles.fieldSelect}
                 value={level.field}
@@ -155,10 +160,10 @@ export default function GroupsPanel({
         className={styles.addBtn}
         onClick={addLevel}
         disabled={levels.length >= MAX_LEVELS || groupableFields.length === 0}
-        aria-label="Add grouping level"
+        aria-label={levels.length === 0 ? 'Add primary grouping' : 'Add secondary grouping'}
       >
         <Plus size={14} />
-        Add grouping level
+        {levels.length === 0 ? 'Add primary grouping' : 'Add secondary grouping'}
         {levels.length >= MAX_LEVELS && <span> (max {MAX_LEVELS})</span>}
       </button>
 

@@ -1,14 +1,20 @@
 /**
  * FilterGroupSidebar — slide-out panel with 3-tab navigation:
- * Groups, Filters, Views.
+ * View, Focus, Saved.
  *
  * Replaces the FilterBar as the primary tool for manipulating
  * what the calendar shows and how it is organized. Available to
  * all users (not owner-gated like ConfigPanel).
+ *
+ * Issue #268 renamed the tabs and header:
+ *   Groups  → View   (a perspective picker; grouping builder is now "Advanced")
+ *   Filters → Focus
+ *   Views   → Saved
+ *   "Organize" → "View Controls"
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { X, SlidersHorizontal, Layers, Filter, Bookmark } from 'lucide-react';
-import GroupsPanel from './GroupsPanel';
+import ViewPanel from './ViewPanel';
 import type { GroupLevel } from './GroupsPanel';
 import FiltersPanel from './FiltersPanel';
 import ViewsPanel from './ViewsPanel';
@@ -18,7 +24,7 @@ import type { FilterField } from '../filters/filterSchema';
 import type { SortConfig } from '../types/grouping';
 import styles from './FilterGroupSidebar.module.css';
 
-export type SidebarTab = 'groups' | 'filters' | 'views';
+export type SidebarTab = 'view' | 'focus' | 'saved';
 
 export type FilterGroupSidebarProps = {
   /** Whether the sidebar is open. */
@@ -97,7 +103,9 @@ export default function FilterGroupSidebar({
   onDeleteView,
   onToggleViewVisibility,
 }: FilterGroupSidebarProps) {
-  const [activeTab, setActiveTab] = useState<SidebarTab>('filters');
+  // Default to the View tab so the perspective picker is the owner's
+  // first stop. Focus/Saved open via explicit tab clicks.
+  const [activeTab, setActiveTab] = useState<SidebarTab>('view');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Condition builder for the Filters tab
@@ -167,7 +175,7 @@ export default function FilterGroupSidebar({
         <div className={styles.header}>
           <h2 className={styles.headerTitle}>
             <SlidersHorizontal size={15} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            Organize
+            View Controls
           </h2>
           <button
             className={styles.closeBtn}
@@ -181,40 +189,40 @@ export default function FilterGroupSidebar({
         {/* Tab strip */}
         <div className={styles.tabs} role="tablist" aria-label="Sidebar tabs">
           <button
-            className={[styles.tab, activeTab === 'groups' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setActiveTab('groups')}
+            className={[styles.tab, activeTab === 'view' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setActiveTab('view')}
             role="tab"
-            aria-selected={activeTab === 'groups'}
-            aria-controls="sidebar-tab-groups"
+            aria-selected={activeTab === 'view'}
+            aria-controls="sidebar-tab-view"
           >
             <Layers size={14} />
-            Groups
+            View
             {groupLevels.length > 0 && (
               <span className={styles.badge}>{groupLevels.length}</span>
             )}
           </button>
           <button
-            className={[styles.tab, activeTab === 'filters' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setActiveTab('filters')}
+            className={[styles.tab, activeTab === 'focus' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setActiveTab('focus')}
             role="tab"
-            aria-selected={activeTab === 'filters'}
-            aria-controls="sidebar-tab-filters"
+            aria-selected={activeTab === 'focus'}
+            aria-controls="sidebar-tab-focus"
           >
             <Filter size={14} />
-            Filters
+            Focus
             {conditionBuilder.activeCount > 0 && (
               <span className={styles.badge}>{conditionBuilder.activeCount}</span>
             )}
           </button>
           <button
-            className={[styles.tab, activeTab === 'views' && styles.active].filter(Boolean).join(' ')}
-            onClick={() => setActiveTab('views')}
+            className={[styles.tab, activeTab === 'saved' && styles.active].filter(Boolean).join(' ')}
+            onClick={() => setActiveTab('saved')}
             role="tab"
-            aria-selected={activeTab === 'views'}
-            aria-controls="sidebar-tab-views"
+            aria-selected={activeTab === 'saved'}
+            aria-controls="sidebar-tab-saved"
           >
             <Bookmark size={14} />
-            Views
+            Saved
             {views.length > 0 && (
               <span className={styles.badge}>{views.length}</span>
             )}
@@ -223,9 +231,9 @@ export default function FilterGroupSidebar({
 
         {/* Tab content */}
         <div className={styles.content}>
-          {activeTab === 'groups' && (
-            <div id="sidebar-tab-groups" role="tabpanel" aria-label="Groups">
-              <GroupsPanel
+          {activeTab === 'view' && (
+            <div id="sidebar-tab-view" role="tabpanel" aria-label="View">
+              <ViewPanel
                 levels={groupLevels}
                 onLevelsChange={onGroupLevelsChange}
                 sort={sort}
@@ -236,8 +244,8 @@ export default function FilterGroupSidebar({
               />
             </div>
           )}
-          {activeTab === 'filters' && (
-            <div id="sidebar-tab-filters" role="tabpanel" aria-label="Filters">
+          {activeTab === 'focus' && (
+            <div id="sidebar-tab-focus" role="tabpanel" aria-label="Focus">
               <FiltersPanel
                 builder={conditionBuilder}
                 schema={schema}
@@ -246,8 +254,8 @@ export default function FilterGroupSidebar({
               />
             </div>
           )}
-          {activeTab === 'views' && (
-            <div id="sidebar-tab-views" role="tabpanel" aria-label="Views">
+          {activeTab === 'saved' && (
+            <div id="sidebar-tab-saved" role="tabpanel" aria-label="Saved">
               <ViewsPanel
                 views={views}
                 activeId={activeViewId}
@@ -286,12 +294,12 @@ export function SidebarToggleButton({
     <button
       className={[styles.toggleBtn, isOpen && styles.active].filter(Boolean).join(' ')}
       onClick={onClick}
-      aria-label={isOpen ? 'Close organize sidebar' : 'Open organize sidebar'}
+      aria-label={isOpen ? 'Close view controls' : 'Open view controls'}
       aria-expanded={isOpen}
-      title="Filters, grouping & saved views"
+      title="Perspective, focus & saved views"
     >
       <SlidersHorizontal size={15} />
-      <span>Organize</span>
+      <span>View Controls</span>
       {totalActive > 0 && (
         <span className={styles.badge}>{totalActive}</span>
       )}

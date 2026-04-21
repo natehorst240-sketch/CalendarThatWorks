@@ -45,6 +45,8 @@ import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
+import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
+import type { FocusChipDef } from './ui/FocusChips';
 import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
 import OwnerLock              from './ui/OwnerLock';
@@ -161,6 +163,16 @@ export type WorksCalendarProps = {
   renderToolbar?: (api: CalendarApi) => ReactNode;
   renderFilterBar?: (...args: unknown[]) => ReactNode;
   renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
+  /**
+   * Visible quick-filter chips rendered above the view area. Opt-in:
+   *   - omitted (default) → no chip row renders
+   *   - `true`            → renders the library's DEFAULT_FOCUS_CHIPS
+   *   - `FocusChipDef[]`  → renders that custom chip list
+   * Clicking a chip toggles its categories on the calendar's `category`
+   * filter. Hosts that don't define the referenced categories render a
+   * no-op chip (harmless).
+   */
+  focusChips?: FocusChipDef[] | boolean;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
   showAddButton?: boolean;
@@ -396,6 +408,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderToolbar,
     renderFilterBar,
     renderSavedViewsBar,
+    focusChips,
     emptyState,
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
@@ -2106,6 +2119,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             />
           )
         }
+
+        {/* ── Focus chips (visible quick filters, opt-in) ── */}
+        {focusChips && (
+          <FocusChips
+            chips={Array.isArray(focusChips) ? focusChips : DEFAULT_FOCUS_CHIPS}
+            activeCategories={cal.filters?.category as Set<string> | undefined}
+            onToggleCategory={(category) => cal.toggleFilter('category', category)}
+          />
+        )}
 
         {/* ── Filter Bar (legacy, kept for renderFilterBar override) ── */}
         {renderFilterBar && renderFilterBar({
