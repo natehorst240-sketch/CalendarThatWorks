@@ -110,9 +110,11 @@ Tasks:
 
 **Decision point outcome:** actual velocity ≫ estimate (well under 2× over — more like 10× under). Stages 3–6 continue as planned; no re-scoping required.
 
+**Stage 3 confirms Stage 2's velocity pattern.** Stage 3 landed in ~2 days against a 2–3 week estimate, same 10× under-estimate ratio. Pattern suggests original sizing treated `noImplicitAny` and `strictNullChecks` as a bundle; for `noImplicitAny` alone, cost per diagnostic is ~0.5 minute when the diagnostics are mechanical parameter annotations.
+
 ---
 
-### Stage 3 — Boundaries: `src/api/**`, `src/providers/**`, `src/hooks/**`
+### Stage 3 — Boundaries: `src/api/**`, `src/providers/**`, `src/hooks/**` — ✅ Completed 2026-04-21
 
 **Why grouped:** these are the external-data seams. Real types here pay off the most for refactor safety.
 
@@ -120,12 +122,27 @@ Tasks:
 - Third-party untyped responses may use `any` or `unknown` at the boundary, with a wrapper function that types the rest of the flow.
 - React hook return types must be explicit.
 
-**Exit criteria:**
-- All listed directories added to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
-- `typecheck:strict` green.
-- Running `any` count within budget (target: ≤ 20 additional in stage 3).
+**What shipped:**
+- Five commits landing the three directories across four sprints plus a follow-up:
+  - `7c9622a` — sprint 2: simple hooks (`useGroupingRows`, `useEventOptions`, `useFeedEvents`, `useFetchEvents`, `useKeyboardShortcuts`, `useOwnerConfig`, `useSourceAggregator`, `useTouchSwipe`) + `src/api/**`.
+  - `9e9fd04` / `799045a` — sprint 3: heavy hooks (`useDrag`, `useSavedViews`, `useSourceStore`) + review-comment follow-ups on source and saved-view shapes.
+  - `c498f2a` — sprint 4: undo-test hardening + `useDrag` typing.
+  - `9d5d918` — Stage 3b: remaining hooks (`useCalendar`, `useEventDraftState`, `useFeedStore`, `useFocusTrap`, `useOccurrences`, `usePermissions`, `useRealtimeEvents`, `useSyncedCalendar`, `useTouchDnd`) + `src/providers/**` + 7 free strict-clean hooks added to the allowlist.
+  - Follow-up on `claude/typescript-migration-lessons-zSxnq` — explicit return types on the 14 hooks that had shipped with inferred returns.
+- `MIGRATED_PATHS` now at 38 entries covering `src/api/`, `src/providers/`, and every non-test file under `src/hooks/`. Zero unmigrated hooks remain.
+- Advisory `tsc -p tsconfig.json` green throughout — the Stage 2 "run both" rule held; no regressions to unmigrated UI/view callers.
 
-**Sizing:** 2–3 weeks.
+**Exit criteria — met:**
+- All listed directories in `MIGRATED_PATHS`. ✅
+- `typecheck:strict` green across 38 paths. ✅
+- `any` delta **+17** across `src/hooks/**` (+28 added, −11 removed in `useSavedViews`); `src/api/` +0; `src/providers/` +0. Total = 17, under 20-site budget. ✅
+
+**Lessons learned:**
+- **Inferred hook returns are a readable trap.** The initial 11-hook sprint (PR #266/#267) shipped without explicit return types; inference produced correct types in practice but obscured the public contract from readers and hid the rule violation until review. `React hook return types must be explicit` is now a pre-commit check item, not a style preference.
+- **`Set<T>` setter types from `useState` need care.** `setConfigOpen` is a `Dispatch<SetStateAction<boolean>>`, not `(b: boolean) => void` — the latter would reject the functional-update form in consumer code. Typing useState setters in return-type manifests uses the React types directly.
+- **Boundary-structural types compose.** `useSourceAggregator` passes its filtered feeds through `useFeedEvents` — declaring its own `feedErrors` type inline (rather than importing `FeedError` from `useFeedEvents`) kept the two hooks decoupled while still strict-clean.
+
+**Sizing outcome:** estimated 2–3 weeks. Actual: ~2 days across Codex sprints + follow-up (including the extra cleanup pass). Ratio matches Stage 2's ~10× under-estimate for `noImplicitAny`-alone work.
 
 ---
 
@@ -247,7 +264,7 @@ _Populated as stages complete._
 |---|---|---|---|
 | 1 | 0 | 0 | 0 |
 | 2 | +11 (production) | 11 | 20 |
-| 3 | _tbd_ | _tbd_ | 40 |
+| 3 | +17 (production) | 28 | 40 |
 | 5 | _tbd_ | _tbd_ | 80 |
 
 ### Stage 2 `any` accounting (2026-04-21)
@@ -266,3 +283,19 @@ Measurement: count of `any` tokens matching `/:\s*any\b|:\s*any\[\]|<any>|\bas a
 Most of the Stage 2 `any` additions — +6 in `core`, +1 in `grouping`, +4 in `filters` — are at the public-API seam with unmigrated UI/test callers: `Record<string, any>` return types (`parseICS`, `buildOpenShiftEvent`, `buildOpenShiftPatch`, `loadConfig`), `[k: string]: any` index signatures (`LayoutEvent`, `ThemeObject`, `Preset`), and `Record<string, any>` on `Accessor` / `FilterItem`. These are deliberate boundary-protection as described in the third "Lesson learned" above; they will be tightened back to `unknown` when the relevant UI slice migrates in Stage 5. The initial landing introduced +1; the fix commit `cd18a03` added +10 more after the advisory `tsc` regression surfaced which seams needed loosening.
 
 Test files (`__tests__/**`) added `any` annotations on stub/helper callbacks (e.g. `(r: any) => r.emp?.role`) — not counted against the production budget, but worth tracking: ~10 added. These will be revisited when individual test modules are tightened in later stages (or never, if we accept stub events as an explicit escape-hatch pattern in tests).
+
+### Stage 3 `any` accounting (2026-04-21)
+
+Measurement: same regex as Stage 2, applied to `src/api/**`, `src/providers/**`, `src/hooks/*.ts` (non-test), before Stage 3 open (`88822d6`) vs after the follow-up return-type pass.
+
+| Directory | Before | After | Delta |
+|---|---|---|---|
+| `src/api/**` | n/a | 0 | 0 |
+| `src/providers/**` | 0 | 0 | 0 |
+| `src/hooks/**` (migrated files) | 35 | 52 | **+17** |
+| **Total** | 35 | 52 | **+17** |
+
+Hook-side additions are concentrated where boundaries meet unmigrated callers:
+- `useCalendar` (+5), `useEventDraftState` (+6), `useOccurrences` (+3), `useTouchDnd` (+5), `useFocusTrap` (+2), `useSourceAggregator` (+2), `useGroupingRows` (+3) — explicit boundary `any` on event/config/payload shapes that flow into unmigrated `src/views/**` or `WorksCalendar.tsx`, plus `Record<string, any>` fragments inside explicit hook return types.
+- `useFeedEvents` (+1), `useFetchEvents` (+1) — `Record<string, any>` on feed/fetched events so downstream renderers can keep their ad-hoc fields without forcing narrowing.
+- `useSavedViews` (−11) — net removal: old code had 18 `any` sites; the migration tightened most of them to `unknown` or concrete shapes while leaving `Record<string, any>` at the serialise/deserialise seam only.

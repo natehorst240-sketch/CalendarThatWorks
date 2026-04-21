@@ -286,7 +286,27 @@ export function deserializeFilters(saved: Record<string, any> | null | undefined
  * @param {string} calendarId
  * @returns {{ views, saveView, updateView, resaveView, deleteView }}
  */
-export function useSavedViews(calendarId: string) {
+export function useSavedViews(calendarId: string): {
+  views: SavedView[];
+  saveView: (name: string, filters: Record<string, unknown>, opts?: SaveViewOptions) => SavedView;
+  updateView: (id: string, patch: Partial<SavedView>) => void;
+  resaveView: (
+    id: string,
+    filters: Record<string, unknown>,
+    viewName?: string | null,
+    groupBy?: GroupByInput,
+    opts?: {
+      sort?: unknown;
+      showAllGroups?: unknown;
+      sortBy?: unknown;
+      zoomLevel?: unknown;
+      collapsedGroups?: unknown;
+      selectedBaseIds?: unknown;
+    },
+  ) => void;
+  deleteView: (id: string) => void;
+  toggleStripVisibility: (id: string) => void;
+} {
   const [views, setViews] = useState<SavedView[]>(() => loadViews(calendarId));
 
   // Re-load when calendarId changes

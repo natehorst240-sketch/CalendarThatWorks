@@ -38,7 +38,7 @@ export function useTouchDnd({
   onOver?: (el: Element | null, payload: any) => void
   onDrop?: (el: Element | null, payload: any) => void
   onCancel?: (payload: any) => void
-} = {}) {
+} = {}): (e: any, payload: any) => void {
   const stateRef = useRef<any>(null);
 
   const cleanup = useCallback(() => {

@@ -88,7 +88,17 @@ function dateFromDayAndMinutes(day: Date, minutes: number): Date {
 
 export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
   { pxPerHour, dayStart, dayEnd }: { pxPerHour: number; dayStart: number; dayEnd: number },
-) {
+): {
+  ghost: DragGhost<TEvent>;
+  draggedId: TEvent['id'] | null;
+  startMove: (ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => void;
+  startResize: (ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => void;
+  startResizeTop: (ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => void;
+  startCreate: (e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => void;
+  onPointerMove: (e: DragPointer) => void;
+  onPointerUp: () => DragResult<TEvent> | null;
+  cancel: () => void;
+} {
   const ghostRef = useRef<DragGhost<TEvent>>(null);
   const [ghost, setDisplayGhost] = useState<DragGhost<TEvent>>(null);
   const s = useRef<DragState<TEvent> | null>(null); // mutable drag state

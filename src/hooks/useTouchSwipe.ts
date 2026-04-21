@@ -31,7 +31,7 @@ export function useTouchSwipe({
   minDistance?: number;
   maxOffAxis?: number;
   maxDurationMs?: number;
-}) {
+}): void {
   const gestureRef = useRef<{ x: number; y: number; ts: number } | null>(null);
 
   useEffect(() => {

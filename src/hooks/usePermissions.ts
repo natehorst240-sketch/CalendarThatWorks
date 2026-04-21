@@ -10,7 +10,7 @@
 export const ROLES = /** @type {const} */ (['admin', 'user', 'readonly']);
 type Role = 'admin' | 'user' | 'readonly';
 
-const CAPS: Record<Role, {
+export type PermissionCaps = {
   canAddEvent: boolean;
   canEditEvent: boolean;
   canDeleteEvent: boolean;
@@ -18,7 +18,9 @@ const CAPS: Record<Role, {
   canManagePeople: boolean;
   canManageOptions: boolean;
   canManageSavedViews: boolean;
-}> = {
+};
+
+const CAPS: Record<Role, PermissionCaps> = {
   admin: {
     canAddEvent:         true,
     canEditEvent:        true,
@@ -48,6 +50,6 @@ const CAPS: Record<Role, {
   },
 };
 
-export function usePermissions(role: string = 'admin') {
+export function usePermissions(role: string = 'admin'): PermissionCaps {
   return CAPS[(role in CAPS ? role : 'admin') as Role];
 }

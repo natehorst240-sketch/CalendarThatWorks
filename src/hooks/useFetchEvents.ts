@@ -43,7 +43,11 @@ export function useFetchEvents<T extends Record<string, any>>(
   view: string,
   currentDate: Date,
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0,
-) {
+): {
+  fetchedEvents: T[];
+  loading: boolean;
+  error: unknown;
+} {
   const [fetchedEvents, setFetchedEvents] = useState<T[]>([]);
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState<unknown>(null);

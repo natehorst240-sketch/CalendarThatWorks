@@ -95,7 +95,15 @@ export function persistSources(calendarId: string, sources: CalendarSource[]): v
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useSourceStore(calendarId: string) {
+export function useSourceStore(calendarId: string): {
+  sources: CalendarSource[];
+  activeIcsSources: ActiveIcsSource[];
+  activeCsvSources: CsvSource[];
+  addSource: (partial: NewSource) => CalendarSource;
+  removeSource: (id: string) => void;
+  updateSource: (id: string, patch: SourcePatch) => void;
+  toggleSource: (id: string) => void;
+} {
   const [sources, setSources] = useState<CalendarSource[]>(() => loadSources(calendarId));
 
   // Re-load when calendarId changes (multiple embedded calendar instances)

@@ -19,7 +19,11 @@ function save(calendarId: string, categories: string[]): void {
   } catch {}
 }
 
-export function useEventOptions(calendarId: string) {
+export function useEventOptions(calendarId: string): {
+  categories: string[];
+  addCategory: (cat: string) => void;
+  removeCategory: (cat: string) => void;
+} {
   const [categories, setCategories] = useState(() => load(calendarId));
 
   const addCategory = useCallback((cat: string) => {

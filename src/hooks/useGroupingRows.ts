@@ -7,7 +7,15 @@ type GroupingOptions<T> = {
   groupHeaderHeight?: number
 };
 
-export function useGrouping<T extends Record<string, any>>(rows: T[], options: GroupingOptions<T> = {}) {
+export function useGrouping<T extends Record<string, any>>(rows: T[], options: GroupingOptions<T> = {}): {
+  flatRows: Array<Record<string, any>>;
+  groupOrder: string[];
+  collapsedGroups: Set<string>;
+  toggleGroup: (key: string) => void;
+  expandAll: () => void;
+  collapseAll: () => void;
+  isGrouped: boolean;
+} {
   const { groupBy, fieldAccessor, groupHeaderHeight = 36 } = options;
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
 

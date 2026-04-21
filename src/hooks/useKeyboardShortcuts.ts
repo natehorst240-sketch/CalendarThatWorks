@@ -53,7 +53,7 @@ export function useKeyboardShortcuts(api: {
   goToToday?: () => void;
   openHelp?: () => void;
   enabled?: boolean;
-}) {
+}): void {
   const { setView, navigate, goToToday, openHelp, enabled = true } = api;
 
   useEffect(() => {

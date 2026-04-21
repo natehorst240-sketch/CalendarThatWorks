@@ -30,6 +30,7 @@ import { SyncManager } from '../api/v1/sync/SyncManager';
 import type { CalendarAdapter } from '../api/v1/adapters/CalendarAdapter';
 import type { CalendarEventV1 } from '../api/v1/types';
 import type { SyncState, SyncManagerOptions } from '../api/v1/sync/SyncManager';
+import type { SyncStatus } from '../api/v1/sync/SyncQueue';
 
 /**
  * @typedef {import('../api/v1/sync/SyncManager.js').SyncManagerOptions} SyncManagerOptions
@@ -72,7 +73,21 @@ export function useSyncedCalendar({
   maxRetries,
   retryBaseDelay,
   live = false,
-}: UseSyncedCalendarOptions) {
+}: UseSyncedCalendarOptions): {
+  events: ReadonlyMap<string, CalendarEventV1>;
+  statusMap: ReadonlyMap<string, SyncStatus>;
+  errorsMap: ReadonlyMap<string, Error>;
+  isSyncing: boolean;
+  pendingCount: number;
+  createEvent: (event: CalendarEventV1) => ReturnType<SyncManager['createEvent']>;
+  updateEvent: (id: string, patch: Partial<CalendarEventV1>) => ReturnType<SyncManager['updateEvent']>;
+  deleteEvent: (id: string) => ReturnType<SyncManager['deleteEvent']>;
+  retryFailed: () => ReturnType<SyncManager['retryFailed']>;
+  clearErrors: () => ReturnType<SyncManager['clearErrors']>;
+  statusFor: (eventId: string) => ReturnType<SyncManager['statusFor']>;
+  errorFor: (eventId: string) => ReturnType<SyncManager['errorFor']>;
+  manager: SyncManager;
+} {
   // ── SyncManager (stable across renders) ────────────────────────────────────
   const managerRef = useRef<SyncManager | null>(null);
 

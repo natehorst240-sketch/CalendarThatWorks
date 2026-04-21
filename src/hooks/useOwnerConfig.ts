@@ -1,7 +1,7 @@
 /**
  * useOwnerConfig.js — Owner authentication + config state.
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema';
 
 type OwnerConfig = Record<string, any>;
@@ -16,7 +16,21 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   ownerPassword?: string;
   onConfigSave?: (config: OwnerConfig) => void;
   devMode?: boolean;
-}) {
+}): {
+  config: OwnerConfig;
+  isOwner: boolean;
+  configOpen: boolean;
+  setConfigOpen: Dispatch<SetStateAction<boolean>>;
+  configInitialTab: string | null;
+  smartViewEditId: string | null;
+  authError: string;
+  isAuthLoading: boolean;
+  authenticate: (password: string) => Promise<boolean>;
+  updateConfig: (updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => void;
+  closeConfig: () => void;
+  openGear: () => void;
+  openConfigToTab: (tabId: string | null, opts?: { smartViewEditId?: string | null }) => void;
+} {
   const [config,        setConfig]        = useState<OwnerConfig>(() => loadConfig(calendarId));
   const [isOwner,       setIsOwner]       = useState(devMode);
   const [configOpen,    setConfigOpen]    = useState(false);

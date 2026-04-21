@@ -20,7 +20,10 @@ type ICalFeedInput = {
 type FeedEvent = Record<string, any> & { _feedLabel: string };
 type FeedError = { feed: ICalFeedInput; err: unknown };
 
-export function useFeedEvents(icalFeeds: ICalFeedInput[] = []) {
+export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
+  feedEvents: FeedEvent[];
+  feedErrors: FeedError[];
+} {
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedErrors, setFeedErrors] = useState<FeedError[]>([]);
 

@@ -29,7 +29,10 @@ type SourceStoreLike = {
 export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
   icalFeedsProp?: FeedLike[];
   sourceStore: SourceStoreLike;
-}) {
+}): {
+  events: SourceEvent[];
+  feedErrors: Array<{ feed: { url: string; label?: string; refreshInterval?: number }; err: unknown }>;
+} {
   // Merge prop-level feeds + store-managed ICS feeds for the polling hook.
   // We use a stable JSON key so that referentially-new but semantically-identical
   // arrays do not trigger unnecessary re-fetches.
