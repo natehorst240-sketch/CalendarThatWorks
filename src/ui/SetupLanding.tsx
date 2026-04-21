@@ -11,7 +11,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ChevronRight, ChevronLeft, Check, Sparkles, Rocket, Users, Palette, LayoutGrid, Wand2, MapPin } from 'lucide-react';
-import { THEMES, THEME_META } from '../styles/themes';
+import { THEMES, THEME_META, normalizeTheme, resolveCssTheme } from '../styles/themes';
 import styles from './SetupLanding.module.css';
 import {
   IllustrationTheme,
@@ -181,7 +181,7 @@ export default function SetupLanding({
   /* ── Welcome ─────────────────────────────────────────────────────────── */
   if (step === 0) {
     return (
-      <div className={styles.landing} data-wc-theme={theme} role="region" aria-label="Calendar setup">
+      <div className={styles.landing} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
         <div className={styles.hero}>
           <div className={styles.heroIcon}><Rocket size={40} aria-hidden="true" /></div>
           <h1 className={styles.heroTitle}>Let’s set up your calendar</h1>
@@ -215,7 +215,7 @@ export default function SetupLanding({
 
   /* ── Steps ───────────────────────────────────────────────────────────── */
   return (
-    <div className={styles.landing} data-wc-theme={theme} role="region" aria-label="Calendar setup">
+    <div className={styles.landing} data-wc-theme={resolveCssTheme(theme)} role="region" aria-label="Calendar setup">
       <div className={styles.shell}>
         <header className={styles.topBar}>
           <span className={styles.brand}><Sparkles size={14} aria-hidden="true" /> Calendar setup</span>
@@ -317,6 +317,10 @@ function StepName({ name, onChange }: { name: string; onChange: (v: string) => v
 }
 
 function StepTheme({ current, onChange }: { current: string; onChange: (id: string) => void }) {
+  // The stored value may be a legacy id ('corporate', 'ocean', …) for
+  // upgraded calendars — normalize before matching so the currently-active
+  // card still renders as selected.
+  const normalizedCurrent = normalizeTheme(current);
   return (
     <section className={styles.step}>
       <h2 className={styles.stepTitle}>How should it look?</h2>
@@ -328,7 +332,7 @@ function StepTheme({ current, onChange }: { current: string; onChange: (id: stri
       <div className={styles.themeGrid}>
         {THEMES.map(id => {
           const t = THEME_META[id];
-          const selected = current === t.id;
+          const selected = normalizedCurrent === t.id;
           return (
             <button
               key={t.id}

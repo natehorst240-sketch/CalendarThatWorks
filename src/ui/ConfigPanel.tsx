@@ -14,7 +14,7 @@ import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { serializeFilters } from '../hooks/useSavedViews';
-import { THEMES, THEME_META } from '../styles/themes';
+import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
 import SourcePanel from './SourcePanel';
 import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
@@ -250,7 +250,10 @@ export default function ConfigPanel({
 }
 
 function SetupTab({ config, onUpdate }: any) {
-  const selectedTheme = config.setup?.preferredTheme ?? 'corporate';
+  // Stored `preferredTheme` may be a legacy id (e.g. 'corporate', 'ocean')
+  // for upgraded calendars. Normalize for the aria-pressed/selected match
+  // so the active card still highlights after the theme-system rewrite.
+  const selectedTheme = normalizeTheme(config.setup?.preferredTheme ?? 'corporate');
   const calendarName = config.title ?? 'My WorksCalendar';
 
   const setCalendarName = (name) => onUpdate(c => ({
