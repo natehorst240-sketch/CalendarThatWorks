@@ -18,6 +18,7 @@
  *     (5 states per Phase 0 contract).
  */
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isToday, isWeekend,
@@ -29,6 +30,7 @@ import { buildGroupTree } from '../hooks/useGrouping.ts';
 import GroupHeader from '../ui/GroupHeader.tsx';
 import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
+import type { CalendarViewEvent } from '../types/ui';
 import AuditDrawer from './AuditDrawer';
 import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
 
@@ -50,6 +52,15 @@ const APPROVAL_STAGES = new Set([
   'requested', 'approved', 'finalized', 'pending_higher', 'denied',
 ]);
 
+type AssetEvent = CalendarViewEvent & {
+  _dayStart: number;
+  _dayEnd: number;
+  _lane: number;
+  color?: string;
+  meta?: Record<string, any>;
+};
+type CategoryConfigLike = { categories?: Array<{ id?: string; color?: string }> } | null | undefined;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -58,10 +69,10 @@ const APPROVAL_STAGES = new Set([
  * earliest slot that's free at the event's start day. Returns the clipped
  * events plus the max lane count so the row can size its height.
  */
-function assignLanes(events: any[], monthStart: Date, monthEnd: Date) {
+function assignLanes(events: CalendarViewEvent[], monthStart: Date, monthEnd: Date): { events: AssetEvent[]; laneCount: number } {
   const clipped = events
-     .filter((e: any) => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
-    .map((e: any) => ({
+    .filter((e) => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
+    .map((e) => ({
       ...e,
       _dayStart: differenceInCalendarDays(
         max([startOfDay(e.start), monthStart]),
@@ -71,8 +82,8 @@ function assignLanes(events: any[], monthStart: Date, monthEnd: Date) {
         min([startOfDay(e.end), monthEnd]),
         monthStart,
       ),
-    }))
-    .sort((a: any, b: any) => a._dayStart - b._dayStart || a._dayEnd - b._dayEnd);
+    } as AssetEvent))
+    .sort((a, b) => a._dayStart - b._dayStart || a._dayEnd - b._dayEnd);
 
   const laneEnd = [];
   for (const ev of clipped) {
@@ -99,8 +110,8 @@ function assignLanes(events: any[], monthStart: Date, monthEnd: Date) {
  * (falling back to DEFAULT_CATEGORIES when the prop is empty). Used by
  * resolveAssetColor to look up the pill hue for a given event.
  */
-function buildCategoryColorMap(categoriesConfig: any) {
-  const map = new Map();
+function buildCategoryColorMap(categoriesConfig: CategoryConfigLike): Map<string, string> {
+  const map = new Map<string, string>();
   const defs = categoriesConfig?.categories?.length
     ? categoriesConfig.categories
     : DEFAULT_CATEGORIES;
@@ -115,8 +126,8 @@ function buildCategoryColorMap(categoriesConfig: any) {
  * context colorRules > categoriesConfig > event.color > undefined (falls
  * through to CSS default).
  */
-function resolveAssetColor(ev: any, categoryColorMap: Map<string, string>, colorRules: any) {
-  const ruleColor = resolveColor(ev, colorRules);
+function resolveAssetColor(ev: CalendarViewEvent & { color?: string }, categoryColorMap: Map<string, string>, colorRules: unknown) {
+  const ruleColor = resolveColor(ev as any, colorRules as any);
   if (ruleColor) return ruleColor;
   if (ev.category && categoryColorMap.has(ev.category)) {
     return categoryColorMap.get(ev.category);
@@ -129,8 +140,9 @@ function resolveAssetColor(ev: any, categoryColorMap: Map<string, string>, color
  * value, otherwise null. Unknown strings are treated as null so the pill
  * renders without a stage-specific CSS class.
  */
-function getApprovalStage(ev: any) {
-  const stage = ev?.meta?.approvalStage?.stage;
+function getApprovalStage(ev: CalendarViewEvent | null | undefined): string | null {
+  const meta = ev?.meta as Record<string, any> | undefined;
+  const stage = meta?.approvalStage?.stage;
   return APPROVAL_STAGES.has(stage) ? stage : null;
 }
 
@@ -384,12 +396,12 @@ export default function AssetsView({
     if (assetRegistry) {
       const ordered = assetRegistry.map(a => a.id);
       const orderedSet = new Set(ordered);
-      const hasOrphan = events.some((e: any) => !orderedSet.has(e.resource ?? '(Unassigned)'));
+      const hasOrphan = events.some((e: CalendarViewEvent) => !orderedSet.has(e.resource ?? '(Unassigned)'));
       const base = hasOrphan ? [...ordered, '(Unassigned)'] : ordered;
       return applySort(base);
     }
     const set = new Set<string>();
-    events.forEach((e: any) => set.add(e.resource ?? '(Unassigned)'));
+    events.forEach((e: CalendarViewEvent) => set.add(e.resource ?? '(Unassigned)'));
     return [...set].sort((a, b) => {
       if (a === '(Unassigned)') return 1;
       if (b === '(Unassigned)') return -1;
@@ -427,23 +439,26 @@ export default function AssetsView({
    * Row height is computed from the laned events so rows stay tight when
    * most events are filtered into a different group bucket.
    */
-  const buildAssetRow = useCallback((resource: string, subsetEvents: any[]) => {
+  const buildAssetRow = useCallback((resource: string, subsetEvents: CalendarViewEvent[]) => {
     // "(Unassigned)" bucket catches any event whose resource isn't in the
     // registry (or is missing entirely). Registry rows keep exact-id match.
     const matchesRow = assetRegistry
-      ? ((e: any) => {
+      ? ((e: CalendarViewEvent) => {
           const r = e.resource ?? '(Unassigned)';
           if (resource === '(Unassigned)') return !assetById.has(r);
           return r === resource;
         })
-      : ((e: any) => (e.resource ?? '(Unassigned)') === resource);
+      : ((e: CalendarViewEvent) => (e.resource ?? '(Unassigned)') === resource);
     const resEvents = subsetEvents.filter(matchesRow);
     const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
     const rowH = Math.max(
       laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
       ROW_PAD * 2 + LANE_H + 16,
     );
-    const firstWithMeta = resEvents.find((e: any) => e.meta?.assetSublabel || e.meta?.sublabel);
+    const firstWithMeta = resEvents.find((e: CalendarViewEvent) => {
+      const meta = e.meta as Record<string, unknown> | undefined;
+      return meta?.assetSublabel || meta?.sublabel;
+    });
     const registryEntry = assetById.get(resource) ?? null;
     const sublabel = firstWithMeta?.meta?.assetSublabel
       ?? firstWithMeta?.meta?.sublabel
@@ -509,7 +524,7 @@ export default function AssetsView({
   }, [collapsedControlled, onCollapsedGroupsChange]);
 
   // Count every leaf event reachable under a group (respecting nested trees).
-  const countEvents = useCallback((node: any): number => {
+  const countEvents = useCallback((node: { children?: Array<any>; events: CalendarViewEvent[] }): number => {
     if (!node.children || node.children.length === 0) return node.events.length;
     return node.children.reduce((sum: number, c: any) => sum + countEvents(c), 0);
   }, []);
@@ -532,7 +547,7 @@ export default function AssetsView({
         // Scope to member-held events; use the raw events list (not the
         // strictly-filtered one) so a pool row stays populated even when
         // strictAssetFiltering hides some members.
-        const scoped = eventsProp.filter((e: any) => e.resource != null && memberSet.has(e.resource));
+        const scoped = eventsProp.filter((e: CalendarViewEvent) => e.resource != null && memberSet.has(e.resource));
         const { events: laned, laneCount } = assignLanes(scoped, monthStart, monthEnd);
         const rowH = Math.max(
           laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2,
@@ -677,7 +692,7 @@ export default function AssetsView({
     }
   }, [focusedCell, rowOffsets, flatRows]);
 
-  const handleCellKeyDown = useCallback((e: any, ri: number, di: number, cellRowEvents: any[], resourceId: string, isPoolRow: boolean) => {
+  const handleCellKeyDown = useCallback((e: ReactKeyboardEvent<HTMLElement>, ri: number, di: number, cellRowEvents: AssetEvent[], resourceId: string, isPoolRow: boolean) => {
     const maxRi = flatRows.length - 1;
     const maxDi = totalDays - 1;
     let nextRi = ri, nextDi = di;
@@ -692,7 +707,7 @@ export default function AssetsView({
       case 'Enter':
       case ' ': {
         e.preventDefault();
-        const hit = cellRowEvents.find((ev: any) => ev._dayStart <= di && ev._dayEnd >= di);
+        const hit = cellRowEvents.find((ev) => ev._dayStart <= di && ev._dayEnd >= di);
         // On pool rows, rowEvents is the aggregate of member bookings — an
         // occupied cell just means *some* member is busy, not that the pool
         // itself is taken. Always route pool cells to onPoolDateSelect so
@@ -1025,7 +1040,7 @@ export default function AssetsView({
                     const di = visColStart + relDi;
                     const isFocused  = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
                     const resourceId = resource;
-                    const cellHasEvent = rowEvents.some((ev: any) => ev._dayStart <= di && ev._dayEnd >= di);
+                    const cellHasEvent = rowEvents.some((ev: AssetEvent) => ev._dayStart <= di && ev._dayEnd >= di);
                     return (
                       <div
                         key={`kbcell-${di}`}
@@ -1067,13 +1082,13 @@ export default function AssetsView({
                   })}
 
                   {/* Event pills */}
-                  {rowEvents.map((ev: any) => {
+                  {rowEvents.map((ev: AssetEvent) => {
                     const evColor = resolveAssetColor(ev, categoryColorMap, ctx?.colorRules);
                     const left    = ev._dayStart * dayColW + 2;
                     const width   = Math.max(dayColW - 4, (ev._dayEnd - ev._dayStart + 1) * dayColW - 4);
                     const top     = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
                     const stage       = getApprovalStage(ev);
-                    const onClick = (e: any) => {
+                    const onClick = (e: ReactMouseEvent<HTMLButtonElement>) => {
                       if (AUDIT_STAGES.has(stage)) openAudit(ev, e.currentTarget);
                       else onEventClick?.(ev);
                     };
@@ -1149,7 +1164,7 @@ export default function AssetsView({
                               left: left + width - 18,
                               top:  top + (LANE_H - 16) / 2,
                             }}
-                            onClick={(e: any) => {
+                            onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               openApprovalMenu(ev, stage, e.currentTarget);
                             }}
