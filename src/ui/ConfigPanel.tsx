@@ -296,12 +296,12 @@ function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const selectedTheme = normalizeTheme(config.setup?.preferredTheme ?? 'corporate');
   const calendarName = config.title ?? 'My WorksCalendar';
 
-  const setCalendarName = (name) => onUpdate(c => ({
+  const setCalendarName = (name: string) => onUpdate(c => ({
     ...c,
     title: name,
   }));
 
-  const setPreferredTheme = (themeId) => onUpdate(c => ({
+  const setPreferredTheme = (themeId: string) => onUpdate(c => ({
     ...c,
     setup: { ...(c.setup ?? {}), preferredTheme: themeId },
   }));
@@ -860,10 +860,12 @@ function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps)
 /* ----- HoverCard tab ----- */
 function HoverCardTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const hc = config.hoverCard;
-  const toggle = (key) =>
+  type HoverCardFieldKey = 'showTime' | 'showCategory' | 'showResource' | 'showMeta' | 'showNotes';
+
+  const toggle = (key: HoverCardFieldKey) =>
     onUpdate(c => ({ ...c, hoverCard: { ...c.hoverCard, [key]: !c.hoverCard[key] } }));
 
-  const fields = [
+  const fields: Array<{ key: HoverCardFieldKey; label: string }> = [
     { key: 'showTime',     label: 'Time' },
     { key: 'showCategory', label: 'Category' },
     { key: 'showResource', label: 'Resource' },
@@ -1484,8 +1486,8 @@ export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
 function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const d = config.display;
   const labels = config.filterUi?.groupLabels ?? {};
-  const set = (key, val) => onUpdate(c => ({ ...c, display: { ...c.display, [key]: val } }));
-  const setGroupLabel = (key, val) =>
+  const set = (key: string, val: unknown) => onUpdate(c => ({ ...c, display: { ...c.display, [key]: val } }));
+  const setGroupLabel = (key: 'categories' | 'resources' | 'sources' | 'more', val: string) =>
     onUpdate(c => ({
       ...c,
       filterUi: {

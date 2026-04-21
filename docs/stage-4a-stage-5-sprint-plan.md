@@ -95,6 +95,13 @@ If ANY of these fail → PR is NOT DONE.
 
 Goal: Easy wins, stabilize patterns
 
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Added explicit parameter types in `SetupTab` setters (`setCalendarName`, `setPreferredTheme`) to remove implicit callback `any`.
+- Introduced a constrained `HoverCardFieldKey` union in `HoverCardTab` and typed the `fields` map to enforce valid toggle keys.
+- Typed `DisplayTab` mutation helpers (`set`, `setGroupLabel`) so tab-local updates no longer rely on implicit `any`.
+
 ---
 
 ### PR 5 — ConfigPanel (Data Tabs)
