@@ -4,7 +4,7 @@
  */
 import { useState, useCallback } from 'react';
 
-function load(calendarId) {
+function load(calendarId: string): string[] {
   try {
     const raw = localStorage.getItem(`wc-options-${calendarId}`);
     return JSON.parse(raw)?.categories ?? [];
@@ -13,16 +13,16 @@ function load(calendarId) {
   }
 }
 
-function save(calendarId, categories) {
+function save(calendarId: string, categories: string[]): void {
   try {
     localStorage.setItem(`wc-options-${calendarId}`, JSON.stringify({ categories }));
   } catch {}
 }
 
-export function useEventOptions(calendarId) {
+export function useEventOptions(calendarId: string) {
   const [categories, setCategories] = useState(() => load(calendarId));
 
-  const addCategory = useCallback((cat) => {
+  const addCategory = useCallback((cat: string) => {
     const trimmed = String(cat).trim();
     if (!trimmed) return;
     setCategories(prev => {
@@ -33,7 +33,7 @@ export function useEventOptions(calendarId) {
     });
   }, [calendarId]);
 
-  const removeCategory = useCallback((cat) => {
+  const removeCategory = useCallback((cat: string) => {
     setCategories(prev => {
       const next = prev.filter(c => c !== cat);
       save(calendarId, next);

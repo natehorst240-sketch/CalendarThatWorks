@@ -102,7 +102,8 @@ describe('RestAdapter.loadRange', () => {
   });
 
   it('uses custom startParam and endParam', async () => {
-    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const noEvents: CalendarEventV1[] = [];
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => noEvents });
     const origFetch = globalThis.fetch;
     globalThis.fetch = stub as typeof fetch;
     try {
@@ -235,7 +236,8 @@ describe('RestAdapter.exportFeed', () => {
 
 describe('RestAdapter schedule template scaffolding', () => {
   it('GETs schedule templates', async () => {
-    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ id: 'sched-1', name: 'Clinic', entries: [] }] });
+    const templatesResponse = [{ id: 'sched-1', name: 'Clinic', entries: [] as unknown[] }];
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => templatesResponse });
     const origFetch = globalThis.fetch;
     globalThis.fetch = stub as typeof fetch;
     try {
@@ -249,7 +251,8 @@ describe('RestAdapter schedule template scaffolding', () => {
   });
 
   it('POSTs schedule template instantiation request', async () => {
-    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ templateId: 'sched-1', generated: [] }) });
+    const instantiationResponse = { templateId: 'sched-1', generated: [] as CalendarEventV1[] };
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => instantiationResponse });
     const origFetch = globalThis.fetch;
     globalThis.fetch = stub as typeof fetch;
     try {
@@ -265,7 +268,8 @@ describe('RestAdapter schedule template scaffolding', () => {
   });
 
   it('PATCHes a schedule template', async () => {
-    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'sched-1', name: 'Updated', entries: [] }) });
+    const updatedTemplate = { id: 'sched-1', name: 'Updated', entries: [] as unknown[] };
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => updatedTemplate });
     const origFetch = globalThis.fetch;
     globalThis.fetch = stub as typeof fetch;
     try {

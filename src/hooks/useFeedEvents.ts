@@ -11,9 +11,18 @@
 import { useState, useEffect } from 'react';
 import { fetchAndParseICS } from '../core/icalParser';
 
-export function useFeedEvents(icalFeeds) {
-  const [feedEvents, setFeedEvents] = useState([]);
-  const [feedErrors, setFeedErrors] = useState([]);
+type ICalFeedInput = {
+  url: string;
+  label?: string;
+  refreshInterval?: number;
+};
+
+type FeedEvent = Record<string, any> & { _feedLabel: string };
+type FeedError = { feed: ICalFeedInput; err: unknown };
+
+export function useFeedEvents(icalFeeds: ICalFeedInput[] = []) {
+  const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
+  const [feedErrors, setFeedErrors] = useState<FeedError[]>([]);
 
   useEffect(() => {
     if (!icalFeeds?.length) {
@@ -24,17 +33,18 @@ export function useFeedEvents(icalFeeds) {
     let cancelled = false;
 
     async function fetchAll() {
-      const results = [];
-      const errors  = [];
+      const results: FeedEvent[] = [];
+      const errors: FeedError[] = [];
 
-      await Promise.allSettled(icalFeeds.map(async feed => {
+      await Promise.allSettled(icalFeeds.map(async (feed: ICalFeedInput) => {
         try {
-          const evs = await fetchAndParseICS(feed.url);
+          const evs = await fetchAndParseICS(feed.url) as Array<Record<string, any>>;
           const label = feed.label ?? feed.url;
-          results.push(...evs.map(ev => ({ ...ev, _feedLabel: label })));
-        } catch (err: any) {
+          results.push(...evs.map((ev) => ({ ...ev, _feedLabel: label })));
+        } catch (err: unknown) {
           errors.push({ feed, err });
-          console.warn('[WorksCalendar] iCal feed error:', feed.url, err.message);
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn('[WorksCalendar] iCal feed error:', feed.url, message);
         }
       }));
 
@@ -47,7 +57,7 @@ export function useFeedEvents(icalFeeds) {
     fetchAll();
 
     // Set up per-feed refresh timers
-    const timers = icalFeeds.map(feed => {
+    const timers = icalFeeds.map((feed: ICalFeedInput) => {
       const interval = feed.refreshInterval ?? 300_000; // 5 minutes
       return setInterval(fetchAll, interval);
     });

@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 
 const INTERACTIVE_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A']);
 
-function isInteractiveElement(node) {
+function isInteractiveElement(node: EventTarget | null): boolean {
   if (!(node instanceof Element)) return false;
   if (INTERACTIVE_TAGS.has(node.tagName)) return true;
   return node.closest('[contenteditable="true"], [data-no-swipe="true"]') != null;
@@ -23,14 +23,22 @@ export function useTouchSwipe({
   minDistance = 48,
   maxOffAxis = 72,
   maxDurationMs = 700,
+}: {
+  targetRef: RefObject<HTMLElement | null>;
+  enabled?: boolean;
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  minDistance?: number;
+  maxOffAxis?: number;
+  maxDurationMs?: number;
 }) {
-  const gestureRef = useRef(null);
+  const gestureRef = useRef<{ x: number; y: number; ts: number } | null>(null);
 
   useEffect(() => {
     const el = targetRef?.current;
     if (!enabled || !el) return undefined;
 
-    const handleTouchStart = (e) => {
+    const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) {
         gestureRef.current = null;
         return;
@@ -47,7 +55,7 @@ export function useTouchSwipe({
       };
     };
 
-    const handleTouchEnd = (e) => {
+    const handleTouchEnd = (e: TouchEvent) => {
       const start = gestureRef.current;
       gestureRef.current = null;
       if (!start || e.changedTouches.length === 0) return;

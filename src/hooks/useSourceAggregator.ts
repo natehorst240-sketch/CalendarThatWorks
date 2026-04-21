@@ -18,7 +18,18 @@
 import { useMemo } from 'react';
 import { useFeedEvents } from './useFeedEvents';
 
-export function useSourceAggregator({ icalFeedsProp = [], sourceStore }) {
+type FeedLike = Record<string, any> & { url?: string; label?: string; refreshInterval?: number };
+type SourceEvent = Record<string, any>;
+type CsvSource = { id: string; label?: string; enabled?: boolean; events?: SourceEvent[] };
+type SourceStoreLike = {
+  activeIcsSources: FeedLike[];
+  activeCsvSources: CsvSource[];
+};
+
+export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
+  icalFeedsProp?: FeedLike[];
+  sourceStore: SourceStoreLike;
+}) {
   // Merge prop-level feeds + store-managed ICS feeds for the polling hook.
   // We use a stable JSON key so that referentially-new but semantically-identical
   // arrays do not trigger unnecessary re-fetches.
@@ -29,7 +40,7 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }) {
   );
 
   const allIcsFeeds = useMemo(
-    () => [...(icalFeedsProp ?? []), ...sourceStore.activeIcsSources],
+    () => [...(icalFeedsProp ?? []), ...sourceStore.activeIcsSources].filter((f): f is FeedLike & { url: string } => typeof f.url === 'string'),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allIcsFeedsKey],
   );
@@ -39,7 +50,7 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }) {
   // Tag ICS events with source metadata
   const taggedFeedEvents = useMemo(
     () =>
-      feedEvents.map(ev => ({
+      feedEvents.map((ev) => ({
         ...ev,
         _sourceId:    ev._feedLabel ?? 'ics',
         _sourceLabel: ev._feedLabel,
@@ -50,15 +61,15 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }) {
   // CSV source events — already parsed, just merge when the source is enabled
   const csvEvents = useMemo(
     () =>
-      sourceStore.activeCsvSources.flatMap(src =>
-        (src.events ?? []).map(ev => ({
+      sourceStore.activeCsvSources.flatMap((src) =>
+        (src.events ?? []).map((ev) => ({
           ...ev,
           _sourceId:    src.id,
           _sourceLabel: src.label,
         })),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(sourceStore.activeCsvSources.map(s => ({ id: s.id, enabled: s.enabled, count: s.events?.length })))],
+    [JSON.stringify(sourceStore.activeCsvSources.map((s) => ({ id: s.id, enabled: s.enabled, count: s.events?.length })))],
   );
 
   const events = useMemo(

@@ -26,6 +26,18 @@ const MIGRATED_PATHS = [
   'src/core/',
   'src/grouping/',
   'src/filters/',
+  // Stage 3 (Sprint 1)
+  'src/api/',
+  'src/hooks/useGroupingRows.ts',
+  'src/hooks/__tests__/useGrouping.test.ts',
+  // Stage 3 (Sprint 2)
+  'src/hooks/useEventOptions.ts',
+  'src/hooks/useFeedEvents.ts',
+  'src/hooks/useFetchEvents.ts',
+  'src/hooks/useKeyboardShortcuts.ts',
+  'src/hooks/useOwnerConfig.ts',
+  'src/hooks/useSourceAggregator.ts',
+  'src/hooks/useTouchSwipe.ts',
 ];
 
 // Implicit-any diagnostic codes. See:

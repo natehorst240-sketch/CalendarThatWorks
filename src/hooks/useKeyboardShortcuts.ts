@@ -24,13 +24,14 @@ const VIEW_KEYS = {
   '4': 'agenda',
   '5': 'schedule',
   '6': 'assets',
-};
+} as const;
+type CalendarView = typeof VIEW_KEYS[keyof typeof VIEW_KEYS];
 
-function isTypingTarget(el) {
+function isTypingTarget(el: Element | null): boolean {
   if (!el) return false;
   const tag = el.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
-  if (el.isContentEditable) return true;
+  if (el instanceof HTMLElement && el.isContentEditable) return true;
   return false;
 }
 
@@ -46,13 +47,19 @@ function hasOpenModal() {
  * @param {() => void} api.openHelp
  * @param {boolean} [api.enabled=true]
  */
-export function useKeyboardShortcuts(api) {
+export function useKeyboardShortcuts(api: {
+  setView?: (view: string) => void;
+  navigate?: (direction: number) => void;
+  goToToday?: () => void;
+  openHelp?: () => void;
+  enabled?: boolean;
+}) {
   const { setView, navigate, goToToday, openHelp, enabled = true } = api;
 
   useEffect(() => {
     if (!enabled) return;
 
-    function handler(e) {
+    function handler(e: KeyboardEvent) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (isTypingTarget(document.activeElement)) return;
       if (hasOpenModal()) return;
@@ -60,7 +67,7 @@ export function useKeyboardShortcuts(api) {
       // View switches: digits 1..6
       if (Object.prototype.hasOwnProperty.call(VIEW_KEYS, e.key)) {
         e.preventDefault();
-        setView?.(VIEW_KEYS[e.key]);
+        setView?.(VIEW_KEYS[e.key as keyof typeof VIEW_KEYS]);
         return;
       }
 

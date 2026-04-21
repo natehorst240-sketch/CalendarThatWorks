@@ -1,20 +1,22 @@
 import { useState, useMemo, useCallback } from 'react';
 import { groupRows } from '../grouping/groupRows';
 
-export function useGrouping(rows, options: {
+type GroupingOptions<T> = {
   groupBy?: unknown
-  fieldAccessor?: unknown
+  fieldAccessor?: ((row: T) => unknown) | Array<(row: T) => unknown>
   groupHeaderHeight?: number
-} = {}) {
+};
+
+export function useGrouping<T extends Record<string, any>>(rows: T[], options: GroupingOptions<T> = {}) {
   const { groupBy, fieldAccessor, groupHeaderHeight = 36 } = options;
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
 
   const { flatRows, groupOrder } = useMemo(() => {
-    if (!groupBy) return { flatRows: rows, groupOrder: [] };
+    if (!groupBy) return { flatRows: rows as Array<T | Record<string, any>>, groupOrder: [] };
     return groupRows(rows, { groupBy, fieldAccessor: fieldAccessor as any, collapsedGroups, groupHeaderHeight });
   }, [rows, groupBy, fieldAccessor, collapsedGroups, groupHeaderHeight]);
 
-  const toggleGroup = useCallback((key) => {
+  const toggleGroup = useCallback((key: string) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);

@@ -8,7 +8,9 @@ const rows = [
   { id: 3, emp: { role: 'Doctor' } },
 ];
 
-const fieldAccessor = (row) => row.emp?.role ?? null;
+type GroupingTestRow = (typeof rows)[number];
+
+const fieldAccessor = (row: GroupingTestRow) => row.emp?.role ?? null;
 
 describe('useGrouping', () => {
   it('returns identity flatRows when groupBy is null', () => {
@@ -23,7 +25,7 @@ describe('useGrouping', () => {
     );
     expect(result.current.isGrouped).toBe(true);
     expect(result.current.groupOrder).toEqual(['Nurse', 'Doctor']);
-    const headers = result.current.flatRows.filter(r => r._type === 'groupHeader');
+    const headers = result.current.flatRows.filter((r) => r._type === 'groupHeader');
     expect(headers.length).toBe(2);
   });
 
@@ -33,7 +35,7 @@ describe('useGrouping', () => {
     );
     act(() => result.current.toggleGroup('Nurse'));
     expect(result.current.collapsedGroups.has('Nurse')).toBe(true);
-    const nurseMembers = result.current.flatRows.filter(r => !r._type && r.emp?.role === 'Nurse');
+    const nurseMembers = result.current.flatRows.filter((r) => !r._type && r.emp?.role === 'Nurse');
     expect(nurseMembers.length).toBe(0);
   });
 
