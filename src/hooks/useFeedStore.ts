@@ -28,12 +28,21 @@ import { useState, useCallback, useEffect } from 'react';
 // }
 
 const STORAGE_PREFIX = 'wc-feeds-';
+type StoredFeed = {
+  id: string;
+  url: string;
+  label: string;
+  color: string;
+  enabled: boolean;
+  refreshInterval: number;
+  addedAt: string;
+};
 
-function key(calendarId) {
+function key(calendarId: string): string {
   return `${STORAGE_PREFIX}${calendarId}`;
 }
 
-function load(calendarId) {
+function load(calendarId: string): StoredFeed[] {
   try {
     const raw = localStorage.getItem(key(calendarId));
     return raw ? JSON.parse(raw) : [];
@@ -42,7 +51,7 @@ function load(calendarId) {
   }
 }
 
-function persist(calendarId, feeds) {
+function persist(calendarId: string, feeds: StoredFeed[]): void {
   try {
     localStorage.setItem(key(calendarId), JSON.stringify(feeds));
   } catch {
@@ -52,7 +61,14 @@ function persist(calendarId, feeds) {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useFeedStore(calendarId) {
+export function useFeedStore(calendarId: string): {
+  feeds: StoredFeed[];
+  activeFeeds: Array<{ url: string; label: string; refreshInterval: number }>;
+  addFeed: (partial: Partial<StoredFeed>) => StoredFeed;
+  removeFeed: (id: string) => void;
+  updateFeed: (id: string, patch: Partial<StoredFeed>) => void;
+  toggleFeed: (id: string) => void;
+} {
   const [feeds, setFeeds] = useState(() => load(calendarId));
 
   // Re-load when calendarId changes (switching between embedded instances)
@@ -65,7 +81,7 @@ export function useFeedStore(calendarId) {
     persist(calendarId, feeds);
   }, [calendarId, feeds]);
 
-  const addFeed = useCallback((partial) => {
+  const addFeed = useCallback((partial: Partial<StoredFeed>) => {
     const feed = {
       id:              `feed-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       url:             '',
@@ -76,26 +92,26 @@ export function useFeedStore(calendarId) {
       addedAt:         new Date().toISOString(),
       ...partial,
     };
-    setFeeds(prev => [...prev, feed]);
+    setFeeds((prev: StoredFeed[]) => [...prev, feed]);
     return feed;
   }, []);
 
-  const removeFeed = useCallback((id) => {
-    setFeeds(prev => prev.filter(f => f.id !== id));
+  const removeFeed = useCallback((id: string) => {
+    setFeeds((prev: StoredFeed[]) => prev.filter((f) => f.id !== id));
   }, []);
 
-  const updateFeed = useCallback((id, patch) => {
-    setFeeds(prev => prev.map(f => f.id === id ? { ...f, ...patch } : f));
+  const updateFeed = useCallback((id: string, patch: Partial<StoredFeed>) => {
+    setFeeds((prev: StoredFeed[]) => prev.map((f) => f.id === id ? { ...f, ...patch } : f));
   }, []);
 
-  const toggleFeed = useCallback((id) => {
-    setFeeds(prev => prev.map(f => f.id === id ? { ...f, enabled: !f.enabled } : f));
+  const toggleFeed = useCallback((id: string) => {
+    setFeeds((prev: StoredFeed[]) => prev.map((f) => f.id === id ? { ...f, enabled: !f.enabled } : f));
   }, []);
 
   // The shape expected by useFeedEvents — only enabled feeds, only the fields
   // that hook cares about.
   const activeFeeds = feeds
-    .filter(f => f.enabled && f.url)
+    .filter((f: StoredFeed) => f.enabled && f.url)
     .map(({ url, label, refreshInterval }) => ({ url, label, refreshInterval }));
 
   return { feeds, activeFeeds, addFeed, removeFeed, updateFeed, toggleFeed };

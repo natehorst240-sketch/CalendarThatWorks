@@ -11,10 +11,13 @@
  */
 import { useState, useEffect, useRef } from 'react';
 
-export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseClient: any; table: any; filter?: any }) {
-  const [events, setEvents] = useState([]);
-  const [status, setStatus] = useState('disabled');
-  const channelRef = useRef(null);
+type RealtimeStatus = 'disabled' | 'connecting' | 'live' | 'error';
+type RealtimeRow = any;
+
+export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseClient: any; table: string; filter?: string }): { events: RealtimeRow[]; status: RealtimeStatus } {
+  const [events, setEvents] = useState<RealtimeRow[]>([]);
+  const [status, setStatus] = useState<RealtimeStatus>('disabled');
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!supabaseClient || !table) {
@@ -31,18 +34,18 @@ export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseC
 
     const channel = supabaseClient
       .channel(chanName)
-      .on('postgres_changes', pgFilter, (payload) => {
+      .on('postgres_changes', pgFilter, (payload: any) => {
         const { eventType, new: newRow, old: oldRow } = payload;
-        setEvents(prev => {
+        setEvents((prev: RealtimeRow[]) => {
           switch (eventType) {
             case 'INSERT': return [...prev, newRow];
-            case 'UPDATE': return prev.map(e => String(e.id) === String(newRow.id) ? newRow : e);
-            case 'DELETE': return prev.filter(e => String(e.id) !== String(oldRow.id));
+            case 'UPDATE': return prev.map((e: RealtimeRow) => String(e.id) === String(newRow.id) ? newRow : e);
+            case 'DELETE': return prev.filter((e: RealtimeRow) => String(e.id) !== String(oldRow.id));
             default: return prev;
           }
         });
       })
-      .subscribe((s) => {
+      .subscribe((s: string) => {
         if (s === 'SUBSCRIBED')    setStatus('live');
         else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') setStatus('error');
       });
@@ -55,14 +58,14 @@ export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseC
     supabaseClient
       .from(table)
       .select('*')
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: RealtimeRow[] | null; error: unknown }) => {
         if (cancelled || error || !data) return;
-        setEvents(prev => {
+        setEvents((prev: RealtimeRow[]) => {
           // prev may already contain INSERT payloads from the realtime channel.
           // Build a map keyed by id: initial data wins for rows it knows about,
           // but any realtime rows not in the initial fetch are preserved.
-          const map = new Map(data.map(r => [String(r.id), r]));
-          prev.forEach(r => { if (!map.has(String(r.id))) map.set(String(r.id), r); });
+          const map = new Map(data.map((r: RealtimeRow) => [String(r.id), r]));
+          prev.forEach((r: RealtimeRow) => { if (!map.has(String(r.id))) map.set(String(r.id), r); });
           return [...map.values()];
         });
       })

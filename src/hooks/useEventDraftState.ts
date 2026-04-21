@@ -12,7 +12,7 @@ import { getEventTemplateById } from '../core/engine/recurrence/templates.ts';
 
 const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-export function toDatetimeLocal(date) {
+export function toDatetimeLocal(date: Date | string | null | undefined): string {
   if (!date) return '';
   try {
     return format(date instanceof Date ? date : parseISO(date), "yyyy-MM-dd'T'HH:mm");
@@ -21,13 +21,13 @@ export function toDatetimeLocal(date) {
   }
 }
 
-export function fromDatetimeLocal(str) {
+export function fromDatetimeLocal(str: string | null | undefined): Date | null {
   if (!str) return null;
   const d = new Date(str);
   return isValid(d) ? d : null;
 }
 
-function inferPresetFromRRule(rrule) {
+function inferPresetFromRRule(rrule: string | null | undefined): string {
   if (!rrule) return 'none';
   const normalized = String(rrule).trim().toUpperCase();
   if (normalized === 'FREQ=DAILY') return 'daily';
@@ -37,7 +37,7 @@ function inferPresetFromRRule(rrule) {
   return 'custom';
 }
 
-function buildRRuleFromPreset(preset, startValue) {
+function buildRRuleFromPreset(preset: string, startValue: string): string | null {
   const start = fromDatetimeLocal(startValue);
   if (!start) return null;
   if (preset === 'daily') return 'FREQ=DAILY';
@@ -52,7 +52,22 @@ function buildRRuleFromPreset(preset, startValue) {
  * @param {string[]}              categories  Available categories from the engine.
  * @param {object|null}           config      Owner config (eventFields, etc.).
  */
-export function useEventDraftState(event, categories, config) {
+export function useEventDraftState(event: any, categories: string[], config: any): {
+  values: any;
+  templateId: string;
+  recurrencePreset: string;
+  customRrule: string;
+  errors: Record<string, string>;
+  customFields: any[];
+  allCats: string[];
+  set: (key: string, val: unknown) => void;
+  setMeta: (key: string, val: unknown) => void;
+  applyTemplate: (nextTemplateId: string) => void;
+  setRecurrencePreset: (value: string) => void;
+  setCustomRrule: (value: string) => void;
+  validate: () => boolean;
+  buildRRule: () => string | null;
+} {
   const [values, setValues] = useState(() => {
     const startDate = event?.start ? new Date(event.start) : new Date();
     // If the caller didn't supply an end, default to a 1-hour event so the
@@ -99,16 +114,16 @@ export function useEventDraftState(event, categories, config) {
     new Set([...categories, ...Object.keys(config?.eventFields || {})]),
   );
 
-  function set(key, val) {
+  function set(key: string, val: unknown): void {
     setValues(v => ({ ...v, [key]: val }));
     setErrors(e => ({ ...e, [key]: undefined }));
   }
 
-  function setMeta(key, val) {
+  function setMeta(key: string, val: unknown): void {
     setValues(v => ({ ...v, meta: { ...v.meta, [key]: val } }));
   }
 
-  function applyTemplate(nextTemplateId) {
+  function applyTemplate(nextTemplateId: string): void {
     setTemplateId(nextTemplateId);
     const template = getEventTemplateById(nextTemplateId);
     if (!template?.defaults) return;
@@ -139,7 +154,7 @@ export function useEventDraftState(event, categories, config) {
     }
   }
 
-  function validate() {
+  function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!values.title.trim()) errs.title = 'Title is required';
     if (!values.start) errs.start = 'Start date is required';
@@ -147,7 +162,7 @@ export function useEventDraftState(event, categories, config) {
     if (values.start && values.end && new Date(values.start) >= new Date(values.end)) {
       errs.end = 'End must be after start';
     }
-    customFields.filter(f => f.required).forEach(f => {
+    customFields.filter((f: any) => f.required).forEach((f: any) => {
       if (!values.meta[f.name] && values.meta[f.name] !== 0) {
         errs[`meta_${f.name}`] = `${f.name} is required`;
       }
@@ -157,7 +172,7 @@ export function useEventDraftState(event, categories, config) {
   }
 
   /** Returns the final RRULE string (or null) based on current preset/custom state. */
-  function buildRRule() {
+  function buildRRule(): string | null {
     const presetRrule = buildRRuleFromPreset(recurrencePreset, values.start);
     const normalizedCustom = customRrule.trim().toUpperCase();
     return recurrencePreset === 'custom' ? (normalizedCustom || null) : presetRrule;

@@ -12,7 +12,37 @@ import { applyFilters, getCategories, getResources } from '../filters/filterEngi
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import { createInitialFilters, clearFilterValue } from '../filters/filterState';
 
-export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEFAULT_FILTER_SCHEMA) {
+type CalendarView = 'month' | 'agenda' | 'schedule' | 'timeline' | 'base' | 'assets' | 'week' | 'day' | string;
+type CalendarFilters = Record<string, any>;
+type CalendarState = {
+  view: CalendarView;
+  setView: (value: CalendarView) => void;
+  currentDate: Date;
+  setCurrentDate: (value: Date) => void;
+  events: any[];
+  visibleEvents: any[];
+  categories: string[];
+  resources: string[];
+  filters: CalendarFilters;
+  navigate: (direction: number) => void;
+  goToToday: () => void;
+  toggleCategory: (cat: string) => void;
+  toggleResource: (res: string) => void;
+  toggleSourceFilter: (id: string) => void;
+  setSearch: (search: string) => void;
+  setDateRange: (dateRange: unknown) => void;
+  setFilter: (key: string, value: unknown) => void;
+  toggleFilter: (key: string, value: unknown) => void;
+  clearFilter: (key: string) => void;
+  clearFilters: () => void;
+  replaceFilters: (newFilters: CalendarFilters) => void;
+};
+
+export function useCalendar(
+  rawEvents: any[],
+  initialView: CalendarView = 'month',
+  filterSchema: any[] = DEFAULT_FILTER_SCHEMA,
+): CalendarState {
   const [view,        setView]        = useState(initialView);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filters,     setFilters]     = useState(() => createInitialFilters(filterSchema));
@@ -27,7 +57,7 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
     [events, filters, filterSchema],
   );
 
-  const navigate = useCallback((direction) => {
+  const navigate = useCallback((direction: number) => {
     setCurrentDate(prev => {
       switch (view) {
         case 'month':
@@ -47,43 +77,43 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
 
   // ── Named toggles (backward-compatible) ──────────────────────────────────────
 
-  const toggleCategory = useCallback((cat) => {
-    setFilters(f => {
+  const toggleCategory = useCallback((cat: string) => {
+    setFilters((f: CalendarFilters) => {
       const next = new Set((f as any).categories);
       next.has(cat) ? next.delete(cat) : next.add(cat);
       return { ...f, categories: next };
     });
   }, []);
 
-  const toggleResource = useCallback((res) => {
-    setFilters(f => {
+  const toggleResource = useCallback((res: string) => {
+    setFilters((f: CalendarFilters) => {
       const next = new Set((f as any).resources);
       next.has(res) ? next.delete(res) : next.add(res);
       return { ...f, resources: next };
     });
   }, []);
 
-  const toggleSourceFilter = useCallback((id) => {
-    setFilters(f => {
+  const toggleSourceFilter = useCallback((id: string) => {
+    setFilters((f: CalendarFilters) => {
       const next = new Set((f as any).sources);
       next.has(id) ? next.delete(id) : next.add(id);
       return { ...f, sources: next };
     });
   }, []);
 
-  const setSearch    = useCallback((search)    => setFilters(f => ({ ...f, search })),    []);
-  const setDateRange = useCallback((dateRange) => setFilters(f => ({ ...f, dateRange })), []);
+  const setSearch    = useCallback((search: string)    => setFilters((f: CalendarFilters) => ({ ...f, search })),    []);
+  const setDateRange = useCallback((dateRange: unknown) => setFilters((f: CalendarFilters) => ({ ...f, dateRange })), []);
 
   // ── Generic schema-driven API ─────────────────────────────────────────────────
 
   /** Set a single filter field by key. */
-  const setFilter = useCallback((key, value) => {
-    setFilters(f => ({ ...f, [key]: value }));
+  const setFilter = useCallback((key: string, value: unknown) => {
+    setFilters((f: CalendarFilters) => ({ ...f, [key]: value }));
   }, []);
 
   /** Toggle a single value inside a multi-select filter field. */
-  const toggleFilter = useCallback((key, value) => {
-    setFilters(f => {
+  const toggleFilter = useCallback((key: string, value: unknown) => {
+    setFilters((f: CalendarFilters) => {
       const current = f[key];
       const next = current instanceof Set ? new Set(current) : new Set();
       next.has(value) ? next.delete(value) : next.add(value);
@@ -92,9 +122,9 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
   }, []);
 
   /** Clear one filter field back to its default (empty) value. */
-  const clearFilter = useCallback((key) => {
+  const clearFilter = useCallback((key: string) => {
     const field = filterSchema.find(fd => fd.key === key);
-    setFilters(f => ({ ...f, [key]: clearFilterValue(field) }));
+    setFilters((f: CalendarFilters) => ({ ...f, [key]: clearFilterValue(field) }));
   }, [filterSchema]);
 
   const clearFilters = useCallback(() => {
@@ -102,7 +132,7 @@ export function useCalendar(rawEvents, initialView = 'month', filterSchema = DEF
   }, [filterSchema]);
 
   /** Replace the entire filter state at once (used by saved-view apply). */
-  const replaceFilters = useCallback((newFilters) => {
+  const replaceFilters = useCallback((newFilters: CalendarFilters) => {
     setFilters(newFilters);
   }, []);
 

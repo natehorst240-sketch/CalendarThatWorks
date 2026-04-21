@@ -29,7 +29,7 @@ const FOCUSABLE_SELECTORS = [
  *  - inside an `inert` subtree
  *  - made invisible via CSS display:none or visibility:hidden
  */
-function isVisible(el) {
+function isVisible(el: HTMLElement): boolean {
   if (el.hidden) return false;
   if (el.closest('[hidden]')) return false;
   if (el.closest('[aria-hidden="true"]')) return false;
@@ -47,8 +47,8 @@ function isVisible(el) {
  * @param {boolean} [active=true]  Set false to temporarily suspend the trap.
  * @returns {React.RefObject<HTMLElement>}  Attach to the dialog container element.
  */
-export function useFocusTrap(onEscape, active = true) {
-  const containerRef = useRef(null);
+export function useFocusTrap(onEscape?: (() => void) | null, active = true): any {
+  const containerRef = useRef<any>(null);
   // Keep a stable ref to the callback so the effect dep array stays stable.
   const onEscapeRef  = useRef(onEscape);
   useEffect(() => { onEscapeRef.current = onEscape; }, [onEscape]);
@@ -64,11 +64,11 @@ export function useFocusTrap(onEscape, active = true) {
     // Auto-focus the first visible focusable child (skip if something inside
     // is already focused, e.g. via autoFocus prop on an input).
     if (!el.contains(document.activeElement)) {
-      const first = [...el.querySelectorAll(FOCUSABLE_SELECTORS)].find(isVisible);
+      const first = [...(el.querySelectorAll(FOCUSABLE_SELECTORS) as HTMLElement[])].find(isVisible);
       first?.focus();
     }
 
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent): void {
       if (!el.contains(document.activeElement)) return;
 
       if (e.key === 'Escape') {
@@ -80,7 +80,7 @@ export function useFocusTrap(onEscape, active = true) {
 
       if (e.key !== 'Tab') return;
 
-      const focusables = [...el.querySelectorAll(FOCUSABLE_SELECTORS)].filter(isVisible);
+      const focusables = [...(el.querySelectorAll(FOCUSABLE_SELECTORS) as HTMLElement[])].filter(isVisible);
       if (!focusables.length) return;
 
       const first = focusables[0];

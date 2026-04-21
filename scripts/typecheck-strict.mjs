@@ -42,6 +42,25 @@ const MIGRATED_PATHS = [
   'src/hooks/useDrag.ts',
   'src/hooks/useSavedViews.ts',
   'src/hooks/useSourceStore.ts',
+  // Stage 3b
+  'src/providers/',
+  'src/hooks/useBookingHold.ts',
+  'src/hooks/useConditionBuilder.ts',
+  'src/hooks/useGrouping.ts',
+  'src/hooks/useNormalizedConfig.ts',
+  'src/hooks/useResourceLocations.ts',
+  'src/hooks/useSavedWorkflows.ts',
+  'src/hooks/useTabScopedEvents.ts',
+  'src/hooks/useWorkflowTicker.ts',
+  'src/hooks/useCalendar.ts',
+  'src/hooks/useFeedStore.ts',
+  'src/hooks/useSyncedCalendar.ts',
+  'src/hooks/useEventDraftState.ts',
+  'src/hooks/useRealtimeEvents.ts',
+  'src/hooks/useOccurrences.ts',
+  'src/hooks/useFocusTrap.ts',
+  'src/hooks/useTouchDnd.ts',
+  'src/hooks/usePermissions.ts',
 ];
 
 // Implicit-any diagnostic codes. See:

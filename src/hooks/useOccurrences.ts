@@ -16,9 +16,9 @@ import { expandRRule } from '../core/icalParser';
  * @param {Date} rangeEnd
  * @returns {import('../index.d.ts').NormalizedEvent[]}
  */
-export function useOccurrences(events, rangeStart, rangeEnd) {
+export function useOccurrences(events: any[], rangeStart: Date, rangeEnd: Date): any[] {
   return useMemo(() => {
-    const result = [];
+    const result: any[] = [];
     // Expand the range by 1 week on each side so events that start just
     // before or end just after the visible range are still shown correctly.
     const expStart = addDays(rangeStart, -7);
@@ -30,7 +30,7 @@ export function useOccurrences(events, rangeStart, rangeEnd) {
         continue;
       }
 
-      const exdates = (ev.exdates ?? []).map(d => d instanceof Date ? d : new Date(d));
+      const exdates = (ev.exdates ?? []).map((d: Date | string) => d instanceof Date ? d : new Date(d));
       const durationMs = ev.end.getTime() - ev.start.getTime();
 
       const starts = expandRRule(ev.start, ev.rrule, exdates, expStart, expEnd);

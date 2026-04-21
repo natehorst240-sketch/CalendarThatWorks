@@ -39,7 +39,7 @@ export function useTouchDnd({
   onDrop?: (el: Element | null, payload: any) => void
   onCancel?: (payload: any) => void
 } = {}) {
-  const stateRef = useRef(null);
+  const stateRef = useRef<any>(null);
 
   const cleanup = useCallback(() => {
     const s = stateRef.current;
@@ -54,7 +54,7 @@ export function useTouchDnd({
 
   useEffect(() => cleanup, [cleanup]);
 
-  return useCallback((e, payload) => {
+  return useCallback((e: any, payload: any) => {
     if (!enabled) return;
     if (stateRef.current) return; // only one gesture at a time
     const touches = e.touches ?? e.nativeEvent?.touches;
@@ -82,7 +82,7 @@ export function useTouchDnd({
       timer: null,
     };
 
-    s.handleMove = (evt) => {
+    s.handleMove = (evt: TouchEvent) => {
       const list = evt.touches;
       if (!list || list.length !== 1) return;
       const t = list[0];
@@ -105,7 +105,7 @@ export function useTouchDnd({
       }
     };
 
-    s.handleEnd = (evt) => {
+    s.handleEnd = (evt: TouchEvent) => {
       const wasDragging = s.dragging;
       const overEl = s.overEl;
       if (wasDragging && evt?.cancelable) evt.preventDefault(); // suppress ghost click

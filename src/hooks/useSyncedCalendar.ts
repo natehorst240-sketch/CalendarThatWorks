@@ -27,6 +27,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SyncManager } from '../api/v1/sync/SyncManager';
+import type { CalendarAdapter } from '../api/v1/adapters/CalendarAdapter';
+import type { CalendarEventV1 } from '../api/v1/types';
+import type { SyncState, SyncManagerOptions } from '../api/v1/sync/SyncManager';
 
 /**
  * @typedef {import('../api/v1/sync/SyncManager.js').SyncManagerOptions} SyncManagerOptions
@@ -47,6 +50,18 @@ import { SyncManager } from '../api/v1/sync/SyncManager';
  * @param {number}  [options.retryBaseDelay] — Base retry delay in ms. Default: 1000.
  * @param {boolean} [options.live] — If true, call connectLive() on mount. Default: false.
  */
+type UseSyncedCalendarOptions = {
+  adapter: CalendarAdapter;
+  start: Date;
+  end: Date;
+  conflictResolution?: SyncManagerOptions['conflictResolution'];
+  onConflict?: SyncManagerOptions['onConflict'];
+  onError?: SyncManagerOptions['onError'];
+  maxRetries?: number;
+  retryBaseDelay?: number;
+  live?: boolean;
+};
+
 export function useSyncedCalendar({
   adapter,
   start,
@@ -57,9 +72,9 @@ export function useSyncedCalendar({
   maxRetries,
   retryBaseDelay,
   live = false,
-}) {
+}: UseSyncedCalendarOptions) {
   // ── SyncManager (stable across renders) ────────────────────────────────────
-  const managerRef = useRef(/** @type {SyncManager|null} */ (null));
+  const managerRef = useRef<SyncManager | null>(null);
 
   if (managerRef.current === null) {
     managerRef.current = new SyncManager({
@@ -73,12 +88,12 @@ export function useSyncedCalendar({
   }
 
   // ── Sync state ─────────────────────────────────────────────────────────────
-  const [syncState, setSyncState] = useState(/** @type {SyncState|null} */ (null));
+  const [syncState, setSyncState] = useState<SyncState | null>(null);
 
   // ── Subscribe to SyncManager ────────────────────────────────────────────────
   useEffect(() => {
     const manager = managerRef.current;
-    const unsub = manager.subscribe(state => setSyncState(state));
+    const unsub = manager.subscribe((state: SyncState) => setSyncState(state));
     return unsub;
   }, []);
 
@@ -86,7 +101,7 @@ export function useSyncedCalendar({
   useEffect(() => {
     const manager = managerRef.current;
     const controller = new AbortController();
-    manager.loadRange(start, end, controller.signal).catch(err => {
+    manager.loadRange(start, end, controller.signal).catch((err: unknown) => {
       if (!controller.signal.aborted) console.error('[useSyncedCalendar] loadRange error:', err);
     });
     return () => controller.abort();
@@ -103,34 +118,34 @@ export function useSyncedCalendar({
   // ── Stable mutation callbacks ───────────────────────────────────────────────
   const createEvent = useCallback(
     /** @param {CalendarEventV1} event */
-    (event) => managerRef.current.createEvent(event),
+    (event: CalendarEventV1) => managerRef.current!.createEvent(event),
     [],
   );
 
   const updateEvent = useCallback(
     /** @param {string} id @param {Partial<CalendarEventV1>} patch */
-    (id, patch) => managerRef.current.updateEvent(id, patch),
+    (id: string, patch: Partial<CalendarEventV1>) => managerRef.current!.updateEvent(id, patch),
     [],
   );
 
   const deleteEvent = useCallback(
     /** @param {string} id */
-    (id) => managerRef.current.deleteEvent(id),
+    (id: string) => managerRef.current!.deleteEvent(id),
     [],
   );
 
-  const retryFailed = useCallback(() => managerRef.current.retryFailed(), []);
-  const clearErrors = useCallback(() => managerRef.current.clearErrors(), []);
+  const retryFailed = useCallback(() => managerRef.current!.retryFailed(), []);
+  const clearErrors = useCallback(() => managerRef.current!.clearErrors(), []);
 
   const statusFor = useCallback(
     /** @param {string} eventId */
-    (eventId) => managerRef.current.statusFor(eventId),
+    (eventId: string) => managerRef.current!.statusFor(eventId),
     [],
   );
 
   const errorFor = useCallback(
     /** @param {string} eventId */
-    (eventId) => managerRef.current.errorFor(eventId),
+    (eventId: string) => managerRef.current!.errorFor(eventId),
     [],
   );
 
