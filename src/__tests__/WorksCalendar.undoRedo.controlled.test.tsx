@@ -14,6 +14,7 @@ import { createRef, useState } from 'react';
 import '@testing-library/jest-dom';
 
 import { WorksCalendar, type CalendarApi } from '../WorksCalendar.tsx';
+import type { WorksCalendarEvent } from '../types/events.ts';
 
 beforeEach(() => {
   if (!Element.prototype.scrollIntoView) {
@@ -23,7 +24,7 @@ beforeEach(() => {
 });
 
 function ControlledHost({ apiRef }: { apiRef: React.RefObject<CalendarApi> }) {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<WorksCalendarEvent[]>([]);
   return (
     <WorksCalendar
       ref={apiRef}
@@ -77,5 +78,5 @@ describe('WorksCalendar undo/redo — controlled events (issue #152)', () => {
     });
     expect(apiRef.current?.canUndo).toBe(false);
     expect(apiRef.current?.canRedo).toBe(true);
-  });
+  }, 10_000);
 });

@@ -27,16 +27,23 @@
  */
 import { useRef, useState, useCallback } from 'react';
 import { getHours, getMinutes, isSameDay } from 'date-fns';
+import type { NormalizedEvent } from '../types/events';
 
 const SNAP_MIN    = 15;
 const MIN_DRAG_PX = 4;
 
-type DragEventItem = any;
-type DragGhost = { ev: DragEventItem | null; start: Date; end: Date } | null;
+type DragEventBase = {
+  id?: string | number;
+  start: Date;
+  end: Date;
+  _numCols?: number;
+  _col?: number;
+};
+type DragGhost<TEvent extends DragEventBase> = { ev: TEvent | null; start: Date; end: Date } | null;
 type DragMode = 'move' | 'resize' | 'resize-top' | 'create';
-type DragResult =
+type DragResult<TEvent extends DragEventBase> =
   | { type: 'create'; ev: null; newStart: Date; newEnd: Date }
-  | { type: Exclude<DragMode, 'create'>; ev: DragEventItem; newStart: Date; newEnd: Date };
+  | { type: Exclude<DragMode, 'create'>; ev: TEvent; newStart: Date; newEnd: Date };
 type DragPointer = {
   clientX: number;
   clientY: number;
@@ -49,9 +56,9 @@ type DragGridElement = {
   getBoundingClientRect(): { top: number; left: number; width: number };
   setPointerCapture(pointerId: number): void;
 };
-type DragState = {
+type DragState<TEvent extends DragEventBase> = {
   type: DragMode;
-  ev: DragEventItem | null;
+  ev: TEvent | null;
   gridEl: DragGridElement;
   days: Date[];
   gutterWidth: number;
@@ -79,12 +86,14 @@ function dateFromDayAndMinutes(day: Date, minutes: number): Date {
   return d;
 }
 
-export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; dayStart: number; dayEnd: number }) {
-  const ghostRef = useRef<DragGhost>(null);
-  const [ghost, setDisplayGhost] = useState<DragGhost>(null);
-  const s = useRef<DragState | null>(null); // mutable drag state
+export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
+  { pxPerHour, dayStart, dayEnd }: { pxPerHour: number; dayStart: number; dayEnd: number },
+) {
+  const ghostRef = useRef<DragGhost<TEvent>>(null);
+  const [ghost, setDisplayGhost] = useState<DragGhost<TEvent>>(null);
+  const s = useRef<DragState<TEvent> | null>(null); // mutable drag state
 
-  function updateGhost(next: DragGhost): void {
+  function updateGhost(next: DragGhost<TEvent>): void {
     ghostRef.current = next;
     setDisplayGhost(prev => {
       if (!next && !prev) return prev;
@@ -107,7 +116,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; da
   }
 
   // ── startMove ─────────────────────────────────────────────────────────────
-  const startMove = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
+  const startMove = useCallback((ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect       = gridEl.getBoundingClientRect();
@@ -125,7 +134,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; da
   }, [pxPerHour, dayStart]);
 
   // ── startResize (bottom edge — end time) ──────────────────────────────────
-  const startResize = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
+  const startResize = useCallback((ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect     = gridEl.getBoundingClientRect();
@@ -141,7 +150,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; da
   }, []);
 
   // ── startResizeTop (top edge — start time) ────────────────────────────────
-  const startResizeTop = useCallback((ev: DragEventItem, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
+  const startResizeTop = useCallback((ev: TEvent, e: DragPointer, gridEl: DragGridElement, days: Date[], gutterWidth: number) => {
     e.preventDefault();
     e.stopPropagation();
     const rect     = gridEl.getBoundingClientRect();
@@ -222,7 +231,7 @@ export function useDrag({ pxPerHour, dayStart, dayEnd }: { pxPerHour: number; da
   }, [pxPerHour, dayStart, dayEnd]);
 
   // ── onPointerUp ───────────────────────────────────────────────────────────
-  const onPointerUp = useCallback((): DragResult | null => {
+  const onPointerUp = useCallback((): DragResult<TEvent> | null => {
     const drag       = s.current;
     const finalGhost = ghostRef.current;
     s.current        = null;
