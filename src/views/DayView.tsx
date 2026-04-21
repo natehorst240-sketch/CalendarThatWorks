@@ -1,3 +1,4 @@
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import {
   format, isToday, isSameDay, getHours, getMinutes,
@@ -56,7 +57,12 @@ export default function DayView({
     el?.focus({ preventScroll: false });
   }, [focusedHour]);
 
-  const handleSlotKeyDown = useCallback((e, hi, slotStart, slotEnd) => {
+  const handleSlotKeyDown = useCallback((
+    e: ReactKeyboardEvent<HTMLDivElement>,
+    hi: number,
+    slotStart: Date,
+    slotEnd: Date,
+  ) => {
     const maxHi = slotHours.length - 1;
     let next = null;
     switch (e.key) {

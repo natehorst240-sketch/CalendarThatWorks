@@ -14,7 +14,9 @@ import type {
   AnyRecord,
   ConfigPanelProps,
   ConfigPanelTabId,
+  SaveViewOptions,
   SavedViewDraft,
+  SavedViewFilters,
   UpdateConfig,
 } from '../types/ui';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
@@ -535,7 +537,10 @@ export function SmartViewsTab({
         items={items}
         categories={categories ?? []}
         resources={resources ?? []}
-        onSave={(name, filters, conditions) => onSaveView?.(name, filters, { conditions })}
+        onSave={(name: string, filters: SavedViewFilters, conditions: unknown[] | null) => {
+          const options: SaveViewOptions = { conditions };
+          onSaveView?.(name, filters, options);
+        }}
         initialName={editingView?.name ?? ''}
         initialConditions={editingView?.conditions ?? null}
         editingId={editingId}
@@ -610,7 +615,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     const trimmed = pendingName.trim();
     if (!trimmed) { setIsAdding(false); setPendingName(''); return; }
     const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
-    const newMember = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
+    const newMember: TeamMemberDraft = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
     updateMembers([...teamMembers, newMember]);
     onEmployeeAdd?.(newMember);
     setPendingName('');
@@ -1011,7 +1016,8 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
 
   function removeField(idx: number) {
     onUpdate(c => {
-      const arr = (c.eventFields?.[selCat] || []).filter((_, i) => i !== idx);
+      const existing = (((c.eventFields ?? {}) as EventFieldsByCategory)[selCat] || []) as EventFieldDraft[];
+      const arr = existing.filter((_, i) => i !== idx);
       return { ...c, eventFields: { ...c.eventFields, [selCat]: arr } };
     });
   }
@@ -1742,7 +1748,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
 }
 
 /* ----- Approvals tab ----- */
-const STAGE_LABELS = {
+const STAGE_LABELS: Record<ApprovalStageId, string> = {
   requested:      'Requested',
   approved:       'Approved',
   finalized:      'Finalized',
@@ -1905,7 +1911,7 @@ export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
           (e.g. <code>Req · Flight 202</code>); leave blank for no prefix.
         </p>
 
-        {APPROVAL_STAGE_IDS.map(stage => {
+        {APPROVAL_STAGE_IDS.map((stage: ApprovalStageId) => {
           const stageRule = rules[stage] ?? { allow: [], prefix: '' };
           return (
             <div key={stage} className={styles.fieldRow} data-stage-id={stage}>

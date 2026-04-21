@@ -200,6 +200,11 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 
 **Sizing:** 4–6 weeks.
 
+**Status note (2026-04-21):**
+- Stage 5 code-typing work has started, but Stage 5 is not complete under this
+  roadmap until Stage 5 UI/view paths are added to `MIGRATED_PATHS` and pass
+  the strict ratchet.
+
 ### Stage 5 PR checklist template (required in every PR description)
 
 - **What was typed**
