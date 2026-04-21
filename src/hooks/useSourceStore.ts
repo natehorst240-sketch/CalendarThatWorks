@@ -60,7 +60,11 @@ type CalendarSource = {
 };
 type SourcePatch = Partial<Omit<CalendarSource, 'id'>>;
 type NewSource = Partial<CalendarSource> & { type?: string };
-type ActiveIcsSource = Pick<IcsSource, 'url' | 'label' | 'refreshInterval'>;
+type ActiveIcsSource = {
+  url: string;
+  label?: string;
+  refreshInterval?: number;
+};
 
 function sourceKey(calendarId: string): string { return `${SOURCE_PREFIX}${calendarId}`; }
 function legacyKey(calendarId: string): string { return `${LEGACY_PREFIX}${calendarId}`; }
@@ -105,9 +109,11 @@ export function useSourceStore(calendarId: string) {
   }, [calendarId, sources]);
 
   const addSource = useCallback((partial: NewSource): CalendarSource => {
+    const sourceType = partial.type ?? 'ics';
+    const isCsv = sourceType === 'csv';
     const source: CalendarSource = {
       id:              createId('src'),
-      type:            partial.type ?? 'ics',
+      type:            sourceType,
       label:           '',
       color:           '#3b82f6',
       enabled:         true,
@@ -116,8 +122,8 @@ export function useSourceStore(calendarId: string) {
       url:             '',
       refreshInterval: 300_000,
       // CSV defaults (overridden by partial)
-      events:          [],
       importedAt:      undefined,
+      ...(isCsv ? { events: [] } : {}),
       ...partial,
     };
     setSources(prev => [...prev, source]);
@@ -140,7 +146,13 @@ export function useSourceStore(calendarId: string) {
   const activeIcsSources = useMemo<ActiveIcsSource[]>(
     () =>
       sources
-        .filter((s): s is IcsSource => s.type === 'ics' && s.enabled && !!s.url)
+        .filter(
+          (s): s is CalendarSource & { type: 'ics'; url: string } =>
+            s.type === 'ics'
+            && s.enabled === true
+            && typeof s.url === 'string'
+            && s.url.length > 0,
+        )
         .map(({ url, label, refreshInterval }) => ({ url, label, refreshInterval })),
     [sources],
   );

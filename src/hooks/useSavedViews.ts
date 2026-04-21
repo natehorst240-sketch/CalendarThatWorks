@@ -122,7 +122,7 @@ function normalizeSavedView(view: unknown): SavedView | null {
   if (!view || typeof view !== 'object') return null;
   const v = view as Record<string, unknown>;
   if (typeof v.id !== 'string' || typeof v.name !== 'string') return null;
-  if (!v.filters || typeof v.filters !== 'object') return null;
+  if (!v.filters || typeof v.filters !== 'object' || Array.isArray(v.filters)) return null;
 
   return {
     id:              v.id,
