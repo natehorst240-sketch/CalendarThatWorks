@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
+import type { DragEvent as ReactDragEvent, TouchEvent as ReactTouchEvent } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isSameDay, isToday, startOfDay,
@@ -33,6 +34,12 @@ type AgendaViewProps = {
   employees?: Array<{ id?: string; name?: string; displayName?: string }>;
 };
 
+type LeafEventEntry = {
+  ev: CalendarViewEvent;
+  nativePath: string;
+  nativeLabel: string;
+};
+
 export default function AgendaView({
   currentDate,
   events,
@@ -51,7 +58,7 @@ export default function AgendaView({
   const resourceLabelFor = useMemo(() => {
     const list = Array.isArray(employees) ? employees : [];
     const byId = new Map(list.map((m) => [String(m.id), m.name || m.displayName || m.id]));
-    return (id) => byId.get(String(id)) ?? id;
+    return (id: string | null | undefined) => byId.get(String(id)) ?? String(id ?? '');
   }, [employees]);
 
   const days = useMemo(() => {
@@ -94,7 +101,7 @@ export default function AgendaView({
     if (!groupBy) return null;
     return grouped.map(({ day, events: dayEvents }) => ({
       day,
-      tree: buildGroupTree(dayEvents as never, groupBy),
+      tree: buildGroupTree(dayEvents as never, groupBy) as GroupTreeNode[],
     }));
   }, [grouped, groupBy]);
 
@@ -176,7 +183,7 @@ export default function AgendaView({
     // shadow copy would be ambiguous.
     const dndEnabled = !!onEventGroupChange && !crossGroup && !!nativePath;
     const onDragStart = dndEnabled
-      ? (e) => {
+      ? (e: ReactDragEvent<HTMLElement>) => {
           dragRef.current = { ev, nativePath };
           if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = 'move';
@@ -186,7 +193,7 @@ export default function AgendaView({
       : undefined;
     const onDragEnd = dndEnabled ? () => { dragRef.current = null; setDropTargetPath(null); } : undefined;
     const onTouchStart = dndEnabled
-      ? (e) => bindTouchDnd(e, { ev, nativePath, dayTree, dayKey })
+      ? (e: ReactTouchEvent<HTMLElement>) => bindTouchDnd(e, { ev, nativePath, dayTree, dayKey })
       : undefined;
 
     if (ctx?.renderEvent) {
@@ -249,14 +256,14 @@ export default function AgendaView({
   }
 
   // Count every leaf event reachable under a group (respecting nested trees).
-  function countEvents(group) {
+  function countEvents(group: GroupTreeNode): number {
     if (group.children.length === 0) return group.events.length;
     return group.children.reduce((sum, c) => sum + countEvents(c), 0);
   }
 
   // Collect all leaf events in a tree, paired with their native path.
-  function collectLeafEvents(tree, parentPath) {
-    const out = [];
+  function collectLeafEvents(tree: GroupTreeNode[], parentPath: string): LeafEventEntry[] {
+    const out: LeafEventEntry[] = [];
     for (const group of tree) {
       const path = parentPath ? `${parentPath}/${group.key}` : group.key;
       if (group.children.length === 0) {
@@ -268,7 +275,14 @@ export default function AgendaView({
     return out;
   }
 
-  function renderGroupNode(group, parentPath, posInSet, setSize, allLeafEvents, dayTree) {
+  function renderGroupNode(
+    group: GroupTreeNode,
+    parentPath: string,
+    posInSet: number,
+    setSize: number,
+    allLeafEvents: LeafEventEntry[],
+    dayTree: GroupTreeNode[] | null,
+  ) {
     const path = parentPath ? `${parentPath}/${group.key}` : group.key;
     const collapsed = collapsedGroups.has(path);
     const total = countEvents(group);
@@ -280,7 +294,7 @@ export default function AgendaView({
     const renderedEvents = (() => {
       if (!isLeaf) return null;
       if (!showAllGroups) return group.events.map(ev => renderEventItem(ev, { nativePath: path, dayTree, dayKey }));
-      return allLeafEvents.map(({ ev, nativePath, nativeLabel }) => {
+      return allLeafEvents.map(({ ev, nativePath, nativeLabel }: LeafEventEntry) => {
         const isNative = nativePath === path;
         return renderEventItem(ev, {
           crossGroup: !isNative,
@@ -297,7 +311,7 @@ export default function AgendaView({
     const isDropTarget = dndEnabled && dropTargetPath === path;
 
     const onDragOver = dndEnabled
-      ? (e) => {
+      ? (e: ReactDragEvent<HTMLDivElement>) => {
           if (!dragRef.current) return;
           e.preventDefault();
           if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
@@ -308,7 +322,7 @@ export default function AgendaView({
       ? () => { if (dropTargetPath === path) setDropTargetPath(null); }
       : undefined;
     const onDrop = dndEnabled
-      ? (e) => {
+      ? (e: ReactDragEvent<HTMLDivElement>) => {
           e.preventDefault();
           const drag = dragRef.current;
           dragRef.current = null;
@@ -347,7 +361,7 @@ export default function AgendaView({
         {!collapsed && (
           isLeaf
             ? renderedEvents
-            : group.children.map((child, i) =>
+            : group.children.map((child: GroupTreeNode, i: number) =>
                 renderGroupNode(child, path, i + 1, group.children.length, allLeafEvents, dayTree),
               )
         )}

@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
@@ -15,7 +16,7 @@ const SPAN_GAP = 3;
 const MAX_SPANS_VISIBLE = 3;
 const OVERFLOW_TRACK_H = SPAN_H + 4;
 
-function isMultiDay(ev) {
+function isMultiDay(ev: CalendarViewEvent): boolean {
   if (ev.allDay) return true;
   return !isSameDay(startOfDay(ev.start), displayEndDay(ev));
 }
@@ -40,16 +41,25 @@ export default function MonthView({
   currentDate, events, onEventClick, onEventMove, onDateSelect,
   config, weekStartDay = 0, pillHoverTitle = false,
 }: MonthViewProps) {
-  const [popoverState, setPopoverState] = useState(null);
-  const [hoveredWeekIdx, setHoveredWeekIdx] = useState(null);
+  const [popoverState, setPopoverState] = useState<{ day: Date; anchorRect: DOMRect } | null>(null);
+  const [hoveredWeekIdx, setHoveredWeekIdx] = useState<number | null>(null);
   const [viewportWidth, setViewportWidth] = useState(
     () => (typeof window === 'undefined' ? 1024 : window.innerWidth),
   );
   // Hover projection panel state (positioned above hovered month-view pills).
-  const [titleHover, setTitleHover] = useState(null);
+  const [titleHover, setTitleHover] = useState<{
+    title: string;
+    color: string;
+    x: number;
+    y: number;
+    dates: string;
+    category: string | null;
+    resource: string | null;
+    notes: string | null;
+  } | null>(null);
   // Keyboard-focused day cell (roving tabindex pattern).
   const [focusedDay,  setFocusedDay]  = useState(() => startOfDay(currentDate));
-  const gridRef = useRef(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const ctx = useCalendarContext();
 
   // Sync focusedDay when the parent navigates to a new month.
@@ -68,12 +78,12 @@ export default function MonthView({
   useEffect(() => {
     if (!popoverState) return undefined;
 
-    function handlePointerDown(e) {
+    function handlePointerDown(e: MouseEvent) {
       if (e.target.closest?.('[data-month-popover], [data-month-more-trigger]')) return;
       setPopoverState(null);
     }
 
-    function handleDismiss(e) {
+    function handleDismiss(e: KeyboardEvent | Event) {
       if (e.type === 'keydown' && e.key !== 'Escape') return;
       setPopoverState(null);
     }
@@ -103,7 +113,7 @@ export default function MonthView({
   }, [focusedDay]);
 
   // Arrow-key navigation handler attached to each gridcell.
-  const handleCellKeyDown = useCallback((e, day) => {
+  const handleCellKeyDown = useCallback((e: ReactKeyboardEvent<HTMLDivElement>, day: Date) => {
     let next = null;
     switch (e.key) {
       case 'ArrowLeft':  next = subDays(day, 1);  break;
@@ -131,17 +141,17 @@ export default function MonthView({
   }, [weekStartDay, onDateSelect]);
 
   // ── Drag state ───────────────────────────────────────────────────────────
-  const dragRef    = useRef(null); // { ev, moved, targetDay }
-  const [dragTarget, setDragTarget] = useState(null); // Date | null
+  const dragRef = useRef<{ ev: CalendarViewEvent; moved: boolean; targetDay: Date | null } | null>(null);
+  const [dragTarget, setDragTarget] = useState<Date | null>(null);
 
-  function startPillDrag(ev, e) {
+  function startPillDrag(ev: CalendarViewEvent, e: ReactPointerEvent<HTMLElement>) {
     if (e.button !== 0 || !ctx?.permissions?.canDrag) return;
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = { ev, moved: false, targetDay: null };
   }
 
-  function handleCellPointerEnter(day) {
+  function handleCellPointerEnter(day: Date) {
     const d = dragRef.current;
     if (!d) return;
     d.moved     = true;
@@ -177,22 +187,22 @@ export default function MonthView({
     const gridStart  = startOfWeek(monthStart, { weekStartsOn: weekStartDay });
     const gridEnd    = endOfWeek(monthEnd,     { weekStartsOn: weekStartDay });
     const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
-    const wks  = [];
+    const wks: Date[][] = [];
     for (let i = 0; i < days.length; i += 7) wks.push(days.slice(i, i + 7));
-    const names = [];
+    const names: string[] = [];
     for (let i = 0; i < 7; i++) names.push(format(days[i], 'EEE'));
     return { weeks: wks, dayNames: names };
   }, [currentDate, weekStartDay]);
 
   const { multiDay, singleDay } = useMemo(() => {
-    const multi = [];
-    const single = [];
+    const multi: CalendarViewEvent[] = [];
+    const single: CalendarViewEvent[] = [];
     events.forEach(ev => (isMultiDay(ev) ? multi : single).push(ev));
     return { multiDay: multi, singleDay: single };
   }, [events]);
 
   const singleByDay = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, CalendarViewEvent[]>();
     singleDay.forEach(ev => {
       const key = format(ev.start, 'yyyy-MM-dd');
       if (!map.has(key)) map.set(key, []);
@@ -200,7 +210,7 @@ export default function MonthView({
     });
 
     map.forEach((dayEvents, key) => {
-      dayEvents.sort((a, b) => {
+      dayEvents.sort((a: CalendarViewEvent, b: CalendarViewEvent) => {
         if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
         const startDiff = a.start.getTime() - b.start.getTime();
         if (startDiff !== 0) return startDiff;
@@ -224,7 +234,7 @@ export default function MonthView({
     return { dayNumTrackH: 32, weekRowMinH: 120, weekRowHoverMinH: 150 };
   }, [viewportWidth]);
 
-  function buildHoverProjection(ev, color, rect) {
+  function buildHoverProjection(ev: CalendarViewEvent, color: string, rect: DOMRect) {
     const dates = ev.allDay
       ? (isSameDay(ev.start, ev.end)
         ? format(ev.start, 'EEE, MMM d')
@@ -247,7 +257,7 @@ export default function MonthView({
     };
   }
 
-  const getPopoverEvents = useCallback((day) => {
+  const getPopoverEvents = useCallback((day: Date): CalendarViewEvent[] => {
     const dayStart = startOfDay(day);
     const dayKey = format(day, 'yyyy-MM-dd');
     const spanningEvents = multiDay.filter((ev) => dayStart >= startOfDay(ev.start) && dayStart <= displayEndDay(ev));
@@ -282,7 +292,7 @@ export default function MonthView({
   }, [popoverState]);
 
   // ── Renderers ─────────────────────────────────────────────────────────────
-  function renderPill(ev, extra: { onAfterClick?: () => void } = {}, weekIdx = null) {
+  function renderPill(ev: CalendarViewEvent, extra: { onAfterClick?: () => void } = {}, weekIdx: number | null = null) {
     const color       = resolveColor(ev, ctx?.colorRules);
     const onClick     = () => { onEventClick?.(ev); extra.onAfterClick?.(); };
     const isDimmed    = dragRef.current?.ev?.id === ev.id && dragTarget !== null;
@@ -290,7 +300,7 @@ export default function MonthView({
       : ev.status === 'tentative' ? styles.tentative : '';
     const display     = ev.meta?._display ?? {};
 
-    function handlePillMouseEnter(e) {
+    function handlePillMouseEnter(e: ReactMouseEvent<HTMLElement>) {
       if (enlargeMonthRowOnHover && weekIdx != null) setHoveredWeekIdx(weekIdx);
       if (pillHoverTitle) {
         const r = e.currentTarget.getBoundingClientRect();
@@ -298,7 +308,7 @@ export default function MonthView({
       }
     }
     function handlePillMouseLeave() {
-      if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === weekIdx ? null : prev));
+      if (enlargeMonthRowOnHover) setHoveredWeekIdx((prev: number | null) => (prev === weekIdx ? null : prev));
       if (pillHoverTitle) setTitleHover(null);
     }
 
@@ -481,7 +491,7 @@ export default function MonthView({
 
                         {/* paddingTop reserves space for the absolutely-positioned spansLayer */}
                         <div className={styles.events} style={{ paddingTop: spansHeight }}>
-                          {daySingles.slice(0, MAX_PILLS).map(ev => renderPill(ev, {}, wi))}
+                          {daySingles.slice(0, MAX_PILLS).map((ev: CalendarViewEvent) => renderPill(ev, {}, wi))}
                           {isDropTarget && renderGhostPill()}
                         </div>
 
@@ -529,7 +539,7 @@ export default function MonthView({
                               }
                             }}
                             onMouseLeave={() => {
-                              if (enlargeMonthRowOnHover) setHoveredWeekIdx(prev => (prev === wi ? null : prev));
+                              if (enlargeMonthRowOnHover) setHoveredWeekIdx((prev: number | null) => (prev === wi ? null : prev));
                               if (pillHoverTitle) setTitleHover(null);
                             }}
                             aria-label={`${ev.title}${ev.category ? `, ${ev.category}` : ''}${continuesBefore ? ', continues from previous week' : ''}${continuesAfter ? ', continues next week' : ''}`}

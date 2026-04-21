@@ -1,4 +1,5 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react';
 import {
   format, isToday, isSameDay, getHours, getMinutes,
   startOfDay, addDays,
@@ -56,7 +57,12 @@ export default function DayView({
     el?.focus({ preventScroll: false });
   }, [focusedHour]);
 
-  const handleSlotKeyDown = useCallback((e, hi, slotStart, slotEnd) => {
+  const handleSlotKeyDown = useCallback((
+    e: ReactKeyboardEvent<HTMLButtonElement>,
+    hi: number,
+    slotStart: Date,
+    slotEnd: Date,
+  ) => {
     const maxHi = slotHours.length - 1;
     let next = null;
     switch (e.key) {
@@ -119,12 +125,12 @@ export default function DayView({
   // ── Drag ────────────────────────────────────────────────────────────────
   const drag = useDrag({ pxPerHour, dayStart, dayEnd });
 
-  const handleGridPointerDown = useCallback((e) => {
+  const handleGridPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 || !ctx?.permissions?.canAddEvent) return;
     drag.startCreate(e, gridRef.current, days, GUTTER_W);
   }, [drag.startCreate, days, ctx?.permissions?.canAddEvent]);
 
-  const handleGridPointerMove = useCallback((e) => {
+  const handleGridPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     drag.onPointerMove(e);
   }, [drag.onPointerMove]);
 

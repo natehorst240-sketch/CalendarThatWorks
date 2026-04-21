@@ -100,15 +100,12 @@ without the ratchet update is tracked as **Partially complete**.
 
 Goal: Easy wins, stabilize patterns
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added explicit parameter types in `SetupTab` setters (`setCalendarName`, `setPreferredTheme`) to remove implicit callback `any`.
 - Introduced a constrained `HoverCardFieldKey` union in `HoverCardTab` and typed the `fields` map to enforce valid toggle keys.
 - Typed `DisplayTab` mutation helpers (`set`, `setGroupLabel`) so tab-local updates no longer rely on implicit `any`.
-
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
 
 ---
 
@@ -120,7 +117,7 @@ Goal: Easy wins, stabilize patterns
 
 Goal: Structured data typing
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added explicit tab-local domain types for Data tabs in `ConfigPanel.tsx`:
@@ -134,9 +131,6 @@ Goal: Structured data typing
   - `AssetsTab`: draft/meta update paths, list mutation helpers, and required-field guard
 - Tightened select-change handlers to constrained unions (template visibility and category pill style) instead of broad `string`.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
-
 ---
 
 ### PR 6 — ConfigPanel (Workflow Tabs)
@@ -148,7 +142,7 @@ Goal: Structured data typing
 
 Goal: Handle complex state + flows
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Removed implicit `any` from workflow-tab mutators by introducing explicit local draft/patch types in `src/ui/ConfigPanel.tsx` for:
@@ -159,9 +153,6 @@ Goal: Handle complex state + flows
 - Tightened `SmartViewsTab` edit/delete state and `handleUpdate` callback signature with explicit id/filter/conditions types.
 - Added explicit type narrowing for workflow tab select/file-input handlers (approval quorum, request field type, conflict rule type/severity, profile image upload result) to prevent broad `string`/`unknown` writes.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
-
 ---
 
 ### PR 7 — Small Views
@@ -171,16 +162,13 @@ Goal: Handle complex state + flows
 
 Goal: Low-risk view typing
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Replaced file-level view-prop `any` in `DayView`, `AgendaView`, and `MonthView` with explicit boundary prop types (dates, callbacks, and config slices) to document the small-view public seams.
 - Added a shared `CalendarViewEvent` boundary shape in `src/types/ui.ts` and re-exported it from `src/index.ts` for consistent low-risk view typing.
 - Tightened local state typing in `AgendaView` (collapsed group set, drag/drop refs, drop patch shape) and removed implicit numeric arithmetic on `Date` values by sorting via `getTime()`.
 - Added explicit DOM/ref typing in `DayView` (grid ref + focus target) and retained compatibility with existing render/drag/color pipelines via narrow, intentional casts at integration points.
-
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
 
 ---
 

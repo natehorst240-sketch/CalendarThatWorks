@@ -63,6 +63,10 @@ const MIGRATED_PATHS = [
   'src/hooks/usePermissions.ts',
   // Stage 4a PR2
   'src/ui/ConfigPanel.tsx',
+  // Stage 5 PR7
+  'src/views/DayView.tsx',
+  'src/views/AgendaView.tsx',
+  'src/views/MonthView.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:
