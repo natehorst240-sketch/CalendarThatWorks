@@ -224,17 +224,14 @@ describe('MonthView — event status', () => {
 describe('MonthView — optional props', () => {
   it('renders week numbers when config.display.showWeekNumbers is true', () => {
     wrap({ config: { display: { showWeekNumbers: true } } });
-    // ISO week for April 13 (week containing our currentDate) is week 16
-    expect(screen.getByText('16')).toBeInTheDocument();
+    // ISO week 16 contains April 12–18. "16" appears as both the week-number
+    // label AND the day-cell for April 16, so there are at least two matches.
+    expect(screen.getAllByText('16').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('does not render week numbers by default', () => {
+  it('does not render extra week-number elements by default', () => {
     wrap();
-    // Week 16 as a standalone cell would only appear if week numbers are on
-    const cells = screen.getAllByRole('gridcell');
-    // All gridcells have aria-labels like "Monday, April 13..." not bare numbers
-    cells.forEach(cell => {
-      expect(cell).not.toHaveAttribute('aria-label', '16');
-    });
+    // Without week numbers, "16" only appears once — as the April 16 day cell.
+    expect(screen.getAllByText('16')).toHaveLength(1);
   });
 });
