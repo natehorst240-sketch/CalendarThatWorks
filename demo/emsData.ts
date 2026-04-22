@@ -1,36 +1,34 @@
-// demo/emsData.ts
+/**
+ * demo/emsData.ts — Air EMS (emergency medical services) demo dataset.
+ *
+ * Replaces the old engineering on-call + jet-charter fixtures used prior to
+ * issue #268. Models a small operations console: regions + bases, pilots +
+ * medical crew + mechanics, aircraft with capabilities, shifts (day/night),
+ * mechanic on-call rotation, maintenance events, training requests, and an
+ * international critical-care transfer mission with leg-by-leg crew + medical
+ * assignments and country clearance compliance.
+ *
+ * All datetimes are local-time ISO-8601 strings (no timezone suffix) anchored
+ * around 2026-04-21 so the schedule view always has populated rows relative
+ * to "today" in the demo.
+ */
 
-import type {
-  RegionRecord,
-  BaseRecord,
-  AssetRecord,
-  PilotRecord,
-  MedicalRecord,
-  MechanicRecord,
-  ShiftRecord,
-  MaintenanceRecord,
-  RequestRecord,
-  MissionRecord,
-} from './types';
+// ── Geography ─────────────────────────────────────────────────────────────────
 
-/* ── Regions ───────────────────────────────────────── */
-
-export const regions: RegionRecord[] = [
+export const regions = [
   { id: 'r1', name: 'Mountain' },
   { id: 'r2', name: 'Southwest' },
 ];
 
-/* ── Bases ─────────────────────────────────────────── */
-
-export const bases: BaseRecord[] = [
+export const bases = [
   { id: 'b1', name: 'Salt Lake', regionId: 'r1' },
-  { id: 'b2', name: 'Logan', regionId: 'r1' },
-  { id: 'b3', name: 'Phoenix', regionId: 'r2' },
+  { id: 'b2', name: 'Logan',     regionId: 'r1' },
+  { id: 'b3', name: 'Phoenix',   regionId: 'r2' },
 ];
 
-/* ── Assets ────────────────────────────────────────── */
+// ── Fleet ─────────────────────────────────────────────────────────────────────
 
-export const assets: AssetRecord[] = [
+export const assets = [
   {
     id: 'a1',
     name: 'Heli 1',
@@ -57,9 +55,9 @@ export const assets: AssetRecord[] = [
   },
 ];
 
-/* ── Crew ─────────────────────────────────────────── */
+// ── People ────────────────────────────────────────────────────────────────────
 
-export const crew: PilotRecord[] = [
+export const crew = [
   {
     id: 'c1',
     name: 'Pilot A',
@@ -83,7 +81,7 @@ export const crew: PilotRecord[] = [
   },
 ];
 
-export const medicalCrew: MedicalRecord[] = [
+export const medicalCrew = [
   {
     id: 'mc1',
     name: 'Nurse Kelly',
@@ -114,152 +112,134 @@ export const medicalCrew: MedicalRecord[] = [
   },
 ];
 
-export const mechanics: MechanicRecord[] = [
-  { id: 'mech1', name: 'Tech Mike', baseId: 'b1', status: 'on-call' },
+export const mechanics = [
+  { id: 'mech1', name: 'Tech Mike',  baseId: 'b1', status: 'on-call'  },
   { id: 'mech2', name: 'Tech Sarah', baseId: 'b2', status: 'off-duty' },
 ];
 
-/* ── Shifts ───────────────────────────────────────── */
+// ── Shifts (day / night, all roles) ───────────────────────────────────────────
 
-export const dispatchShifts: ShiftRecord[] = [
+export const dispatchShifts = [
   {
     id: 'd1',
     title: 'Dispatch Day Shift',
     baseId: 'b1',
     start: '2026-04-21T07:00',
-    end: '2026-04-21T19:00',
-    type: 'dispatch',
+    end:   '2026-04-21T19:00',
+    type:  'dispatch',
   },
   {
     id: 'd2',
     title: 'Dispatch Night Shift',
     baseId: 'b1',
     start: '2026-04-21T19:00',
-    end: '2026-04-22T07:00',
-    type: 'dispatch',
+    end:   '2026-04-22T07:00',
+    type:  'dispatch',
   },
 ];
 
-export const pilotShifts: ShiftRecord[] = [
+export const pilotShifts = [
   {
     id: 'ps1',
     title: 'Pilot Day Shift',
     crewId: 'c1',
     start: '2026-04-21T07:00',
-    end: '2026-04-21T19:00',
-    type: 'shift',
+    end:   '2026-04-21T19:00',
+    type:  'shift',
   },
   {
     id: 'ps2',
     title: 'Pilot Night Shift',
     crewId: 'c2',
     start: '2026-04-21T19:00',
-    end: '2026-04-22T07:00',
-    type: 'shift',
+    end:   '2026-04-22T07:00',
+    type:  'shift',
   },
 ];
 
-export const medicalShifts: ShiftRecord[] = [
+export const medicalShifts = [
   {
     id: 'ms1',
     title: 'Medical Day Shift',
     crewId: 'mc1',
     start: '2026-04-21T07:00',
-    end: '2026-04-21T19:00',
-    type: 'shift',
+    end:   '2026-04-21T19:00',
+    type:  'shift',
   },
   {
     id: 'ms2',
     title: 'Medical Night Shift',
     crewId: 'mc2',
     start: '2026-04-21T19:00',
-    end: '2026-04-22T07:00',
-    type: 'shift',
+    end:   '2026-04-22T07:00',
+    type:  'shift',
   },
 ];
 
-export const mechanicOnCall: ShiftRecord[] = [
+// Mechanic on-call rotates weekly so the schedule shows coverage continuity
+// even when the schedule view is zoomed out to the month.
+export const mechanicOnCall = [
   {
     id: 'oc1',
     title: 'On Call - Week A',
     crewId: 'mech1',
     start: '2026-04-20T00:00',
-    end: '2026-04-27T00:00',
-    type: 'on-call',
+    end:   '2026-04-27T00:00',
+    type:  'on-call',
   },
   {
     id: 'oc2',
     title: 'On Call - Week B',
     crewId: 'mech2',
     start: '2026-04-27T00:00',
-    end: '2026-05-04T00:00',
-    type: 'on-call',
+    end:   '2026-05-04T00:00',
+    type:  'on-call',
   },
 ];
 
-/* ── Maintenance ───────────────────────────────────── */
+// ── Maintenance + approvals ──────────────────────────────────────────────────
 
-export const maintenanceEvents: MaintenanceRecord[] = [
+export const maintenanceEvents = [
   {
     id: 'm1',
     title: '100hr Inspection - Heli 1',
     assetId: 'a1',
     start: '2026-04-22T08:00',
-    end: '2026-04-22T14:00',
-    type: 'maintenance',
+    end:   '2026-04-22T14:00',
+    type:  'maintenance',
   },
 ];
 
-/* ── Requests ─────────────────────────────────────── */
-
-export const requests: RequestRecord[] = [
+export const requests = [
   {
     id: 'req1',
     title: 'Training Flight Request',
     assetId: 'a1',
     status: 'pending',
     start: '2026-04-23T09:00',
-    end: '2026-04-23T12:00',
-    type: 'request',
+    end:   '2026-04-23T12:00',
+    type:  'request',
   },
 ];
 
-/* ── Mission (core demo scenario) ─────────────────── */
+// ── International mission — the product's headline demo ──────────────────────
 
-export const mission: MissionRecord = {
+export const mission = {
   id: 'mission1',
   name: 'Brazil → Germany Critical Care Transfer',
   requiredCrew: {
-    pilots: ['IFR', 'International'],
+    pilots:  ['IFR', 'International'],
     medical: ['Critical Care', 'Vent'],
   },
   legs: [
-    {
-      id: 'leg1',
-      from: 'SLC',
-      to: 'JFK',
-      start: '2026-04-24T06:00',
-      end: '2026-04-24T12:00',
-    },
-    {
-      id: 'leg2',
-      from: 'JFK',
-      to: 'London',
-      start: '2026-04-24T14:00',
-      end: '2026-04-25T02:00',
-    },
-    {
-      id: 'leg3',
-      from: 'London',
-      to: 'Germany',
-      start: '2026-04-25T04:00',
-      end: '2026-04-25T08:00',
-    },
+    { id: 'leg1', from: 'SLC',    to: 'JFK',     start: '2026-04-24T06:00', end: '2026-04-24T12:00' },
+    { id: 'leg2', from: 'JFK',    to: 'London',  start: '2026-04-24T14:00', end: '2026-04-25T02:00' },
+    { id: 'leg3', from: 'London', to: 'Germany', start: '2026-04-25T04:00', end: '2026-04-25T08:00' },
   ],
   assignments: {
     pilots: [
-      { crewId: 'c1', legId: 'leg1' },
-      { crewId: 'c2', legId: 'leg2' },
+      { crewId: 'c1',  legId: 'leg1' },
+      { crewId: 'c2',  legId: 'leg2' },
     ],
     medical: [
       { crewId: 'mc1', legId: 'leg1' },
@@ -267,9 +247,9 @@ export const mission: MissionRecord = {
     ],
   },
   compliance: [
-    { id: 'comp1', label: 'Brazil Exit Clearance', status: 'approved' },
-    { id: 'comp2', label: 'UK Entry Clearance', status: 'approved' },
-    { id: 'comp3', label: 'Germany Entry Clearance', status: 'pending' },
+    { id: 'comp1', label: 'Brazil Exit Clearance',       status: 'approved' },
+    { id: 'comp2', label: 'UK Entry Clearance',          status: 'approved' },
+    { id: 'comp3', label: 'Germany Entry Clearance',     status: 'pending'  },
     { id: 'comp4', label: 'Medical Capability Verified', status: 'approved' },
   ],
 };
