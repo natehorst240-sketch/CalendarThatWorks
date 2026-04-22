@@ -4,275 +4,207 @@
 
 This document starts the Stage 7 planning effort for enabling `strictNullChecks` repo-wide.
 
-Stage 7 is **not** part of the Stage 0–6 `noImplicitAny` roadmap. That roadmap explicitly deferred nullability work until after Stage 6 was complete. Stage 6 is now complete, so Stage 7 can begin as its own staged epic.
+---
 
-This plan is intentionally measurement-first. `strictNullChecks` work is expected to be **2–4× the effort of Stages 1–6 combined**, so this epic must be sized from real diagnostics and executed in narrow, reviewable slices.
+## Sprint 2 — Targeted UI + Test Reduction Sprint (Post-Pilot)
+
+**Date:** 2026-04-22  
+**Status:** ACTIVE (based on latest CI checkpoint)
+
+### Goal
+
+Reduce strict-null error count by attacking **mid-sized UI seams + mechanical test debt** while continuing to avoid root composition (`WorksCalendar.tsx`).
+
+This sprint is designed to:
+
+- shrink total diagnostics meaningfully
+- reduce noise before view-layer work
+- prepare for future `views/**` slicing
 
 ---
 
-## Why Stage 7 is Separate
+## Why this sprint focus
 
-The `noImplicitAny` migration was dominated by mechanical parameter and callback typing. `strictNullChecks` is different:
+Latest CI checkpoint shows:
 
-- it changes control-flow requirements, not just annotations
-- it often forces runtime-safe handling for missing values
-- it frequently surfaces real product assumptions, not just loose typing
-- it can cascade across component boundaries, hooks, views, tests, and config models
+- root file (`WorksCalendar.tsx`) still too high-cascade
+- views still high-risk and not yet ready for broad changes
+- **UI panels and tests contain high-density, low-risk fixes**
 
-Because of that, Stage 7 needs its **own roadmap, own ratchet, and own audit checkpoints** rather than being appended to the old plan.
-
----
-
-## Starting Assumptions
-
-Locked assumptions entering Stage 7:
-
-- Stage 6 is complete
-- root `noImplicitAny` is already enabled
-- the prior ratchet model for `noImplicitAny` has been retired
-- this epic should be sized against real `strictNullChecks` measurements, not guesses
-- likely effort is **2–4× Stages 1–6 combined**
+This sprint targets the highest ROI per PR.
 
 ---
 
-## Guiding Rules
+## Sprint 2 Target Areas
 
-1. **Measure before slicing.** No sprint estimate is valid until repo-wide `strictNullChecks` diagnostics are collected.
-2. **Separate nullability bugs from typing cleanup.** If a fix changes runtime behavior, document it explicitly.
-3. **One seam per PR.** Nullability cascades faster than `noImplicitAny`; keep slices smaller.
-4. **Prefer normalization and guards at boundaries.** Avoid scattering `!` or `as` assertions through callsites.
-5. **Non-null assertions are exceptions, not strategy.** Every new `!` must be justified locally.
-6. **Keep root builds green.** Use staged enforcement until the repo is truly ready for the root flip.
+### Slice A — ICSFeedPanel (UI seam)
 
----
+Files:
+- `src/ui/ICSFeedPanel.tsx`
 
-## Proposed Epic Structure
+Problems:
+- state inferred as `null`, later treated as object
+- `never` cascades on `ok`, `count`, `error`
 
-Stage 7 should run as a staged epic with six planned steps.
+Fix pattern:
 
-### Sprint 0 — Baseline audit and enforcement mechanism
+```ts
+type FeedState = {
+  ok: boolean;
+  count?: number;
+  error?: string;
+} | null;
+```
 
-**Goal:** establish the measurement and ratchet model for `strictNullChecks`.
+- explicitly type state
+- guard before access
 
-Tasks:
-- create a dedicated strict-null audit doc
-- run repo-wide measurement with `strictNullChecks: true`
-- group diagnostics by directory and file
-- classify findings into:
-  - mechanical narrowing
-  - boundary normalization
-  - runtime-risk null handling
-- decide whether a side config / filter script ratchet is needed again
-- record top 20 offending files and top directories
-
-Deliverables:
-- `docs/stage-7-strict-null-checks-audit.md`
-- a directory/file count table
-- staged enforcement mechanism proposal
-- first realistic size estimate for the epic
-
-**Exit criteria:**
-- repo-wide strict-null diagnostics measured explicitly
-- highest-risk hotspots identified
-- enforcement plan chosen before code migration begins
+PR size: 1 file
+Risk: LOW
 
 ---
 
-### Sprint 1 — Leaf types, utilities, and pure data helpers
+### Slice B — SourcePanel (UI seam)
 
-**Goal:** prove the Stage 7 mechanism on the lowest-risk code.
+Files:
+- `src/ui/SourcePanel.tsx`
 
-Likely target areas:
-- pure helper modules
-- utility functions
-- type adapters / normalizers
-- parser and formatter helpers with obvious nullable seams
+Problems:
+- `boolean | undefined` used as boolean
+- `string | undefined` used as string
+- nullable draft objects
 
-Rules:
-- add null guards and normalization helpers at entry seams
-- avoid pushing `undefined` unions outward unless required
-- prefer explicit return types where nullability matters
+Fix pattern:
 
-**Exit criteria:**
-- first migrated paths are strict-null clean
-- enforcement mechanism is proven in CI
-- no broad UI/view churn required
+- normalize inputs at boundary
+- use defaulting (`?? false`, `?? ''`)
+- guard draft before usage
 
----
-
-### Sprint 2 — Data boundaries and configuration seams
-
-**Goal:** clean the places where optional external data enters the app.
-
-Likely target areas:
-- config loading and parsing
-- API response normalization
-- persisted owner/workflow/view settings
-- imported or external record shapes
-
-Focus:
-- normalize once at boundaries
-- create named nullable input types vs normalized runtime-safe output types
-- avoid duplicated fallback logic across consumers
-
-**Exit criteria:**
-- core data-entry seams are normalized
-- downstream callers consume safer shapes
-- nullability handling is documented for each boundary
+PR size: 1 file
+Risk: LOW–MED
 
 ---
 
-### Sprint 3 — Hooks and state flows
+### Slice C — Form normalization fixes
 
-**Goal:** migrate hooks after the app's data seams are safer.
+Files:
+- `AvailabilityForm.tsx`
+- `CalendarExternalForm.tsx`
 
-Likely target areas:
-- hooks returning optional state
-- refs, event drafts, selection models, and derived state
-- async/loading hooks where nullable values are expected transiently
+Problems:
+- writing `undefined` into `Record<string,string>`
 
-Focus:
-- explicit hook return contracts
-- loading/empty/error state modeling
-- minimize consumer churn by returning stable named result shapes
+Fix pattern:
 
-**Exit criteria:**
-- migrated hooks are strict-null clean
-- nullability in hook returns is explicit and documented
-- view consumers are prepared for later UI migration
+```ts
+setState(prev => ({
+  ...prev,
+  title: value ?? ''
+}))
+```
 
----
-
-### Sprint 4 — UI/forms/dialogs
-
-**Goal:** tackle owner-facing UI after boundaries and hooks are stabilized.
-
-Likely target areas:
-- forms and dialogs
-- config/setup surfaces
-- import/export preview flows
-- shared UI controls with optional props/data
-
-Focus:
-- controlled input safety
-- optional callback handling
-- conditional rendering around nullable values
-- local draft-state narrowing
-
-**Exit criteria:**
-- selected UI slices are strict-null clean
-- no uncontrolled spread of `value!` or callback assertions
+PR size: 1–2 files
+Risk: LOW
 
 ---
 
-### Sprint 5 — Views and root integration
+### Slice D — Mechanical test cleanup batch
 
-**Goal:** clean the highest-cascade parts of the product.
+Targets:
+- `src/__tests__/**`
+- `src/hooks/__tests__/**`
+- `src/api/v1/__tests__/sync.test.ts`
 
-Likely target areas:
-- `src/views/**`
-- root calendar composition
-- render pipelines depending on optional metadata or partial event shapes
+Patterns to fix:
 
-Focus:
-- render-time guards
-- row/group/event model normalization
-- root integration boundaries
-- targeted runtime validation for behavior-sensitive paths
+- `.get(...)!` or guard instead of assuming existence
+- `element!` or null check before fireEvent
+- `.find(...)` → guard or fallback
 
-**Exit criteria:**
-- remaining debt is reduced to a small, reviewable remainder
-- a final readiness audit can determine if root `strictNullChecks` flip is realistic
+Example:
 
----
+```ts
+const el = screen.queryByText('foo');
+expect(el).not.toBeNull();
+fireEvent.click(el!);
+```
 
-### Sprint 6 — Root flip and ratchet retirement
-
-**Goal:** enable `strictNullChecks` in root config and remove Stage 7 migration scaffolding.
-
-Tasks:
-- fix final strict-null blockers
-- move `strictNullChecks: true` into root config
-- remove side-config / temporary ratchet tooling if used
-- simplify CI back to one TS gate
-- document Stage 7 completion
-
-**Exit criteria:**
-- root TypeScript build passes with `strictNullChecks: true`
-- temporary migration infrastructure is retired
-- docs explicitly mark Stage 7 complete
+PR size: 3–5 files per PR
+Risk: LOW (mechanical)
 
 ---
 
-## PR Sizing Rules
+### Slice E — First view micro-slice (TimelineView)
 
-Because this epic is expected to be much larger than `noImplicitAny`, use tighter review limits:
+Files:
+- `src/views/TimelineView.tsx`
 
-- target **1–4 files per PR** for risky areas
-- target **1 seam or concept per PR**, not whole directories, once React-heavy work begins
-- split immediately if a PR introduces runtime behavior changes in addition to type cleanup
+Scope (STRICTLY limited):
 
-Examples of good Stage 7 slices:
-- one parser/normalizer pair
-- one hook plus its local tests
-- one dialog plus its local helpers
-- one view helper cluster, not an entire view family
+- one ref or scroll handler cluster
+- one hover/selection state cluster
 
----
+Do NOT:
+- touch full render pipeline
+- refactor entire file
 
-## Early Risk Categories
+Goal:
+- prove view-level slicing works without cascade
 
-Every Stage 7 issue or PR should be tagged as one of:
-
-- **Mechanical** — obvious guards, narrowing, or defaulting
-- **Boundary** — external/public seam needs normalization
-- **Runtime-risk** — null handling may change behavior
-- **Cascade-risk** — likely to spread across modules
-
-This label should appear in every PR description.
+PR size: 1 file
+Risk: MEDIUM
 
 ---
 
-## Required Metrics to Collect in Sprint 0
+## Sprint 2 PR Plan (ordered)
 
-Before estimating the rest of the epic, capture:
-
-- total repo-wide `strictNullChecks` diagnostics
-- unique files affected
-- top directories by count
-- top offending files by count
-- percentage of diagnostics in:
-  - pure modules
-  - hooks
-  - UI
-  - views
-  - tests
-- count of likely runtime-risk sites vs mechanical sites
-
-Without this table, Stage 7 sizing is not considered valid.
+1. PR1 — ICSFeedPanel
+2. PR2 — SourcePanel
+3. PR3 — Form normalization
+4. PR4–PR6 — test cleanup batches
+5. PR7 — TimelineView micro-slice
 
 ---
 
-## Suggested Deliverables
+## Exit Criteria
 
-At minimum, Stage 7 should produce these docs/files:
+Sprint 2 is successful if:
 
-- `docs/stage-7-strict-null-checks-audit.md`
-- `docs/stage-7-strict-null-checks-sprint-plan.md` *(this file)*
-- optional: Stage 7 ratchet script/config if staged enforcement is reused
-
----
-
-## Immediate Next Step
-
-Open the Stage 7 baseline audit before committing to any implementation PRs.
-
-The first implementation sprint does **not** start until Sprint 0 produces real repo-wide nullability measurements.
+- strict-null error count decreases meaningfully
+- no new regressions introduced
+- at least one view file is partially migrated safely
+- noise from tests is reduced
 
 ---
 
-## Final Reminder
+## What we are NOT doing yet
 
-Stage 7 is expected to be the largest TypeScript migration epic in this repository.
+Explicitly out of scope:
 
-Treat it as a new program of work, not as a follow-up checkbox to Stage 6.
+- `src/WorksCalendar.tsx`
+- full `views/**` migrations
+- root config flip stabilization
+
+Those require a later dedicated sprint after noise reduction.
+
+---
+
+## Next Sprint Preview (Sprint 3)
+
+If Sprint 2 succeeds:
+
+- expand view slicing (Timeline + WeekView)
+- begin hook normalization (`useSyncedCalendar`, etc.)
+- prepare for root composition stabilization sprint
+
+---
+
+## Key Insight
+
+The fastest path to `strictNullChecks: true` is **not fixing the biggest file first**.
+
+It is:
+
+> reduce cascade pressure → shrink error surface → then attack root composition cleanly
+
+This sprint executes that strategy.
