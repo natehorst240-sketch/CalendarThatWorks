@@ -51,6 +51,7 @@
     "build:examples": "vite build --config vite.examples.config.ts",
     "preview": "vite preview --config vite.demo.config.ts",
     "type-check": "tsc --noEmit",
+    "type-check:strict-null": "node scripts/typecheck-strict-null.mjs",
     "type-check:watch": "tsc --noEmit --watch",
     "prepublishOnly": "npm run test && npm run build"
   },

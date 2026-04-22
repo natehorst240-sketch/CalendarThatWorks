@@ -2,14 +2,25 @@ const UNGROUPED = '(Ungrouped)';
 
 type Accessor = (item: any) => any;
 type Row = Record<string, any>;
+type GroupBucketMap = Map<string, Row[]>;
 
-function bucketize(items: Row[], accessor: Accessor): { map: Map<string, Row[]>; order: string[] } {
-  const map = new Map<string, Row[]>();
+function getOrCreateBucket(map: GroupBucketMap, key: string): Row[] {
+  const existingBucket = map.get(key);
+  if (existingBucket) {
+    return existingBucket;
+  }
+  const bucket: Row[] = [];
+  map.set(key, bucket);
+  return bucket;
+}
+
+function bucketize(items: Row[], accessor: Accessor): { map: GroupBucketMap; order: string[] } {
+  const map: GroupBucketMap = new Map();
   for (const item of items) {
     const val = accessor(item);
     const key = val != null && val !== '' ? String(val) : UNGROUPED;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(item);
+    const bucket = getOrCreateBucket(map, key);
+    bucket.push(item);
   }
   // Insertion order preserved; (Ungrouped) always sorts last.
   const order = [...map.keys()].sort((a, b) => {
@@ -34,11 +45,19 @@ function emitLevel(
     flatRows.push(...items);
     return;
   }
-  const { map, order } = bucketize(items, accessors[level]);
+  const accessor = accessors[level];
+  if (!accessor) {
+    flatRows.push(...items);
+    return;
+  }
+  const { map, order } = bucketize(items, accessor);
   for (const key of order) {
     const path = parentPath ? `${parentPath}/${key}` : key;
     groupOrder.push(path);
     const bucket = map.get(key);
+    if (!bucket) {
+      continue;
+    }
     const collapsed = collapsedGroups.has(path);
     // Total member count = count of leaf rows under this group, recursively.
     const count = bucket.length;

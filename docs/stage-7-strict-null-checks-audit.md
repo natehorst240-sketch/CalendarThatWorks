@@ -1,7 +1,7 @@
 # Stage 7 — strictNullChecks Audit (Sprint 0 Baseline)
 
 _Date:_ 2026-04-22  
-_Status:_ Sprint 0 baseline completed (measurement + ratchet proposal)
+_Status:_ Sprint 0 baseline completed; Sprint 1 ratchet pilot landed on `src/grouping/groupRows.ts`
 
 ## Scope and Method
 
@@ -169,3 +169,19 @@ To de-risk quickly while proving the ratchet:
 - [x] top offenders identified
 - [x] staged enforcement mechanism proposed
 - [x] first realistic epic size estimate recorded
+
+---
+
+## Sprint 1 Pilot (Leaf utility seam)
+
+Date: 2026-04-22
+
+- Added a strict-null ratchet script (`scripts/typecheck-strict-null.mjs`) that runs full-repo strict-null diagnostics and fails only for migrated paths.
+- Wired CI to run `npm run type-check:strict-null` as a blocking TypeScript check.
+- Migrated first low-risk leaf path:
+  - `src/grouping/groupRows.ts`
+  - `src/grouping/__tests__/groupRows.test.ts`
+
+Pilot result:
+- Migrated paths are strict-null clean under the ratchet.
+- Mechanism is active in CI without requiring root `strictNullChecks` flip.
