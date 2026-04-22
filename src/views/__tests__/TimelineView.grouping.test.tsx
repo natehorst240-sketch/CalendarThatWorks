@@ -12,7 +12,7 @@ const employees = [
   { id: 'doc-1',   name: 'Carol Jones', role: 'Doctor' },
 ];
 
-function renderTimeline(props = {}) {
+function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <TimelineView
@@ -124,13 +124,13 @@ describe('TimelineView grouping', () => {
   });
 
   describe('DnD row reassignment', () => {
-    function dragAndDrop(source, target) {
+    function dragAndDrop(source: Element | Window | Document, target: Element | Window | Document) {
       const dt = {
         effectAllowed: '',
         dropEffect: '',
-        _data: {},
-        setData(k, v) { this._data[k] = v; },
-        getData(k) { return this._data[k]; },
+        _data: {} as Record<string, string>,
+        setData(k: string, v: string) { this._data[k] = v; },
+        getData(k: string) { return this._data[k]; },
       };
       fireEvent.dragStart(source, { dataTransfer: dt });
       fireEvent.dragOver(target, { dataTransfer: dt });

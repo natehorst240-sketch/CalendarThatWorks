@@ -13,7 +13,7 @@ import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
 
-const evOn = (day) => new Date(2026, 3, day);
+const evOn = (day: number) => new Date(2026, 3, day);
 
 const events = [
   {
@@ -42,7 +42,7 @@ const events = [
   },
 ];
 
-function renderAssets(props = {}) {
+function renderAssets(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AssetsView
@@ -151,8 +151,8 @@ describe('AssetsView grouping — 2-level tree', () => {
 });
 
 describe('AssetsView grouping — controlled collapsedGroups', () => {
-  function Controlled(props) {
-    const [collapsed, setCollapsed] = useState(() => new Set());
+  function Controlled(props: Record<string, unknown>) {
+    const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     return (
       <CalendarContext.Provider value={null}>
         <AssetsView

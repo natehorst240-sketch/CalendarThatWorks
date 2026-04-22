@@ -73,6 +73,24 @@ const MIGRATED_PATHS = [
   'src/views/BaseGanttView.tsx',
   // Stage 5 PR9
   'src/views/TimelineView.tsx',
+  // Stage 5c PR1 (remaining views pass)
+  'src/views/AuditDrawer.tsx',
+  'src/views/ScheduleView.tsx',
+  'src/views/__tests__/AgendaView.grouping.test.tsx',
+  'src/views/__tests__/AgendaView.touchDnd.test.tsx',
+  'src/views/__tests__/AssetsView.approvalActions.test.tsx',
+  'src/views/__tests__/AssetsView.assetsProp.test.tsx',
+  'src/views/__tests__/AssetsView.grouping.test.tsx',
+  'src/views/__tests__/AssetsView.keyboardNav.test.tsx',
+  'src/views/__tests__/AssetsView.pools.test.tsx',
+  'src/views/__tests__/AssetsView.test.tsx',
+  'src/views/__tests__/AssetsView.toolbar.test.tsx',
+  'src/views/__tests__/AssetsView.virtualization.test.tsx',
+  'src/views/__tests__/AuditDrawer.test.tsx',
+  'src/views/__tests__/BaseGanttView.test.tsx',
+  'src/views/__tests__/TimelineView.grouping.test.tsx',
+  'src/views/__tests__/TimelineView.touchDnd.test.tsx',
+  'src/views/__tests__/WeekDayView.offHoursClipping.test.tsx',
   // Stage 5 PR10
   'src/WorksCalendar.tsx',
   // Stage 5 PR12

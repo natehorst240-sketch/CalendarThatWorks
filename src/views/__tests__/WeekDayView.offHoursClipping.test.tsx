@@ -16,7 +16,7 @@ import WeekView from '../WeekView';
 import DayView from '../DayView';
 import { CalendarContext } from '../../core/CalendarContext';
 
-function d(y, mo, day, h = 0, m = 0) {
+function d(y: number, mo: number, day: number, h = 0, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
@@ -26,14 +26,14 @@ function Wrap({ children }: any) {
   );
 }
 
-function makeEvent(id, start, end) {
+function makeEvent(id: string, start: Date, end: Date) {
   return { id, title: `Event ${id}`, start, end, allDay: false, color: '#3b82f6' };
 }
 
 describe('WeekView off-hours event clipping', () => {
   const monday = d(2026, 4, 6);
 
-  function renderWeek(events, display = { dayStart: 6, dayEnd: 22 }) {
+  function renderWeek(events: any[], display = { dayStart: 6, dayEnd: 22 }) {
     return render(
       <Wrap>
         <WeekView
@@ -106,7 +106,7 @@ describe('WeekView off-hours event clipping', () => {
 describe('DayView off-hours event clipping', () => {
   const currentDate = d(2026, 4, 10);
 
-  function renderDay(events, display = { dayStart: 6, dayEnd: 22 }) {
+  function renderDay(events: any[], display = { dayStart: 6, dayEnd: 22 }) {
     return render(
       <Wrap>
         <DayView

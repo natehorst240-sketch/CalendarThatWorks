@@ -25,7 +25,7 @@ const sampleEvents = [
     end:   new Date(2026, 3, 5),
     resource: 'N121AB',
     category: 'training',
-    meta: { approvalStage: { stage: 'approved', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'approved', updatedAt: '', history: [] as unknown[] } },
   },
   {
     id: 'ev-requested',
@@ -34,7 +34,7 @@ const sampleEvents = [
     end:   new Date(2026, 3, 9),
     resource: 'N121AB',
     category: 'pr',
-    meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] as unknown[] } },
   },
   {
     id: 'ev-denied',
@@ -43,7 +43,7 @@ const sampleEvents = [
     end:   new Date(2026, 3, 13),
     resource: 'N505CD',
     category: 'maintenance',
-    meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] as unknown[] } },
   },
 ];
 
