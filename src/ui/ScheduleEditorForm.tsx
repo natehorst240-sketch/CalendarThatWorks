@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { format, parseISO, isValid, addDays, addHours } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { createId } from '../core/createId';
 import styles from './ScheduleEditorForm.module.css';
+import type { WorksCalendarEvent } from '../types/events';
 
 // ─── Shift templates ──────────────────────────────────────────────────────────
 
-const SHIFT_TEMPLATES = [
+type ShiftTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  rrule: string;
+  durationHours: number;
+  note?: string;
+};
+
+const SHIFT_TEMPLATES: ShiftTemplate[] = [
   {
     id:    'mon-thu',
     label: 'Mon–Thu (4×10)',
@@ -39,7 +49,9 @@ const SHIFT_TEMPLATES = [
   },
 ];
 
-const RRULE_PRESETS = [
+type RrulePresetId = 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'custom';
+
+const RRULE_PRESETS: Array<{ id: RrulePresetId; label: string; rrule: string | null }> = [
   { id: 'daily',    label: 'Daily',              rrule: 'FREQ=DAILY' },
   { id: 'weekdays', label: 'Weekdays (Mon–Fri)',  rrule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' },
   { id: 'weekly',   label: 'Weekly',              rrule: null }, // computed from start day
@@ -49,9 +61,9 @@ const RRULE_PRESETS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
 
-function toInput(date, allDay) {
+function toInput(date: Date | string | null | undefined, allDay: boolean): string {
   if (!date) return '';
   try {
     const d = date instanceof Date ? date : parseISO(date);
@@ -61,13 +73,13 @@ function toInput(date, allDay) {
   }
 }
 
-function fromInput(str, allDay) {
+function fromInput(str: string, allDay: boolean): Date | null {
   if (!str) return null;
   const d = new Date(str + (allDay && str.length === 10 ? 'T00:00:00' : ''));
   return isValid(d) ? d : null;
 }
 
-function buildRrule(preset, startStr) {
+function buildRrule(preset: RrulePresetId, startStr: string): string | null {
   const start = fromInput(startStr, false);
   if (preset === 'daily')    return 'FREQ=DAILY';
   if (preset === 'weekdays') return 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
@@ -98,11 +110,18 @@ export default function ScheduleEditorForm({
   onCallCategory = 'on-call',
   onSave,
   onClose,
-}: any) {
+}: {
+  emp: { id: string; name: string; role?: string };
+  initialStart?: Date | null;
+  initialEnd?: Date | null;
+  onCallCategory?: string;
+  onSave: (eventOrEvents: WorksCalendarEvent | WorksCalendarEvent[]) => void;
+  onClose: () => void;
+}) {
   const trapRef = useFocusTrap(onClose);
 
   // Mode: 'onetime' | 'recurring' | 'template'
-  const [mode, setMode] = useState('onetime');
+  const [mode, setMode] = useState<'onetime' | 'recurring' | 'template'>('onetime');
 
   const defaultStart = initialStart ?? new Date();
   const defaultEnd   = initialEnd ?? addHours(defaultStart, 8);
@@ -110,14 +129,14 @@ export default function ScheduleEditorForm({
   const [start,       setStart]       = useState(toInput(defaultStart, false));
   const [end,         setEnd]         = useState(toInput(defaultEnd,   false));
   const [title,       setTitle]       = useState('On-Call Shift');
-  const [rrulePreset, setRrulePreset] = useState('weekdays');
+  const [rrulePreset, setRrulePreset] = useState<RrulePresetId>('weekdays');
   const [customRrule, setCustomRrule] = useState('');
   const [templateId,  setTemplateId]  = useState(SHIFT_TEMPLATES[0].id);
   const [errors,      setErrors]      = useState<Record<string, string>>({});
 
   const selectedTemplate = SHIFT_TEMPLATES.find(t => t.id === templateId) ?? SHIFT_TEMPLATES[0];
 
-  function validateDateRange(startStr, endStr) {
+  function validateDateRange(startStr: string, endStr: string): { isValid: boolean; message: string } {
     const s = fromInput(startStr, false);
     const e = fromInput(endStr, false);
     if (!s || !e) return { isValid: false, message: 'Enter valid start and end date/times' };
@@ -151,7 +170,7 @@ export default function ScheduleEditorForm({
     return Object.keys(errs).length === 0;
   }
 
-  function buildEvent(startDate, endDate, rrule) {
+  function buildEvent(startDate: Date, endDate: Date, rrule: string | null): WorksCalendarEvent {
     return {
       id:       createId('shift'),
       title:    title.trim(),
@@ -164,13 +183,14 @@ export default function ScheduleEditorForm({
     };
   }
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
 
     if (mode === 'onetime') {
       const s  = fromInput(start, false);
       const en = fromInput(end,   false);
+      if (!s || !en) return;
       onSave(buildEvent(s, en, null));
       return;
     }
@@ -181,6 +201,7 @@ export default function ScheduleEditorForm({
       const rrule = rrulePreset === 'custom'
         ? customRrule.trim().toUpperCase()
         : buildRrule(rrulePreset, start);
+      if (!s || !en) return;
       onSave(buildEvent(s, en, rrule));
       return;
     }
@@ -227,7 +248,7 @@ export default function ScheduleEditorForm({
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
           {/* Mode tabs */}
           <div className={styles.modeTabs} role="group" aria-label="Shift type">
-            {(['onetime', 'recurring', 'template']).map(m => (
+            {(['onetime', 'recurring', 'template'] as const).map(m => (
               <button
                 key={m}
                 type="button"
@@ -296,7 +317,7 @@ export default function ScheduleEditorForm({
                 id="sef-rrule"
                 className={styles.select}
                 value={rrulePreset}
-                onChange={e => { setRrulePreset(e.target.value); setErrors(v => ({ ...v, rrule: undefined })); }}
+                onChange={e => { setRrulePreset(e.target.value as RrulePresetId); setErrors(v => ({ ...v, rrule: undefined })); }}
               >
                 {RRULE_PRESETS.map(p => (
                   <option key={p.id} value={p.id}>{p.label}</option>

@@ -86,6 +86,10 @@ const MIGRATED_PATHS = [
   'src/__tests__/WorksCalendar.sort.integration.test.tsx',
   'src/__tests__/groupingFilteringSorting.integration.test.ts',
   'src/__tests__/phaseB.integration.test.tsx',
+  // Stage 5b PR3
+  'src/ui/ScheduleEditorForm.tsx',
+  'src/ui/CalendarExternalForm.tsx',
+  'src/ui/RequestForm.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

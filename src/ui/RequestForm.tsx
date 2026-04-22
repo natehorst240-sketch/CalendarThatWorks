@@ -18,13 +18,39 @@
  *   select     dropdown, options parsed from comma-separated string
  *   checkbox   boolean toggle
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './RequestForm.module.css';
 
 const INPUT_TYPES = new Set(['text', 'textarea', 'number', 'date', 'datetime', 'select', 'checkbox']);
 
-function normalizeField(field, idx) {
+type RequestFormFieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'select' | 'checkbox';
+
+type RequestFormFieldDraft = {
+  key?: string;
+  label?: string;
+  type?: RequestFormFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: string;
+};
+
+type RequestFormField = {
+  key: string;
+  label: string;
+  type: RequestFormFieldType;
+  required: boolean;
+  placeholder: string;
+  options: string;
+};
+
+type RequestSchema = {
+  fields?: RequestFormFieldDraft[];
+} | null | undefined;
+
+type RequestFormValues = Record<string, string | boolean>;
+
+function normalizeField(field: RequestFormFieldDraft, idx: number): RequestFormField {
   const key = typeof field?.key === 'string' && field.key.trim()
     ? field.key.trim()
     : `field-${idx + 1}`;
@@ -39,7 +65,7 @@ function normalizeField(field, idx) {
   };
 }
 
-function defaultForField(field) {
+function defaultForField(field: RequestFormField): string | boolean {
   switch (field.type) {
     case 'checkbox': return false;
     case 'number':   return '';
@@ -47,7 +73,7 @@ function defaultForField(field) {
   }
 }
 
-function parseOptions(raw) {
+function parseOptions(raw: string): string[] {
   return String(raw ?? '')
     .split(',')
     .map(s => s.trim())
@@ -68,7 +94,13 @@ export default function RequestForm({
   onSubmit,
   onCancel,
   title = 'New request',
-}: any) {
+}: {
+  schema: RequestSchema;
+  initialValues?: RequestFormValues;
+  onSubmit: (payload: { values: any }) => void;
+  onCancel: () => void;
+  title?: string;
+}) {
   const trapRef = useFocusTrap(onCancel);
 
   const fields = useMemo(() => {
@@ -76,19 +108,21 @@ export default function RequestForm({
     return raw.map(normalizeField);
   }, [schema]);
 
-  const [values, setValues] = useState(() => {
-    const seed = {};
+  const [values, setValues] = useState<RequestFormValues>(() => {
+    const seed: RequestFormValues = {};
     for (const f of fields) {
       seed[f.key] = initialValues[f.key] ?? defaultForField(f);
     }
     return seed;
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const toInputValue = (value: string | boolean | undefined): string =>
+    typeof value === 'string' ? value : '';
 
-  const setValue = (key, next) => setValues(prev => ({ ...prev, [key]: next }));
+  const setValue = (key: string, next: string | boolean) => setValues(prev => ({ ...prev, [key]: next }));
 
   const validate = () => {
-    const next = {};
+    const next: Record<string, string> = {};
     for (const f of fields) {
       if (!f.required) continue;
       const v = values[f.key];
@@ -102,7 +136,7 @@ export default function RequestForm({
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
     onSubmit?.({ values });
@@ -144,7 +178,7 @@ export default function RequestForm({
                   <span>{field.label}{field.required ? ' *' : ''}</span>
                   <textarea
                     className={styles.textarea}
-                    value={values[field.key] ?? ''}
+                    value={toInputValue(values[field.key])}
                     onChange={e => setValue(field.key, e.target.value)}
                     placeholder={field.placeholder}
                     aria-label={field.label}
@@ -163,7 +197,7 @@ export default function RequestForm({
                   <span>{field.label}{field.required ? ' *' : ''}</span>
                   <select
                     className={styles.select}
-                    value={values[field.key] ?? ''}
+                    value={toInputValue(values[field.key])}
                     onChange={e => setValue(field.key, e.target.value)}
                     aria-label={field.label}
                     aria-invalid={ariaInvalid}
@@ -204,7 +238,7 @@ export default function RequestForm({
                 <input
                   type={htmlType}
                   className={styles.input}
-                  value={values[field.key] ?? ''}
+                  value={toInputValue(values[field.key])}
                   onChange={e => setValue(field.key, e.target.value)}
                   placeholder={field.placeholder}
                   aria-label={field.label}

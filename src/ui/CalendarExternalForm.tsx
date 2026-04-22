@@ -1,9 +1,36 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import styles from './CalendarExternalForm.module.css';
 
 const SUPPORTED_FIELD_TYPES = new Set(['text', 'textarea', 'datetime-local', 'date', 'checkbox', 'select']);
 
-const DEFAULT_FIELDS = [
+type ExternalFormFieldType = 'text' | 'textarea' | 'datetime-local' | 'date' | 'checkbox' | 'select';
+
+type ExternalFormOption = {
+  value: string;
+  label: string;
+};
+
+type ExternalFormField = {
+  name: string;
+  label?: string;
+  type?: ExternalFormFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: ExternalFormOption[];
+};
+
+type ExternalFormValues = Record<string, string | boolean | null | undefined>;
+
+type ExternalFormSubmitContext = {
+  values: ExternalFormValues;
+  fields: ExternalFormField[];
+};
+
+type ExternalFormAdapter = {
+  submitEvent: (payload: unknown, context: ExternalFormSubmitContext) => Promise<unknown> | unknown;
+};
+
+const DEFAULT_FIELDS: ExternalFormField[] = [
   { name: 'title', label: 'Title', type: 'text', required: true },
   { name: 'start', label: 'Start', type: 'datetime-local', required: true },
   { name: 'end', label: 'End', type: 'datetime-local', required: true },
@@ -13,7 +40,7 @@ const DEFAULT_FIELDS = [
   { name: 'description', label: 'Description', type: 'textarea', required: false },
 ];
 
-function normalizeFields(fields) {
+function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
   if (!Array.isArray(fields) || fields.length === 0) {
     throw new Error('CalendarExternalForm requires at least one field.');
   }
@@ -29,7 +56,7 @@ function normalizeFields(fields) {
     }
     names.add(field.name);
 
-    const type = field.type || 'text';
+    const type = field.type ?? 'text';
     if (!SUPPORTED_FIELD_TYPES.has(type)) {
       throw new Error(`Unsupported field type: ${type}`);
     }
@@ -44,14 +71,14 @@ function normalizeFields(fields) {
   });
 }
 
-function ensureAdapter(adapter) {
-  if (!adapter || typeof adapter.submitEvent !== 'function') {
+function ensureAdapter(adapter: unknown): ExternalFormAdapter {
+  if (!adapter || typeof (adapter as { submitEvent?: unknown }).submitEvent !== 'function') {
     throw new Error('CalendarExternalForm adapter must define submitEvent(payload, context).');
   }
-  return adapter;
+  return adapter as ExternalFormAdapter;
 }
 
-function defaultValidate(values, fields) {
+function defaultValidate(values: ExternalFormValues, fields: ExternalFormField[]): Record<string, string> {
   const errors: Record<string, string> = {};
   fields.forEach((field) => {
     if (!field.required) return;
@@ -62,7 +89,8 @@ function defaultValidate(values, fields) {
     }
   });
 
-  if (values.start && values.end && new Date(values.start) > new Date(values.end)) {
+  if (typeof values.start === 'string' && typeof values.end === 'string' && values.start && values.end
+      && new Date(values.start) > new Date(values.end)) {
     errors.end = 'End must be after start.';
   }
 
@@ -84,14 +112,23 @@ export default function CalendarExternalForm({
   submitLabel = 'Submit event',
   onSuccess,
   onError,
-}: any) {
+}: {
+  adapter: unknown;
+  fields?: ExternalFormField[];
+  initialValues?: ExternalFormValues;
+  validate?: (values: ExternalFormValues, fields: ExternalFormField[]) => Record<string, string>;
+  transform?: (values: ExternalFormValues) => unknown;
+  submitLabel?: string;
+  onSuccess?: (result: unknown, values: ExternalFormValues) => void;
+  onError?: (error: unknown, values: ExternalFormValues) => void;
+}) {
   // Validate eagerly in the component body (before hooks) so errors throw
   // synchronously from render() and are catchable by tests / error boundaries.
   const safeAdapter = ensureAdapter(adapter);
   const normalizedFields = normalizeFields(fields);
 
   const mergedInitialValues = useMemo(() => {
-    const fromFields = normalizeFields(fields).reduce((acc, field) => {
+    const fromFields = normalizeFields(fields).reduce<ExternalFormValues>((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
@@ -99,17 +136,20 @@ export default function CalendarExternalForm({
   }, [fields, initialValues]);
 
   const [values, setValues] = useState(mergedInitialValues);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function setValue(name, value) {
+  const toInputValue = (value: string | boolean | null | undefined): string =>
+    typeof value === 'string' ? value : '';
+
+  function setValue(name: string, value: string | boolean) {
     setValues((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: undefined }));
     setSubmitError('');
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const validationErrors = validate(values, normalizedFields);
     setErrors(validationErrors);
@@ -145,7 +185,7 @@ export default function CalendarExternalForm({
                 <textarea
                   id={inputId}
                   className={styles.textarea}
-                  value={value}
+                  value={toInputValue(value)}
                   placeholder={field.placeholder}
                   onChange={(e) => setValue(field.name, e.target.value)}
                   rows={3}
@@ -155,7 +195,7 @@ export default function CalendarExternalForm({
                 <select
                   id={inputId}
                   className={styles.select}
-                  value={value}
+                  value={toInputValue(value)}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 >
                   <option value="">Select…</option>
@@ -177,7 +217,7 @@ export default function CalendarExternalForm({
                   id={inputId}
                   className={styles.input}
                   type={field.type || 'text'}
-                  value={value}
+                  value={toInputValue(value)}
                   placeholder={field.placeholder}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 />
