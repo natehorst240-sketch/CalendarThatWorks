@@ -1,8 +1,20 @@
-import { render, fireEvent, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useTouchDnd } from '../useTouchDnd';
 
-function Harness({ enabled = true, longPressMs = 300, cbs }: any) {
+type DndPayload = { id: string };
+type DndCallbacks = {
+  onStart: (payload: DndPayload) => void;
+  onOver: (target: Element | null, payload: DndPayload) => void;
+  onDrop: (target: Element | null, payload: DndPayload) => void;
+  onCancel: (payload: DndPayload) => void;
+};
+
+function Harness({ enabled = true, longPressMs = 300, cbs }: {
+  enabled?: boolean;
+  longPressMs?: number;
+  cbs: DndCallbacks;
+}) {
   const onTouchStart = useTouchDnd({
     enabled,
     longPressMs,
@@ -30,7 +42,12 @@ function Harness({ enabled = true, longPressMs = 300, cbs }: any) {
  * Dispatch a touch event with a given touches array via a native Event.
  * happy-dom doesn't build TouchEvent, so we forge the `touches` property.
  */
-function fireTouch(type, el, touches, { cancelable = true } = {}) {
+function fireTouch(
+  type: string,
+  el: EventTarget,
+  touches: Array<{ x: number; y: number }>,
+  { cancelable = true }: { cancelable?: boolean } = {},
+): Event {
   const evt = new Event(type, { bubbles: true, cancelable });
   Object.defineProperty(evt, 'touches', {
     value: touches.map(t => ({ clientX: t.x, clientY: t.y, target: el })),

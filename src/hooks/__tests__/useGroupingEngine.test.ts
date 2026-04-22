@@ -20,7 +20,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     rrule: null,
     exdates: [],
     meta: {},
-    _raw: {} as any,
+    _raw: { title: 'Raw Event', start: new Date('2024-01-01T09:00:00') },
     ...overrides,
   }
 }

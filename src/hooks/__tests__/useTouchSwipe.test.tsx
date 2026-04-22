@@ -3,13 +3,25 @@ import { describe, it, expect, vi } from 'vitest';
 import { useRef } from 'react';
 import { useTouchSwipe } from '../useTouchSwipe';
 
-function Harness({ enabled = true, onSwipeLeft, onSwipeRight }: any) {
-  const ref = useRef(null);
+type SwipeCallbacks = {
+  onSwipeLeft: () => void;
+  onSwipeRight: () => void;
+};
+
+function Harness({ enabled = true, onSwipeLeft, onSwipeRight }: {
+  enabled?: boolean;
+  onSwipeLeft: SwipeCallbacks['onSwipeLeft'];
+  onSwipeRight: SwipeCallbacks['onSwipeRight'];
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
   useTouchSwipe({ targetRef: ref, enabled, onSwipeLeft, onSwipeRight, minDistance: 40 });
   return <div ref={ref} data-testid="swipe-target">Swipe target</div>;
 }
 
-function dispatchSwipe(el, { startX, startY, endX, endY }) {
+function dispatchSwipe(
+  el: HTMLElement,
+  { startX, startY, endX, endY }: { startX: number; startY: number; endX: number; endY: number },
+) {
   const touchstart = new Event('touchstart', { bubbles: true, cancelable: true });
   Object.defineProperty(touchstart, 'touches', {
     value: [{ clientX: startX, clientY: startY, target: el }],

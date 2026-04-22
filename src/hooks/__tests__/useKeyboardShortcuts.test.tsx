@@ -10,7 +10,14 @@ import '@testing-library/jest-dom';
 
 import { useKeyboardShortcuts } from '../useKeyboardShortcuts';
 
-function Harness({ api }: any) {
+type CalendarApi = {
+  setView: (view: string) => void;
+  navigate: (direction: number) => void;
+  goToToday: () => void;
+  openHelp: () => void;
+};
+
+function Harness({ api }: { api: CalendarApi }) {
   useKeyboardShortcuts(api);
   return (
     <div>
@@ -20,7 +27,7 @@ function Harness({ api }: any) {
   );
 }
 
-function makeApi(overrides = {}) {
+function makeApi(overrides: Partial<CalendarApi> = {}): CalendarApi {
   return {
     setView: vi.fn(),
     navigate: vi.fn(),
