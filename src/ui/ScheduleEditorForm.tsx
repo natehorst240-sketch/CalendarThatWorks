@@ -54,8 +54,8 @@ type RrulePresetId = 'daily' | 'weekdays' | 'weekly' | 'biweekly' | 'custom';
 const RRULE_PRESETS: Array<{ id: RrulePresetId; label: string; rrule: string | null }> = [
   { id: 'daily',    label: 'Daily',              rrule: 'FREQ=DAILY' },
   { id: 'weekdays', label: 'Weekdays (Mon–Fri)',  rrule: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR' },
-  { id: 'weekly',   label: 'Weekly',              rrule: null }, // computed from start day
-  { id: 'biweekly', label: 'Every Two Weeks',     rrule: null }, // computed from start day
+  { id: 'weekly',   label: 'Weekly',              rrule: null },
+  { id: 'biweekly', label: 'Every Two Weeks',     rrule: null },
   { id: 'custom',   label: 'Custom RRULE…',       rrule: null },
 ];
 
@@ -63,46 +63,68 @@ const RRULE_PRESETS: Array<{ id: RrulePresetId; label: string; rrule: string | n
 
 const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;
 
-function toInput(date: Date | string | null | undefined, allDay: boolean): string {
+type ScheduleEditorErrors = Record<string, string>;
+
+type ScheduleEditorFormProps = {
+  emp: { id: string; name: string; role?: string };
+  initialStart?: Date | null;
+  initialEnd?: Date | null;
+  onCallCategory?: string;
+  onSave: (eventOrEvents: WorksCalendarEvent | WorksCalendarEvent[]) => void;
+  onClose: () => void;
+};
+
+function getDefaultTemplate(): ShiftTemplate {
+  const firstTemplate = SHIFT_TEMPLATES[0];
+  if (!firstTemplate) {
+    throw new Error('ScheduleEditorForm requires at least one shift template.');
+  }
+  return firstTemplate;
+}
+
+function withoutErrorKeys(errors: ScheduleEditorErrors, ...keys: string[]): ScheduleEditorErrors {
+  if (keys.length === 0) return errors;
+  const next = { ...errors };
+  for (const key of keys) {
+    delete next[key];
+  }
+  return next;
+}
+
+export function toInput(date: Date | string | null | undefined, allDay: boolean): string {
   if (!date) return '';
   try {
-    const d = date instanceof Date ? date : parseISO(date);
-    return format(d, allDay ? 'yyyy-MM-dd' : "yyyy-MM-dd'T'HH:mm");
+    const parsed = date instanceof Date ? date : parseISO(date);
+    if (!isValid(parsed)) return '';
+    return format(parsed, allDay ? 'yyyy-MM-dd' : "yyyy-MM-dd'T'HH:mm");
   } catch {
     return '';
   }
 }
 
-function fromInput(str: string, allDay: boolean): Date | null {
+export function fromInput(str: string, allDay: boolean): Date | null {
   if (!str) return null;
   const d = new Date(str + (allDay && str.length === 10 ? 'T00:00:00' : ''));
   return isValid(d) ? d : null;
 }
 
-function buildRrule(preset: RrulePresetId, startStr: string): string | null {
+export function buildRrule(preset: RrulePresetId, startStr: string): string | null {
   const start = fromInput(startStr, false);
-  if (preset === 'daily')    return 'FREQ=DAILY';
+  if (preset === 'daily') return 'FREQ=DAILY';
   if (preset === 'weekdays') return 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
-  if (preset === 'weekly' && start)
-    return `FREQ=WEEKLY;BYDAY=${WEEKDAY_CODES[start.getDay()]}`;
-  if (preset === 'biweekly' && start)
-    return `FREQ=WEEKLY;INTERVAL=2;BYDAY=${WEEKDAY_CODES[start.getDay()]}`;
+  if (preset === 'weekly' && start) {
+    const weekdayCode = WEEKDAY_CODES[start.getDay()];
+    return weekdayCode ? `FREQ=WEEKLY;BYDAY=${weekdayCode}` : null;
+  }
+  if (preset === 'biweekly' && start) {
+    const weekdayCode = WEEKDAY_CODES[start.getDay()];
+    return weekdayCode ? `FREQ=WEEKLY;INTERVAL=2;BYDAY=${weekdayCode}` : null;
+  }
   return null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-/**
- * ScheduleEditorForm — modal for creating shift events for an employee.
- *
- * Props:
- *   emp          { id, name, role? }
- *   initialStart Date | null       — pre-filled start date
- *   initialEnd   Date | null       — optional pre-filled end date/time
- *   onCallCategory string          — category name for on-call / shift events (default 'on-call')
- *   onSave       (shiftEvent | shiftEvent[]) => void  — may return multiple events for templates
- *   onClose      () => void
- */
 export default function ScheduleEditorForm({
   emp,
   initialStart,
@@ -110,31 +132,24 @@ export default function ScheduleEditorForm({
   onCallCategory = 'on-call',
   onSave,
   onClose,
-}: {
-  emp: { id: string; name: string; role?: string };
-  initialStart?: Date | null;
-  initialEnd?: Date | null;
-  onCallCategory?: string;
-  onSave: (eventOrEvents: WorksCalendarEvent | WorksCalendarEvent[]) => void;
-  onClose: () => void;
-}) {
+}: ScheduleEditorFormProps) {
   const trapRef = useFocusTrap(onClose);
 
-  // Mode: 'onetime' | 'recurring' | 'template'
   const [mode, setMode] = useState<'onetime' | 'recurring' | 'template'>('onetime');
 
   const defaultStart = initialStart ?? new Date();
-  const defaultEnd   = initialEnd ?? addHours(defaultStart, 8);
+  const defaultEnd = initialEnd ?? addHours(defaultStart, 8);
+  const defaultTemplate = getDefaultTemplate();
 
-  const [start,       setStart]       = useState(toInput(defaultStart, false));
-  const [end,         setEnd]         = useState(toInput(defaultEnd,   false));
-  const [title,       setTitle]       = useState('On-Call Shift');
+  const [start, setStart] = useState(toInput(defaultStart, false));
+  const [end, setEnd] = useState(toInput(defaultEnd, false));
+  const [title, setTitle] = useState('On-Call Shift');
   const [rrulePreset, setRrulePreset] = useState<RrulePresetId>('weekdays');
   const [customRrule, setCustomRrule] = useState('');
-  const [templateId,  setTemplateId]  = useState(SHIFT_TEMPLATES[0].id);
-  const [errors,      setErrors]      = useState<Record<string, string>>({});
+  const [templateId, setTemplateId] = useState(defaultTemplate.id);
+  const [errors, setErrors] = useState<ScheduleEditorErrors>({});
 
-  const selectedTemplate = SHIFT_TEMPLATES.find(t => t.id === templateId) ?? SHIFT_TEMPLATES[0];
+  const selectedTemplate = SHIFT_TEMPLATES.find((template) => template.id === templateId) ?? defaultTemplate;
 
   function validateDateRange(startStr: string, endStr: string): { isValid: boolean; message: string } {
     const s = fromInput(startStr, false);
@@ -144,41 +159,41 @@ export default function ScheduleEditorForm({
     return { isValid: true, message: '' };
   }
 
-  function validate() {
-    const errs: Record<string, string> = {};
-    if (!title.trim()) errs.title = 'Title is required';
+  function validate(): boolean {
+    const nextErrors: ScheduleEditorErrors = {};
+    if (!title.trim()) nextErrors.title = 'Title is required';
     if (!start) {
-      errs.start = 'Start is required';
+      nextErrors.start = 'Start is required';
     } else if (!fromInput(start, false)) {
-      errs.start = 'Enter a valid start date/time';
+      nextErrors.start = 'Enter a valid start date/time';
     }
 
     if (mode !== 'template') {
       if (!end) {
-        errs.end = 'End is required';
+        nextErrors.end = 'End is required';
       } else if (!fromInput(end, false)) {
-        errs.end = 'Enter a valid end date/time';
+        nextErrors.end = 'Enter a valid end date/time';
       } else {
-        const { isValid, message } = validateDateRange(start, end);
-        if (!isValid) errs.end = message;
+        const rangeValidation = validateDateRange(start, end);
+        if (!rangeValidation.isValid) nextErrors.end = rangeValidation.message;
       }
     }
     if (mode === 'recurring' && rrulePreset === 'custom' && !customRrule.trim()) {
-      errs.rrule = 'Enter a valid RRULE string';
+      nextErrors.rrule = 'Enter a valid RRULE string';
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   }
 
   function buildEvent(startDate: Date, endDate: Date, rrule: string | null): WorksCalendarEvent {
     return {
-      id:       createId('shift'),
-      title:    title.trim(),
-      start:    startDate,
-      end:      endDate,
+      id: createId('shift'),
+      title: title.trim(),
+      start: startDate,
+      end: endDate,
       category: onCallCategory,
       resource: emp.id,
-      meta:     { kind: 'shift', employeeId: emp.id },
+      meta: { kind: 'shift', employeeId: emp.id },
       ...(rrule ? { rrule } : {}),
     };
   }
@@ -188,45 +203,44 @@ export default function ScheduleEditorForm({
     if (!validate()) return;
 
     if (mode === 'onetime') {
-      const s  = fromInput(start, false);
-      const en = fromInput(end,   false);
-      if (!s || !en) return;
-      onSave(buildEvent(s, en, null));
+      const parsedStart = fromInput(start, false);
+      const parsedEnd = fromInput(end, false);
+      if (!parsedStart || !parsedEnd) return;
+      onSave(buildEvent(parsedStart, parsedEnd, null));
       return;
     }
 
     if (mode === 'recurring') {
-      const s  = fromInput(start, false);
-      const en = fromInput(end,   false);
+      const parsedStart = fromInput(start, false);
+      const parsedEnd = fromInput(end, false);
       const rrule = rrulePreset === 'custom'
         ? customRrule.trim().toUpperCase()
         : buildRrule(rrulePreset, start);
-      if (!s || !en) return;
-      onSave(buildEvent(s, en, rrule));
+      if (!parsedStart || !parsedEnd) return;
+      onSave(buildEvent(parsedStart, parsedEnd, rrule));
       return;
     }
 
     if (mode === 'template') {
-      const s = fromInput(start, false);
-      if (!s) return;
-      const en = addHours(s, selectedTemplate.durationHours);
+      const parsedStart = fromInput(start, false);
+      if (!parsedStart) return;
+      const parsedEnd = addHours(parsedStart, selectedTemplate.durationHours);
 
       if (selectedTemplate.id === '7on7off') {
-        // Create 7 consecutive daily events for the first block
         const events = Array.from({ length: 7 }, (_, i) => {
-          const dayStart = addDays(s, i);
-          const dayEnd   = addHours(dayStart, selectedTemplate.durationHours);
+          const dayStart = addDays(parsedStart, i);
+          const dayEnd = addHours(dayStart, selectedTemplate.durationHours);
           return buildEvent(dayStart, dayEnd, null);
         });
         onSave(events);
       } else {
-        onSave(buildEvent(s, en, selectedTemplate.rrule));
+        onSave(buildEvent(parsedStart, parsedEnd, selectedTemplate.rrule));
       }
     }
   }
 
   return (
-    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={trapRef}
         className={styles.modal}
@@ -234,34 +248,31 @@ export default function ScheduleEditorForm({
         aria-modal="true"
         aria-label={`Create schedule for ${emp.name}`}
       >
-        {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerInfo}>
             <h2 className={styles.title}>Create Shift Schedule</h2>
             <span className={styles.empName}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
-          <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
+          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit} noValidate>
-          {/* Mode tabs */}
           <div className={styles.modeTabs} role="group" aria-label="Shift type">
-            {(['onetime', 'recurring', 'template'] as const).map(m => (
+            {(['onetime', 'recurring', 'template'] as const).map((tabMode) => (
               <button
-                key={m}
+                key={tabMode}
                 type="button"
-                className={[styles.modeTab, mode === m && styles.modeTabActive].filter(Boolean).join(' ')}
-                onClick={() => setMode(m)}
-                aria-pressed={mode === m}
+                className={[styles.modeTab, mode === tabMode && styles.modeTabActive].filter(Boolean).join(' ')}
+                onClick={() => setMode(tabMode)}
+                aria-pressed={mode === tabMode}
               >
-                {m === 'onetime'   ? 'One-Time'  : m === 'recurring' ? 'Recurring' : 'Template'}
+                {tabMode === 'onetime' ? 'One-Time' : tabMode === 'recurring' ? 'Recurring' : 'Template'}
               </button>
             ))}
           </div>
 
-          {/* Title */}
           <div className={styles.field}>
             <label className={styles.label} htmlFor="sef-title">
               Shift Title <span className={styles.req}>*</span>
@@ -270,29 +281,33 @@ export default function ScheduleEditorForm({
               id="sef-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={title}
-              onChange={e => { setTitle(e.target.value); setErrors(v => ({ ...v, title: undefined })); }}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'title'));
+              }}
               autoFocus
             />
             {errors.title && <span className={styles.error}>{errors.title}</span>}
           </div>
 
-          {/* Start field (shared across modes) */}
           <div className={styles.field}>
             <label className={styles.label} htmlFor="sef-start">
-              {mode === 'template' ? 'First Shift Start' : 'Start'}
-              {' '}<span className={styles.req}>*</span>
+              {mode === 'template' ? 'First Shift Start' : 'Start'}{' '}
+              <span className={styles.req}>*</span>
             </label>
             <input
               id="sef-start"
               type="datetime-local"
               className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
               value={start}
-              onChange={e => { setStart(e.target.value); setErrors(v => ({ ...v, start: undefined, end: undefined })); }}
+              onChange={(e) => {
+                setStart(e.target.value);
+                setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'start', 'end'));
+              }}
             />
             {errors.start && <span className={styles.error}>{errors.start}</span>}
           </div>
 
-          {/* End field — shown for onetime and recurring modes */}
           {mode !== 'template' && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="sef-end">
@@ -303,13 +318,15 @@ export default function ScheduleEditorForm({
                 type="datetime-local"
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={end}
-                onChange={e => { setEnd(e.target.value); setErrors(v => ({ ...v, end: undefined })); }}
+                onChange={(e) => {
+                  setEnd(e.target.value);
+                  setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'end'));
+                }}
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>
           )}
 
-          {/* Recurring: RRULE preset */}
           {mode === 'recurring' && (
             <div className={styles.field}>
               <label className={styles.label} htmlFor="sef-rrule">Repeat Pattern</label>
@@ -317,17 +334,23 @@ export default function ScheduleEditorForm({
                 id="sef-rrule"
                 className={styles.select}
                 value={rrulePreset}
-                onChange={e => { setRrulePreset(e.target.value as RrulePresetId); setErrors(v => ({ ...v, rrule: undefined })); }}
+                onChange={(e) => {
+                  setRrulePreset(e.target.value as RrulePresetId);
+                  setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'rrule'));
+                }}
               >
-                {RRULE_PRESETS.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
+                {RRULE_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>{preset.label}</option>
                 ))}
               </select>
               {rrulePreset === 'custom' && (
                 <input
                   className={[styles.input, errors.rrule && styles.inputError].filter(Boolean).join(' ')}
                   value={customRrule}
-                  onChange={e => { setCustomRrule(e.target.value); setErrors(v => ({ ...v, rrule: undefined })); }}
+                  onChange={(e) => {
+                    setCustomRrule(e.target.value);
+                    setErrors((currentErrors) => withoutErrorKeys(currentErrors, 'rrule'));
+                  }}
                   placeholder="FREQ=WEEKLY;BYDAY=MO,WE,FR"
                   aria-label="Custom RRULE string"
                 />
@@ -337,26 +360,25 @@ export default function ScheduleEditorForm({
             </div>
           )}
 
-          {/* Template: picker */}
           {mode === 'template' && (
             <div className={styles.field}>
               <label className={styles.label}>Schedule Template</label>
               <div className={styles.templateGrid}>
-                {SHIFT_TEMPLATES.map(t => (
+                {SHIFT_TEMPLATES.map((template) => (
                   <button
-                    key={t.id}
+                    key={template.id}
                     type="button"
                     className={[
                       styles.templateCard,
-                      templateId === t.id && styles.templateCardActive,
+                      templateId === template.id && styles.templateCardActive,
                     ].filter(Boolean).join(' ')}
-                    onClick={() => setTemplateId(t.id)}
-                    aria-pressed={templateId === t.id}
+                    onClick={() => setTemplateId(template.id)}
+                    aria-pressed={templateId === template.id}
                   >
-                    <span className={styles.templateLabel}>{t.label}</span>
-                    <span className={styles.templateDesc}>{t.description}</span>
-                    {t.note && (
-                      <span className={styles.templateNote}>{t.note}</span>
+                    <span className={styles.templateLabel}>{template.label}</span>
+                    <span className={styles.templateDesc}>{template.description}</span>
+                    {template.note && (
+                      <span className={styles.templateNote}>{template.note}</span>
                     )}
                   </button>
                 ))}
@@ -367,7 +389,6 @@ export default function ScheduleEditorForm({
             </div>
           )}
 
-          {/* Actions */}
           <div className={styles.actions}>
             <button type="button" className={styles.btnCancel} onClick={onClose}>Cancel</button>
             <button type="submit" className={styles.btnSave}>
