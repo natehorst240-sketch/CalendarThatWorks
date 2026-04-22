@@ -23,14 +23,14 @@ import AssetsView from '../AssetsView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1);
-const evOn = (day) => new Date(2026, 3, day);
+const evOn = (day: number) => new Date(2026, 3, day);
 
 const events = [
   { id: 'e1', title: 'T1', start: evOn(3),  end: evOn(3),  resource: 'N100', meta: { region: 'West' } },
   { id: 'e2', title: 'T2', start: evOn(5),  end: evOn(5),  resource: 'N200', meta: { region: 'East' } },
 ];
 
-function renderView(props = {}) {
+function renderView(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AssetsView

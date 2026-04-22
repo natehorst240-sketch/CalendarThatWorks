@@ -169,13 +169,13 @@ describe('AgendaView grouping', () => {
   });
 
   describe('DnD between groups', () => {
-    function dragAndDrop(source, target) {
+    function dragAndDrop(source: Element | Window | Document, target: Element | Window | Document) {
       const dt = {
         effectAllowed: '',
         dropEffect: '',
-        _data: {},
-        setData(k, v) { this._data[k] = v; },
-        getData(k) { return this._data[k]; },
+        _data: {} as Record<string, string>,
+        setData(k: string, v: string) { this._data[k] = v; },
+        getData(k: string) { return this._data[k]; },
       };
       fireEvent.dragStart(source, { dataTransfer: dt });
       fireEvent.dragOver(target, { dataTransfer: dt });

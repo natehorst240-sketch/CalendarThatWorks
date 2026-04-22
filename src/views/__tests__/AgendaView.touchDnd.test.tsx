@@ -12,7 +12,7 @@ const events = [
   { id: 'e2', title: 'Team Meeting', category: 'Work',     start: sameDay, end: sameDay, allDay: true },
 ];
 
-function renderAgenda(props = {}) {
+function renderAgenda(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AgendaView
@@ -26,7 +26,7 @@ function renderAgenda(props = {}) {
   );
 }
 
-function fireTouch(type, el, touches = []) {
+function fireTouch(type: string, el: EventTarget, touches: Array<{ x: number; y: number }> = []) {
   const evt = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(evt, 'touches', {
     value: touches.map(t => ({ clientX: t.x, clientY: t.y, target: el })),
@@ -38,8 +38,8 @@ function fireTouch(type, el, touches = []) {
 }
 
 describe('AgendaView touch DnD', () => {
-  let origElementFromPoint;
-  let pointTarget = null;
+  let origElementFromPoint: typeof document.elementFromPoint;
+  let pointTarget: Element | null = null;
 
   beforeEach(() => {
     vi.useFakeTimers();

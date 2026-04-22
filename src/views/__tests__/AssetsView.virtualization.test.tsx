@@ -48,7 +48,10 @@ function buildAssets(n = 50) {
 }
 
 /** Build M events distributed across asset IDs. */
-function buildEvents(assets, m = 200) {
+function buildEvents(
+  assets: Array<{ id: string; group: string; meta: { fleet: string; base: string; ops: string; status: string } }>,
+  m = 200,
+) {
   return Array.from({ length: m }, (_, i) => {
     const asset   = assets[i % assets.length];
     const dayStart = (i % 28) + 1;

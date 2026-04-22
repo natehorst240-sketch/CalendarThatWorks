@@ -17,9 +17,9 @@ import AssetsView from '../AssetsView';
 import { CalendarContext } from '../../core/CalendarContext';
 
 const currentDate = new Date(2026, 3, 1); // April 2026
-const evOn = (day) => new Date(2026, 3, day);
+const evOn = (day: number) => new Date(2026, 3, day);
 
-function renderView(props = {}) {
+function renderView(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AssetsView

@@ -12,7 +12,7 @@ function d(year: number, month: number, day: number) {
 
 // BaseGanttView accesses ctx.colorRules (no optional chain) when rendering bars.
 // Provide a minimal context so tests with events don't crash.
-const minCtx = { colorRules: [] };
+const minCtx = { colorRules: [] as unknown[] };
 
 function wrap(props: Record<string, any> = {}, ctxValue: any = null) {
   return render(

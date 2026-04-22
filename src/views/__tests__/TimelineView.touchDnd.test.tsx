@@ -18,7 +18,7 @@ const evts = [
   { id: 'shift-1', title: 'Alice Shift', start: shiftStart, end: shiftEnd, resource: 'nurse-1' },
 ];
 
-function renderTimeline(props = {}) {
+function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <TimelineView
@@ -32,7 +32,7 @@ function renderTimeline(props = {}) {
   );
 }
 
-function fireTouch(type, el, touches = []) {
+function fireTouch(type: string, el: EventTarget, touches: Array<{ x: number; y: number }> = []) {
   const evt = new Event(type, { bubbles: true, cancelable: true });
   Object.defineProperty(evt, 'touches', {
     value: touches.map(t => ({ clientX: t.x, clientY: t.y, target: el })),
@@ -44,8 +44,8 @@ function fireTouch(type, el, touches = []) {
 }
 
 describe('TimelineView touch DnD', () => {
-  let origElementFromPoint;
-  let pointTarget = null;
+  let origElementFromPoint: typeof document.elementFromPoint;
+  let pointTarget: Element | null = null;
 
   beforeEach(() => {
     vi.useFakeTimers();

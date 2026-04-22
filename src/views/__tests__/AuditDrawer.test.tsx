@@ -67,7 +67,7 @@ describe('AuditDrawer — render', () => {
     const eventNoHistory = {
       id: 'ev-x',
       title: 'Plain',
-      meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] } },
+      meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] as unknown[] } },
     };
     render(<AuditDrawer event={eventNoHistory} onClose={vi.fn()} />);
     expect(screen.getByText(/No history recorded/i)).toBeInTheDocument();

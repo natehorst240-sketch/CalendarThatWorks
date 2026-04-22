@@ -17,7 +17,7 @@ import { findNode } from '../core/workflow/workflowSchema';
  * raw input unchanged when the value is falsy or unparseable so the caller
  * never renders "Invalid Date".
  */
-function formatAt(iso) {
+function formatAt(iso: string | undefined | null) {
   if (!iso) return '';
   try {
     const d = new Date(iso);
@@ -41,7 +41,7 @@ const ACTION_LABELS = {
  * Returns null when inapplicable (no instance, not awaiting, no SLA, or
  * the active node isn't in the workflow anymore).
  */
-function computeSlaPill(workflow, workflowInstance, nowMs) {
+function computeSlaPill(workflow: any, workflowInstance: any, nowMs: number) {
   if (!workflow || !workflowInstance) return null;
   if (workflowInstance.status !== 'awaiting') return null;
   const nodeId = workflowInstance.currentNodeId;
@@ -68,7 +68,7 @@ function computeSlaPill(workflow, workflowInstance, nowMs) {
   };
 }
 
-function formatRemaining(ms) {
+function formatRemaining(ms: number) {
   const abs = Math.abs(ms);
   const totalMinutes = Math.max(0, Math.round(abs / 60_000));
   if (totalMinutes < 60) return `${totalMinutes}m`;
@@ -78,13 +78,13 @@ function formatRemaining(ms) {
 }
 
 export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: any) {
-  const closeRef = useRef(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (!event) return;
     closeRef.current?.focus();
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [event, onClose]);
@@ -164,7 +164,7 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
             <p className={styles.empty}>No history recorded for this request.</p>
           ) : (
             <ol className={styles.timeline}>
-              {history.map((entry, i) => (
+              {history.map((entry: any, i: number) => (
                 <li
                   key={`${entry.at}-${entry.action}-${i}`}
                   className={styles.entry}
@@ -172,7 +172,7 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
                 >
                   <div className={styles.entryHead}>
                     <span className={styles.entryAction}>
-                      {ACTION_LABELS[entry.action] ?? entry.action}
+                      {ACTION_LABELS[entry.action as keyof typeof ACTION_LABELS] ?? entry.action}
                     </span>
                     {entry.tier != null && (
                       <span className={styles.entryTier}>Tier {entry.tier}</span>

@@ -14,7 +14,7 @@ const baseEvents = [
     end:   new Date(2026, 3, 5),
     resource: 'N121AB',
     category: 'training',
-    meta: { sublabel: 'Citation CJ3', approvalStage: { stage: 'approved', updatedAt: '', history: [] } },
+    meta: { sublabel: 'Citation CJ3', approvalStage: { stage: 'approved', updatedAt: '', history: [] as unknown[] } },
   },
   {
     id: 'ev-2',
@@ -23,7 +23,7 @@ const baseEvents = [
     end:   new Date(2026, 3, 7),
     resource: 'N121AB',
     category: 'pr',
-    meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] as unknown[] } },
   },
   {
     id: 'ev-3',
@@ -32,7 +32,7 @@ const baseEvents = [
     end:   new Date(2026, 3, 12),
     resource: 'N505CD',
     category: 'maintenance',
-    meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'denied', updatedAt: '', history: [] as unknown[] } },
   },
   {
     id: 'ev-4',
@@ -41,11 +41,11 @@ const baseEvents = [
     end:   new Date(2026, 3, 16),
     resource: 'N505CD',
     category: 'coverage',
-    meta: { approvalStage: { stage: 'pending_higher', updatedAt: '', history: [] } },
+    meta: { approvalStage: { stage: 'pending_higher', updatedAt: '', history: [] as unknown[] } },
   },
 ];
 
-function renderAssets(props = {}) {
+function renderAssets(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AssetsView
