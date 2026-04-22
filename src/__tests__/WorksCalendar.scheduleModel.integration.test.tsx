@@ -4,11 +4,27 @@ import React, { createRef } from 'react';
 
 import { WorksCalendar } from '../WorksCalendar.tsx';
 
-function getKinds(events) {
+type EventMetaLike = Record<string, unknown> & {
+  kind?: string;
+  sourceShiftId?: string;
+  coveredBy?: string | null;
+  status?: string;
+  shiftStatus?: string;
+  openShiftId?: string;
+  coveredEmployeeId?: string;
+};
+
+type ScheduleEventLike = {
+  id?: string;
+  kind?: string;
+  meta?: EventMetaLike;
+};
+
+function getKinds(events: ScheduleEventLike[]) {
   return events.map((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase());
 }
 
-function getByKind(events, kind) {
+function getByKind(events: ScheduleEventLike[], kind: string) {
   return events.filter((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase() === kind);
 }
 
@@ -37,7 +53,7 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Save PTO Request' }));
   }
 
-  async function assignCoverageTo(nameRegex) {
+  async function assignCoverageTo(nameRegex: RegExp) {
     fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
     fireEvent.click(await screen.findByRole('button', { name: nameRegex }));
   }
@@ -80,7 +96,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(saved.resource).toBe('emp-1');
 
       const visible = apiRef.current.getVisibleEvents();
-      const ptoEvents = visible.filter((ev) => String(ev?.meta?.kind ?? '') === 'pto');
+      const ptoEvents = visible.filter((ev: ScheduleEventLike) => String(ev?.meta?.kind ?? '') === 'pto');
       expect(ptoEvents.length).toBeGreaterThan(0);
     });
   }, 30000);
@@ -97,7 +113,7 @@ describe('WorksCalendar schedule model integration', () => {
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();
       const openShifts = getByKind(visible, 'open-shift').filter(
-        (ev) => String(ev.meta?.sourceShiftId ?? '') === 'shift-1',
+        (ev: ScheduleEventLike) => String(ev.meta?.sourceShiftId ?? '') === 'shift-1',
       );
       expect(openShifts).toHaveLength(1);
     });
@@ -114,7 +130,7 @@ describe('WorksCalendar schedule model integration', () => {
 
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-2');
 
       const openShift = getByKind(visible, 'open-shift')[0];
@@ -147,7 +163,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(kinds).not.toContain('covering');
       expect(kinds).not.toContain('covering-shift');
 
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(shift.meta?.shiftStatus).toBeUndefined();
       expect(shift.meta?.coveredBy).toBeUndefined();
       expect(shift.meta?.openShiftId).toBeUndefined();
@@ -206,13 +222,13 @@ describe('WorksCalendar schedule model integration', () => {
 
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();
-      const coveringEvents = visible.filter((ev) => {
+      const coveringEvents = visible.filter((ev: ScheduleEventLike) => {
         const kind = String(ev?.meta?.kind ?? '').toLowerCase();
         return kind === 'covering' || kind === 'covering-shift';
       });
       expect(coveringEvents).toHaveLength(1);
 
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
   }, 30000);
@@ -230,7 +246,7 @@ describe('WorksCalendar schedule model integration', () => {
 
     await waitFor(() => {
       const visible = apiRef.current.getVisibleEvents();
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: ScheduleEventLike) => String(ev.id) === 'shift-1');
       expect(shift.meta?.coveredBy).toBeNull();
 
       const openShift = getByKind(visible, 'open-shift')[0];

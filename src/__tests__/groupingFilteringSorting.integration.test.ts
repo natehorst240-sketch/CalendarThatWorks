@@ -23,7 +23,7 @@ import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema.ts';
 import { sortEvents } from '../core/sortEngine.ts';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 
-const baseDay = (day) => new Date(2026, 3, day);
+const baseDay = (day: number) => new Date(2026, 3, day);
 
 const events = [
   { id: 'e1', title: 'Charlie Flight', start: baseDay(2), end: baseDay(2),  category: 'training',    resource: 'N100', meta: { region: 'West', priority: 1 } },

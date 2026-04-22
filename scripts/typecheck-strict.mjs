@@ -80,6 +80,12 @@ const MIGRATED_PATHS = [
   // Stage 5b PR1
   'src/hooks/__tests__/useSavedViews.test.ts',
   'src/hooks/__tests__/useSourceStore.test.ts',
+  // Stage 5b PR2
+  'src/__tests__/WorksCalendar.scheduleModel.integration.test.tsx',
+  'src/__tests__/WorksCalendar.employees.sync.test.tsx',
+  'src/__tests__/WorksCalendar.sort.integration.test.tsx',
+  'src/__tests__/groupingFilteringSorting.integration.test.ts',
+  'src/__tests__/phaseB.integration.test.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

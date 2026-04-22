@@ -11,7 +11,7 @@ import { createRef } from 'react';
 import { WorksCalendar } from '../WorksCalendar.tsx';
 
 const base = new Date('2026-04-10T00:00:00.000Z');
-function d(days) { return new Date(base.getTime() + days * 86400000); }
+function d(days: number) { return new Date(base.getTime() + days * 86400000); }
 
 const events = [
   { id: 'a', title: 'Charlie', start: d(2), end: d(3), meta: { priority: 1 } },
@@ -30,7 +30,7 @@ describe('WorksCalendar sort prop', () => {
         sort={{ field: 'title', direction: 'asc' }}
       />,
     );
-    const titles = apiRef.current.getVisibleEvents().map(e => e.title);
+    const titles = apiRef.current.getVisibleEvents().map((e: { title: string }) => e.title);
     expect(titles).toEqual(['Alpha', 'Alpha', 'Bravo', 'Charlie']);
   });
 
@@ -46,7 +46,7 @@ describe('WorksCalendar sort prop', () => {
         ]}
       />,
     );
-    const ids = apiRef.current.getVisibleEvents().map(e => e.id);
+    const ids = apiRef.current.getVisibleEvents().map((e: { id: string }) => e.id);
     // Alphas are tied by title → the later start date wins ('d' before 'b').
     expect(ids).toEqual(['d', 'b', 'c', 'a']);
   });
@@ -54,7 +54,7 @@ describe('WorksCalendar sort prop', () => {
   it('defaults to start-date order when sort is omitted (baseline preserved)', () => {
     const apiRef = createRef<any>();
     render(<WorksCalendar ref={apiRef} events={events} />);
-    const ids = apiRef.current.getVisibleEvents().map(e => e.id);
+    const ids = apiRef.current.getVisibleEvents().map((e: { id: string }) => e.id);
     // Pipeline default: events surface in chronological start order.
     expect(ids).toEqual(['b', 'c', 'a', 'd']);
   });

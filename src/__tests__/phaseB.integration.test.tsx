@@ -27,6 +27,30 @@ import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu'
 import { evaluateConflicts } from '../core/conflictEngine.ts';
 import { DEFAULT_CONFIG } from '../core/configSchema';
 
+type RequestValues = {
+  title: string;
+  start: string;
+  end: string;
+  resource: string;
+  category?: string;
+};
+
+type EventLike = {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: string;
+  category?: string;
+  meta?: {
+    approvalStage?: {
+      stage: string;
+      updatedAt: string;
+      history: unknown[];
+    };
+  };
+};
+
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 
 /** Cross-cutting config the three systems all read. */
@@ -78,13 +102,13 @@ const seededEvent = {
  * Small orchestrator that wires the three systems the way a host app would.
  * Not production code — exists only for the test pipeline.
  */
-function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
-  const [events, setEvents]     = useState(initialEvents);
-  const [proposed, setProposed] = useState(null);
-  const [conflict, setConflict] = useState(null);
-  const [committed, setCommitted] = useState(null);
+function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config: Record<string, any>; initialEvents?: EventLike[]; onCommit?: (evt: EventLike) => void }) {
+  const [events, setEvents]     = useState<EventLike[]>(initialEvents);
+  const [proposed, setProposed] = useState<EventLike | null>(null);
+  const [conflict, setConflict] = useState<{ allowed?: boolean; severity?: string } | null>(null);
+  const [committed, setCommitted] = useState<EventLike | null>(null);
 
-  const handleSubmit = ({ values }) => {
+  const handleSubmit = ({ values }: { values: RequestValues }) => {
     const evt = {
       id: `new-${events.length + 1}`,
       title: values.title,
@@ -107,12 +131,12 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
     }
   };
 
-  const persist = (evt) => {
+  const persist = (evt: EventLike) => {
     const withStage = {
       ...evt,
-      meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] } },
+      meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] as unknown[] } },
     };
-    setEvents(prev => [...prev, withStage]);
+    setEvents((prev: EventLike[]) => [...prev, withStage]);
     setCommitted(withStage);
     onCommit?.(withStage);
   };
@@ -145,7 +169,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
   );
 }
 
-function fillRequestForm({ title, start, end, resource, category }: any) {
+function fillRequestForm({ title, start, end, resource, category }: RequestValues) {
   fireEvent.change(screen.getByLabelText('Title'),    { target: { value: title } });
   fireEvent.change(screen.getByLabelText('Starts'),   { target: { value: start } });
   fireEvent.change(screen.getByLabelText('Ends'),     { target: { value: end } });
@@ -277,7 +301,7 @@ describe('Phase B pipeline — committed event exposes approval actions', () => 
         ...fullConfig.approvals,
         rules: {
           ...fullConfig.approvals.rules,
-          requested: { allow: [], prefix: 'Req' },
+          requested: { allow: [] as string[], prefix: 'Req' },
         },
       },
     };
