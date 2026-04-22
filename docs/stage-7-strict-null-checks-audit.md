@@ -185,3 +185,46 @@ Date: 2026-04-22
 Pilot result:
 - Migrated paths are strict-null clean under the ratchet.
 - Mechanism is active in CI without requiring root `strictNullChecks` flip.
+
+## Root strictNullChecks Flip Trial
+
+Date: 2026-04-22
+
+### Change applied
+
+- Updated `tsconfig.json` to set `compilerOptions.strictNullChecks` to `true`.
+
+### Validation command
+
+```bash
+npm run -s type-check -- --pretty false
+```
+
+### Result summary
+
+- Exit code: `2` (type-check failed under strict nullability)
+- Total diagnostics: **386**
+- Unique files affected: **53**
+
+Top offending files:
+
+1. `src/WorksCalendar.tsx` — 77 diagnostics
+2. `src/views/TimelineView.tsx` — 58 diagnostics
+3. `src/views/WeekView.tsx` — 25 diagnostics
+4. `src/views/DayView.tsx` — 22 diagnostics
+5. `src/views/AssetsView.tsx` — 21 diagnostics
+
+Top error codes:
+
+- `TS2339` — 154
+- `TS2345` — 67
+- `TS18047` — 52
+- `TS2532` — 31
+- `TS18048` — 29
+
+### Findings
+
+- The strict-null failures remain heavily concentrated in `src/WorksCalendar.tsx` and view-layer components, matching prior Stage 7 hotspot analysis.
+- A recurring failure pattern is state initialized as `null` (or inferred as `never`) and later consumed as non-null objects, causing large `TS2339`/`TS2345` cascades.
+- Ref-centric code paths (`engineRef.current`, `undoManagerRef.current`) contribute many `possibly 'null'` diagnostics and should be handled with explicit guards or narrowed helper APIs.
+- Tests continue to fail on nullable query/indexing assumptions (`Object is possibly 'undefined'`), indicating production + test migration must proceed together.

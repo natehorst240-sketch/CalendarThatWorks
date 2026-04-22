@@ -1,0 +1,521 @@
+src/WorksCalendar.tsx(799,53): error TS2345: Argument of type 'SupabaseClient<any, "public", "public", any, any>' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type 'SupabaseClient<any, "public", "public", any, any>' provides no match for the signature '(prevState: null): null'.
+src/WorksCalendar.tsx(805,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/WorksCalendar.tsx(833,5): error TS2322: Type 'CalendarEngine' is not assignable to type 'null'.
+src/WorksCalendar.tsx(836,5): error TS2322: Type 'UndoRedoManager' is not assignable to type 'null'.
+src/WorksCalendar.tsx(836,50): error TS2345: Argument of type 'null' is not assignable to parameter of type 'CalendarEngine'.
+src/WorksCalendar.tsx(837,28): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(847,19): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(856,5): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(857,28): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(865,21): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(875,5): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(879,7): error TS18047: 'undoManagerRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(886,11): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(970,3): error TS2322: Type '{ businessHours: any; blockedWindows: UnknownRecord[]; }' is not assignable to type 'null'.
+src/WorksCalendar.tsx(986,21): error TS18047: 'undoMgr' is possibly 'null'.
+src/WorksCalendar.tsx(988,20): error TS18047: 'engine' is possibly 'null'.
+src/WorksCalendar.tsx(992,7): error TS18047: 'undoMgr' is possibly 'null'.
+src/WorksCalendar.tsx(993,29): error TS2339: Property 'announce' does not exist on type 'never'.
+src/WorksCalendar.tsx(1003,9): error TS2353: Object literal may only specify known properties, and 'violations' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1006,29): error TS18047: 'engine' is possibly 'null'.
+src/WorksCalendar.tsx(1008,13): error TS18047: 'undoMgr' is possibly 'null'.
+src/WorksCalendar.tsx(1009,35): error TS2339: Property 'announce' does not exist on type 'never'.
+src/WorksCalendar.tsx(1018,25): error TS2353: Object literal may only specify known properties, and 'violations' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1066,26): error TS2345: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type 'any[]' is not assignable to type 'never[]'.
+    Type 'any' is not assignable to type 'never'.
+src/WorksCalendar.tsx(1101,21): error TS18047: 'undoManagerRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1102,40): error TS2339: Property 'announce' does not exist on type 'never'.
+src/WorksCalendar.tsx(1108,21): error TS18047: 'undoManagerRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1109,40): error TS2339: Property 'announce' does not exist on type 'never'.
+src/WorksCalendar.tsx(1128,46): error TS2345: Argument of type '{}' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type '{}' provides no match for the signature '(prevState: null): null'.
+src/WorksCalendar.tsx(1129,33): error TS18047: 'undoManagerRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1130,33): error TS18047: 'undoManagerRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1131,63): error TS2339: Property 'canUndo' does not exist on type 'never'.
+src/WorksCalendar.tsx(1132,63): error TS2339: Property 'canRedo' does not exist on type 'never'.
+src/WorksCalendar.tsx(1142,9): error TS2353: Object literal may only specify known properties, and 'event' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1155,21): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1253,13): error TS18049: 'openShiftEv' is possibly 'null' or 'undefined'.
+src/WorksCalendar.tsx(1354,30): error TS2353: Object literal may only specify known properties, and 'emp' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1356,32): error TS2353: Object literal may only specify known properties, and 'emp' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1487,7): error TS2353: Object literal may only specify known properties, and 'actionLabel' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1511,67): error TS2339: Property 'state' does not exist on type 'never'.
+src/WorksCalendar.tsx(1717,62): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | number | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | number | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/WorksCalendar.tsx(1788,30): error TS18047: 'engineRef.current' is possibly 'null'.
+src/WorksCalendar.tsx(1814,50): error TS2698: Spread types may only be created from object types.
+src/WorksCalendar.tsx(1839,20): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'number | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'number | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/WorksCalendar.tsx(1872,41): error TS2339: Property 'state' does not exist on type 'never'.
+src/WorksCalendar.tsx(1882,34): error TS2339: Property 'event' does not exist on type 'never'.
+src/WorksCalendar.tsx(1949,20): error TS2353: Object literal may only specify known properties, and 'start' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1964,22): error TS2353: Object literal may only specify known properties, and 'start' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1968,30): error TS2353: Object literal may only specify known properties, and 'emp' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(1979,20): error TS2353: Object literal may only specify known properties, and 'start' does not exist in type '(prevState: null) => null'.
+src/WorksCalendar.tsx(2029,33): error TS2322: Type '{ renderEvent: ((event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode) | undefined; renderHoverCard: ((event: WorksCalendarEvent, onClose: () => void) => ReactNode) | undefined; ... 4 more ...; editMode: boolean; }' is not assignable to type 'null'.
+src/WorksCalendar.tsx(2092,79): error TS2345: Argument of type '{}' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type '{}' provides no match for the signature '(prevState: null): null'.
+src/WorksCalendar.tsx(2309,19): error TS2322: Type '((event: WorksCalendarEvent, action: string) => void | Promise<void>) | undefined' is not assignable to type '((event: AssetsViewEvent, action: string) => void) | undefined'.
+  Type '(event: WorksCalendarEvent, action: string) => void | Promise<void>' is not assignable to type '(event: AssetsViewEvent, action: string) => void'.
+    Types of parameters 'event' and 'event' are incompatible.
+      Type 'AssetsViewEvent' is not assignable to type 'WorksCalendarEvent'.
+        Types of property 'category' are incompatible.
+          Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+            Type 'null' is not assignable to type 'string | undefined'.
+src/WorksCalendar.tsx(2324,43): error TS2339: Property 'id' does not exist on type 'never'.
+src/WorksCalendar.tsx(2342,30): error TS2339: Property 'id' does not exist on type 'never'.
+src/WorksCalendar.tsx(2342,46): error TS2339: Property 'resourcePoolId' does not exist on type 'never'.
+src/WorksCalendar.tsx(2371,36): error TS2339: Property 'emp' does not exist on type 'never'.
+src/WorksCalendar.tsx(2372,37): error TS2339: Property 'kind' does not exist on type 'never'.
+src/WorksCalendar.tsx(2373,45): error TS2339: Property 'start' does not exist on type 'never'.
+src/WorksCalendar.tsx(2374,45): error TS2339: Property 'initialEvent' does not exist on type 'never'.
+src/WorksCalendar.tsx(2383,38): error TS2339: Property 'emp' does not exist on type 'never'.
+src/WorksCalendar.tsx(2384,47): error TS2339: Property 'start' does not exist on type 'never'.
+src/WorksCalendar.tsx(2385,45): error TS2339: Property 'end' does not exist on type 'never'.
+src/WorksCalendar.tsx(2410,42): error TS2339: Property 'actionLabel' does not exist on type 'never'.
+src/WorksCalendar.tsx(2411,40): error TS2339: Property 'onConfirm' does not exist on type 'never'.
+src/WorksCalendar.tsx(2412,39): error TS2339: Property 'onCancel' does not exist on type 'never'.
+src/WorksCalendar.tsx(2419,38): error TS2339: Property 'violations' does not exist on type 'never'.
+src/WorksCalendar.tsx(2420,34): error TS2339: Property 'isHard' does not exist on type 'never'.
+src/WorksCalendar.tsx(2421,37): error TS2339: Property 'onConfirm' does not exist on type 'never'.
+src/WorksCalendar.tsx(2422,43): error TS2339: Property 'onConfirm' does not exist on type 'never'.
+src/WorksCalendar.tsx(2439,13): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/WorksCalendar.tsx(2472,38): error TS2339: Property 'event' does not exist on type 'never'.
+src/WorksCalendar.tsx(2472,74): error TS2339: Property 'event' does not exist on type 'never'.
+src/WorksCalendar.tsx(2472,116): error TS2339: Property 'event' does not exist on type 'never'.
+src/WorksCalendar.tsx(2473,37): error TS2339: Property 'event' does not exist on type 'never'.
+src/WorksCalendar.tsx(2474,33): error TS2339: Property 'x' does not exist on type 'never'.
+src/WorksCalendar.tsx(2475,33): error TS2339: Property 'y' does not exist on type 'never'.
+src/__tests__/WorksCalendar.employees.sync.test.tsx(57,24): error TS2532: Object is possibly 'undefined'.
+src/__tests__/WorksCalendar.employees.sync.test.tsx(86,24): error TS2532: Object is possibly 'undefined'.
+src/__tests__/WorksCalendar.recurringScopedEdit.test.tsx(79,3): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(54,31): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(56,28): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(65,28): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(78,22): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(95,12): error TS18048: 'east' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(96,12): error TS18048: 'east' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(96,12): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(97,12): error TS18048: 'east' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(97,12): error TS2532: Object is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(177,12): error TS18048: 'east' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(178,12): error TS18048: 'west' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(194,12): error TS18048: 'east' is possibly 'undefined'.
+src/__tests__/groupingFilteringSorting.integration.test.ts(195,12): error TS18048: 'west' is possibly 'undefined'.
+src/__tests__/phaseB.integration.test.tsx(161,20): error TS18048: 'committed.meta' is possibly 'undefined'.
+src/__tests__/phaseB.integration.test.tsx(161,20): error TS18048: 'committed.meta.approvalStage' is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(285,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(292,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(327,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(354,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(395,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(410,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(429,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(444,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(461,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(490,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(503,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/__tests__/sync.test.ts(519,5): error TS2532: Object is possibly 'undefined'.
+src/api/v1/adapters/SupabaseAdapter.ts(175,49): error TS2352: Conversion of type 'null' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/core/__tests__/scheduleMutations.test.ts(34,12): error TS2533: Object is possibly 'null' or 'undefined'.
+src/core/__tests__/scheduleOverlap.test.ts(162,54): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/core/__tests__/scheduleOverlap.test.ts(162,74): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/filters/__tests__/filterEngine.test.ts(324,18): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/filters/__tests__/filterEngine.test.ts(324,18): error TS18048: 'field.getOptions' is possibly 'undefined'.
+src/filters/__tests__/filterEngine.test.ts(349,18): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/filters/__tests__/filterEngine.test.ts(349,18): error TS18048: 'field.getOptions' is possibly 'undefined'.
+src/filters/__tests__/filterEngine.test.ts(374,18): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/filters/__tests__/filterEngine.test.ts(374,18): error TS18048: 'field.getOptions' is possibly 'undefined'.
+src/filters/__tests__/filterState.test.ts(158,12): error TS18048: 'catPill' is possibly 'undefined'.
+src/hooks/__tests__/useBookingHold.test.tsx(192,16): error TS2322: Type 'string' is not assignable to type 'null'.
+src/hooks/__tests__/useDrag.test.ts(61,26): error TS18048: 'start' is possibly 'undefined'.
+src/hooks/__tests__/useDrag.test.ts(61,50): error TS18048: 'start' is possibly 'undefined'.
+src/hooks/__tests__/useFocusTrap.test.tsx(31,21): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/hooks/__tests__/useFocusTrap.test.tsx(35,21): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/hooks/__tests__/useFocusTrap.test.tsx(60,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/hooks/__tests__/useSavedViews.test.ts(228,31): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/hooks/__tests__/useSavedViews.test.ts(694,31): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/hooks/__tests__/useSavedViews.test.ts(807,14): error TS2532: Object is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(65,23): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/hooks/__tests__/useSourceStore.test.ts(120,45): error TS18048: 'src' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(133,45): error TS18048: 's1' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(145,45): error TS18048: 'src' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(154,45): error TS18048: 'src' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(165,45): error TS18048: 'src' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(167,45): error TS18048: 'src' is possibly 'undefined'.
+src/hooks/__tests__/useSourceStore.test.ts(241,31): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/hooks/useDrag.ts(214,46): error TS18048: 's.current.offsetY' is possibly 'undefined'.
+src/hooks/useDrag.ts(218,55): error TS18048: 's.current.durationMs' is possibly 'undefined'.
+src/hooks/useDrag.ts(225,32): error TS18047: 'ev' is possibly 'null'.
+src/hooks/useDrag.ts(231,47): error TS18047: 'ev' is possibly 'null'.
+src/hooks/useEventDraftState.ts(201,11): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(201,49): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(202,11): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(202,55): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(203,11): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(203,62): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(204,11): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(204,49): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(205,18): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(205,72): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(206,40): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventDraftState.ts(207,33): error TS18047: 'template.defaults' is possibly 'null'.
+src/hooks/useEventOptions.ts(10,23): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/hooks/useSavedViews.ts(148,3): error TS2322: Type '(SavedView | null)[]' is not assignable to type 'SavedView[]'.
+  Type 'SavedView | null' is not assignable to type 'SavedView'.
+    Type 'null' is not assignable to type 'SavedView'.
+src/hooks/useSourceStore.ts(170,49): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/hooks/useSyncedCalendar.ts(111,19): error TS18047: 'manager' is possibly 'null'.
+src/hooks/useSyncedCalendar.ts(119,5): error TS18047: 'manager' is possibly 'null'.
+src/hooks/useSyncedCalendar.ts(129,5): error TS18047: 'manager' is possibly 'null'.
+src/hooks/useSyncedCalendar.ts(130,18): error TS18047: 'manager' is possibly 'null'.
+src/ui/AdvancedFilterBuilder.tsx(127,40): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+      Type 'null' is not assignable to type 'string | number | Timeout | undefined'.
+  Overload 2 of 2, '(id: number | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'number | undefined'.
+      Type 'null' is not assignable to type 'number | undefined'.
+src/ui/AdvancedFilterBuilder.tsx(177,20): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+      Type 'null' is not assignable to type 'string | number | Timeout | undefined'.
+  Overload 2 of 2, '(id: number | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'number | undefined'.
+      Type 'null' is not assignable to type 'number | undefined'.
+src/ui/AdvancedFilterBuilder.tsx(182,20): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(timeout: string | number | Timeout | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+      Type 'null' is not assignable to type 'string | number | Timeout | undefined'.
+  Overload 2 of 2, '(id: number | undefined): void', gave the following error.
+    Argument of type 'Timeout | null' is not assignable to parameter of type 'number | undefined'.
+      Type 'null' is not assignable to type 'number | undefined'.
+src/ui/AvailabilityForm.tsx(179,101): error TS2345: Argument of type '(v: Record<string, string>) => { title: undefined; }' is not assignable to parameter of type 'SetStateAction<Record<string, string>>'.
+  Type '(v: Record<string, string>) => { title: undefined; }' is not assignable to type '(prevState: Record<string, string>) => Record<string, string>'.
+    Type '{ title: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'title' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/ui/AvailabilityForm.tsx(219,103): error TS2345: Argument of type '(v: Record<string, string>) => { start: undefined; end: undefined; }' is not assignable to parameter of type 'SetStateAction<Record<string, string>>'.
+  Type '(v: Record<string, string>) => { start: undefined; end: undefined; }' is not assignable to type '(prevState: Record<string, string>) => Record<string, string>'.
+    Type '{ start: undefined; end: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'start' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/ui/AvailabilityForm.tsx(232,101): error TS2345: Argument of type '(v: Record<string, string>) => { end: undefined; }' is not assignable to parameter of type 'SetStateAction<Record<string, string>>'.
+  Type '(v: Record<string, string>) => { end: undefined; }' is not assignable to type '(prevState: Record<string, string>) => Record<string, string>'.
+    Type '{ end: undefined; }' is not assignable to type 'Record<string, string>'.
+      Property 'end' is incompatible with index signature.
+        Type 'undefined' is not assignable to type 'string'.
+src/ui/CSVImportDialog.tsx(127,38): error TS18047: 'e.target.files' is possibly 'null'.
+src/ui/CalendarExternalForm.tsx(161,15): error TS2345: Argument of type '(prev: Record<string, string>) => { [x: string]: string | undefined; }' is not assignable to parameter of type 'SetStateAction<Record<string, string>>'.
+  Type '(prev: Record<string, string>) => { [x: string]: string | undefined; }' is not assignable to type '(prevState: Record<string, string>) => Record<string, string>'.
+    Type '{ [x: string]: string | undefined; }' is not assignable to type 'Record<string, string>'.
+      'string' index signatures are incompatible.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+src/ui/CalendarExternalForm.tsx(228,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/ui/ConfigPanel.tsx(331,15): error TS2322: Type '((...args: any[]) => void) | undefined' is not assignable to type '(source: Partial<CalendarSource>) => void'.
+  Type 'undefined' is not assignable to type '(source: Partial<CalendarSource>) => void'.
+src/ui/ConfigPanel.tsx(332,15): error TS2322: Type '((...args: any[]) => void) | undefined' is not assignable to type '(id: string) => void'.
+  Type 'undefined' is not assignable to type '(id: string) => void'.
+src/ui/ConfigPanel.tsx(333,15): error TS2322: Type '((...args: any[]) => void) | undefined' is not assignable to type '(id: string) => void'.
+  Type 'undefined' is not assignable to type '(id: string) => void'.
+src/ui/ConfigPanel.tsx(334,15): error TS2322: Type '((...args: any[]) => void) | undefined' is not assignable to type '(id: string, patch: Partial<CalendarSource>) => void'.
+  Type 'undefined' is not assignable to type '(id: string, patch: Partial<CalendarSource>) => void'.
+src/ui/ICSFeedPanel.tsx(169,23): error TS2353: Object literal may only specify known properties, and 'ok' does not exist in type '(prevState: null) => null'.
+src/ui/ICSFeedPanel.tsx(176,23): error TS2353: Object literal may only specify known properties, and 'ok' does not exist in type '(prevState: null) => null'.
+src/ui/ICSFeedPanel.tsx(248,34): error TS2339: Property 'ok' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(251,29): error TS2339: Property 'ok' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(254,23): error TS2339: Property 'ok' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(258,25): error TS2339: Property 'ok' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(259,37): error TS2339: Property 'count' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(259,62): error TS2339: Property 'count' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(260,28): error TS2339: Property 'corsLikely' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(261,64): error TS2339: Property 'error' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(262,40): error TS2339: Property 'error' does not exist on type 'never'.
+src/ui/ICSFeedPanel.tsx(307,81): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'SetStateAction<number>'.
+  Type 'null' is not assignable to type 'SetStateAction<number>'.
+src/ui/ImportZone.tsx(43,33): error TS18047: 'e.target' is possibly 'null'.
+src/ui/RequestForm.tsx(57,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/ui/RequestForm.tsx(61,5): error TS2322: Type 'RequestFormFieldType | undefined' is not assignable to type 'RequestFormFieldType'.
+  Type 'undefined' is not assignable to type 'RequestFormFieldType'.
+src/ui/ScheduleTemplateDialog.tsx(210,48): error TS2345: Argument of type 'string | number | Date | undefined' is not assignable to parameter of type 'string | number | Date'.
+  Type 'undefined' is not assignable to type 'string | number | Date'.
+src/ui/SourcePanel.tsx(133,21): error TS18048: 'draft' is possibly 'undefined'.
+src/ui/SourcePanel.tsx(146,26): error TS2345: Argument of type 'boolean | undefined' is not assignable to parameter of type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/ui/SourcePanel.tsx(150,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/ui/SourcePanel.tsx(195,9): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/ui/SourcePanel.tsx(212,21): error TS18048: 'draft' is possibly 'undefined'.
+src/ui/SourcePanel.tsx(222,26): error TS2345: Argument of type 'boolean | undefined' is not assignable to parameter of type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/ui/SourcePanel.tsx(226,45): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/ui/SourcePanel.tsx(266,9): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/ui/SourcePanel.tsx(429,47): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'SetStateAction<number>'.
+  Type 'null' is not assignable to type 'SetStateAction<number>'.
+src/ui/SourcePanel.tsx(480,8): error TS18047: 'errors' is possibly 'null'.
+src/ui/SourcePanel.tsx(482,28): error TS18047: 'errors' is possibly 'null'.
+src/ui/SourcePanel.tsx(552,49): error TS2538: Type 'undefined' cannot be used as an index type.
+src/ui/__tests__/ConfigPanel.focusTrap.test.tsx(38,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/ConfigPanel.focusTrap.test.tsx(52,25): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/ConfigPanel.teamTab.test.tsx(116,22): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/ConfigPanel.teamTab.test.tsx(117,23): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(35,21): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(39,21): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(50,14): error TS18047: 'dialog' is possibly 'null'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(59,14): error TS18047: 'dialog' is possibly 'null'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(65,12): error TS18047: 'dialog' is possibly 'null'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(81,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(92,27): error TS18047: 'dialog' is possibly 'null'.
+src/ui/__tests__/EventForm.focusTrap.test.tsx(96,21): error TS2345: Argument of type 'HTMLButtonElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/KeyboardHelpOverlay.test.tsx(28,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/OwnerLoginModal.test.tsx(43,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/OwnerLoginModal.test.tsx(81,25): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(32,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(42,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(53,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(65,27): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(75,24): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(84,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(93,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(106,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/ThemeCustomizer.test.tsx(120,20): error TS2532: Object is possibly 'undefined'.
+src/ui/__tests__/a11y.test.tsx(624,33): error TS2322: Type '{ renderEvent: () => JSX.Element; }' is not assignable to type 'null'.
+src/ui/__tests__/a11y.test.tsx(727,33): error TS2322: Type '{ renderEvent: () => JSX.Element; }' is not assignable to type 'null'.
+src/views/AgendaView.tsx(168,60): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/AgendaView.tsx(202,14): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/AgendaView.tsx(203,26): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/AgendaView.tsx(376,14): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/AgendaView.tsx(376,40): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/AssetsView.tsx(400,18): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/AssetsView.tsx(401,18): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/AssetsView.tsx(402,18): error TS2339: Property 'scrollLeft' does not exist on type 'never'.
+src/views/AssetsView.tsx(403,18): error TS2339: Property 'clientWidth' does not exist on type 'never'.
+src/views/AssetsView.tsx(406,8): error TS2339: Property 'addEventListener' does not exist on type 'never'.
+src/views/AssetsView.tsx(410,10): error TS2339: Property 'removeEventListener' does not exist on type 'never'.
+src/views/AssetsView.tsx(430,44): error TS2339: Property 'clientWidth' does not exist on type 'never'.
+src/views/AssetsView.tsx(432,10): error TS2339: Property 'scrollLeft' does not exist on type 'never'.
+src/views/AssetsView.tsx(782,25): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/AssetsView.tsx(783,14): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/AssetsView.tsx(784,35): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/AssetsView.tsx(784,52): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/AssetsView.tsx(785,14): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/AssetsView.tsx(785,43): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/AssetsView.tsx(794,35): error TS2339: Property 'querySelector' does not exist on type 'never'.
+src/views/AssetsView.tsx(798,27): error TS2339: Property 'querySelector' does not exist on type 'never'.
+src/views/AssetsView.tsx(832,32): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/views/AssetsView.tsx(956,15): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/AssetsView.tsx(957,17): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/AssetsView.tsx(1206,82): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/AssetsView.tsx(1212,44): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/views/BaseGanttView.tsx(255,48): error TS18047: 'ctx' is possibly 'null'.
+src/views/DayView.tsx(34,26): error TS2339: Property 'businessHours' does not exist on type 'never'.
+src/views/DayView.tsx(97,26): error TS2339: Property 'displayTimezone' does not exist on type 'never'.
+src/views/DayView.tsx(129,33): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(130,25): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(131,36): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(152,63): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/DayView.tsx(165,14): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/DayView.tsx(166,26): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/DayView.tsx(176,100): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(176,192): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(179,102): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(179,199): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(183,102): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(183,196): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(198,96): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(198,188): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(201,98): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(201,195): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(207,98): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/DayView.tsx(207,192): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/DayView.tsx(229,50): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/DayView.tsx(259,70): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/MonthView.tsx(150,33): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/MonthView.tsx(211,7): error TS2532: Object is possibly 'undefined'.
+src/views/MonthView.tsx(299,47): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/MonthView.tsx(310,48): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/views/MonthView.tsx(318,14): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/MonthView.tsx(319,26): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/MonthView.tsx(349,16): error TS2339: Property 'editMode' does not exist on type 'never'.
+src/views/MonthView.tsx(372,43): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/MonthView.tsx(512,61): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/MonthView.tsx(541,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/views/ScheduleView.tsx(46,56): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/ScheduleView.tsx(90,66): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/ScheduleView.tsx(94,32): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/ScheduleView.tsx(95,44): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/TimelineView.tsx(185,57): error TS2339: Property 'contains' does not exist on type 'never'.
+src/views/TimelineView.tsx(186,57): error TS2339: Property 'contains' does not exist on type 'never'.
+src/views/TimelineView.tsx(227,42): error TS2322: Type '{ ev: any; sourceRowKey: any; }' is not assignable to type 'null'.
+src/views/TimelineView.tsx(230,24): error TS2345: Argument of type '(prev: string | null) => string | null' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type 'string | null' is not assignable to type 'null'.
+    Type 'string' is not assignable to type 'null'.
+src/views/TimelineView.tsx(260,20): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/TimelineView.tsx(261,20): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/TimelineView.tsx(267,8): error TS2339: Property 'addEventListener' does not exist on type 'never'.
+src/views/TimelineView.tsx(275,10): error TS2339: Property 'removeEventListener' does not exist on type 'never'.
+src/views/TimelineView.tsx(281,44): error TS2339: Property 'focus' does not exist on type 'never'.
+src/views/TimelineView.tsx(376,12): error TS18047: 'resourceList' is possibly 'null'.
+src/views/TimelineView.tsx(499,25): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/TimelineView.tsx(500,14): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/TimelineView.tsx(501,35): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/TimelineView.tsx(501,52): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/TimelineView.tsx(502,14): error TS2339: Property 'scrollTop' does not exist on type 'never'.
+src/views/TimelineView.tsx(502,43): error TS2339: Property 'clientHeight' does not exist on type 'never'.
+src/views/TimelineView.tsx(509,35): error TS2339: Property 'querySelector' does not exist on type 'never'.
+src/views/TimelineView.tsx(513,27): error TS2339: Property 'querySelector' does not exist on type 'never'.
+src/views/TimelineView.tsx(577,14): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/TimelineView.tsx(577,40): error TS2339: Property 'emptyState' does not exist on type 'never'.
+src/views/TimelineView.tsx(785,37): error TS2339: Property 'sourceRowKey' does not exist on type 'never'.
+src/views/TimelineView.tsx(790,43): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(831,42): error TS2353: Object literal may only specify known properties, and 'emp' does not exist in type '(prevState: null) => null'.
+src/views/TimelineView.tsx(839,38): error TS2322: Type 'string | null' is not assignable to type 'Background<string | number> | undefined'.
+  Type 'null' is not assignable to type 'Background<string | number> | undefined'.
+src/views/TimelineView.tsx(860,38): error TS2322: Type 'string | null' is not assignable to type 'Background<string | number> | undefined'.
+  Type 'null' is not assignable to type 'Background<string | number> | undefined'.
+src/views/TimelineView.tsx(942,64): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/TimelineView.tsx(943,54): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/TimelineView.tsx(960,27): error TS2322: Type '{ ev: LooseEvent; sourceRowKey: any; }' is not assignable to type 'null'.
+src/views/TimelineView.tsx(974,30): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/TimelineView.tsx(975,42): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/TimelineView.tsx(1021,34): error TS18048: 'ev.meta' is possibly 'undefined'.
+src/views/TimelineView.tsx(1030,44): error TS2345: Argument of type '(prev: { ev?: LooseEvent; } | null) => { ev: LooseEvent; rect: DOMRect; } | null' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type '{ ev: LooseEvent; rect: DOMRect; } | null' is not assignable to type 'null'.
+    Type '{ ev: LooseEvent; rect: DOMRect; }' is not assignable to type 'null'.
+src/views/TimelineView.tsx(1081,71): error TS18048: 'ev.meta' is possibly 'undefined'.
+src/views/TimelineView.tsx(1094,44): error TS2345: Argument of type '(prev: { ev?: LooseEvent; } | null) => { ev: LooseEvent; rect: DOMRect; } | null' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type '{ ev: LooseEvent; rect: DOMRect; } | null' is not assignable to type 'null'.
+    Type '{ ev: LooseEvent; rect: DOMRect; }' is not assignable to type 'null'.
+src/views/TimelineView.tsx(1111,42): error TS2345: Argument of type '(prev: { ev?: LooseEvent; } | null) => { ev: LooseEvent; rect: DOMRect; } | null' is not assignable to parameter of type 'SetStateAction<null>'.
+  Type '{ ev: LooseEvent; rect: DOMRect; } | null' is not assignable to type 'null'.
+    Type '{ ev: LooseEvent; rect: DOMRect; }' is not assignable to type 'null'.
+src/views/TimelineView.tsx(1149,35): error TS2339: Property 'rect' does not exist on type 'never'.
+src/views/TimelineView.tsx(1149,68): error TS2339: Property 'rect' does not exist on type 'never'.
+src/views/TimelineView.tsx(1155,27): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1155,52): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1157,72): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1159,61): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1169,27): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1169,52): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1171,72): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1173,61): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1179,22): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1182,144): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1195,35): error TS2339: Property 'rect' does not exist on type 'never'.
+src/views/TimelineView.tsx(1195,68): error TS2339: Property 'rect' does not exist on type 'never'.
+src/views/TimelineView.tsx(1198,24): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1200,22): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1203,61): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1208,54): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1212,48): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1217,65): error TS2339: Property 'ev' does not exist on type 'never'.
+src/views/TimelineView.tsx(1239,24): error TS2339: Property 'emp' does not exist on type 'never'.
+src/views/TimelineView.tsx(1240,31): error TS2339: Property 'rect' does not exist on type 'never'.
+src/views/TimelineView.tsx(1241,83): error TS2339: Property 'emp' does not exist on type 'never'.
+src/views/WeekView.tsx(60,27): error TS2339: Property 'businessHours' does not exist on type 'never'.
+src/views/WeekView.tsx(162,26): error TS2339: Property 'displayTimezone' does not exist on type 'never'.
+src/views/WeekView.tsx(189,15): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(190,25): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/WeekView.tsx(191,36): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(216,15): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(218,18): error TS18047: 'gridRef.current' is possibly 'null'.
+src/views/WeekView.tsx(228,12): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(259,22): error TS18047: 'grid' is possibly 'null'.
+src/views/WeekView.tsx(269,5): error TS18047: 'grid' is possibly 'null'.
+src/views/WeekView.tsx(276,24): error TS18047: 'allDayRef.current' is possibly 'null'.
+src/views/WeekView.tsx(311,53): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/WeekView.tsx(328,24): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/WeekView.tsx(329,13): error TS2339: Property 'renderEvent' does not exist on type 'never'.
+src/views/WeekView.tsx(339,16): error TS2339: Property 'editMode' does not exist on type 'never'.
+src/views/WeekView.tsx(350,59): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(350,141): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/WeekView.tsx(353,61): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(353,148): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/WeekView.tsx(373,61): error TS2339: Property 'permissions' does not exist on type 'never'.
+src/views/WeekView.tsx(373,145): error TS2345: Argument of type 'HTMLDivElement | null' is not assignable to parameter of type 'DragGridElement'.
+  Type 'null' is not assignable to type 'DragGridElement'.
+src/views/WeekView.tsx(395,59): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/WeekView.tsx(445,62): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/WeekView.tsx(489,62): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/WeekView.tsx(537,70): error TS2339: Property 'colorRules' does not exist on type 'never'.
+src/views/__tests__/AgendaView.grouping.test.tsx(69,21): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AgendaView.grouping.test.tsx(208,22): error TS18048: 'exerciseItem' is possibly 'undefined'.
+src/views/__tests__/AgendaView.grouping.test.tsx(211,19): error TS2345: Argument of type 'HTMLButtonElement | null' is not assignable to parameter of type 'Element | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Window | Document'.
+src/views/__tests__/AgendaView.grouping.test.tsx(238,22): error TS18048: 'exerciseItem' is possibly 'undefined'.
+src/views/__tests__/AgendaView.grouping.test.tsx(240,19): error TS2345: Argument of type 'HTMLButtonElement | null' is not assignable to parameter of type 'Element | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Window | Document'.
+src/views/__tests__/AgendaView.grouping.test.tsx(273,19): error TS2345: Argument of type 'HTMLButtonElement | null' is not assignable to parameter of type 'Element | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Window | Document'.
+src/views/__tests__/AssetsView.grouping.test.tsx(96,21): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AssetsView.grouping.test.tsx(133,21): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AssetsView.grouping.test.tsx(177,21): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AssetsView.grouping.test.tsx(180,21): error TS2345: Argument of type 'HTMLElement | undefined' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'undefined' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AssetsView.keyboardNav.test.tsx(70,23): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Node | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Node | Window | Document'.
+src/views/__tests__/AssetsView.test.tsx(167,33): error TS2322: Type '{ colorRules: { field: string; value: string; color: string; }[]; }' is not assignable to type 'null'.
+src/views/__tests__/TimelineView.grouping.test.tsx(169,27): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Window | Document'.
+src/views/__tests__/TimelineView.grouping.test.tsx(193,27): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element | Window | Document'.
+  Type 'null' is not assignable to type 'Element | Window | Document'.
+src/views/__tests__/TimelineView.touchDnd.test.tsx(103,12): error TS18047: 'aliceRow' is possibly 'null'.
