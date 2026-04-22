@@ -251,6 +251,15 @@ Goal: Contain complexity
 
 Goal: Stabilize root without over-tightening
 
+**Status:** ✅ Completed (2026-04-22)
+
+**Shipped in this PR:**
+- Added explicit Phase 1 boundary typing in `src/WorksCalendar.tsx` for root helpers, top-level state/callback seams, and public API callback parameters to eliminate implicit parameter and local-variable `any` from the WorksCalendar root path.
+- Kept the root migration intentionally loose by centralizing boundary looseness under a documented `LooseValue` alias so Phase 1 can stabilize the root seam without forcing cross-module rewrites in the same PR.
+
+**Completion updates in the current repo:**
+- Added `src/WorksCalendar.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`, so WorksCalendar Phase 1 is now strict-ratchet enforced.
+
 ---
 
 ### PR 11 — WorksCalendar (Phase 2)

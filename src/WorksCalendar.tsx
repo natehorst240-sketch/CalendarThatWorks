@@ -219,10 +219,16 @@ export type WorksCalendarProps = {
   onPoolsChange?: (pools: ResourcePool[]) => void;
 };
 
+
+
+// Phase 1 migration boundary: keep WorksCalendar callback seams intentionally
+// loose while removing implicit `any` from root handlers.
+type LooseValue = any;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Human-readable announcement text for a completed engine operation. */
-function opAnnouncement(op) {
+function opAnnouncement(op: LooseValue) {
   switch (op.type) {
     case 'create': return `Event "${op.event?.title ?? 'Untitled'}" created.`;
     case 'update': return 'Event updated.';
@@ -315,9 +321,9 @@ function buildRecipeSavedView(
       return null;
   }
 }
-let exportToExcelFn = null;
+let exportToExcelFn: LooseValue = null;
 
-async function exportVisibleEvents(events) {
+async function exportVisibleEvents(events: LooseValue) {
   if (!exportToExcelFn) {
     ({ exportToExcel: exportToExcelFn } = await import('./export/excelExport.js'));
   }
@@ -325,7 +331,7 @@ async function exportVisibleEvents(events) {
 }
 
 /** Compute the visible [start, end] range for a given view + date. */
-function viewRange(view, date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
+function viewRange(view: LooseValue, date: LooseValue, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   switch (view) {
     case 'week':
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
@@ -470,7 +476,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const parentMembers = Array.isArray(employees) ? employees : [];
     if (configMembers.length === 0) return parentMembers;
     if (parentMembers.length === 0) return configMembers;
-    const configById = new Map(configMembers.map((m) => [String(m.id), m]));
+    const configById = new Map(configMembers.map((m: LooseValue) => [String(m.id), m]));
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.team?.members]);
@@ -495,10 +501,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // Wrap parent employee handlers so edits from ANY surface (timeline add-form
   // or TeamTab settings) flow both to the consumer's state AND to the owner
   // config. Keeps TeamTab and the live schedule in sync. See issue #101.
-  const handleEmployeeAddInternal = useCallback((member) => {
+  const handleEmployeeAddInternal = useCallback((member: LooseValue) => {
     ownerCfg.updateConfig(c => {
       const existing = c.team?.members ?? [];
-      if (existing.some(m => String(m.id) === String(member.id))) return c;
+      if (existing.some((m: LooseValue) => String(m.id) === String(member.id))) return c;
       return {
         ...c,
         team: { ...(c.team ?? {}), members: [...existing, member] },
@@ -508,10 +514,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEmployeeAdd?.(member);
   }, [ownerCfg.updateConfig, onEmployeeAdd]);
 
-  const handleEmployeeDeleteInternal = useCallback((id) => {
+  const handleEmployeeDeleteInternal = useCallback((id: LooseValue) => {
     ownerCfg.updateConfig(c => ({
       ...c,
-      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter(m => String(m.id) !== String(id)) },
+      team: { ...(c.team ?? {}), members: (c.team?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
     }));
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
@@ -691,7 +697,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (savedViewActiveId)    setSavedViewDirty(true);
   }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleApplyView = useCallback((savedView) => {
+  const handleApplyView = useCallback((savedView: LooseValue) => {
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
@@ -711,7 +717,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSavedViewDirty(false);
   }, [cal, schema]);
 
-  const handleDeleteView = useCallback((id) => {
+  const handleDeleteView = useCallback((id: LooseValue) => {
     savedViews.deleteView(id);
     if (savedViewActiveId === id) {
       setSavedViewActiveId(null);
@@ -761,7 +767,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // included as-is — using title+start as a fallback key would silently
     // drop events that happen to share the same title and start time.
     const map = new Map();
-    const noId = [];
+    const noId: LooseValue[] = [];
     [...rawEvents, ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
       if (ev.id != null) map.set(String(ev.id), ev);
       else noId.push(ev);
@@ -924,7 +930,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
   const [recurringPrompt, setRecurringPrompt] = useState(null);
 
-  const applyEngineOp = useCallback((op, onAccepted) => {
+  const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
     const engine  = engineRef.current;
     const undoMgr = undoManagerRef.current;
     const ctx     = opCtxRef.current;
@@ -999,7 +1005,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return { previewMax, createMax };
   }, [scheduleInstantiationLimits]);
 
-  const trackScheduleTemplateAnalytics = useCallback((event, payload = {}) => {
+  const trackScheduleTemplateAnalytics = useCallback((event: LooseValue, payload: LooseValue = {}) => {
     onScheduleTemplateAnalytics?.({
       event,
       at: new Date().toISOString(),
@@ -1039,7 +1045,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Keyboard shortcuts ───────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const onKeyDown = (e) => {
+    const onKeyDown = (e: LooseValue) => {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
 
@@ -1064,11 +1070,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── CalendarApi / imperative handle ─────────────────────────────────────
   const api = useMemo(() => ({
-    navigateTo:       (date) => cal.setCurrentDate(date),
-    setView:          (view) => cal.setView(view),
+    navigateTo:       (date: LooseValue) => cal.setCurrentDate(date),
+    setView:          (view: LooseValue) => cal.setView(view),
     goToToday:        ()     => cal.goToToday(),
-    openEvent:        (id)   => {
-      const ev = expandedEvents.find(e => e.id === id);
+    openEvent:        (id: LooseValue)   => {
+      const ev = expandedEvents.find((e: LooseValue) => e.id === id);
       if (ev) setSelectedEvent(ev);
     },
     getVisibleEvents: ()     => visibleEvents,
@@ -1083,7 +1089,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   useImperativeHandle(ref, () => api, [api]);
 
   // ── Callbacks ────────────────────────────────────────────────────────────
-  const handleEventClick = useCallback((ev) => {
+  const handleEventClick = useCallback((ev: LooseValue) => {
     if (editModeRef.current) {
       setSelectedEvent(null);
       setInlineEditTarget({
@@ -1097,7 +1103,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
-  const getSavedEventPayload = useCallback((eventId, fallbackEvent = null, fallbackPatch = null) => {
+  const getSavedEventPayload = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const normalizedId = eventId == null ? '' : String(eventId);
     if (normalizedId) {
       const saved = engineRef.current.state.events.get(normalizedId);
@@ -1107,12 +1113,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return fallbackPatch ? { ...fallbackEvent, ...fallbackPatch } : fallbackEvent;
   }, []);
 
-  const emitEventSave = useCallback((eventId, fallbackEvent = null, fallbackPatch = null) => {
+  const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
     if (savedPayload) onEventSave?.(savedPayload);
   }, [getSavedEventPayload, onEventSave]);
 
-  const handleShiftStatusChange = useCallback((ev, status) => {
+  const handleShiftStatusChange = useCallback((ev: LooseValue, status: LooseValue) => {
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const linkedOpenShifts = findLinkedOpenShifts(expandedEvents, ev);
@@ -1140,7 +1146,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete]);
 
-  const handleCoverageAssign = useCallback((ev, coveringEmployeeId) => {
+  const handleCoverageAssign = useCallback((ev: LooseValue, coveringEmployeeId: LooseValue) => {
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
@@ -1152,7 +1158,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (!normalizedCoveringEmployeeId) {
       const clearedMeta = {
         ...(ev.meta ?? {}),
-        coveredBy: null,
+        coveredBy: null as LooseValue,
       };
       applyEngineOp(
         { type: 'update', id: eventId, patch: { meta: clearedMeta }, source: 'api' },
@@ -1164,7 +1170,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         if (openId) {
           const openMeta = {
             ...(primaryOpenShift.meta ?? {}),
-            coveredBy: null,
+            coveredBy: null as LooseValue,
             status: 'open',
           };
           applyEngineOp(
@@ -1264,8 +1270,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    * - 'schedule' → opens ScheduleEditorForm
    * All actions also bubble to the external onEmployeeAction prop.
    */
-  const handleEmployeeAction = useCallback((empId, actionInput) => {
-    const emp = configuredEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: empId };
+  const handleEmployeeAction = useCallback((empId: LooseValue, actionInput: LooseValue) => {
+    const emp = configuredEmployees.find((e: LooseValue) => String(e.id) === String(empId)) ?? { id: empId, name: empId };
     const actionPayload = typeof actionInput === 'string'
       ? { type: actionInput }
       : (actionInput ?? {});
@@ -1275,18 +1281,18 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (AVAILABILITY_ACTIONS.has(action)) {
       const initialEvent = action === 'availability'
         ? expandedEvents
-          .filter((ev) => {
+          .filter((ev: LooseValue) => {
             const evKind = normalizeScheduleKind(ev?.kind ?? ev?.meta?.kind);
             const evCat  = String(ev?.category ?? '').toLowerCase();
             const resourceId = String(ev?.resource ?? ev?.resourceId ?? ev?.employeeId ?? '');
             return resourceId === String(empId) && (evKind === 'availability' || evCat === 'availability');
           })
-          .sort((a, b) => {
+          .sort((a: LooseValue, b: LooseValue) => {
             const aStart = a?.start ? new Date(a.start).getTime() : 0;
             const bStart = b?.start ? new Date(b.start).getTime() : 0;
             return bStart - aStart;
           })
-          .map((ev) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
+          .map((ev: LooseValue) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
         : actionPayload.sourceShift
           ? {
             title: action === 'pto' ? 'PTO' : 'Unavailable',
@@ -1309,9 +1315,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
    *  unavailable window automatically gets an open-shift event created. */
-  const handleAvailabilitySave = useCallback((availEv) => {
+  const handleAvailabilitySave = useCallback((availEv: LooseValue) => {
     const existingAvailability = expandedEvents.find(
-      (ev) => String(ev._eventId ?? ev.id) === String(availEv.id),
+      (ev: LooseValue) => String(ev._eventId ?? ev.id) === String(availEv.id),
     );
     const availabilityId = existingAvailability
       ? String(existingAvailability._eventId ?? existingAvailability.id)
@@ -1387,7 +1393,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           ...(shiftEv.meta ?? {}),
           shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
           openShiftId:  openShift.id,
-          coveredBy:    null,
+          coveredBy:    null as LooseValue,
           requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
           requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
         };
@@ -1402,9 +1408,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.onCallCategory]);
 
   /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
-  const handleScheduleEditorSave = useCallback((shiftEvOrArr) => {
+  const handleScheduleEditorSave = useCallback((shiftEvOrArr: LooseValue) => {
     const events = Array.isArray(shiftEvOrArr) ? shiftEvOrArr : [shiftEvOrArr];
-    events.forEach((ev, index) => {
+    events.forEach((ev: LooseValue, index: LooseValue) => {
       const scheduleId = String(ev.id ?? createId(`shift-${index}`));
       applyEngineOp(
         { type: 'create', event: { ...ev, id: scheduleId }, source: 'api' },
@@ -1426,14 +1432,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
    *
    * Defined BEFORE any handler that references it to avoid stale closures.
    */
-  const applyWithRecurringCheck = useCallback((ev, makeOp, onAccepted, actionLabel) => {
+  const applyWithRecurringCheck = useCallback((ev: LooseValue, makeOp: LooseValue, onAccepted: LooseValue, actionLabel: LooseValue) => {
     if (!ev._recurring) {
       applyEngineOp(makeOp('series'), onAccepted);
       return;
     }
     setRecurringPrompt({
       actionLabel,
-      onConfirm: (scope) => {
+      onConfirm: (scope: LooseValue) => {
         setRecurringPrompt(null);
         applyEngineOp(
           { ...makeOp(scope), scope, occurrenceDate: ev.start instanceof Date ? ev.start : new Date(ev.start) },
@@ -1444,7 +1450,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [applyEngineOp]);
 
-  const handleEventSave = useCallback((rawEv) => {
+  const handleEventSave = useCallback((rawEv: LooseValue) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
     const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
     // Expanded recurring occurrences from the engine carry _eventId.
@@ -1483,7 +1489,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         },
         source: 'form',
       };
-      applyEngineOp(op, (result) => {
+      applyEngineOp(op, (result: LooseValue) => {
         // applyCreate generates its own engine id, so look the saved
         // record up by the id the engine actually assigned — otherwise
         // pool-resolved events fall through to the fallback payload,
@@ -1500,7 +1506,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // Existing event — may be a recurring occurrence.
     applyWithRecurringCheck(
       rawEv,
-      (scope) => ({
+      (scope: LooseValue) => ({
         type:  'update',
         id:    eventId,
         patch: {
@@ -1516,12 +1522,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         },
         source: 'form',
       }),
-      (result) => {
+      (result: LooseValue) => {
         // For scoped recurring ops the engine may produce multiple changes
         // (e.g. updated master + created detached occurrence). Emit onEventSave
         // for every changed/created event so the host stays fully in sync.
         if (result?.changes?.length > 1) {
-          result.changes.forEach(change => {
+          result.changes.forEach((change: LooseValue) => {
             if (change.type === 'created') {
               onEventSave?.(toLegacyEvent(change.event) as any);
             } else if (change.type === 'updated') {
@@ -1538,17 +1544,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, onEventSave]);
 
-  const handleEventMove = useCallback((ev, newStart, newEnd) => {
+  const handleEventMove = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
       ev,
-      (scope) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
-      (result) => {
+      (scope: LooseValue) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
+      (result: LooseValue) => {
         if (onEventMove) {
           onEventMove(ev, newStart, newEnd);
         } else if (result?.changes?.length > 1) {
-          result.changes.forEach(change => {
+          result.changes.forEach((change: LooseValue) => {
             if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
             else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
           });
@@ -1561,17 +1567,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventMove, onEventSave]);
 
-  const handleEventResize = useCallback((ev, newStart, newEnd) => {
+  const handleEventResize = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
     applyWithRecurringCheck(
       ev,
-      (scope) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
-      (result) => {
+      (scope: LooseValue) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
+      (result: LooseValue) => {
         if (onEventResize) {
           onEventResize(ev, newStart, newEnd);
         } else if (result?.changes?.length > 1) {
-          result.changes.forEach(change => {
+          result.changes.forEach((change: LooseValue) => {
             if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
             else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
           });
@@ -1584,7 +1590,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
 
-  const handleEventGroupChange = useCallback((ev, patch) => {
+  const handleEventGroupChange = useCallback((ev: LooseValue, patch: LooseValue) => {
     if (!patch || typeof patch !== 'object') return;
     const raw = ev._raw ?? ev;
     const id  = ev._eventId ?? String(ev.id);
@@ -1597,19 +1603,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
   }, [applyEngineOp, emitEventSave, onEventGroupChange]);
 
-  const handleEventDelete = useCallback((id) => {
+  const handleEventDelete = useCallback((id: LooseValue) => {
     // Find the event so we can check if it's recurring.
-    const ev      = expandedEvents.find(e => String(e.id) === String(id)) ?? { id };
+    const ev      = expandedEvents.find((e: LooseValue) => String(e.id) === String(id)) ?? { id };
     const eventId = ev._eventId ?? String(id);
     applyWithRecurringCheck(
       ev,
-      (scope) => ({ type: 'delete', id: eventId, source: 'form' }),
+      (scope: LooseValue) => ({ type: 'delete', id: eventId, source: 'form' }),
       () => { onEventDelete?.(id); setFormEvent(null); },
       'Delete',
     );
   }, [applyWithRecurringCheck, expandedEvents, onEventDelete]);
 
-  const handleImport = useCallback((imported, meta) => {
+  const handleImport = useCallback((imported: LooseValue, meta: LooseValue) => {
     onImport?.(imported);
     // Persist as a toggleable CSV source so events survive across sessions
     sourceStore.addSource({
@@ -1622,7 +1628,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setImportOpen(false);
   }, [onImport, sourceStore]);
 
-  const handleScheduleInstantiate = useCallback((request) => {
+  const handleScheduleInstantiate = useCallback((request: LooseValue) => {
     const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
@@ -1694,7 +1700,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setScheduleOpen(false);
   }, [applyEngineOp, getSavedEventPayload, onEventSave, resolvedScheduleLimits.createMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
-  const buildSchedulePreview = useCallback((request) => {
+  const buildSchedulePreview = useCallback((request: LooseValue) => {
     const startedAt = Date.now();
     const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
@@ -1734,7 +1740,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     const ctx = opCtxRef.current;
     const seededEvents = [...engineRef.current.state.events.values()];
-    const conflicts = [];
+    const conflicts: LooseValue[] = [];
 
     generated.forEach((ev, index) => {
       const legacy = [{
@@ -1774,7 +1780,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return { generated, conflicts, error: '' };
   }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
 
-  const handleCreateScheduleTemplate = useCallback(async (template) => {
+  const handleCreateScheduleTemplate = useCallback(async (template: LooseValue) => {
     if (!scheduleTemplateAdapter?.createScheduleTemplate) return;
     try {
       await scheduleTemplateAdapter.createScheduleTemplate(template);
@@ -1785,7 +1791,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
 
-  const handleDeleteScheduleTemplate = useCallback(async (templateId) => {
+  const handleDeleteScheduleTemplate = useCallback(async (templateId: LooseValue) => {
     if (!scheduleTemplateAdapter?.deleteScheduleTemplate) return;
     try {
       await scheduleTemplateAdapter.deleteScheduleTemplate(templateId);
@@ -1796,7 +1802,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
 
-  const handleEditFromHoverCard = useCallback((ev) => {
+  const handleEditFromHoverCard = useCallback((ev: LooseValue) => {
     setSelectedEvent(null);
     let formEv = ev._raw ?? ev;
     // Recurring occurrences carry rrule:null — look up the series master so the
@@ -1811,7 +1817,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, []);
 
   /** Save quick display customizations from InlineEventEditor. */
-  const handleInlineSave = useCallback((patch) => {
+  const handleInlineSave = useCallback((patch: LooseValue) => {
     const ev = inlineEditTarget?.event;
     if (!ev) return;
     const eventId = ev._eventId ?? String(ev.id);
@@ -1876,7 +1882,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const isEmpty      = visibleEvents.length === 0;
 
   // Date-select (drag-to-create or day click) → open form seeded with the range
-  const handleDateSelect = useCallback((start, end) => {
+  const handleDateSelect = useCallback((start: LooseValue, end: LooseValue) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end);
     setFormEvent({ start, end });
@@ -1885,14 +1891,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // Schedule cell select → route to schedule-specific editor, not generic EventForm.
   // When the dropped cell isn't a known employee (no resource match), fall back
   // to the generic EventForm so the user still has a way to create an event.
-  const handleScheduleDateSelect = useCallback((start, end, resourceId) => {
+  const handleScheduleDateSelect = useCallback((start: LooseValue, end: LooseValue, resourceId: LooseValue) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
 
     const startDate = start instanceof Date ? start : new Date(start);
     const endDate = end instanceof Date ? end : new Date(end);
 
-    const emp = configuredEmployees.find(e => String(e.id) === String(resourceId));
+    const emp = configuredEmployees.find((e: LooseValue) => String(e.id) === String(resourceId));
     if (!emp) {
       setFormEvent({ start: startDate, end: endDate, resource: resourceId });
       return;
@@ -1905,7 +1911,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // the initial formEvent into its submit payload, so seeding
   // resourcePoolId here is enough to get the engine to resolve it on
   // save — the generic form doesn't need a pool-picker field.
-  const handlePoolDateSelect = useCallback((start, end, poolId) => {
+  const handlePoolDateSelect = useCallback((start: LooseValue, end: LooseValue, poolId: LooseValue) => {
     if (!hasAddButton) return;
     const startDate = start instanceof Date ? start : new Date(start);
     const endDate   = end   instanceof Date ? end   : new Date(end);
@@ -2083,9 +2089,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               activeId:    savedViewActiveId,
               isDirty:     savedViewDirty,
               applyView:   handleApplyView,
-              saveView:    (name, opts) => savedViews.saveView(name, cal.filters, { view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx), ...opts }),
+              saveView:    (name: LooseValue, opts: LooseValue) => savedViews.saveView(name, cal.filters, { view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx), ...opts }),
               updateView:  savedViews.updateView,
-              resaveView:  (id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx)),
+              resaveView:  (id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx)),
               deleteView:  handleDeleteView,
               toggleStripVisibility: savedViews.toggleStripVisibility,
               clearFilters: cal.clearFilters,
@@ -2093,7 +2099,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               currentFilters: cal.filters,
               currentView:    cal.view,
               schema,
-              buildFilterSummary: (filters) => buildFilterSummary(filters, schema),
+              buildFilterSummary: (filters: LooseValue) => buildFilterSummary(filters, schema),
             })
           : (
             <ProfileBar
@@ -2107,15 +2113,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               locationLabel={locationLabel}
               hasActiveFilters={hasActiveFilters(cal.filters, schema)}
               onApply={handleApplyView}
-              onAdd={({ name, color }) =>
+              onAdd={({ name, color }: { name: LooseValue; color: LooseValue }) =>
                 savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
               }
-              onResave={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+              onResave={(id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
               onToggleVisibility={savedViews.toggleStripVisibility}
               onClearFilters={cal.clearFilters}
-              onEditConditions={ownerCfg.isOwner ? (id) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
+              onEditConditions={ownerCfg.isOwner ? (id: LooseValue) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
             />
           )
         }
@@ -2290,7 +2296,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             categories={resolvedAssetRequestCategories}
             initialStart={cal.currentDate}
             initialAssetId={undefined}
-            onSubmit={(payload) => {
+            onSubmit={(payload: LooseValue) => {
               handleEventSave(payload);
               setAssetRequestOpen(false);
             }}
