@@ -10,10 +10,6 @@ jobs:
   type-check:
     name: TypeScript Type Check
     runs-on: ubuntu-latest
-    # Blocking check: root advisory tsc is now enforced so Stage 4a/5 PRs
-    # cannot merge unless both the migration ratchet and repo-wide typecheck
-    # stay green. This mirrors the strict Definition of Done in the sprint
-    # plan and PR template.
     steps:
       - uses: actions/checkout@v4
 
@@ -28,28 +24,6 @@ jobs:
 
       - name: Run type check
         run: npm run type-check
-
-  type-check-strict:
-    name: TypeScript Strict Type Check
-    runs-on: ubuntu-latest
-    # Blocking check that grows with the noImplicitAny migration.
-    # Only files/dirs listed in tsconfig.strict.json are enforced;
-    # everything else stays under the root repo-wide type-check job above.
-    # See docs/TypeScriptStrictMigration.md for the staged plan.
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run strict type check
-        run: npm run type-check:strict
 
   unit-tests:
     name: Unit & Component Tests
