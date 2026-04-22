@@ -204,6 +204,22 @@ Record:
 - updated unique files count
 - whether remaining debt is still dominated by `src/ui`
 
+#### Checkpoint run recorded — 2026-04-22
+
+Command run:
+
+```bash
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+```
+
+Results:
+- **253** implicit-any diagnostics (down from 413)
+- **55** unique files with implicit-any diagnostics (down from 67)
+- Remaining debt is **still dominated by `src/ui`** (167 / 253 diagnostics, ~66%)
+
+Notes:
+- The run also reports a non-implicit-any type mismatch in `src/WorksCalendar.tsx` (`TS2345`), which is outside this implicit-any checkpoint metric.
+
 ### Required checkpoint after PR 5
 After PRs 4–5 land, rerun the full Stage 6 readiness audit in:
 - `docs/stage-6-readiness-audit.md`
