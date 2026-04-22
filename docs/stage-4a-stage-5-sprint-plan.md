@@ -267,6 +267,16 @@ Goal: Stabilize root without over-tightening
 - Remove temp `any`
 - Finalize public interfaces
 
+**Status:** ✅ Completed (2026-04-22)
+
+**Shipped in this PR:**
+- Tightened `WorksCalendarProps` callback/public seams in `src/WorksCalendar.tsx` by replacing variadic `unknown[]` signatures with named, explicit handler payload types for employee actions, availability/schedule saves, conflict/approval hooks, and render extension points.
+- Consolidated root boundary aliases (`UnknownRecord`, `EmployeeRecord`, `EmployeeActionInput`, `AvailabilitySavePayload`, etc.) so public interfaces are intentionally loose where required, but documented and named.
+- Reduced ad-hoc boundary shape duplication by reusing shared aliases for config, note, feed, and template-adapter seams.
+
+**Completion updates in the current repo:**
+- `src/WorksCalendar.tsx` remains in `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`, and this phase finalizes the exported WorksCalendar interface without widening strict-ratchet scope.
+
 ---
 
 ### PR 12 — Final Ratchet

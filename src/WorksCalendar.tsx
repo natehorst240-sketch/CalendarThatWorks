@@ -85,7 +85,7 @@ import TimelineView           from './views/TimelineView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
-import type { AssetsZoomLevel, LocationProvider } from './types/assets';
+import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
@@ -99,6 +99,24 @@ export type CalendarRole = 'admin' | 'user' | 'readonly';
 export type ScheduleInstantiationLimits = {
   previewMax?: number;
   createMax?: number;
+};
+
+type UnknownRecord = Record<string, unknown>;
+type ScheduleTemplateAdapter = {
+  listScheduleTemplates?: () => Promise<unknown>;
+  createScheduleTemplate?: (template: UnknownRecord) => Promise<unknown>;
+  deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
+  [key: string]: unknown;
+};
+type EmployeeId = string | number;
+type EmployeeRecord = { id: EmployeeId; name?: string; [key: string]: unknown };
+type EmployeeActionInput = { type?: string; [key: string]: unknown };
+type EventGroupPatch = Record<string, unknown>;
+type AssetLocationData = LocationData | null;
+type AvailabilitySavePayload = {
+  status?: string;
+  coveredBy?: string | null;
+  [key: string]: unknown;
 };
 
 export type CalendarApi = {
@@ -118,51 +136,46 @@ export type CalendarApi = {
 export type WorksCalendarProps = {
   events?: WorksCalendarEvent[];
   fetchEvents?: (...args: unknown[]) => Promise<WorksCalendarEvent[]>;
-  icalFeeds?: Array<Record<string, unknown>>;
+  icalFeeds?: UnknownRecord[];
   onImport?: (events: WorksCalendarEvent[]) => void;
-  scheduleTemplates?: Array<Record<string, unknown>>;
-  scheduleTemplateAdapter?: {
-    listScheduleTemplates?: () => Promise<unknown>;
-    createScheduleTemplate?: (template: unknown) => Promise<unknown>;
-    deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
-    [key: string]: unknown;
-  };
+  scheduleTemplates?: UnknownRecord[];
+  scheduleTemplateAdapter?: ScheduleTemplateAdapter;
   scheduleInstantiationLimits?: ScheduleInstantiationLimits;
-  onScheduleTemplateAnalytics?: (payload: Record<string, unknown>) => void;
+  onScheduleTemplateAnalytics?: (payload: UnknownRecord) => void;
   calendarId?: string;
   ownerPassword?: string;
-  onConfigSave?: (config: Record<string, unknown>) => void;
+  onConfigSave?: (config: UnknownRecord) => void;
   devMode?: boolean;
-  notes?: Record<string, unknown>;
-  onNoteSave?: (note: Record<string, unknown>) => void;
+  notes?: UnknownRecord;
+  onNoteSave?: (note: UnknownRecord) => void;
   onNoteDelete?: (noteId: string) => void;
   onEventClick?: (event: WorksCalendarEvent) => void;
   onEventSave?: (event: WorksCalendarEvent) => void;
   onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
-  onEventGroupChange?: (event: WorksCalendarEvent, patch: Record<string, unknown>) => void;
+  onEventGroupChange?: (event: WorksCalendarEvent, patch: EventGroupPatch) => void;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseTable?: string;
   supabaseFilter?: string;
   role?: CalendarRole;
-  employees?: Array<Record<string, unknown>>;
-  onEmployeeAdd?: (...args: unknown[]) => void;
-  onEmployeeDelete?: (...args: unknown[]) => void;
-  onEmployeeAction?: (...args: unknown[]) => void;
-  onAvailabilitySave?: (...args: unknown[]) => void;
-  onScheduleSave?: (...args: unknown[]) => void;
-  blockedWindows?: Array<Record<string, unknown>>;
+  employees?: EmployeeRecord[];
+  onEmployeeAdd?: (member: EmployeeRecord) => void;
+  onEmployeeDelete?: (employeeId: EmployeeId) => void;
+  onEmployeeAction?: (employeeId: EmployeeId, action: EmployeeActionInput) => void;
+  onAvailabilitySave?: (payload: AvailabilitySavePayload) => void;
+  onScheduleSave?: (payload: WorksCalendarEvent) => void;
+  blockedWindows?: UnknownRecord[];
   theme?: string;
-  colorRules?: Array<Record<string, unknown>>;
-  businessHours?: Record<string, unknown>;
-  renderEvent?: (...args: unknown[]) => ReactNode;
-  renderHoverCard?: (...args: unknown[]) => ReactNode;
+  colorRules?: UnknownRecord[];
+  businessHours?: UnknownRecord;
+  renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
+  renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
   renderToolbar?: (api: CalendarApi) => ReactNode;
-  renderFilterBar?: (...args: unknown[]) => ReactNode;
-  renderSavedViewsBar?: (...args: unknown[]) => ReactNode;
+  renderFilterBar?: (args: UnknownRecord) => ReactNode;
+  renderSavedViewsBar?: (args: UnknownRecord) => ReactNode;
   /**
    * Visible quick-filter chips rendered above the view area. Opt-in:
    *   - omitted (default) → no chip row renders
@@ -198,10 +211,10 @@ export type WorksCalendarProps = {
   assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
   strictAssetFiltering?: boolean;
   assetRequestCategories?: string[];
-  onConflictCheck?: (...args: unknown[]) => Promise<unknown>;
-  onApprovalAction?: (...args: unknown[]) => void | Promise<void>;
-  renderAssetLocation?: (...args: unknown[]) => ReactNode;
-  renderConflictBody?: (...args: unknown[]) => ReactNode;
+  onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
+  onApprovalAction?: (event: WorksCalendarEvent, action: string) => void | Promise<void>;
+  renderAssetLocation?: (locationData: AssetLocationData, asset: { id: string }) => ReactNode;
+  renderConflictBody?: (args: UnknownRecord) => ReactNode;
 
   /**
    * Resource pools (#212). Bookings can target a pool id via
