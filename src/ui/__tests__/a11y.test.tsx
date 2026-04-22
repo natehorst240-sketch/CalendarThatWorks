@@ -24,6 +24,11 @@ import DayView from '../../views/DayView';
 import TimelineView from '../../views/TimelineView';
 import { CalendarContext } from '../../core/CalendarContext';
 
+type MonthViewTestProps = Partial<React.ComponentProps<typeof MonthView>>;
+type WeekViewTestProps = Partial<React.ComponentProps<typeof WeekView>>;
+type DayViewTestProps = Partial<React.ComponentProps<typeof DayView>>;
+type TimelineViewTestProps = Partial<React.ComponentProps<typeof TimelineView>>;
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function d(y: number, mo: number, day: number, h = 9, m = 0) {
@@ -43,7 +48,7 @@ function makeEvent(id: string, overrides: A11yEventOverrides = {}) {
     id,
     title: overrides.title ?? `Event ${id}`,
     start: overrides.start ?? d(2026, 4, 10, 9),
-    end:   overrides.end   ?? d(2026, 4, 10, 10),
+    end: overrides.end ?? d(2026, 4, 10, 10),
     allDay: overrides.allDay ?? false,
     color: overrides.color ?? '#3b82f6',
     ...overrides,
@@ -220,15 +225,15 @@ describe('useFocusTrap', () => {
 describe('MonthView ARIA semantics', () => {
   const currentDate = d(2026, 4, 1);
 
-  function renderMonth(props: Record<string, unknown> = {}) {
+  function renderMonth(props: MonthViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <MonthView
           currentDate={currentDate}
-          events={(props.events as unknown[]) ?? []}
+          events={props.events ?? []}
           weekStartDay={0}
           onEventClick={vi.fn()}
-          onDateSelect={(props.onDateSelect as (() => void) | undefined) ?? vi.fn()}
+          onDateSelect={props.onDateSelect ?? vi.fn()}
           config={{}}
           {...props}
         />
@@ -364,15 +369,15 @@ describe('MonthView ARIA semantics', () => {
 describe('WeekView ARIA semantics', () => {
   const currentDate = d(2026, 4, 6);
 
-  function renderWeek(props: Record<string, unknown> = {}) {
+  function renderWeek(props: WeekViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <WeekView
           currentDate={currentDate}
-          events={(props.events as unknown[]) ?? []}
+          events={props.events ?? []}
           weekStartDay={0}
           onEventClick={vi.fn()}
-          onDateSelect={(props.onDateSelect as (() => void) | undefined) ?? vi.fn()}
+          onDateSelect={props.onDateSelect ?? vi.fn()}
           onEventMove={vi.fn()}
           onEventResize={vi.fn()}
           config={{ display: { dayStart: 8, dayEnd: 18 } }}
@@ -484,14 +489,14 @@ describe('WeekView ARIA semantics', () => {
 describe('DayView ARIA semantics', () => {
   const currentDate = d(2026, 4, 10);
 
-  function renderDay(props: Record<string, unknown> = {}) {
+  function renderDay(props: DayViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <DayView
           currentDate={currentDate}
-          events={(props.events as unknown[]) ?? []}
+          events={props.events ?? []}
           onEventClick={vi.fn()}
-          onDateSelect={(props.onDateSelect as (() => void) | undefined) ?? vi.fn()}
+          onDateSelect={props.onDateSelect ?? vi.fn()}
           onEventMove={vi.fn()}
           onEventResize={vi.fn()}
           config={{ display: { dayStart: 8, dayEnd: 18 } }}
@@ -612,12 +617,12 @@ describe('TimelineView ARIA semantics', () => {
     { id: 'bob', name: 'Bob Jones', role: 'Designer' },
   ];
 
-  function renderTimeline(props: Record<string, unknown> = {}) {
+  function renderTimeline(props: TimelineViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <TimelineView
           currentDate={currentDate}
-          events={(props.events as unknown[]) ?? []}
+          events={props.events ?? []}
           employees={employees}
           onEventClick={vi.fn()}
           {...props}
