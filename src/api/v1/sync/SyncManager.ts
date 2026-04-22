@@ -273,7 +273,7 @@ export class SyncManager {
           this._dispatchCreate(op.id, op.payload as CalendarEventV1, op.eventId);
           break;
         case 'update':
-          this._dispatchUpdate(op.id, op.eventId, op.payload as Partial<CalendarEventV1>, this._events.get(op.eventId)!);
+          this._dispatchQueuedUpdate(op.id, op.eventId, op.payload as Partial<CalendarEventV1>);
           break;
         case 'delete':
           this._dispatchDelete(op.id, op.eventId, op.rollbackEvent);
@@ -355,6 +355,23 @@ export class SyncManager {
       .catch(err => this._handleError(opId, err, 'update', patch, id));
   }
 
+  private _dispatchQueuedUpdate(
+    opId: string,
+    id: string,
+    patch: Partial<CalendarEventV1>,
+  ): void {
+    const current = this._events.get(id);
+    if (!current) {
+      const error = new Error(`SyncManager: cannot retry update for missing local event "${id}".`);
+      this._queue.markError(opId, error);
+      this._onError?.(opId, error);
+      this._notify();
+      return;
+    }
+
+    this._dispatchUpdate(opId, id, patch, current);
+  }
+
   private _dispatchDelete(
     opId: string,
     id: string,
@@ -412,7 +429,7 @@ export class SyncManager {
             this._dispatchCreate(opId, refreshed.payload as CalendarEventV1, id);
             break;
           case 'update':
-            this._dispatchUpdate(opId, id, refreshed.payload as Partial<CalendarEventV1>, this._events.get(id)!);
+            this._dispatchQueuedUpdate(opId, id, refreshed.payload as Partial<CalendarEventV1>);
             break;
           case 'delete':
             this._dispatchDelete(opId, id, refreshed.rollbackEvent);
