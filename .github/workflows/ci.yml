@@ -36,7 +36,7 @@ jobs:
     name: TypeScript Strict Type Check
     runs-on: ubuntu-latest
     # Blocking check that grows with the noImplicitAny migration.
-    # Only files/dirs listed in tsconfig.strict.json are enforced;
+    # Only files/dirs listed in scripts/typecheck-strict.mjs are enforced;
     # everything else stays under the root repo-wide type-check job above.
     # See docs/TypeScriptStrictMigration.md for the staged plan.
     steps:
