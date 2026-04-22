@@ -316,3 +316,20 @@ Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as o
 Stage 5b is a cleanup stage, not a configuration stage.
 
 The goal is to make Stage 6 possible later — not to force it early.
+
+### Pre-Stage-6 ready note (dress rehearsal, 2026-04-22)
+
+A Stage 6 dress rehearsal was run after PR A using the exact validation command set:
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+npm run type-check:strict
+```
+
+Outcome:
+- Strict repo-wide compile is clean.
+- Repo-wide implicit-any debt remains **0** across **0** files.
+- The former `src/WorksCalendar.tsx` strict blockers (`TS2345`, `TS2322`) are fixed.
+- Stage 6 is now assessed as ready for a dedicated config-retirement PR.
+

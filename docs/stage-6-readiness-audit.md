@@ -452,3 +452,35 @@ Top implicit-any diagnostic codes:
 
 - **Decision:** **NOT READY**.
 - **Rationale:** This rerun is a major improvement versus the earlier 212/52 checkpoint, but **82 diagnostics across 25 files** is still too broad for a safe one-PR Stage 6 root flip. Remaining debt is now heavily concentrated in `src/views`, so another focused cleanup sprint is recommended before attempting Stage 6.
+
+---
+
+## Stage 6 Dress Rehearsal — Pre-config-retirement validation (2026-04-22)
+
+This section captures the requested Stage 6 dress rehearsal run after PR A, without deleting any configuration.
+
+### Commands Run
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+npm run type-check:strict
+```
+
+### Results
+
+- Root baseline (`tsconfig.json`): **Pass**, 0 diagnostics.
+- Strict compile (`tsconfig.strict.json`): **Pass**, 0 diagnostics.
+- Ratchet check (`npm run type-check:strict`): **GREEN**.
+- Repo-wide implicit-any debt: **0 diagnostics across 0 files**.
+
+### Former strict blockers status
+
+- Former non-implicit-any blockers in `src/WorksCalendar.tsx` (`TS2345`, `TS2322`) from earlier audit checkpoints are now resolved.
+- Verification run found **no remaining strict blockers outside `src/WorksCalendar.tsx`** and no strict blockers inside it either.
+
+### Readiness decision
+
+- **Decision:** **READY for a dedicated Stage 6 config-retirement PR**.
+- **Rationale:** Repo-wide implicit-any debt is zero, previous blocker set is resolved, and strict repo-wide compile is clean before any root config deletion.
+
