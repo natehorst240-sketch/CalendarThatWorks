@@ -43,6 +43,14 @@ For Stage 5 PRs, a checkmark is only valid once the migrated files are added to
 `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`. Code-only typing progress
 without the ratchet update is tracked as **Partially complete**.
 
+### Review Reconciliation Note (updated 2026-04-21)
+The status lines below were reconciled against the current repo state by checking:
+- the live `MIGRATED_PATHS` allowlist in `scripts/typecheck-strict.mjs`
+- the current code in the Stage 5 files
+- the merged PR sequence that landed the related changes
+
+These statuses reflect the repo **as it exists now**, not the state of the first PR that introduced each slice.
+
 ---
 
 ## 🧱 Stage 4a — Decision + Prep
@@ -53,7 +61,7 @@ without the ratchet update is tracked as **Partially complete**.
 - Define per-PR `any` budget
 - Add checklist to migration doc
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Decision recorded in `docs/TypeScriptStrictMigration.md`:**
 - **Path A is locked** for this roadmap (continue into Stage 5).
@@ -71,7 +79,7 @@ without the ratchet update is tracked as **Partially complete**.
 - UI data shapes
 - Loose but intentional boundary types
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added shared UI boundary types in `src/types/ui.ts`:
@@ -82,11 +90,26 @@ without the ratchet update is tracked as **Partially complete**.
 - Switched `ConfigPanel` from file-level props `: any` to `ConfigPanelProps`.
 - Re-exported shared UI types from `src/index.ts` for downstream consumers.
 
+**Completion updates in the current repo:**
+- `src/types/**` and `src/index.ts` are already under the strict ratchet from Stage 1.
+- `src/ui/ConfigPanel.tsx` is now present in `MIGRATED_PATHS`, so the shared UI seam introduced here is now enforced by the current migration harness.
+
 ### PR 3 — ConfigPanel Seam
 - Create `ConfigPanelProps`
 - Type top-level state
 - Extract sub-component prop types
 - REMOVE file-level `any`
+
+**Status:** ✅ Completed (2026-04-21)
+
+**Shipped in this PR:**
+- Added explicit seam prop types in `src/ui/ConfigPanel.tsx` for the main panel and tab-level sections.
+- Replaced ad-hoc `: any` signatures on ConfigPanel tab components with typed props.
+- Typed local seam state like `openSections`, `tabRefs`, and section toggling.
+- Intentionally kept `config` and `UpdateConfig` boundary-loose to prevent a cross-module typing cascade.
+
+**Completion updates in the current repo:**
+- `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS`, so the seam work from PR 3 is ratchet-enforced in the current repo.
 
 ---
 
@@ -100,15 +123,15 @@ without the ratchet update is tracked as **Partially complete**.
 
 Goal: Easy wins, stabilize patterns
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added explicit parameter types in `SetupTab` setters (`setCalendarName`, `setPreferredTheme`) to remove implicit callback `any`.
 - Introduced a constrained `HoverCardFieldKey` union in `HoverCardTab` and typed the `fields` map to enforce valid toggle keys.
 - Typed `DisplayTab` mutation helpers (`set`, `setGroupLabel`) so tab-local updates no longer rely on implicit `any`.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
+**Completion updates in the current repo:**
+- `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS`, so the Simple Tabs slice is now ratchet-enforced.
 
 ---
 
@@ -120,7 +143,7 @@ Goal: Easy wins, stabilize patterns
 
 Goal: Structured data typing
 
-**Status:** 🟡 Partially complete (2026-04-21)
+**Status:** ✅ Completed (2026-04-21)
 
 **Shipped in this PR:**
 - Added explicit tab-local domain types for Data tabs in `ConfigPanel.tsx`:
@@ -134,8 +157,8 @@ Goal: Structured data typing
   - `AssetsTab`: draft/meta update paths, list mutation helpers, and required-field guard
 - Tightened select-change handlers to constrained unions (template visibility and category pill style) instead of broad `string`.
 
-**Outstanding for completion under this plan:**
-- Add the Stage 5 UI files touched by this PR to `MIGRATED_PATHS`.
+**Completion updates in the current repo:**
+- `src/ui/ConfigPanel.tsx` is present in `MIGRATED_PATHS`, so the Data Tabs slice is now ratchet-enforced.
 
 ---
 
@@ -198,6 +221,9 @@ Goal: Layout + shared logic typing
 - Added targeted local layout/domain aliases for lane-packing and row virtualization flows (day-span offsets, grouped row records, pool-row/resource-row metadata) to keep the layout engine strict without over-tightening unrelated modules.
 - Removed medium-view implicit callback parameter `any` in keyboard, pointer, and toolbar handlers by typing event/cell/group action paths and constrained select/toggle values.
 - Kept intentional boundary looseness only at cross-module metadata seams (e.g., dynamic `meta.*` keys) with narrow casts/records where needed to avoid widening `any` through shared UI paths.
+
+**Completion updates in the current repo:**
+- Added `src/views/WeekView.tsx`, `src/views/AssetsView.tsx`, and `src/views/BaseGanttView.tsx` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs`.
 
 ---
 
