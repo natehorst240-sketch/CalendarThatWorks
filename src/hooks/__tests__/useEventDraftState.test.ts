@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useEventDraftState } from '../useEventDraftState';
 
 describe('useEventDraftState strict-null safety', () => {
@@ -18,7 +18,10 @@ describe('useEventDraftState strict-null safety', () => {
 
     const { result } = renderHook(() => useEventDraftState(null, ['Test'], config));
 
-    const isValid = result.current.validate();
+    let isValid = true;
+    act(() => {
+      isValid = result.current.validate();
+    });
 
     expect(isValid).toBe(false);
     expect(result.current.errors['meta_foo']).toBeDefined();
