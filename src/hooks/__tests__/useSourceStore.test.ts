@@ -10,8 +10,8 @@ import { loadSources, persistSources, useSourceStore } from '../useSourceStore';
 
 const CAL_ID = 'test-calendar';
 
-function sourceKey(id) { return `wc-sources-${id}`; }
-function legacyKey(id) { return `wc-feeds-${id}`; }
+function sourceKey(id: string): string { return `wc-sources-${id}`; }
+function legacyKey(id: string): string { return `wc-feeds-${id}`; }
 
 beforeEach(() => {
   localStorage.clear();
@@ -68,7 +68,7 @@ describe('persistSources', () => {
 
 // ── useSourceStore hook ───────────────────────────────────────────────────────
 
-function renderStore(calendarId = CAL_ID) {
+function renderStore(calendarId: string = CAL_ID) {
   return renderHook(() => useSourceStore(calendarId));
 }
 
@@ -97,8 +97,9 @@ describe('useSourceStore — addSource', () => {
 
   it('returns the created source object', () => {
     const { result } = renderStore();
-    let created;
+    let created: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { created = result.current.addSource({ type: 'ics', label: 'X' }); });
+    if (!created) throw new Error('Expected addSource to return created source');
     expect(created.id).toBeDefined();
   });
 
@@ -113,19 +114,22 @@ describe('useSourceStore — addSource', () => {
 describe('useSourceStore — removeSource', () => {
   it('removes a source by id', () => {
     const { result } = renderStore();
-    let src;
+    let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics' }); });
+    if (!src) throw new Error('Expected source to exist');
     act(() => { result.current.removeSource(src.id); });
     expect(result.current.sources).toHaveLength(0);
   });
 
   it('leaves other sources intact', () => {
     const { result } = renderStore();
-    let s1, s2;
+    let s1: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
+    let s2: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => {
       s1 = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', label: 'A' });
       s2 = result.current.addSource({ type: 'ics', url: 'https://b.com/b.ics', label: 'B' });
     });
+    if (!s1 || !s2) throw new Error('Expected both sources to be created');
     act(() => { result.current.removeSource(s1.id); });
     expect(result.current.sources).toHaveLength(1);
     expect(result.current.sources[0].id).toBe(s2.id);
@@ -135,16 +139,18 @@ describe('useSourceStore — removeSource', () => {
 describe('useSourceStore — updateSource', () => {
   it('patches a source by id', () => {
     const { result } = renderStore();
-    let src;
+    let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', label: 'Old', url: 'https://a.com/a.ics' }); });
+    if (!src) throw new Error('Expected source to exist');
     act(() => { result.current.updateSource(src.id, { label: 'New' }); });
     expect(result.current.sources[0].label).toBe('New');
   });
 
   it('does not affect unrelated fields', () => {
     const { result } = renderStore();
-    let src;
+    let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', color: '#ff0000' }); });
+    if (!src) throw new Error('Expected source to exist');
     act(() => { result.current.updateSource(src.id, { label: 'Updated' }); });
     expect(result.current.sources[0].color).toBe('#ff0000');
   });
@@ -153,8 +159,9 @@ describe('useSourceStore — updateSource', () => {
 describe('useSourceStore — toggleSource', () => {
   it('flips enabled flag', () => {
     const { result } = renderStore();
-    let src;
+    let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', enabled: true }); });
+    if (!src) throw new Error('Expected source to exist');
     act(() => { result.current.toggleSource(src.id); });
     expect(result.current.sources[0].enabled).toBe(false);
     act(() => { result.current.toggleSource(src.id); });

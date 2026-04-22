@@ -12,6 +12,34 @@ import {
 } from '../useSavedViews';
 
 const CAL_ID = 'test-cal';
+type LiveFilters = {
+  categories: Set<string>;
+  resources: Set<string>;
+  sources: Set<string>;
+  search: string;
+  dateRange: { start: Date; end: Date } | null;
+};
+type StoredFilters = {
+  categories: string[];
+  resources: string[];
+  sources: string[];
+  search: string;
+  dateRange: { start: string; end: string } | null;
+};
+const makeEmptyLiveFilters = (): LiveFilters => ({
+  categories: new Set<string>(),
+  resources: new Set<string>(),
+  sources: new Set<string>(),
+  search: '',
+  dateRange: null,
+});
+const makeEmptyStoredFilters = (): StoredFilters => ({
+  categories: [],
+  resources: [],
+  sources: [],
+  search: '',
+  dateRange: null,
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -21,7 +49,7 @@ beforeEach(() => {
 
 describe('serializeFilters', () => {
   it('converts Sets to arrays', () => {
-    const filters = {
+    const filters: LiveFilters = {
       categories: new Set(['Work', 'PTO']),
       resources:  new Set(['Alice']),
       sources:    new Set(['src-a']),
@@ -67,7 +95,7 @@ describe('serializeFilters', () => {
 
 describe('deserializeFilters', () => {
   it('converts arrays back to Sets', () => {
-    const saved = {
+    const saved: StoredFilters = {
       categories: ['Work', 'PTO'],
       resources:  ['Alice'],
       sources:    ['src-a'],
@@ -87,10 +115,10 @@ describe('deserializeFilters', () => {
   });
 
   it('converts dateRange strings to Date objects', () => {
-    const saved = {
-      categories: [],
-      resources:  [],
-      sources:    [],
+    const saved: StoredFilters = {
+      categories: [] as string[],
+      resources:  [] as string[],
+      sources:    [] as string[],
       search:     '',
       dateRange:  {
         start: '2026-04-01T00:00:00.000Z',
@@ -133,7 +161,7 @@ describe('useSavedViews', () => {
 
   it('saveView adds a view with generated id and serialized filters', () => {
     const { result } = renderHook(() => useSavedViews(CAL_ID));
-    const filters = {
+    const filters: LiveFilters = {
       categories: new Set(['Work']),
       resources:  new Set(),
       sources:    new Set(),
@@ -156,7 +184,7 @@ describe('useSavedViews', () => {
 
   it('saveView returns the created view object', () => {
     const { result } = renderHook(() => useSavedViews(CAL_ID));
-    let created;
+    let created: ReturnType<ReturnType<typeof useSavedViews>['saveView']> | undefined;
     act(() => {
       created = result.current.saveView('Return Test', {
         categories: new Set(),
@@ -167,6 +195,7 @@ describe('useSavedViews', () => {
       });
     });
     expect(created).toBeDefined();
+    if (!created) throw new Error('Expected saveView to return the created view');
     expect(created.name).toBe('Return Test');
   });
 
@@ -208,7 +237,7 @@ describe('useSavedViews', () => {
         id:        'v1',
         name:      'Stored View',
         createdAt: new Date().toISOString(),
-        filters:   { categories: ['PTO'], resources: [], sources: [], search: '', dateRange: null },
+        filters:   { ...makeEmptyStoredFilters(), categories: ['PTO'] },
       },
     ];
     localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
@@ -226,7 +255,7 @@ describe('useSavedViews', () => {
         id: 'v-old',
         name: 'Old Shape',
         createdAt: new Date().toISOString(),
-        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+        filters: makeEmptyStoredFilters(),
       },
     ];
     localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(existingViews));
@@ -236,12 +265,12 @@ describe('useSavedViews', () => {
   });
 
   it('calendarId switching reloads from correct localStorage key', () => {
-    const viewsA = [{ id: 'va', name: 'View A', createdAt: '', filters: { categories: [], resources: [], sources: [], search: '', dateRange: null } }];
-    const viewsB = [{ id: 'vb', name: 'View B', createdAt: '', filters: { categories: [], resources: [], sources: [], search: '', dateRange: null } }];
+    const viewsA = [{ id: 'va', name: 'View A', createdAt: '', filters: makeEmptyStoredFilters() }];
+    const viewsB = [{ id: 'vb', name: 'View B', createdAt: '', filters: makeEmptyStoredFilters() }];
     localStorage.setItem('wc-saved-views-cal-a', JSON.stringify(viewsA));
     localStorage.setItem('wc-saved-views-cal-b', JSON.stringify(viewsB));
 
-    const { result, rerender } = renderHook(({ id }) => useSavedViews(id), {
+    const { result, rerender } = renderHook(({ id }: { id: string }) => useSavedViews(id), {
       initialProps: { id: 'cal-a' },
     });
     expect(result.current.views[0].name).toBe('View A');
@@ -315,7 +344,7 @@ describe('useSavedViews', () => {
   it('migrates legacy wc-profiles-* data on first load', () => {
     const legacyProfiles = [{
       id: 'p1', name: 'Old Profile', color: '#3b82f6', view: 'week',
-      filters: { categories: ['Work'], resources: [], search: '' },
+      filters: { categories: ['Work'], resources: [] as string[], search: '' },
     }];
     localStorage.setItem('wc-profiles-test-cal', JSON.stringify(legacyProfiles));
     const { result } = renderHook(() => useSavedViews('test-cal'));
@@ -396,13 +425,7 @@ describe('deserializeFilters dateRange validation', () => {
   });
 });
 
-const EMPTY_FILTERS = {
-  categories: new Set(),
-  resources:  new Set(),
-  sources:    new Set(),
-  search:     '',
-  dateRange:  null,
-};
+const EMPTY_FILTERS: LiveFilters = makeEmptyLiveFilters();
 
 describe('useSavedViews — groupBy persistence', () => {
   it('saveView stores groupBy when provided', () => {
@@ -624,7 +647,7 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
           name: 'From v2',
           createdAt: new Date().toISOString(),
           groupBy: 'role',
-          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+          filters: makeEmptyStoredFilters(),
         },
       ],
     };
@@ -643,7 +666,7 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
           id: 'v-legacy',
           name: 'From v2',
           createdAt: new Date().toISOString(),
-          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+          filters: makeEmptyStoredFilters(),
         },
       ],
     };
@@ -661,7 +684,7 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
         id: 'v-legacy',
         name: 'From v2',
         createdAt: new Date().toISOString(),
-        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+        filters: makeEmptyStoredFilters(),
       }],
     }));
     const { result } = renderHook(() => useSavedViews(CAL_ID));

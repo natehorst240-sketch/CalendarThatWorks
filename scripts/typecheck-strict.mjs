@@ -77,6 +77,9 @@ const MIGRATED_PATHS = [
   'src/WorksCalendar.tsx',
   // Stage 5 PR12
   'demo/',
+  // Stage 5b PR1
+  'src/hooks/__tests__/useSavedViews.test.ts',
+  'src/hooks/__tests__/useSourceStore.test.ts',
 ];
 
 // Implicit-any diagnostic codes. See:
