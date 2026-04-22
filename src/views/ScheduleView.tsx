@@ -61,14 +61,14 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
       {/* Header */}
       <div className={styles.header} style={{ gridTemplateColumns: `120px repeat(${resources.length}, minmax(100px, 1fr))` }}>
         <div className={styles.cornerCell} />
-        {resources.map(r => (
+        {resources.map((r: string) => (
           <div key={r} className={styles.resourceHead}>{r}</div>
         ))}
       </div>
 
       {/* Body */}
       <div className={styles.body}>
-        {days.map(day => {
+        {days.map((day: Date) => {
           const key = format(day, 'yyyy-MM-dd');
           const isWeekStart = day.getDay() === weekStartDay;
 
@@ -81,7 +81,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                 <span className={styles.weekDay}>{format(day, 'EEE')}</span>
                 <span className={styles.dayNum}>{format(day, 'MMM d')}</span>
               </div>
-              {resources.map((res) => {
+              {resources.map((res: string) => {
                 const cellEvents = events.filter((e) => e.resource === res && isSameDay(e.start, day));
                 return (
                   <div key={res} className={styles.cell}>

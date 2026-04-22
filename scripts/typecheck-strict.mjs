@@ -93,6 +93,9 @@ const MIGRATED_PATHS = [
   // Stage 5b PR5
   'src/ui/FilterBar.tsx',
   'src/ui/AdvancedFilterBuilder.tsx',
+  // Stage 6 PR A
+  'src/views/ScheduleView.tsx',
+  'src/views/AuditDrawer.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:
