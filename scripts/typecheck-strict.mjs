@@ -90,6 +90,9 @@ const MIGRATED_PATHS = [
   'src/ui/ScheduleEditorForm.tsx',
   'src/ui/CalendarExternalForm.tsx',
   'src/ui/RequestForm.tsx',
+  // Stage 5b PR5
+  'src/ui/FilterBar.tsx',
+  'src/ui/AdvancedFilterBuilder.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

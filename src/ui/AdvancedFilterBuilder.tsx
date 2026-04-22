@@ -31,12 +31,48 @@ import { Plus, X, Check } from 'lucide-react';
 import { createId } from '../core/createId';
 import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema';
 import { conditionsToFilters } from '../filters/conditionEngine';
+import type { FilterField, FilterOperator, FilterOption } from '../filters/filterSchema';
 import styles from './AdvancedFilterBuilder.module.css';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function makeCondition(logic = 'AND', firstFieldKey = 'categories') {
+type ConditionLogic = 'AND' | 'OR';
+
+type BuilderCondition = {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
+  logic: ConditionLogic;
+};
+
+type AdvancedFilterBuilderProps = {
+  schema?: FilterField[];
+  items?: unknown[];
+  onSave?: (name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  categories?: unknown[];
+  resources?: unknown[];
+  initialName?: string;
+  initialConditions?: unknown[] | null;
+  editingId?: string | null;
+  onUpdate?: (id: string, name: string, filters: Record<string, unknown>, conditions: BuilderCondition[]) => void;
+  onCancelEdit?: () => void;
+};
+
+function makeCondition(logic: ConditionLogic = 'AND', firstFieldKey = 'categories'): BuilderCondition {
   return { id: createId('cond'), field: firstFieldKey, operator: 'is', value: '', logic };
+}
+
+function toBuilderCondition(input: unknown, fallbackFieldKey: string): BuilderCondition {
+  const candidate = (input ?? {}) as Partial<BuilderCondition>;
+  const logic: ConditionLogic = candidate.logic === 'OR' ? 'OR' : 'AND';
+  return {
+    id: createId('cond'),
+    field: typeof candidate.field === 'string' ? candidate.field : fallbackFieldKey,
+    operator: typeof candidate.operator === 'string' ? candidate.operator : 'is',
+    value: typeof candidate.value === 'string' ? candidate.value : '',
+    logic,
+  };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -52,16 +88,19 @@ export default function AdvancedFilterBuilder({
   editingId = null,
   onUpdate,
   onCancelEdit,
-}: any) {
+}: AdvancedFilterBuilderProps) {
+  void categories;
+  void resources;
+
   // Exclude date-range fields from the condition builder field list
   const fieldOptions = useMemo(
-    () => schema.filter(f => f.type !== 'date-range'),
+    () => schema.filter((f) => f.type !== 'date-range'),
     [schema]
   );
 
   // Operator map keyed by field.key — falls back to defaultOperatorsForType
-  const operatorMap = useMemo(() => {
-    const map = {};
+  const operatorMap = useMemo<Record<string, FilterOperator[]>>(() => {
+    const map: Record<string, FilterOperator[]> = {};
     for (const f of fieldOptions) {
       map[f.key] = f.operators ?? defaultOperatorsForType(f.type);
     }
@@ -70,17 +109,17 @@ export default function AdvancedFilterBuilder({
 
   const firstFieldKey = fieldOptions[0]?.key ?? 'categories';
 
-  const [conditions, setConditions] = useState(() =>
+  const [conditions, setConditions] = useState<BuilderCondition[]>(() =>
     initialConditions && initialConditions.length > 0
-      ? initialConditions.map(c => ({ ...c, id: createId('cond') }))
+      ? initialConditions.map((c) => toBuilderCondition(c, firstFieldKey))
       : [makeCondition('AND', firstFieldKey)]
   );
   const [viewName,   setViewName]   = useState(initialName);
   const [nameError,  setNameError]  = useState('');
   const [saved,      setSaved]      = useState(false);
-  const savedTimerRef = useRef(null);
-  const rootRef       = useRef(null);
-  const nameInputRef  = useRef(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rootRef       = useRef<HTMLDivElement | null>(null);
+  const nameInputRef  = useRef<HTMLInputElement | null>(null);
 
   // Clear the "Saved!" feedback timeout on unmount to avoid state updates on
   // an unmounted component (can happen in edit mode when the parent unmounts
@@ -101,11 +140,11 @@ export default function AdvancedFilterBuilder({
 
   // ── Condition mutations ─────────────────────────────────────────────────
 
-  const addCondition = (logic) => {
+  const addCondition = (logic: ConditionLogic) => {
     setConditions(prev => [...prev, makeCondition(logic, firstFieldKey)]);
   };
 
-  const updateCondition = (id, updates) => {
+  const updateCondition = (id: string, updates: Partial<BuilderCondition>) => {
     setConditions(prev => prev.map(c => {
       if (c.id !== id) return c;
       const next = { ...c, ...updates };
@@ -118,7 +157,7 @@ export default function AdvancedFilterBuilder({
     }));
   };
 
-  const removeCondition = (id) => {
+  const removeCondition = (id: string) => {
     setConditions(prev => prev.length > 1 ? prev.filter(c => c.id !== id) : prev);
   };
 
@@ -155,8 +194,8 @@ export default function AdvancedFilterBuilder({
       {/* ── Condition rows ── */}
       <div className={styles.conditions}>
         {conditions.map((cond, index) => {
-          const fieldDef = schema.find(f => f.key === cond.field);
-          const options  = fieldDef?.options
+          const fieldDef = schema.find((f) => f.key === cond.field);
+          const options: FilterOption[] | null = fieldDef?.options
                         ?? (fieldDef?.getOptions ? fieldDef.getOptions(items) : null);
           return (
             <div key={cond.id} className={styles.conditionWrap}>
@@ -164,7 +203,7 @@ export default function AdvancedFilterBuilder({
               {/* Logic connector (AND / OR) between rows */}
               {index > 0 && (
                 <div className={styles.logicRow}>
-                  {(['AND', 'OR']).map(lbl => (
+                  {(['AND', 'OR'] as const).map((lbl) => (
                     <button
                       key={lbl}
                       className={[styles.logicBtn, cond.logic === lbl && styles.logicActive].filter(Boolean).join(' ')}
