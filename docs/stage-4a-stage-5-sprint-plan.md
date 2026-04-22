@@ -285,6 +285,15 @@ Goal: Stabilize root without over-tightening
 - Update migration doc
 - Confirm full strict pass
 
+**Status:** ✅ Completed (2026-04-22)
+
+**Shipped in this PR:**
+- Added `demo/` to `MIGRATED_PATHS` in `scripts/typecheck-strict.mjs` to complete the Stage 5 scope ratchet for the planned UI + root + demo migration set.
+- Reconciled Stage 5 status documentation in `docs/TypeScriptStrictMigration.md` to mark Stage 5 complete under the ratchet rules.
+- Confirmed strict and advisory validation:
+  - `npm run type-check:strict`
+  - `npx tsc --noEmit -p tsconfig.json`
+
 ---
 
 ## 🔍 Per-PR Checklist

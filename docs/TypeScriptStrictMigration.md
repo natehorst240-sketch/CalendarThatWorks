@@ -200,10 +200,14 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 
 **Sizing:** 4–6 weeks.
 
-**Status note (2026-04-21):**
-- Stage 5 code-typing work has started, but Stage 5 is not complete under this
-  roadmap until Stage 5 UI/view paths are added to `MIGRATED_PATHS` and pass
-  the strict ratchet.
+**Status note (updated 2026-04-22):**
+- Stage 5 is complete for the planned slice in this roadmap.
+- `scripts/typecheck-strict.mjs` now ratchets all Stage 5 targets from the
+  plan sequence: `src/ui/ConfigPanel.tsx`, the Stage 5 view set
+  (`DayView`/`AgendaView`/`MonthView`/`WeekView`/`AssetsView`/`BaseGanttView`/`TimelineView`),
+  `src/WorksCalendar.tsx`, and `demo/**` (via the `demo/` allowlist entry).
+- `npm run type-check:strict` passes with those paths included, and advisory
+  root `tsc --noEmit -p tsconfig.json` remains green.
 
 ### Stage 5 PR checklist template (required in every PR description)
 
