@@ -32,28 +32,6 @@ jobs:
       - name: Run type check
         run: npm run type-check
 
-  type-check-strict:
-    name: TypeScript Strict Type Check
-    runs-on: ubuntu-latest
-    # Blocking check that grows with the noImplicitAny migration.
-    # Only files/dirs listed in scripts/typecheck-strict.mjs are enforced;
-    # everything else stays under the root repo-wide type-check job above.
-    # See docs/TypeScriptStrictMigration.md for the staged plan.
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run strict type check
-        run: npm run type-check:strict
-
   unit-tests:
     name: Unit & Component Tests
     runs-on: ubuntu-latest

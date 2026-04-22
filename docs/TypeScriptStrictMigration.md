@@ -245,17 +245,18 @@ This decision is explicitly on the plan to prevent the failure mode where scope 
 
 ---
 
-### Stage 6 — Flip the root config
+### Stage 6 — Flip the root config — ✅ Completed 2026-04-22
 
 **Goal:** collapse the migration infrastructure.
 
-Tasks:
-- Move `"noImplicitAny": true` into `tsconfig.json`.
-- Delete `tsconfig.strict.json`, `scripts/typecheck-strict.mjs`, and `npm run type-check:strict`.
-- Collapse the CI jobs back to one.
+**What shipped:**
+- Root `tsconfig.json` now sets `"noImplicitAny": true`.
+- Deleted `tsconfig.strict.json` and `scripts/typecheck-strict.mjs`.
+- Removed `npm run type-check:strict` from `package.json`.
+- Collapsed CI by removing the dedicated `type-check-strict` job from `.github/workflows/ci.yml`; root type-check remains the single TypeScript check.
 
-**Exit criteria:**
-- Root `tsc` green with `noImplicitAny: true`.
+**Exit criteria — met:**
+- Root `tsc` green with `noImplicitAny: true`. ✅
 - PR merged.
 
 **Sizing:** half a day.
