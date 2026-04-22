@@ -1,4 +1,5 @@
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import type { MouseEvent } from 'react';
 import styles from './ValidationAlert.module.css';
 
 /**
@@ -12,7 +13,7 @@ export default function ValidationAlert({ violations, isHard, onConfirm, onCance
   return (
     <div
       className={styles.overlay}
-      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}
+      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div
         ref={trapRef}
@@ -29,7 +30,7 @@ export default function ValidationAlert({ violations, isHard, onConfirm, onCance
         </div>
 
         <ul className={styles.list}>
-          {violations.map((v, i) => (
+          {violations.map((v: any, i: number) => (
             <li key={i} className={styles.item}>{v.message}</li>
           ))}
         </ul>

@@ -14,7 +14,7 @@ export default function OwnerLock({ isOwner, authError, isAuthLoading, onAuthent
     }
   }
 
-  function handleAuthenticate(password) {
+  function handleAuthenticate(password: string) {
     onAuthenticate(password);
     // The modal stays mounted while the parent decides whether the password
     // was valid. When isOwner flips true, the parent unmounts us; otherwise

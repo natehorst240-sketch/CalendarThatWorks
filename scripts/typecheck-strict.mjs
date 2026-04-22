@@ -101,6 +101,27 @@ const MIGRATED_PATHS = [
   'src/ui/SetupWizardModal.tsx',
   'src/ui/SourcePanel.tsx',
   'src/ui/ImportPreview.tsx',
+  // Stage 5b PR7 (remaining non-view UI block + ProfileBar redesign test)
+  'src/ui/ApprovalActionMenu.tsx',
+  'src/ui/AssetRequestForm.tsx',
+  'src/ui/AvailabilityForm.tsx',
+  'src/ui/ConflictModal.tsx',
+  'src/ui/EmployeeActionCard.tsx',
+  'src/ui/EventForm.tsx',
+  'src/ui/EventFormSections/CategorySection.tsx',
+  'src/ui/EventFormSections/CustomFieldsSection.tsx',
+  'src/ui/EventFormSections/RecurrenceSection.tsx',
+  'src/ui/HoverCard.tsx',
+  'src/ui/ICSFeedPanel.tsx',
+  'src/ui/ImportZone.tsx',
+  'src/ui/InlineEventEditor.tsx',
+  'src/ui/OwnerLock.tsx',
+  'src/ui/OwnerLoginModal.tsx',
+  'src/ui/ScreenReaderAnnouncer.tsx',
+  'src/ui/ValidationAlert.tsx',
+  'src/ui/ViewsDropdown.tsx',
+  'src/ui/WorkflowSimulator.tsx',
+  'src/ui/__tests__/ProfileBar.redesign.test.tsx',
 ];
 
 // Implicit-any diagnostic codes. See:

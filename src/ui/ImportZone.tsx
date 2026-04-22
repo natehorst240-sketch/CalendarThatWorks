@@ -4,7 +4,7 @@
  * .ics files → parsed and shown in ImportPreview for confirmation.
  * .csv files → routed to CSVImportDialog for column mapping + preview.
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent, type DragEvent } from 'react';
 import { Upload } from 'lucide-react';
 import { parseICS } from '../core/icalParser';
 import ImportPreview from './ImportPreview';
@@ -13,12 +13,12 @@ import styles from './ImportZone.module.css';
 
 export default function ImportZone({ onImport, onClose }: any) {
   const [dragging,  setDragging]  = useState(false);
-  const [parsed,    setParsed]    = useState(null); // ICS parsed events
+  const [parsed,    setParsed]    = useState<any>(null); // ICS parsed events
   const [csvMode,   setCsvMode]   = useState(false); // switch to CSV dialog
-  const [error,     setError]     = useState(null);
-  const inputRef = useRef(null);
+  const [error,     setError]     = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  function processFile(file) {
+  function processFile(file: File | undefined) {
     if (!file) return;
     setError(null);
 
@@ -38,7 +38,7 @@ export default function ImportZone({ onImport, onClose }: any) {
 
     // ICS path (original behaviour)
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
         const events = parseICS(e.target.result as string);
         if (!events.length) { setError('No events found in this file.'); return; }
@@ -66,10 +66,10 @@ export default function ImportZone({ onImport, onClose }: any) {
       <div
         className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
-        onDrop={e => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDrop={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
+        onDragOver={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDragEnter={e => { e.preventDefault(); setDragging(true); }}
+        onDragEnter={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(true); }}
       >
         <div className={styles.iconWrap}>
           <Upload size={32} />
@@ -113,7 +113,7 @@ export default function ImportZone({ onImport, onClose }: any) {
           type="file"
           accept=".ics,.csv,text/calendar,text/csv"
           className={styles.hiddenInput}
-          onChange={e => processFile(e.target.files[0])}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => processFile(e.target.files?.[0])}
         />
 
         <button className={styles.cancelLink} onClick={onClose}>Cancel</button>

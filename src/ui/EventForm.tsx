@@ -4,6 +4,7 @@
  * and the extracted section components.
  */
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState';
@@ -20,7 +21,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!draft.validate()) return;
     const normalizedResource = draft.values.resource == null ? '' : String(draft.values.resource);
@@ -98,7 +99,7 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
               onPresetChange={d.setRecurrencePreset} onCustomRruleChange={d.setCustomRrule} />
             <div className={styles.row2}>
               <CategorySection value={d.values.category} allCats={d.allCats}
-                onAddCategory={onAddCategory} onChange={cat => d.set('category', cat)} />
+                onAddCategory={onAddCategory} onChange={(cat: string) => d.set('category', cat)} />
               <div className={styles.field}>
                 <label className={styles.label} htmlFor="ef-resource">Resource</label>
                 <input id="ef-resource" className={styles.input} value={d.values.resource}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -31,7 +31,7 @@ const KIND_META = {
   },
 };
 
-const INTENT_META = {
+const INTENT_META: Record<string, { heading: string; submitLabel: string; allDayLocked: boolean; allDayHelp: string | null }> = {
   pto: {
     heading: 'Request PTO',
     submitLabel: 'Save PTO Request',
@@ -54,7 +54,7 @@ const INTENT_META = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function toDateInput(date, allDay) {
+function toDateInput(date: Date | string | null | undefined, allDay: boolean): string {
   if (!date) return '';
   try {
     const d = date instanceof Date ? date : parseISO(date);
@@ -64,7 +64,7 @@ function toDateInput(date, allDay) {
   }
 }
 
-function fromInput(str, allDay) {
+function fromInput(str: string, allDay: boolean): Date | null {
   if (!str) return null;
   const d = new Date(str + (allDay && str.length === 10 ? 'T00:00:00' : ''));
   return isValid(d) ? d : null;
@@ -86,8 +86,8 @@ function fromInput(str, allDay) {
 export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
   const trapRef = useFocusTrap(onClose);
 
-  const kind = initialKind ?? 'pto';
-  const meta = KIND_META[kind] ?? KIND_META.pto;
+  const kind = (initialKind ?? 'pto') as string;
+  const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
   const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
   const isAllDayLocked = Boolean(intentMeta.allDayLocked);
@@ -122,7 +122,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
     return Object.keys(errs).length === 0;
   }
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
 
@@ -147,7 +147,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const kindLabel = meta.label;
 
   return (
-    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className={styles.overlay} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
       <div
         ref={trapRef}
         className={styles.modal}
@@ -176,7 +176,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               id="af-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={title}
-              onChange={e => { setTitle(e.target.value); setErrors(v => ({ ...v, title: undefined })); }}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => { setTitle(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, title: undefined })); }}
               placeholder="e.g. Vacation, Doctor appointment…"
               autoFocus
             />
@@ -189,7 +189,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               type="checkbox"
               checked={allDay}
               disabled={isAllDayLocked}
-              onChange={e => {
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
                 const next = e.target.checked;
                 setAllDay(next);
                 // Re-normalise existing start/end values to the new input format
@@ -216,7 +216,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
                 value={start}
-                onChange={e => { setStart(e.target.value); setErrors(v => ({ ...v, start: undefined, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => { setStart(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, start: undefined, end: undefined })); }}
               />
               {errors.start && <span className={styles.error}>{errors.start}</span>}
             </div>
@@ -229,7 +229,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={end}
-                onChange={e => { setEnd(e.target.value); setErrors(v => ({ ...v, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => { setEnd(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, end: undefined })); }}
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>
@@ -243,7 +243,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               className={styles.textarea}
               rows={3}
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
               placeholder="Optional notes…"
             />
           </div>

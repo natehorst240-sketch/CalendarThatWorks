@@ -35,7 +35,7 @@ const srOnly: React.CSSProperties = {
  * A single live region with two alternating slots.
  * `politeness` must be 'polite' or 'assertive'.
  */
-function LiveRegion({ politeness, slots }: any) {
+function LiveRegion({ politeness, slots }: { politeness: 'polite' | 'assertive'; slots: readonly string[] }) {
   return (
     <div aria-live={politeness} aria-atomic="true" style={srOnly}>
       <span>{slots[0]}</span>
@@ -44,15 +44,18 @@ function LiveRegion({ politeness, slots }: any) {
   );
 }
 
-const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) {
+type AnnouncePoliteness = 'polite' | 'assertive';
+type AnnouncerRef = { announce: (message: string, politeness?: AnnouncePoliteness) => void };
+
+const ScreenReaderAnnouncer = forwardRef<AnnouncerRef, object>(function ScreenReaderAnnouncer(_, ref) {
   // Separate state for polite and assertive regions.
   const [politeSlot,    setPoliteSlot]    = useState(0);
   const [politeMsgs,    setPoliteMsgs]    = useState(['', '']);
   const [assertiveSlot, setAssertiveSlot] = useState(0);
   const [assertiveMsgs, setAssertiveMsgs] = useState(['', '']);
 
-  const politeTimer    = useRef(null);
-  const assertiveTimer = useRef(null);
+  const politeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assertiveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => () => {
@@ -66,7 +69,7 @@ const ScreenReaderAnnouncer = forwardRef(function ScreenReaderAnnouncer(_, ref) 
      * @param {string}  message    The text to announce.
      * @param {'polite'|'assertive'} [politeness='polite']
      */
-    announce(message, politeness = 'polite') {
+    announce(message: string, politeness: AnnouncePoliteness = 'polite') {
       if (politeness === 'assertive') {
         if (assertiveTimer.current) clearTimeout(assertiveTimer.current);
         assertiveTimer.current = setTimeout(() => {

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { ChangeEvent, KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
 import styles from '../EventForm.module.css';
 
@@ -14,7 +15,7 @@ import styles from '../EventForm.module.css';
 export function CategorySection({ value, allCats, onAddCategory, onChange }: any) {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
-  const newCatRef = useRef(null);
+  const newCatRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (addCatOpen) newCatRef.current?.focus();
@@ -36,7 +37,7 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
           <button
             type="button"
             className={styles.addCatBtn}
-            onClick={() => setAddCatOpen(v => !v)}
+            onClick={() => setAddCatOpen((v: boolean) => !v)}
             title="Add category"
             aria-label="Add category"
           >
@@ -52,8 +53,8 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
             className={styles.addCatInput}
             placeholder="New category name"
             value={newCatName}
-            onChange={e => setNewCatName(e.target.value)}
-            onKeyDown={e => {
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setNewCatName(e.target.value)}
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') { e.preventDefault(); submitNewCat(); }
               if (e.key === 'Escape') setAddCatOpen(false);
             }}
@@ -71,7 +72,7 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
         onChange={e => onChange(e.target.value)}
       >
         <option value="">— none —</option>
-        {allCats.map(c => <option key={c} value={c}>{c}</option>)}
+        {allCats.map((c: string) => <option key={c} value={c}>{c}</option>)}
       </select>
     </div>
   );

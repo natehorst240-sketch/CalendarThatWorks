@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent, type MouseEvent } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -7,14 +7,14 @@ import styles from './HoverCard.module.css';
 export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }: any) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
-  const cardRef = useRef(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const trapRef = useFocusTrap(onClose);
   const hc = config?.hoverCard ?? {};
 
   // Close on click outside
   useEffect(() => {
-    function handler(e) {
-      if (cardRef.current && !cardRef.current.contains(e.target)) onClose();
+    function handler(e: globalThis.MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -40,7 +40,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
         <div className={styles.titleRow}>
           <h3 className={styles.title}>{event.title}</h3>
           {onEdit && (
-            <button className={styles.editBtn} onClick={e => { e.stopPropagation(); onEdit(event); }} aria-label="Edit event" title="Edit">
+            <button className={styles.editBtn} onClick={(e: MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onEdit(event); }} aria-label="Edit event" title="Edit">
               <Pencil size={13} />
             </button>
           )}
@@ -107,7 +107,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
                   id="hc-note"
                   className={styles.noteTextarea}
                   value={noteText}
-                  onChange={e => setNoteText(e.target.value)}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNoteText(e.target.value)}
                   placeholder="Add a note…"
                   autoFocus
                   rows={3}

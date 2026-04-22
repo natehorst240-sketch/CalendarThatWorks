@@ -12,6 +12,7 @@
  * engine and two callbacks. It does not mutate state itself.
  */
 import { AlertTriangle, X } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './ConflictModal.module.css';
 
@@ -32,7 +33,7 @@ export default function ConflictModal({
   return (
     <div
       className={styles.overlay}
-      onClick={(e) => e.target === e.currentTarget && onCancel()}
+      onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onCancel()}
     >
       <div
         ref={trapRef}
@@ -58,7 +59,7 @@ export default function ConflictModal({
         </div>
 
         <ul className={styles.list} aria-label="Conflict violations">
-          {result.violations.map((v, i) => (
+          {result.violations.map((v: any, i: number) => (
             <li
               key={`${v.rule}:${v.conflictingEventId ?? i}`}
               className={styles.item}

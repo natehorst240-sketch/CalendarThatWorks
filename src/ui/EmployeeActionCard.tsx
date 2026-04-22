@@ -12,16 +12,16 @@ import styles from './EmployeeActionCard.module.css';
  *   onClose    () => void
  */
 export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }: any) {
-  const cardRef = useRef(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   // Start invisible so we can measure before revealing
   const [pos, setPos] = useState({ top: anchorRect.bottom + 4, left: anchorRect.left, visible: false });
 
   // Close on outside click or Escape
   useEffect(() => {
-    function handleMouseDown(e) {
-      if (cardRef.current && !cardRef.current.contains(e.target)) onClose();
+    function handleMouseDown(e: MouseEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
     }
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
     }
     document.addEventListener('mousedown', handleMouseDown);
@@ -62,7 +62,7 @@ export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose 
     }
   }, [pos.visible]);
 
-  function handleAction(action) {
+  function handleAction(action: string) {
     onAction(action);
     onClose();
   }

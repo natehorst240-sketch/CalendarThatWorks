@@ -25,7 +25,7 @@ const DEFAULT_LABELS = {
  * approvals block. Returns [] when the feature is disabled, the stage is
  * unknown, or the stage has no rules.
  */
-export function allowedActionsFor(stage, approvalsConfig) {
+export function allowedActionsFor(stage: string, approvalsConfig: any): string[] {
   if (!approvalsConfig || approvalsConfig.enabled !== true) return [];
   const stageRule = approvalsConfig.rules?.[stage];
   const allow = Array.isArray(stageRule?.allow) ? stageRule.allow : [];
@@ -47,14 +47,14 @@ export default function ApprovalActionMenu({
   anchorRect,
   variant = 'popover',
 }: any) {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const actions = allowedActionsFor(stage, approvalsConfig);
 
   useEffect(() => {
     if (variant !== 'popover' || actions.length === 0) return;
-    const onKey = e => { if (e.key === 'Escape') onClose?.(); };
-    const onDown = e => {
-      if (ref.current && !ref.current.contains(e.target)) onClose?.();
+    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') onClose?.(); };
+    const onDown = (e: MouseEvent): void => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose?.();
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('mousedown', onDown);
@@ -88,7 +88,7 @@ export default function ApprovalActionMenu({
       data-variant={variant}
       style={style}
     >
-      {actions.map(action => (
+      {actions.map((action: string) => (
         <button
           key={action}
           type="button"
@@ -101,7 +101,7 @@ export default function ApprovalActionMenu({
             onClose?.();
           }}
         >
-          {labels[action] ?? DEFAULT_LABELS[action] ?? action}
+          {labels[action] ?? DEFAULT_LABELS[action as keyof typeof DEFAULT_LABELS] ?? action}
         </button>
       ))}
     </div>

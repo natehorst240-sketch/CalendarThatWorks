@@ -1,4 +1,5 @@
 import styles from '../EventForm.module.css';
+import type { ChangeEvent } from 'react';
 
 const RECURRENCE_PRESETS = [
   { id: 'none',        label: 'Does not repeat'       },
@@ -19,7 +20,7 @@ const RECURRENCE_PRESETS = [
  *   onCustomRruleChange (str) => void
  */
 export function RecurrenceSection({ preset, customRrule, onPresetChange, onCustomRruleChange }: any) {
-  function handlePresetChange(e) {
+  function handlePresetChange(e: ChangeEvent<HTMLSelectElement>) {
     const next = e.target.value;
     onPresetChange(next);
     if (next !== 'custom') onCustomRruleChange('');

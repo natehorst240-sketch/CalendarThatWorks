@@ -1,4 +1,5 @@
 import styles from '../EventForm.module.css';
+import type { ChangeEvent } from 'react';
 
 /**
  * CustomFieldsSection — dynamic schema-driven custom field rendering.
@@ -18,13 +19,13 @@ export function CustomFieldsSection({ category, customFields, metaValues, errors
   return (
     <div className={styles.customSection}>
       <div className={styles.customSectionLabel}>{category} fields</div>
-      {customFields.map(f => (
+      {customFields.map((f: any) => (
         <CustomField
           key={f.name}
           field={f}
           value={metaValues[f.name] ?? ''}
           error={errors[`meta_${f.name}`]}
-          onChange={val => onMetaChange(f.name, val)}
+          onChange={(val: string | boolean) => onMetaChange(f.name, val)}
         />
       ))}
     </div>
@@ -35,7 +36,7 @@ export function CustomFieldsSection({ category, customFields, metaValues, errors
 
 function CustomField({ field, value, error, onChange }: any) {
   const opts = field.options
-    ? field.options.split(',').map(s => s.trim()).filter(Boolean)
+    ? field.options.split(',').map((s: string) => s.trim()).filter(Boolean)
     : [];
   // checkbox uses the wrapping-label pattern; all other types need an explicit id/htmlFor pair
   const fieldId = field.type === 'checkbox'
@@ -54,7 +55,7 @@ function CustomField({ field, value, error, onChange }: any) {
           id={fieldId}
           className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         />
       )}
       {field.type === 'number' && (
@@ -63,7 +64,7 @@ function CustomField({ field, value, error, onChange }: any) {
           type="number"
           className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         />
       )}
       {field.type === 'date' && (
@@ -72,12 +73,12 @@ function CustomField({ field, value, error, onChange }: any) {
           type="date"
           className={[styles.input, error && styles.inputError].filter(Boolean).join(' ')}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         />
       )}
       {field.type === 'checkbox' && (
         <label className={styles.checkRow}>
-          <input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)} />
+          <input type="checkbox" checked={!!value} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.checked)} />
           Yes
         </label>
       )}
@@ -86,10 +87,10 @@ function CustomField({ field, value, error, onChange }: any) {
           id={fieldId}
           className={[styles.select, error && styles.inputError].filter(Boolean).join(' ')}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
         >
           <option value="">— select —</option>
-          {opts.map(o => <option key={o} value={o}>{o}</option>)}
+          {opts.map((o: string) => <option key={o} value={o}>{o}</option>)}
         </select>
       )}
       {field.type === 'textarea' && (
@@ -97,7 +98,7 @@ function CustomField({ field, value, error, onChange }: any) {
           id={fieldId}
           className={[styles.textarea, error && styles.inputError].filter(Boolean).join(' ')}
           value={value}
-          onChange={e => onChange(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
           rows={3}
         />
       )}

@@ -66,7 +66,7 @@ export function WorkflowSimulator(
   const [simClockMs, setSimClockMs] = useState<number>(Date.parse(SIM_EPOCH_ISO))
   const seqRef = useRef<number>(0)
 
-  const { variables, parseError } = useMemo(() => {
+  const { variables, parseError } = useMemo<{ variables: Record<string, unknown>; parseError: string | null }>(() => {
     try {
       const parsed = JSON.parse(variablesText) as unknown
       // Arrays are typeof 'object' in JS, so filter them explicitly —

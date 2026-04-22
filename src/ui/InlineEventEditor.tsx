@@ -4,7 +4,7 @@
  * Activated when the owner clicks an event in Edit Mode.
  * Lets owners tweak title, color, bold, and size without opening the full form.
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from 'react';
 import { X } from 'lucide-react';
 import styles from './InlineEventEditor.module.css';
 
@@ -18,8 +18,8 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
   const [color, setColor] = useState(event.color ?? PRESET_COLORS[0]);
   const [bold,  setBold]  = useState(!!(event.meta?._display?.bold));
   const [large, setLarge] = useState(!!(event.meta?._display?.large));
-  const panelRef = useRef(null);
-  const inputRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -35,14 +35,14 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
 
   // Close on outside click
   useEffect(() => {
-    function handler(e) {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
+    function handler(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [onClose]);
 
-  function handleKeyDown(e) {
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave(); }
   }
@@ -96,7 +96,7 @@ export default function InlineEventEditor({ event, x, y, onSave, onClose }: any)
         ref={inputRef}
         className={styles.titleInput}
         value={title}
-        onChange={e => setTitle(e.target.value)}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
         placeholder="Event title…"
         aria-label="Event title"
       />

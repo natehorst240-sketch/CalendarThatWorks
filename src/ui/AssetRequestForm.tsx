@@ -10,16 +10,17 @@
  * ships with `meta.approvalStage = { stage: 'requested', updatedAt }`.
  */
 import { useMemo, useState } from 'react';
+import type { FormEvent, ChangeEvent, MouseEvent } from 'react';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './EventForm.module.css';
 
-function toLocalInput(date) {
-  const pad = (n) => String(n).padStart(2, '0');
+function toLocalInput(date: Date): string {
+  const pad = (n: number): string => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function fromLocalInput(value) {
+function fromLocalInput(value: string): Date {
   // Interpret as local time (same convention as EventForm's fromDatetimeLocal).
   const [datePart, timePart] = value.split('T');
   const [y, m, d] = datePart.split('-').map(Number);
@@ -49,7 +50,7 @@ export default function AssetRequestForm({
   const [errors,   setErrors]   = useState<Record<string, string>>({});
 
   const assetOptions = useMemo(
-    () => assets.map(a => ({ value: a.id, label: a.label || a.id })),
+    () => assets.map((a: any) => ({ value: a.id, label: a.label || a.id })),
     [assets],
   );
 
@@ -67,7 +68,7 @@ export default function AssetRequestForm({
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
     const now = new Date().toISOString();
@@ -86,7 +87,7 @@ export default function AssetRequestForm({
   }
 
   return (
-    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className={styles.overlay} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
       <div
         className={styles.modal}
         ref={trapRef}
@@ -105,7 +106,7 @@ export default function AssetRequestForm({
               id="ar-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
               placeholder="e.g. A-check, VIP charter, CRM training"
               autoFocus
             />
@@ -119,9 +120,9 @@ export default function AssetRequestForm({
                 id="ar-asset"
                 className={styles.select}
                 value={assetId}
-                onChange={e => setAssetId(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setAssetId(e.target.value)}
               >
-                {assetOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {assetOptions.map((o: { value: string; label: string }) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               {errors.assetId && <span className={styles.error}>{errors.assetId}</span>}
             </div>
@@ -131,9 +132,9 @@ export default function AssetRequestForm({
                 id="ar-category"
                 className={styles.select}
                 value={category}
-                onChange={e => setCategory(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
               >
-                {categories.map(c => (
+                {categories.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.label || c.id}</option>
                 ))}
               </select>
@@ -149,7 +150,7 @@ export default function AssetRequestForm({
                 type="datetime-local"
                 className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
                 value={startStr}
-                onChange={e => setStartStr(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setStartStr(e.target.value)}
               />
               {errors.start && <span className={styles.error}>{errors.start}</span>}
             </div>
@@ -160,7 +161,7 @@ export default function AssetRequestForm({
                 type="datetime-local"
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={endStr}
-                onChange={e => setEndStr(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEndStr(e.target.value)}
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>
@@ -172,7 +173,7 @@ export default function AssetRequestForm({
               id="ar-notes"
               className={styles.textarea}
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
               placeholder="Optional — context for the approver"
               rows={3}
             />

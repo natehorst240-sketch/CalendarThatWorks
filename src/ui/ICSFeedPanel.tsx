@@ -9,7 +9,7 @@
  *   onUpdate    — (id: string, patch: Partial<StoredFeed>) => void
  *   onToggle    — (id: string) => void
  */
-import { useState, useRef } from 'react';
+import { useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Plus, Trash2, RefreshCw, AlertCircle, CheckCircle, Link } from 'lucide-react';
 import { fetchAndParseICS } from '../core/icalParser';
 import styles from './ConfigPanel.module.css';
@@ -30,7 +30,7 @@ const REFRESH_OPTIONS = [
   { label: 'Manual',     value: null       },
 ];
 
-function colorDot(color, size = 10) {
+function colorDot(color: string, size = 10) {
   return (
     <span style={{
       display: 'inline-block',
@@ -94,9 +94,9 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
             autoFocus
             className={styles.input}
             value={draft}
-            onChange={e => setDraft(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
-            onKeyDown={e => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') { setDraft(feed.label); setEditing(false); } }}
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') { setDraft(feed.label); setEditing(false); } }}
             style={{ width: '100%', padding: '3px 6px', fontSize: 12 }}
           />
         ) : (
@@ -219,9 +219,9 @@ function AddFeedForm({ onAdd }: any) {
           style={{ flex: 1, fontSize: 12 }}
           type="url"
           value={url}
-          onChange={e => { setUrl(e.target.value); setValidation(null); }}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => { setUrl(e.target.value); setValidation(null); }}
           placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
-          onKeyDown={e => e.key === 'Enter' && validate()}
+          onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && validate()}
         />
         <button
           onClick={validate}
@@ -272,7 +272,7 @@ function AddFeedForm({ onAdd }: any) {
           style={{ fontSize: 12 }}
           type="text"
           value={label}
-          onChange={e => setLabel(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => setLabel(e.target.value)}
           placeholder="My Work Calendar"
         />
       </label>
@@ -304,7 +304,7 @@ function AddFeedForm({ onAdd }: any) {
             className={styles.select}
             style={{ fontSize: 12 }}
             value={refreshInterval ?? 'null'}
-            onChange={e => setRefreshInterval(e.target.value === 'null' ? null : +e.target.value)}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => setRefreshInterval(e.target.value === 'null' ? null : +e.target.value)}
           >
             {REFRESH_OPTIONS.map(o => (
               <option key={String(o.value)} value={String(o.value)}>{o.label}</option>
@@ -349,10 +349,10 @@ function AddFeedForm({ onAdd }: any) {
 export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
   // Build a quick error lookup by URL
   const errorByUrl = Object.fromEntries(
-    (feedErrors ?? []).map(({ feed, err }) => [feed.url, err])
+    (feedErrors ?? []).map(({ feed, err }: { feed: { url: string }; err: Error }) => [feed.url, err])
   );
 
-  const enabledCount  = feeds.filter(f => f.enabled).length;
+  const enabledCount  = feeds.filter((f: any) => f.enabled).length;
   const errorCount    = Object.keys(errorByUrl).length;
 
   return (
@@ -378,7 +378,7 @@ export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onTog
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {feeds.map(feed => (
+          {feeds.map((feed: any) => (
             <FeedRow
               key={feed.id}
               feed={feed}
@@ -405,7 +405,7 @@ export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onTog
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function _suggestLabel(url) {
+function _suggestLabel(url: string) {
   try {
     const u = new URL(url.replace(/^webcal:/, 'https:'));
     // Strip common ICS path suffixes to get a readable hostname

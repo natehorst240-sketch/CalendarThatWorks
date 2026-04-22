@@ -6,7 +6,7 @@
  * password field so screen-reader users land on a dedicated dialog rather
  * than a floating menu attached to the toolbar.
  */
-import { useState } from 'react';
+import { useState, type FormEvent, type MouseEvent } from 'react';
 import { Eye, EyeOff, Lock, X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './OwnerLoginModal.module.css';
@@ -16,7 +16,7 @@ export default function OwnerLoginModal({ authError, isAuthLoading, onAuthentica
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     onAuthenticate(password);
   }
@@ -24,7 +24,7 @@ export default function OwnerLoginModal({ authError, isAuthLoading, onAuthentica
   return (
     <div
       className={styles.overlay}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         ref={trapRef}

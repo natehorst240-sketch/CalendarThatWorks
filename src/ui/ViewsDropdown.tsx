@@ -21,6 +21,7 @@ const VIEW_ICON_MAP = {
   schedule: CalendarRange,
   assets:   Boxes,
 };
+type ViewKey = keyof typeof VIEW_ICON_MAP;
 
 export default function ViewsDropdown({
   views,
@@ -77,7 +78,7 @@ export default function ViewsDropdown({
           ) : (
             <ul className={styles.dropdownList}>
               {views.map((view: any) => {
-                const ViewIcon = view.view ? VIEW_ICON_MAP[view.view] : null;
+                const ViewIcon = view.view ? VIEW_ICON_MAP[view.view as ViewKey] : null;
                 const isActive = view.id === activeId;
                 const isHidden = !!view.hiddenFromStrip;
                 const color = view.color ?? '#64748b';
