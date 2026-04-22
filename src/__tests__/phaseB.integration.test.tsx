@@ -84,7 +84,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
   const [conflict, setConflict] = useState(null);
   const [committed, setCommitted] = useState(null);
 
-  const handleSubmit = ({ values }) => {
+  const handleSubmit = ({ values }: { values: Record<string, string> }) => {
     const evt = {
       id: `new-${events.length + 1}`,
       title: values.title,
@@ -107,12 +107,12 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: any) {
     }
   };
 
-  const persist = (evt) => {
+  const persist = (evt: Record<string, unknown>) => {
     const withStage = {
       ...evt,
       meta: { approvalStage: { stage: 'requested', updatedAt: '', history: [] } },
     };
-    setEvents(prev => [...prev, withStage]);
+    setEvents((prev: unknown[]) => [...prev, withStage]);
     setCommitted(withStage);
     onCommit?.(withStage);
   };
@@ -277,7 +277,7 @@ describe('Phase B pipeline — committed event exposes approval actions', () => 
         ...fullConfig.approvals,
         rules: {
           ...fullConfig.approvals.rules,
-          requested: { allow: [], prefix: 'Req' },
+          requested: { allow: [] as string[], prefix: 'Req' },
         },
       },
     };

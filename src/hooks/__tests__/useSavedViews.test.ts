@@ -21,7 +21,7 @@ beforeEach(() => {
 
 describe('serializeFilters', () => {
   it('converts Sets to arrays', () => {
-    const filters = {
+    const filters: Record<string, unknown> = {
       categories: new Set(['Work', 'PTO']),
       resources:  new Set(['Alice']),
       sources:    new Set(['src-a']),
@@ -67,7 +67,7 @@ describe('serializeFilters', () => {
 
 describe('deserializeFilters', () => {
   it('converts arrays back to Sets', () => {
-    const saved = {
+    const saved: Record<string, unknown> = {
       categories: ['Work', 'PTO'],
       resources:  ['Alice'],
       sources:    ['src-a'],
@@ -87,7 +87,7 @@ describe('deserializeFilters', () => {
   });
 
   it('converts dateRange strings to Date objects', () => {
-    const saved = {
+    const saved: Record<string, unknown> = {
       categories: [],
       resources:  [],
       sources:    [],
@@ -133,7 +133,7 @@ describe('useSavedViews', () => {
 
   it('saveView adds a view with generated id and serialized filters', () => {
     const { result } = renderHook(() => useSavedViews(CAL_ID));
-    const filters = {
+    const filters: Record<string, unknown> = {
       categories: new Set(['Work']),
       resources:  new Set(),
       sources:    new Set(),
@@ -156,14 +156,14 @@ describe('useSavedViews', () => {
 
   it('saveView returns the created view object', () => {
     const { result } = renderHook(() => useSavedViews(CAL_ID));
-    let created;
+    let created: any;
     act(() => {
       created = result.current.saveView('Return Test', {
         categories: new Set(),
         resources:  new Set(),
         sources:    new Set(),
         search:     '',
-        dateRange:  null,
+        dateRange:  null as null,
       });
     });
     expect(created).toBeDefined();
@@ -208,7 +208,7 @@ describe('useSavedViews', () => {
         id:        'v1',
         name:      'Stored View',
         createdAt: new Date().toISOString(),
-        filters:   { categories: ['PTO'], resources: [], sources: [], search: '', dateRange: null },
+        filters:   { categories: ['PTO'], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null },
       },
     ];
     localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify({
@@ -226,7 +226,7 @@ describe('useSavedViews', () => {
         id: 'v-old',
         name: 'Old Shape',
         createdAt: new Date().toISOString(),
-        filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+        filters: { categories: [] as string[], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null },
       },
     ];
     localStorage.setItem(`wc-saved-views-${CAL_ID}`, JSON.stringify(existingViews));
@@ -236,8 +236,8 @@ describe('useSavedViews', () => {
   });
 
   it('calendarId switching reloads from correct localStorage key', () => {
-    const viewsA = [{ id: 'va', name: 'View A', createdAt: '', filters: { categories: [], resources: [], sources: [], search: '', dateRange: null } }];
-    const viewsB = [{ id: 'vb', name: 'View B', createdAt: '', filters: { categories: [], resources: [], sources: [], search: '', dateRange: null } }];
+    const viewsA = [{ id: 'va', name: 'View A', createdAt: '', filters: { categories: [] as string[], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null } }];
+    const viewsB = [{ id: 'vb', name: 'View B', createdAt: '', filters: { categories: [] as string[], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null } }];
     localStorage.setItem('wc-saved-views-cal-a', JSON.stringify(viewsA));
     localStorage.setItem('wc-saved-views-cal-b', JSON.stringify(viewsB));
 
@@ -315,7 +315,7 @@ describe('useSavedViews', () => {
   it('migrates legacy wc-profiles-* data on first load', () => {
     const legacyProfiles = [{
       id: 'p1', name: 'Old Profile', color: '#3b82f6', view: 'week',
-      filters: { categories: ['Work'], resources: [], search: '' },
+      filters: { categories: ['Work'], resources: [] as string[], search: '' },
     }];
     localStorage.setItem('wc-profiles-test-cal', JSON.stringify(legacyProfiles));
     const { result } = renderHook(() => useSavedViews('test-cal'));
@@ -396,7 +396,7 @@ describe('deserializeFilters dateRange validation', () => {
   });
 });
 
-const EMPTY_FILTERS = {
+const EMPTY_FILTERS: Record<string, unknown> = {
   categories: new Set(),
   resources:  new Set(),
   sources:    new Set(),
@@ -624,7 +624,7 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
           name: 'From v2',
           createdAt: new Date().toISOString(),
           groupBy: 'role',
-          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+          filters: { categories: [] as string[], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null },
         },
       ],
     };
@@ -643,7 +643,7 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
           id: 'v-legacy',
           name: 'From v2',
           createdAt: new Date().toISOString(),
-          filters: { categories: [], resources: [], sources: [], search: '', dateRange: null },
+          filters: { categories: [] as string[], resources: [] as string[], sources: [] as string[], search: '', dateRange: null as null },
         },
       ],
     };

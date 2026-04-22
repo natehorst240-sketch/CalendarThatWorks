@@ -22,7 +22,7 @@ function fakeGrid(top = 0, width = 200, gutterWidth = 0) {
   };
 }
 
-function fakePointer(clientX = 10, clientY) {
+function fakePointer(clientX = 10, clientY: number) {
   return { clientX, clientY, button: 0, pointerId: 1,
     preventDefault: () => {}, stopPropagation: () => {} };
 }

@@ -3,13 +3,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React, { createRef } from 'react';
 
 import { WorksCalendar } from '../WorksCalendar.tsx';
+import type { WorksCalendarEvent } from '../types/events';
 
-function getKinds(events) {
-  return events.map((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase());
+function getKinds(events: WorksCalendarEvent[]) {
+  return events.map((ev: WorksCalendarEvent) => String(ev?.meta?.kind ?? '').toLowerCase());
 }
 
-function getByKind(events, kind) {
-  return events.filter((ev) => String(ev?.meta?.kind ?? ev?.kind ?? '').toLowerCase() === kind);
+function getByKind(events: WorksCalendarEvent[], kind: string) {
+  return events.filter((ev: WorksCalendarEvent) => String(ev?.meta?.kind ?? '').toLowerCase() === kind);
 }
 
 describe('WorksCalendar schedule model integration', () => {
@@ -37,7 +38,7 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Save PTO Request' }));
   }
 
-  async function assignCoverageTo(nameRegex) {
+  async function assignCoverageTo(nameRegex: string | RegExp) {
     fireEvent.click(await screen.findByRole('button', { name: 'Shift not covered — click to assign coverage' }));
     fireEvent.click(await screen.findByRole('button', { name: nameRegex }));
   }
@@ -79,8 +80,8 @@ describe('WorksCalendar schedule model integration', () => {
       expect(saved.meta?.kind).toBe('pto');
       expect(saved.resource).toBe('emp-1');
 
-      const visible = apiRef.current.getVisibleEvents();
-      const ptoEvents = visible.filter((ev) => String(ev?.meta?.kind ?? '') === 'pto');
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
+      const ptoEvents = visible.filter((ev: WorksCalendarEvent) => String(ev?.meta?.kind ?? '') === 'pto');
       expect(ptoEvents.length).toBeGreaterThan(0);
     });
   }, 30000);
@@ -95,9 +96,9 @@ describe('WorksCalendar schedule model integration', () => {
     await requestPtoForAlex();
 
     await waitFor(() => {
-      const visible = apiRef.current.getVisibleEvents();
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
       const openShifts = getByKind(visible, 'open-shift').filter(
-        (ev) => String(ev.meta?.sourceShiftId ?? '') === 'shift-1',
+        (ev: WorksCalendarEvent) => String(ev.meta?.sourceShiftId ?? '') === 'shift-1',
       );
       expect(openShifts).toHaveLength(1);
     });
@@ -113,8 +114,8 @@ describe('WorksCalendar schedule model integration', () => {
     await assignCoverageTo(/^Bailey Chen — RN$/);
 
     await waitFor(() => {
-      const visible = apiRef.current.getVisibleEvents();
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
+      const shift = visible.find((ev: WorksCalendarEvent) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-2');
 
       const openShift = getByKind(visible, 'open-shift')[0];
@@ -141,13 +142,13 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /Clear Status/ }));
 
     await waitFor(() => {
-      const visible = apiRef.current.getVisibleEvents();
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
       const kinds = getKinds(visible);
       expect(kinds).not.toContain('open-shift');
       expect(kinds).not.toContain('covering');
       expect(kinds).not.toContain('covering-shift');
 
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: WorksCalendarEvent) => String(ev.id) === 'shift-1');
       expect(shift.meta?.shiftStatus).toBeUndefined();
       expect(shift.meta?.coveredBy).toBeUndefined();
       expect(shift.meta?.openShiftId).toBeUndefined();
@@ -205,14 +206,14 @@ describe('WorksCalendar schedule model integration', () => {
     await assignCoverageTo(/^Casey Patel — RN$/);
 
     await waitFor(() => {
-      const visible = apiRef.current.getVisibleEvents();
-      const coveringEvents = visible.filter((ev) => {
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
+      const coveringEvents = visible.filter((ev: WorksCalendarEvent) => {
         const kind = String(ev?.meta?.kind ?? '').toLowerCase();
         return kind === 'covering' || kind === 'covering-shift';
       });
       expect(coveringEvents).toHaveLength(1);
 
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const shift = visible.find((ev: WorksCalendarEvent) => String(ev.id) === 'shift-1');
       expect(String(shift.meta?.coveredBy ?? '')).toBe('emp-3');
     });
   }, 30000);
@@ -229,8 +230,8 @@ describe('WorksCalendar schedule model integration', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Remove coverage/i }));
 
     await waitFor(() => {
-      const visible = apiRef.current.getVisibleEvents();
-      const shift = visible.find((ev) => String(ev.id) === 'shift-1');
+      const visible = apiRef.current.getVisibleEvents() as WorksCalendarEvent[];
+      const shift = visible.find((ev: WorksCalendarEvent) => String(ev.id) === 'shift-1');
       expect(shift.meta?.coveredBy).toBeNull();
 
       const openShift = getByKind(visible, 'open-shift')[0];

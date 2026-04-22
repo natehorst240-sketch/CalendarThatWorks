@@ -22,18 +22,19 @@ afterEach(() => cleanup());
  * Returns { client, fireRealtime, resolveSelect }.
  */
 function makeClient() {
-  let realtimeCallback = null;
-  let selectResolve    = null;
-  const selectPromise  = new Promise(res => { selectResolve = res; });
+  type RealtimePayload = { eventType: string; new: unknown; old: unknown };
+  let realtimeCallback: ((payload: RealtimePayload) => void) | null = null;
+  let selectResolve:    ((value: { data: unknown[]; error: null }) => void) | null = null;
+  const selectPromise  = new Promise<{ data: unknown[]; error: null }>(res => { selectResolve = res; });
 
   // The channel is a single object that .on() and .subscribe() both return
   // so that channelRef.current gets the object with .unsubscribe on it.
   const channel = {
-    on(_event, _filter, cb) {
+    on(_event: string, _filter: unknown, cb: (payload: RealtimePayload) => void) {
       realtimeCallback = cb;
       return this;                          // fluent — same channel
     },
-    subscribe(statusCb) {
+    subscribe(statusCb: (status: string) => void) {
       statusCb('SUBSCRIBED');
       return this;                          // fluent — same channel
     },
@@ -47,10 +48,10 @@ function makeClient() {
 
   return {
     client,
-    fireRealtime: (eventType, row) =>
+    fireRealtime: (eventType: string, row: unknown) =>
       realtimeCallback?.({ eventType, new: row, old: row }),
-    resolveSelect: (rows) =>
-      selectResolve({ data: rows, error: null }),
+    resolveSelect: (rows: unknown[]) =>
+      selectResolve?.({ data: rows, error: null }),
   };
 }
 

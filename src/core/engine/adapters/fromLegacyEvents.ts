@@ -16,8 +16,8 @@ import type { EngineEvent, EventStatus } from '../schema/eventSchema';
 export interface LegacyEvent {
   id: unknown;
   title?: string;
-  start: Date | string;
-  end: Date | string;
+  start: Date | string | number;
+  end: Date | string | number;
   allDay?: boolean;
   category?: string | null;
   color?: string | null;
@@ -41,6 +41,7 @@ export interface LegacyEvent {
 function toDate(v: Date | string | unknown): Date {
   if (v instanceof Date) return v;
   if (typeof v === 'string') return new Date(v);
+  if (typeof v === 'number') return new Date(v);
   return new Date();
 }
 

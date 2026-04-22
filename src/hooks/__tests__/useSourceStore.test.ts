@@ -10,8 +10,8 @@ import { loadSources, persistSources, useSourceStore } from '../useSourceStore';
 
 const CAL_ID = 'test-calendar';
 
-function sourceKey(id) { return `wc-sources-${id}`; }
-function legacyKey(id) { return `wc-feeds-${id}`; }
+function sourceKey(id: string) { return `wc-sources-${id}`; }
+function legacyKey(id: string) { return `wc-feeds-${id}`; }
 
 beforeEach(() => {
   localStorage.clear();
@@ -97,7 +97,7 @@ describe('useSourceStore — addSource', () => {
 
   it('returns the created source object', () => {
     const { result } = renderStore();
-    let created;
+    let created: any;
     act(() => { created = result.current.addSource({ type: 'ics', label: 'X' }); });
     expect(created.id).toBeDefined();
   });
@@ -113,7 +113,7 @@ describe('useSourceStore — addSource', () => {
 describe('useSourceStore — removeSource', () => {
   it('removes a source by id', () => {
     const { result } = renderStore();
-    let src;
+    let src: any;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics' }); });
     act(() => { result.current.removeSource(src.id); });
     expect(result.current.sources).toHaveLength(0);
@@ -121,7 +121,7 @@ describe('useSourceStore — removeSource', () => {
 
   it('leaves other sources intact', () => {
     const { result } = renderStore();
-    let s1, s2;
+    let s1: any, s2: any;
     act(() => {
       s1 = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', label: 'A' });
       s2 = result.current.addSource({ type: 'ics', url: 'https://b.com/b.ics', label: 'B' });
@@ -135,7 +135,7 @@ describe('useSourceStore — removeSource', () => {
 describe('useSourceStore — updateSource', () => {
   it('patches a source by id', () => {
     const { result } = renderStore();
-    let src;
+    let src: any;
     act(() => { src = result.current.addSource({ type: 'ics', label: 'Old', url: 'https://a.com/a.ics' }); });
     act(() => { result.current.updateSource(src.id, { label: 'New' }); });
     expect(result.current.sources[0].label).toBe('New');
@@ -143,7 +143,7 @@ describe('useSourceStore — updateSource', () => {
 
   it('does not affect unrelated fields', () => {
     const { result } = renderStore();
-    let src;
+    let src: any;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', color: '#ff0000' }); });
     act(() => { result.current.updateSource(src.id, { label: 'Updated' }); });
     expect(result.current.sources[0].color).toBe('#ff0000');
@@ -153,7 +153,7 @@ describe('useSourceStore — updateSource', () => {
 describe('useSourceStore — toggleSource', () => {
   it('flips enabled flag', () => {
     const { result } = renderStore();
-    let src;
+    let src: any;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', enabled: true }); });
     act(() => { result.current.toggleSource(src.id); });
     expect(result.current.sources[0].enabled).toBe(false);

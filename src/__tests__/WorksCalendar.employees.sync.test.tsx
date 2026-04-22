@@ -82,7 +82,7 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
 
     await waitFor(() => expect(onEmployeeAdd).toHaveBeenCalled());
     const lastConfig = onConfigSave.mock.calls.at(-1)[0];
-    const echoCount = (lastConfig.team?.members ?? []).filter(m => m.name === 'Echo').length;
+    const echoCount = (lastConfig.team?.members ?? []).filter((m: { name: string }) => m.name === 'Echo').length;
     expect(echoCount).toBe(1);
   });
 });
