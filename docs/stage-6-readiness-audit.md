@@ -200,6 +200,93 @@ with:
 
 ---
 
+## Audit Run — 2026-04-22
+
+This section captures a full Stage 6 readiness run executed on **April 22, 2026**.
+
+### Commands Run
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+```
+
+### 1) Current Root Baseline (`tsconfig.json`)
+
+- **Result:** Pass
+- **TypeScript diagnostics:** 0
+- **Notes:** Root config remains advisory for `noImplicitAny` (`noImplicitAny: false`), so implicit-any debt is not blocking at root.
+
+### 2) Repo-wide Implicit-any Debt (`tsconfig.strict.json`)
+
+- **Result:** Fail (`exit 2`)
+- **Total diagnostics:** 417
+- **Implicit-any diagnostics (TS7005/7006/7011/7018/7023/7031/7034/7053):** 413
+- **Unique files with implicit-any diagnostics:** 67
+
+Top implicit-any diagnostic codes:
+
+- `TS7006`: 291
+- `TS7018`: 57
+- `TS7053`: 27
+- `TS7005`: 15
+- `TS7034`: 13
+- `TS7031`: 10
+
+### 3) Migrated vs Non-migrated (`MIGRATED_PATHS`) Debt Split
+
+- **Implicit-any diagnostics in migrated paths:** 0
+- **Implicit-any diagnostics outside migrated paths:** 413
+- **Conclusion:** Current ratchet is working as intended, but Stage 6 would expose substantial non-ratcheted debt immediately.
+
+### 4) Remaining Debt by Directory
+
+| Directory | Error Count | Notes |
+|---|---:|---|
+| `src/ui` | 260 | Largest concentration; mostly form/dialog/component callback and indexing annotations. |
+| `src/hooks` | 70 | Heavy concentration in hook tests plus some hook implementation callback typing. |
+| `src/views` | 60 | Mixed view-level rendering logic and view tests. |
+| `src/__tests__` | 23 | Integration test helpers and callback params are still untyped. |
+
+### Top Offending Files
+
+| File | Error Count |
+|---|---:|
+| `src/hooks/__tests__/useSavedViews.test.ts` | 31 |
+| `src/ui/FilterBar.tsx` | 31 |
+| `src/ui/CSVImportDialog.tsx` | 26 |
+| `src/ui/AdvancedFilterBuilder.tsx` | 20 |
+| `src/ui/RequestForm.tsx` | 17 |
+| `src/ui/ThemeCustomizer.tsx` | 14 |
+| `src/__tests__/WorksCalendar.scheduleModel.integration.test.tsx` | 13 |
+| `src/hooks/__tests__/useSourceStore.test.ts` | 13 |
+| `src/ui/CalendarExternalForm.tsx` | 13 |
+| `src/ui/ScheduleEditorForm.tsx` | 12 |
+
+### 5) Remaining Work Classification
+
+- `src/ui/*` hotspot: **Mechanical + Boundary**
+  - Mechanical: untyped callback parameters and object literal fields.
+  - Boundary: several props/forms interact with shared models, raising caller-surface risk.
+- `src/hooks/*` hotspot: **Mechanical**
+  - Largely callback/test utility annotation work; relatively local.
+- `src/views/*` hotspot: **Mechanical + Cascade risk**
+  - View logic annotations may ripple into view helpers and test fixtures.
+- `src/**/__tests__/*` hotspot: **Mechanical**
+  - Mostly helper signatures and callback argument typing.
+
+### 6) One-PR Fit Assessment
+
+- **Assessment:** Does **not** fit safely in one isolated Stage 6 PR.
+- **Reasoning:** 413 implicit-any diagnostics across 67 files and multiple unrelated areas (`ui`, `hooks`, `views`, root tests). The debt is too broad for a low-risk config flip PR.
+
+### Stage 6 Decision
+
+- **Decision:** **NOT READY**
+- **Required next action:** Keep ratchet model, create at least one intermediate cleanup stage (preferably by directory hotspot), and rerun this audit after reductions.
+
+---
+
 ## Final Reminder
 
 Stage 5 being complete does **not** mean Stage 6 is automatically safe.
