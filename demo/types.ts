@@ -1,128 +1,138 @@
-type EmployeeId = string;
+// Type definitions for EMS data
 
-interface DemoEmployee {
+// Employee ID type
+export type EmployeeId = string;
+
+// Employee record
+export interface DemoEmployee {
     id: EmployeeId;
     name: string;
     position: string;
     department: string;
 }
 
-interface DemoAssetResource {
-    assetId: string;
+// Asset resource record
+export interface DemoAssetResource {
+    id: string;
+    name: string;
     type: string;
     status: string;
 }
 
-type ApprovalStage = 'pending' | 'approved' | 'rejected';
-
-interface ApprovalActionPayload {
-    action: 'approve' | 'reject';
-    comment?: string;
+// Approval stages
+export enum ApprovalStage {
+    Pending,
+    Approved,
+    Rejected,
 }
 
-interface DemoEvent {
-    eventId: string;
-    title: string;
-    date: Date;
-    attendees: DemoEmployee[];
+// Approval action payload
+export interface ApprovalActionPayload {
+    employeeId: EmployeeId;
+    approvalStage: ApprovalStage;
 }
 
-interface DemoNote {
-    noteId: string;
-    content: string;
-    createdAt: Date;
-    author: DemoEmployee;
-}
-
-interface DemoNotesMap {
-    [key: string]: DemoNote;
-}
-
-interface DemoCategory {
-    categoryId: string;
-    name: string;
-}
-
-interface DemoPool {
-    poolId: string;
-    name: string;
-    members: DemoEmployee[];
-}
-
-interface DemoProfile {
-    profileId: string;
-    employee: DemoEmployee;
-    skills: string[];
-}
-
-interface RegionRecord {
-    regionId: string;
-    name: string;
-}
-
-interface BaseRecord {
+// Event record
+export interface DemoEvent {
     id: string;
-    createdAt: Date;
-    updatedAt: Date;
-}
-
-interface AssetRecord extends BaseRecord {
-    assetResource: DemoAssetResource;
-    allocations: any[];
-}
-
-interface PilotRecord extends BaseRecord {
-    licenseNumber: string;
-    experienceYears: number;
-}
-
-interface MedicalRecord extends BaseRecord {
-    patientId: string;
-    condition: string;
-    treatment: string;
-}
-
-interface MechanicRecord extends BaseRecord {
-    specialties: string[];
-}
-
-interface ShiftRecord extends BaseRecord {
-    startTime: Date;
-    endTime: Date;
-    assignedEmployees: DemoEmployee[];
-}
-
-interface MaintenanceRecord extends BaseRecord {
-    assetId: string;
-    description: string;
-    scheduledDate: Date;
-}
-
-interface RequestRecord extends BaseRecord {
-    requester: DemoEmployee;
-    status: string;
-}
-
-interface MissionLeg {
-    legId: string;
+    title: string;
     start: Date;
     end: Date;
 }
 
-interface CrewAssignment {
-    assignmentId: string;
-    missionLeg: MissionLeg;
-    crew: DemoEmployee[];
+// Note record
+export interface DemoNote {
+    id: string;
+    content: string;
 }
 
-interface ComplianceItem {
-    itemId: string;
-    requirement: string;
+// Notes map
+export interface DemoNotesMap {
+    [key: string]: DemoNote;
+}
+
+// Category record
+export interface DemoCategory {
+    id: string;
+    name: string;
+}
+
+// Pool record
+export interface DemoPool {
+    id: string;
+    name: string;
+}
+
+// Profile record
+export interface DemoProfile {
+    employeeId: EmployeeId;
+    skills: string[];
+    certifications: string[];
+}
+
+// EMS data record types
+export interface RegionRecord {
+    id: string;
+    name: string;
+}
+
+export interface BaseRecord {
+    id: string;
+    createdAt: Date;
+}
+
+export interface AssetRecord extends BaseRecord {
+    assetId: string;
+    resource: DemoAssetResource;
+}
+
+export interface PilotRecord extends BaseRecord {
+    pilotId: string;
+    hoursFlown: number;
+}
+
+export interface MedicalRecord extends BaseRecord {
+    recordId: string;
+    medicalHistory: string;
+}
+
+export interface MechanicRecord extends BaseRecord {
+    mechanicId: string;
+    maintenanceRecord: string;
+}
+
+export interface ShiftRecord extends BaseRecord {
+    shiftId: string;
+    schedule: Date[];
+}
+
+export interface MaintenanceRecord extends BaseRecord {
+    maintenanceId: string;
     status: string;
 }
 
-interface MissionRecord extends BaseRecord {
+export interface RequestRecord extends BaseRecord {
+    requestId: string;
+    details: string;
+}
+
+export interface MissionLeg {
+    id: string;
+    departure: string;
+    arrival: string;
+}
+
+export interface CrewAssignment {
+    crewId: string;
+    memberIds: EmployeeId[];
+}
+
+export interface ComplianceItem {
+    itemId: string;
+    status: string;
+}
+
+export interface MissionRecord extends BaseRecord {
     missionId: string;
     legs: MissionLeg[];
-    crewAssignments: CrewAssignment[];
 }
