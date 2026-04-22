@@ -227,16 +227,25 @@ Practical target:
 
 ## Suggested Tracking Table
 
-Update this table as each PR lands.
+Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as of **2026-04-22**.
 
 | PR | Slice | Status | Files added to `MIGRATED_PATHS` | Audit rerun needed? |
 |---|---|---|---|---|
-| 1 | Hook test helpers | Planned | No | No |
-| 2 | Root/integration tests | Planned | No | No |
-| 3 | Small UI forms/dialogs | Planned | No | **Yes** |
+| 1 | Hook test helpers | **Complete** (PR #295 merged) | **Yes** | No |
+| 2 | Root/integration tests | **Complete** (PR #296 merged) | **Yes** | No |
+| 3 | Small UI forms/dialogs | **Complete** (PR #297 merged) | **Yes** | **Checkpoint still needed** |
 | 4 | Medium UI utilities | Planned | No | No |
-| 5 | Shared UI filtering | Planned | No | **Yes** |
+| 5 | Shared UI filtering | **Complete** (PR #299 merged) | **Yes** | **Full audit rerun still needed** |
 | 6 | Remaining non-ratcheted views | Planned | No | Maybe |
+
+### Current status notes
+
+- PRs **1, 2, 3, and 5** have landed on `main`.
+- The corresponding files are present in `scripts/typecheck-strict.mjs` under `MIGRATED_PATHS`.
+- No merged Stage 5b PR was found yet for the planned **PR 4** (`ThemeCustomizer` / `CSVImportDialog`) slice.
+- No merged Stage 5b PR was found yet for the planned **PR 6** remaining-views slice.
+- The required post-PR3 checkpoint audit has not yet been recorded in this file.
+- The required post-PR5 full Stage 6 readiness rerun has not yet been recorded in `docs/stage-6-readiness-audit.md` from this plan's perspective.
 
 ---
 
