@@ -1,14 +1,21 @@
 /**
  * ImportPreview — confirm + import parsed iCal events.
  */
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { format } from 'date-fns';
+import type { WorksCalendarEvent } from '../types/events';
 import styles from './ImportPreview.module.css';
 
-export default function ImportPreview({ events, onImport, onClose }: any) {
-  const [selected, setSelected] = useState(() => new Set(events.map((_, i) => i)));
+type ImportPreviewProps = {
+  events: WorksCalendarEvent[];
+  onImport?: (events: WorksCalendarEvent[]) => void;
+  onClose: () => void;
+};
 
-  function toggle(i) {
+export default function ImportPreview({ events, onImport, onClose }: ImportPreviewProps) {
+  const [selected, setSelected] = useState<Set<number>>(() => new Set(events.map((_, i: number) => i)));
+
+  function toggle(i: number) {
     setSelected(prev => {
       const next = new Set(prev);
       next.has(i) ? next.delete(i) : next.add(i);
@@ -18,11 +25,11 @@ export default function ImportPreview({ events, onImport, onClose }: any) {
 
   function toggleAll() {
     if (selected.size === events.length) setSelected(new Set());
-    else setSelected(new Set(events.map((_, i) => i)));
+    else setSelected(new Set(events.map((_, i: number) => i)));
   }
 
   function handleImport() {
-    const toImport = events.filter((_, i) => selected.has(i));
+    const toImport = events.filter((_, i: number) => selected.has(i));
     onImport?.(toImport);
     onClose();
   }
@@ -31,7 +38,7 @@ export default function ImportPreview({ events, onImport, onClose }: any) {
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.dialog} onClick={e => e.stopPropagation()}>
+      <div className={styles.dialog} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>Import Events</h2>
           <span className={styles.count}>{events.length} event{events.length !== 1 ? 's' : ''} found</span>
@@ -47,7 +54,7 @@ export default function ImportPreview({ events, onImport, onClose }: any) {
         </div>
 
         <div className={styles.list}>
-          {events.map((ev, i) => {
+          {events.map((ev, i: number) => {
             const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
             return (
               <label key={i} className={[styles.item, selected.has(i) && styles.itemSelected].filter(Boolean).join(' ')}>
@@ -89,6 +96,6 @@ export default function ImportPreview({ events, onImport, onClose }: any) {
   );
 }
 
-function isValid(d) {
+function isValid(d: Date): boolean {
   return d instanceof Date && !isNaN(d.getTime());
 }

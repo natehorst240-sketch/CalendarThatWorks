@@ -16,12 +16,14 @@
  *   onToggle    — (id: string) => void
  */
 import { useState, useRef } from 'react';
+import type { ChangeEvent, KeyboardEvent } from 'react';
 import { format } from 'date-fns';
 import {
   Plus, Trash2, RefreshCw, AlertCircle, CheckCircle,
   Link, FileSpreadsheet,
 } from 'lucide-react';
 import { fetchAndParseICS } from '../core/icalParser';
+import type { WorksCalendarEvent } from '../types/events';
 import styles from './ConfigPanel.module.css';
 
 // ── Shared constants ──────────────────────────────────────────────────────────
@@ -40,7 +42,30 @@ const REFRESH_OPTIONS = [
   { label: 'Manual',     value: null       },
 ];
 
-function ColorDot({ color, size = 12, onClick }: any) {
+type CalendarSource = {
+  id: string;
+  type: string;
+  label?: string;
+  color?: string;
+  enabled?: boolean;
+  url?: string;
+  refreshInterval?: number | null;
+  events?: WorksCalendarEvent[];
+  importedAt?: string;
+};
+
+type FeedErrorEntry = {
+  feed?: { url?: string };
+  err?: unknown;
+};
+
+type SourceHandlers = {
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<CalendarSource>) => void;
+};
+
+function ColorDot({ color, size = 12, onClick }: { color: string; size?: number; onClick: () => void }) {
   return (
     <button
       title="Change colour"
@@ -60,7 +85,7 @@ function ColorDot({ color, size = 12, onClick }: any) {
   );
 }
 
-function ToggleSwitch({ checked, onChange, title }: any) {
+function ToggleSwitch({ checked, onChange, title }: { checked: boolean; onChange: () => void; title: string }) {
   return (
     <label
       className={styles.toggle}
@@ -73,7 +98,7 @@ function ToggleSwitch({ checked, onChange, title }: any) {
   );
 }
 
-function RemoveBtn({ onClick, title = 'Remove' }: any) {
+function RemoveBtn({ onClick, title = 'Remove' }: { onClick: () => void; title?: string }) {
   return (
     <button
       className={styles.removeBtn}
@@ -86,7 +111,7 @@ function RemoveBtn({ onClick, title = 'Remove' }: any) {
   );
 }
 
-function rowStyle(enabled) {
+function rowStyle(enabled: boolean) {
   return {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '9px 10px',
@@ -99,10 +124,10 @@ function rowStyle(enabled) {
 
 // ── ICS feed row ──────────────────────────────────────────────────────────────
 
-function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: any) {
+function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: CalendarSource; error?: unknown } & SourceHandlers) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(source.label);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   function commitEdit() {
     const trimmed = draft.trim();
@@ -114,7 +139,7 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: any) {
   const statusIcon = !source.enabled
     ? null
     : error
-      ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error.message} />
+      ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error instanceof Error ? error.message : 'Feed error'} />
       : <CheckCircle size={14} color="var(--wc-success, #10b981)" />;
 
   return (
@@ -134,9 +159,9 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: any) {
             autoFocus
             className={styles.input}
             value={draft}
-            onChange={e => setDraft(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
-            onKeyDown={e => {
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') commitEdit();
               if (e.key === 'Escape') { setDraft(source.label); setEditing(false); }
             }}
@@ -179,7 +204,7 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: any) {
 
 // ── CSV dataset row ───────────────────────────────────────────────────────────
 
-function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: any) {
+function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: CalendarSource } & SourceHandlers) {
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState(source.label);
 
@@ -209,9 +234,9 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: any) {
             autoFocus
             className={styles.input}
             value={draft}
-            onChange={e => setDraft(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
-            onKeyDown={e => {
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') commitEdit();
               if (e.key === 'Escape') { setDraft(source.label); setEditing(false); }
             }}
@@ -250,14 +275,14 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: any) {
 
 // ── Add ICS feed form ─────────────────────────────────────────────────────────
 
-function AddFeedForm({ onAdd }: any) {
+function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => void }) {
   const [open,            setOpen]            = useState(false);
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
   const [color,           setColor]           = useState(PRESET_COLORS[0]);
   const [refreshInterval, setRefreshInterval] = useState(300_000);
   const [validating,      setValidating]      = useState(false);
-  const [validation,      setValidation]      = useState(null);
+  const [validation,      setValidation]      = useState<{ ok: boolean; count?: number; error?: string; corsLikely?: boolean } | null>(null);
 
   function reset() {
     setUrl(''); setLabel(''); setColor(PRESET_COLORS[0]);
@@ -273,11 +298,11 @@ function AddFeedForm({ onAdd }: any) {
       const events = await fetchAndParseICS(trimmed);
       if (!label) setLabel(_suggestLabel(trimmed));
       setValidation({ ok: true, count: events.length });
-    } catch (err: any) {
+    } catch (err: unknown) {
       const isCors = ['cors', 'fetch', 'network', 'failed'].some(
-        w => err.message?.toLowerCase().includes(w),
+        w => (err instanceof Error ? err.message : String(err)).toLowerCase().includes(w),
       );
-      setValidation({ ok: false, error: err.message, corsLikely: isCors });
+      setValidation({ ok: false, error: err instanceof Error ? err.message : String(err), corsLikely: isCors });
     } finally {
       setValidating(false);
     }
@@ -437,7 +462,7 @@ function AddFeedForm({ onAdd }: any) {
 
 // ── Section heading ───────────────────────────────────────────────────────────
 
-function SectionHeading({ icon: Icon, label, count, errors }: any) {
+function SectionHeading({ icon: Icon, label, count, errors }: { icon: typeof Link; label: string; count?: number; errors: number | null }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -463,15 +488,28 @@ function SectionHeading({ icon: Icon, label, count, errors }: any) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
-  const icsSources = (sources ?? []).filter(s => s.type === 'ics');
-  const csvSources = (sources ?? []).filter(s => s.type === 'csv');
+type SourcePanelProps = {
+  sources?: Array<Partial<CalendarSource>>;
+  feedErrors?: unknown[];
+  onAdd: (source: Partial<CalendarSource>) => void;
+  onRemove: (id: string) => void;
+  onToggle: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<CalendarSource>) => void;
+};
+
+export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onToggle, onUpdate }: SourcePanelProps) {
+  const normalizedSources = (sources ?? []) as CalendarSource[];
+  const icsSources = normalizedSources.filter((s: CalendarSource) => s.type === 'ics');
+  const csvSources = normalizedSources.filter((s: CalendarSource) => s.type === 'csv');
 
   const errorByUrl = Object.fromEntries(
-    (feedErrors ?? []).map(({ feed, err }) => [feed.url, err]),
+    (feedErrors ?? []).map((entry) => {
+      const value = entry as FeedErrorEntry;
+      return [value.feed?.url ?? '', value.err];
+    }),
   );
 
-  const icsErrors = icsSources.filter(s => s.enabled && errorByUrl[s.url]).length;
+  const icsErrors = icsSources.filter((s: CalendarSource) => s.enabled && s.url && errorByUrl[s.url]).length;
 
   const hasSources = icsSources.length > 0 || csvSources.length > 0;
 
@@ -482,7 +520,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
         Toggle any source to show or hide its events instantly.
         {hasSources && (
           <span style={{ marginLeft: 6 }}>
-            {(sources ?? []).filter(s => s.enabled).length} of {(sources ?? []).length} active.
+            {normalizedSources.filter((s: CalendarSource) => s.enabled).length} of {normalizedSources.length} active.
           </span>
         )}
       </p>
@@ -507,7 +545,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            {icsSources.map(src => (
+            {icsSources.map((src: CalendarSource) => (
               <IcsFeedRow
                 key={src.id}
                 source={src}
@@ -533,7 +571,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
             errors={null}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {csvSources.map(src => (
+            {csvSources.map((src: CalendarSource) => (
               <CsvDatasetRow
                 key={src.id}
                 source={src}
@@ -556,7 +594,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function _suggestLabel(url) {
+function _suggestLabel(url: string): string {
   try {
     const u = new URL(url.replace(/^webcal:/, 'https:'));
     return u.hostname.replace(/^(www|calendar)\./, '');
@@ -565,6 +603,6 @@ function _suggestLabel(url) {
   }
 }
 
-function _fmtDate(iso) {
+function _fmtDate(iso: string): string {
   try { return format(new Date(iso), 'MMM d, yyyy'); } catch { return ''; }
 }

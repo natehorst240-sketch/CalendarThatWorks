@@ -1,14 +1,69 @@
 import { useMemo, useState } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
+import type { EventStatus } from '../types/events';
 import styles from './ScheduleTemplateDialog.module.css';
 
-function toDatetimeLocal(date) {
+type TemplateEntry = {
+  title: string;
+  startOffsetMinutes: number;
+  durationMinutes: number;
+};
+
+type ScheduleTemplate = {
+  id: string;
+  name: string;
+  entries: TemplateEntry[];
+};
+
+type GeneratedEvent = {
+  id?: string;
+  title?: string;
+  start?: string | number | Date;
+  end?: string | Date;
+  startOffsetMinutes?: number;
+  durationMinutes?: number;
+  category?: string | null;
+  resource?: string | null;
+  status?: EventStatus;
+  color?: string | null;
+  rrule?: string;
+  exdates?: Array<string | Date>;
+  meta?: Record<string, unknown>;
+};
+
+type PreviewConflict = {
+  index?: number;
+  violations?: Array<{ rule?: string; message?: string }>;
+};
+
+type PreviewResult = {
+  generated: GeneratedEvent[];
+  conflicts: PreviewConflict[];
+  error: string;
+};
+
+type InstantiateRequest = {
+  templateId?: string;
+  anchor: Date;
+  resource?: string;
+  category?: string;
+};
+
+type ScheduleTemplateDialogProps = {
+  templates?: ScheduleTemplate[];
+  onInstantiate?: (request: InstantiateRequest) => void;
+  onPreview?: (request: InstantiateRequest) => { generated?: GeneratedEvent[]; conflicts?: PreviewConflict[]; error?: string };
+  onClose?: () => void;
+};
+
+function toDatetimeLocal(date: string | number | Date): string {
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
+  const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function validateTemplate(template) {
+function validateTemplate(template: ScheduleTemplate | null): string {
   if (!template) return 'Please choose a schedule template.';
   if (!Array.isArray(template.entries) || template.entries.length === 0) {
     return 'The selected template has no entries to generate.';
@@ -30,7 +85,7 @@ export default function ScheduleTemplateDialog({
   onInstantiate,
   onPreview,
   onClose,
-}: any) {
+}: ScheduleTemplateDialogProps) {
   const [templateId, setTemplateId] = useState(() => templates[0]?.id ?? '');
   const [anchor, setAnchor] = useState(() => toDatetimeLocal(new Date()));
   const [resource, setResource] = useState('');
@@ -57,7 +112,8 @@ export default function ScheduleTemplateDialog({
       return { generated: [], conflicts: [], error: anchorError || templateError || '' };
     }
     try {
-      return onPreview?.(request) ?? { generated: [], conflicts: [], error: '' };
+      const result = onPreview?.(request);
+      return { generated: result?.generated ?? [], conflicts: result?.conflicts ?? [], error: result?.error ?? '' };
     } catch {
       return { generated: [], conflicts: [], error: 'Unable to build schedule preview.' };
     }
@@ -65,15 +121,15 @@ export default function ScheduleTemplateDialog({
 
   const submitDisabled = !!(templateError || anchorError || preview.error);
   const conflictsByIndex = useMemo(() => {
-    const map = new Map();
-    (preview.conflicts ?? []).forEach((conflict) => {
+    const map = new Map<number, PreviewConflict>();
+    (preview.conflicts ?? []).forEach((conflict: PreviewConflict) => {
       if (typeof conflict?.index !== 'number') return;
       map.set(conflict.index, conflict);
     });
     return map;
   }, [preview.conflicts]);
 
-  function handleSubmit(e) {
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitDisabled || !selectedTemplate) return;
 
@@ -81,7 +137,7 @@ export default function ScheduleTemplateDialog({
   }
 
   return (
-    <div className={styles.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
+    <div className={styles.overlay} onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}>
       <div className={styles.dialog} role="dialog" aria-modal="true" aria-label="Add schedule template">
         <div className={styles.header}>
           <h2 className={styles.title}>Add Schedule</h2>
@@ -96,7 +152,7 @@ export default function ScheduleTemplateDialog({
             <label className={styles.label}>
               Template
               <select className={styles.select} value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                {templates.map((template) => (
+                {templates.map((template: ScheduleTemplate) => (
                   <option key={template.id} value={template.id}>{template.name}</option>
                 ))}
               </select>
@@ -144,7 +200,7 @@ export default function ScheduleTemplateDialog({
                   )}
                 </div>
                 <ul className={styles.previewList}>
-                  {preview.generated.map((ev, idx) => (
+                  {preview.generated.map((ev: GeneratedEvent, idx: number) => (
                     <li
                       key={`${ev.title}-${idx}`}
                       className={`${styles.previewItem} ${conflictsByIndex.has(idx) ? styles.previewItemConflict : ''}`}
@@ -155,9 +211,9 @@ export default function ScheduleTemplateDialog({
                       </div>
                       {conflictsByIndex.has(idx) && (
                         <ul className={styles.conflictList}>
-                          {conflictsByIndex.get(idx).violations?.map((violation, vIdx) => (
+                          {conflictsByIndex.get(idx)?.violations?.map((violation, vIdx: number) => (
                             <li key={`${violation.rule}-${vIdx}`} className={styles.conflictItem}>
-                              {violation.message}
+                              {violation.message ?? 'Conflict'}
                             </li>
                           ))}
                         </ul>

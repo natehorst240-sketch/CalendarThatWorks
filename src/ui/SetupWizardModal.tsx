@@ -17,6 +17,7 @@
  *   onSaveView    (name, filters, opts) => void  — wired to useSavedViews.saveView
  */
 import { useState } from 'react';
+import type { ChangeEvent, MouseEvent } from 'react';
 import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
 import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -24,11 +25,31 @@ import AdvancedFilterBuilder from './AdvancedFilterBuilder';
 import styles from './SetupWizardModal.module.css';
 
 const TOTAL_STEPS = 4;
-const DEFAULT_TEAM_MEMBERS = [
+type TeamMember = {
+  id: number;
+  name: string;
+  color: string;
+  avatar: string | null;
+};
+const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
   { id: 1, name: 'Priya', color: '#8b5cf6', avatar: null },
   { id: 2, name: 'Alex',  color: '#ec4899', avatar: null },
   { id: 3, name: 'Dana',  color: '#14b8a6', avatar: null },
 ];
+
+type CreatedView = {
+  name: string;
+  conditions: unknown[];
+};
+
+type SetupWizardModalProps = {
+  isOpen: boolean;
+  onClose?: () => void;
+  updateConfig?: (patch: Record<string, unknown>) => void;
+  categories?: string[];
+  resources?: string[];
+  onSaveView?: (name: string, filters: Record<string, unknown>, options: Record<string, unknown>) => void;
+};
 
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
@@ -39,19 +60,19 @@ export default function SetupWizardModal({
   categories = [],
   resources  = [],
   onSaveView,
-}: any) {
+}: SetupWizardModalProps) {
   const [step,           setStep]           = useState(1);
   const [calendarName,   setCalendarName]   = useState('My WorksCalendar');
   const [selectedTheme,  setSelectedTheme]  = useState('corporate');
-  const [createdViews,   setCreatedViews]   = useState([]); // { name, conditions }[]
-  const [teamMembers,    setTeamMembers]    = useState(DEFAULT_TEAM_MEMBERS);
+  const [createdViews,   setCreatedViews]   = useState<CreatedView[]>([]); // { name, conditions }[]
+  const [teamMembers,    setTeamMembers]    = useState<TeamMember[]>(DEFAULT_TEAM_MEMBERS);
   const trapRef = useFocusTrap(onClose);
 
   if (!isOpen) return null;
 
-  const handleSaveView = (name, filters, conditions) => {
+  const handleSaveView = (name: string, filters: Record<string, unknown>, conditions: unknown[]) => {
     onSaveView?.(name, filters, { color: null });
-    setCreatedViews(prev => [...prev, { name, conditions }]);
+    setCreatedViews((prev) => [...prev, { name, conditions }]);
   };
 
   const handleFinish = () => {
@@ -68,14 +89,15 @@ export default function SetupWizardModal({
     onClose?.();
   };
 
-  const handleProfileUpload = (memberId, e) => {
+  const handleProfileUpload = (memberId: number, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setTeamMembers(prev => prev.map(member =>
-        member.id === memberId ? { ...member, avatar: ev.target.result } : member
+    reader.onload = (ev: ProgressEvent<FileReader>) => {
+      const avatar = typeof ev.target?.result === 'string' ? ev.target.result : null;
+      setTeamMembers((prev) => prev.map((member) =>
+        member.id === memberId ? { ...member, avatar } : member
       ));
     };
     reader.readAsDataURL(file);
@@ -87,7 +109,7 @@ export default function SetupWizardModal({
   return (
     <div
       className={styles.overlay}
-      onClick={e => e.target === e.currentTarget && onClose?.()}
+      onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose?.()}
     >
       <div
         ref={trapRef}
@@ -182,7 +204,14 @@ export default function SetupWizardModal({
 
 // ─── Step 1: Basic info ───────────────────────────────────────────────────────
 
-function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChange }: any) {
+type Step1Props = {
+  calendarName: string;
+  onCalendarNameChange: (name: string) => void;
+  selectedTheme: string;
+  onThemeChange: (themeId: string) => void;
+};
+
+function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChange }: Step1Props) {
   // The wizard seeds `selectedTheme` with a legacy id ('corporate'); normalize
   // so the matching theme-family card shows as selected on first render.
   const normalizedSelected = normalizeTheme(selectedTheme);
@@ -248,7 +277,13 @@ function Step1({ calendarName, onCalendarNameChange, selectedTheme, onThemeChang
 
 // ─── Step 2: Team members ─────────────────────────────────────────────────────
 
-function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: any) {
+type Step2TeamProps = {
+  teamMembers: TeamMember[];
+  onTeamMemberNameChange: (id: number, name: string) => void;
+  onUpload: (id: number, e: ChangeEvent<HTMLInputElement>) => void;
+};
+
+function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: Step2TeamProps) {
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -301,7 +336,14 @@ function Step2Team({ teamMembers, onTeamMemberNameChange, onUpload }: any) {
 
 // ─── Step 3: Smart Views ──────────────────────────────────────────────────────
 
-function Step2({ categories, resources, createdViews, onSaveView }: any) {
+type Step2Props = {
+  categories: string[];
+  resources: string[];
+  createdViews: CreatedView[];
+  onSaveView: (name: string, filters: Record<string, unknown>, conditions: unknown[]) => void;
+};
+
+function Step2({ categories, resources, createdViews, onSaveView }: Step2Props) {
   return (
     <div className={styles.step}>
       <div className={styles.stepHeader}>
@@ -324,7 +366,7 @@ function Step2({ categories, resources, createdViews, onSaveView }: any) {
         <div className={styles.createdList}>
           <span className={styles.createdLabel}>Created this session:</span>
           <div className={styles.createdChips}>
-            {createdViews.map((v, i) => (
+            {createdViews.map((v: CreatedView, i: number) => (
               <span key={i} className={styles.createdChip}>
                 <Check size={11} />{v.name}
               </span>
@@ -338,7 +380,14 @@ function Step2({ categories, resources, createdViews, onSaveView }: any) {
 
 // ─── Step 4: Done ─────────────────────────────────────────────────────────────
 
-function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: any) {
+type Step3Props = {
+  calendarName: string;
+  selectedTheme: string;
+  teamMembers: TeamMember[];
+  createdViews: CreatedView[];
+};
+
+function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: Step3Props) {
   // Summary card lookup — normalize so legacy ids still resolve to metadata.
   const normalizedSelected = selectedTheme ? normalizeTheme(selectedTheme) : undefined;
   const theme = normalizedSelected
