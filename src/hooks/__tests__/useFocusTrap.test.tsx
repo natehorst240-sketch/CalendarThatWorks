@@ -7,11 +7,16 @@
  */
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { useFocusTrap } from '../useFocusTrap';
 
 /* ── tiny helper component ──────────────────────────────────────────────── */
 
-function Trap({ onEscape, children, active = true }: any) {
+function Trap({ onEscape, children, active = true }: {
+  onEscape?: () => void;
+  children: ReactNode;
+  active?: boolean;
+}) {
   const ref = useFocusTrap(onEscape, active);
   return (
     <div ref={ref} role="dialog" aria-modal="true" data-testid="trap">
@@ -126,7 +131,7 @@ describe('useFocusTrap — inert attribute skipped', () => {
   it('does not auto-focus a button inside an inert subtree', () => {
     render(
       <Trap>
-        <div {...({ inert: '' } as any)}>
+        <div inert="">
           <button data-testid="inert-btn">Inert</button>
         </div>
         <button data-testid="visible">Visible</button>
