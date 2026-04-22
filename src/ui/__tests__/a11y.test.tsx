@@ -23,6 +23,7 @@ import WeekView from '../../views/WeekView';
 import DayView from '../../views/DayView';
 import TimelineView from '../../views/TimelineView';
 import { CalendarContext } from '../../core/CalendarContext';
+import type { NormalizedEvent } from '../../types/events';
 
 type MonthViewTestProps = Partial<React.ComponentProps<typeof MonthView>>;
 type WeekViewTestProps = Partial<React.ComponentProps<typeof WeekView>>;
@@ -35,22 +36,53 @@ function d(y: number, mo: number, day: number, h = 9, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-type A11yEventOverrides = Partial<{
-  title: string;
-  start: Date;
-  end: Date;
-  allDay: boolean;
-  color: string;
-}> & Record<string, unknown>;
+type A11yEventOverrides = Partial<NormalizedEvent> & Record<string, unknown>;
 
-function makeEvent(id: string, overrides: A11yEventOverrides = {}) {
+function makeEvent(id: string, overrides: A11yEventOverrides = {}): NormalizedEvent {
+  const start = overrides.start instanceof Date ? overrides.start : d(2026, 4, 10, 9);
+  const end = overrides.end instanceof Date ? overrides.end : d(2026, 4, 10, 10);
+  const title = typeof overrides.title === 'string' ? overrides.title : `Event ${id}`;
+  const allDay = typeof overrides.allDay === 'boolean' ? overrides.allDay : false;
+  const color = typeof overrides.color === 'string' ? overrides.color : '#3b82f6';
+  const category = typeof overrides.category === 'string' ? overrides.category : null;
+  const resource = typeof overrides.resource === 'string' ? overrides.resource : null;
+  const status = overrides.status ?? 'confirmed';
+  const meta = (overrides.meta as Record<string, unknown> | undefined) ?? {};
+  const rrule = typeof overrides.rrule === 'string' ? overrides.rrule : null;
+  const exdates = overrides.exdates ?? [];
+
   return {
     id,
-    title: overrides.title ?? `Event ${id}`,
-    start: overrides.start ?? d(2026, 4, 10, 9),
-    end: overrides.end ?? d(2026, 4, 10, 10),
-    allDay: overrides.allDay ?? false,
-    color: overrides.color ?? '#3b82f6',
+    title,
+    start,
+    end,
+    allDay,
+    category,
+    color,
+    resource,
+    status,
+    meta,
+    rrule,
+    exdates,
+    _raw: overrides._raw ?? {
+      id,
+      title,
+      start,
+      end,
+      allDay,
+      category: category ?? undefined,
+      color,
+      resource: resource ?? undefined,
+      status,
+      meta,
+      rrule: rrule ?? undefined,
+      exdates,
+    },
+    _recurring: overrides._recurring,
+    _seriesId: overrides._seriesId,
+    _feedLabel: overrides._feedLabel,
+    _col: overrides._col,
+    _numCols: overrides._numCols,
     ...overrides,
   };
 }
