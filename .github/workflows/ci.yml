@@ -32,6 +32,9 @@ jobs:
       - name: Run type check
         run: npm run type-check
 
+      - name: Run strict-null ratchet
+        run: npm run type-check:strict-null
+
   unit-tests:
     name: Unit & Component Tests
     runs-on: ubuntu-latest

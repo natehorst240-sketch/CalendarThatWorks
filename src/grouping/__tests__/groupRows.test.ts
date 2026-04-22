@@ -28,6 +28,8 @@ describe('groupRows', () => {
     expect(nurseHeader).toBeDefined();
     expect(nurseHeader.count).toBe(3);
     const doctorHeader = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === 'Doctor');
+    expect(doctorHeader).toBeDefined();
+    if (!doctorHeader) throw new Error('Expected doctorHeader to be defined');
     expect(doctorHeader.count).toBe(2);
   });
 
@@ -49,6 +51,8 @@ describe('groupRows', () => {
     const { groupOrder, flatRows } = groupRows(rows, { groupBy: 'role', fieldAccessor });
     expect(groupOrder[groupOrder.length - 1]).toBe('(Ungrouped)');
     const ungrouped = flatRows.find(r => r._type === 'groupHeader' && r.groupKey === '(Ungrouped)');
+    expect(ungrouped).toBeDefined();
+    if (!ungrouped) throw new Error('Expected ungrouped header to be defined');
     expect(ungrouped.count).toBe(1);
   });
 
@@ -119,6 +123,8 @@ describe('groupRows', () => {
       });
       // Nurse/Day header present (collapsed) but its rows hidden
       const dayHeader = flatRows.find(r => r.groupKey === 'Nurse/Day');
+      expect(dayHeader).toBeDefined();
+      if (!dayHeader) throw new Error('Expected Nurse/Day header to be defined');
       expect(dayHeader.collapsed).toBe(true);
       expect(flatRows.filter(r => !r._type && r.emp.role === 'Nurse' && r.emp.shift === 'Day')).toHaveLength(0);
       // Nurse/Night unaffected — 1 row
@@ -131,8 +137,12 @@ describe('groupRows', () => {
         fieldAccessor: [roleAcc, shiftAcc],
       });
       const nurseHeader = flatRows.find(r => r.groupKey === 'Nurse');
+      expect(nurseHeader).toBeDefined();
+      if (!nurseHeader) throw new Error('Expected nurseHeader to be defined');
       expect(nurseHeader.count).toBe(3); // Day: 2 + Night: 1
       const doctorHeader = flatRows.find(r => r.groupKey === 'Doctor');
+      expect(doctorHeader).toBeDefined();
+      if (!doctorHeader) throw new Error('Expected doctorHeader to be defined');
       expect(doctorHeader.count).toBe(2);
     });
   });
