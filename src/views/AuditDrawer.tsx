@@ -6,18 +6,18 @@
  * append entries via the onApprovalAction callback (calendar emits, host
  * persists, re-renders with updated history).
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { X } from 'lucide-react';
 import styles from './AuditDrawer.module.css';
 import ApprovalActionMenu from '../ui/ApprovalActionMenu';
-import { findNode } from '../core/workflow/workflowSchema';
+import { findNode, type TimeoutBehavior } from '../core/workflow/workflowSchema';
 
 /**
  * Formats an ISO timestamp as a locale-aware date + time string. Returns the
  * raw input unchanged when the value is falsy or unparseable so the caller
  * never renders "Invalid Date".
  */
-function formatAt(iso) {
+function formatAt(iso: string | undefined): string {
   if (!iso) return '';
   try {
     const d = new Date(iso);
@@ -28,7 +28,7 @@ function formatAt(iso) {
   }
 }
 
-const ACTION_LABELS = {
+const ACTION_LABELS: Record<string, string> = {
   submit:    'Submitted',
   approve:   'Approved',
   deny:      'Denied',
@@ -41,7 +41,18 @@ const ACTION_LABELS = {
  * Returns null when inapplicable (no instance, not awaiting, no SLA, or
  * the active node isn't in the workflow anymore).
  */
-function computeSlaPill(workflow, workflowInstance, nowMs) {
+type SlaPill = {
+  remainingMs: number;
+  slaMinutes: number;
+  onTimeout: TimeoutBehavior;
+  expired: boolean;
+};
+
+function computeSlaPill(
+  workflow: any,
+  workflowInstance: any,
+  nowMs: number,
+): SlaPill | null {
   if (!workflow || !workflowInstance) return null;
   if (workflowInstance.status !== 'awaiting') return null;
   const nodeId = workflowInstance.currentNodeId;
@@ -68,7 +79,7 @@ function computeSlaPill(workflow, workflowInstance, nowMs) {
   };
 }
 
-function formatRemaining(ms) {
+function formatRemaining(ms: number): string {
   const abs = Math.abs(ms);
   const totalMinutes = Math.max(0, Math.round(abs / 60_000));
   if (totalMinutes < 60) return `${totalMinutes}m`;
@@ -77,14 +88,43 @@ function formatRemaining(ms) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: any) {
-  const closeRef = useRef(null);
+type AuditStageHistoryEntry = {
+  at: string;
+  action: string;
+  tier?: number;
+  actor?: string;
+  reason?: string;
+};
+
+type AuditStageData = {
+  stage?: string;
+  history?: AuditStageHistoryEntry[];
+};
+
+type AuditDrawerEvent = {
+  title: string;
+  meta?: {
+    approvalStage?: AuditStageData;
+    workflowInstance?: any;
+  };
+};
+
+type AuditDrawerProps = {
+  event?: AuditDrawerEvent;
+  onClose?: () => void;
+  approvalsConfig?: any;
+  onAction?: (action: string) => void;
+  workflow?: any;
+};
+
+export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: AuditDrawerProps) {
+  const closeRef = useRef<HTMLButtonElement | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (!event) return;
     closeRef.current?.focus();
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [event, onClose]);
@@ -108,7 +148,7 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
   return (
     <div
       className={styles.overlay}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      onClick={(e: MouseEvent<HTMLDivElement>) => { if (e.target === e.currentTarget) onClose?.(); }}
       data-testid="audit-drawer-overlay"
     >
       <aside

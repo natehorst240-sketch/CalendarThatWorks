@@ -9,16 +9,24 @@ import {
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import type { NormalizedEvent } from '../types/events';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
 
-export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }: { currentDate: Date; events: any; onEventClick?: any; weekStartDay?: Day } & Record<string, any>) {
+type ScheduleViewProps = {
+  currentDate: Date;
+  events: NormalizedEvent[];
+  onEventClick?: (event: NormalizedEvent) => void;
+  weekStartDay?: Day;
+} & Record<string, unknown>;
+
+export default function ScheduleView({ currentDate, events, onEventClick, weekStartDay = 0 }: ScheduleViewProps) {
   const ctx = useCalendarContext();
 
   const resources = useMemo<string[]>(() => {
     const set = new Set<string>();
-    events.forEach(e => { if (e.resource) set.add(e.resource); });
+    events.forEach((e) => { if (e.resource) set.add(e.resource); });
     return [...set].sort();
   }, [events]);
 
@@ -33,7 +41,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
       <div className={styles.fallback}>
         <p className={styles.hint}>Schedule view groups events by resource. Add a <code>resource</code> field to your events.</p>
         <div className={styles.simpleList}>
-          {events.slice(0, 40).map(ev => {
+          {events.slice(0, 40).map((ev) => {
             const color = resolveColor(ev, ctx?.colorRules);
             return (
               <button key={ev.id} className={styles.simpleEvent} onClick={() => onEventClick?.(ev)}
@@ -73,11 +81,11 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                 <span className={styles.weekDay}>{format(day, 'EEE')}</span>
                 <span className={styles.dayNum}>{format(day, 'MMM d')}</span>
               </div>
-              {resources.map(res => {
-                const cellEvents = events.filter(e => e.resource === res && isSameDay(e.start, day));
+              {resources.map((res) => {
+                const cellEvents = events.filter((e) => e.resource === res && isSameDay(e.start, day));
                 return (
                   <div key={res} className={styles.cell}>
-                    {cellEvents.map(ev => {
+                    {cellEvents.map((ev) => {
                       const color = resolveColor(ev, ctx?.colorRules);
                       const statusClass = ev.status === 'cancelled' ? styles.cancelled
                         : ev.status === 'tentative' ? styles.tentative : '';
