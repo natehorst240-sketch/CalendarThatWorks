@@ -13,8 +13,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
-import { renderHook } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React, { createRef } from 'react';
 import ScreenReaderAnnouncer from '../ScreenReaderAnnouncer';
@@ -24,6 +23,12 @@ import WeekView from '../../views/WeekView';
 import DayView from '../../views/DayView';
 import TimelineView from '../../views/TimelineView';
 import { CalendarContext } from '../../core/CalendarContext';
+import type { NormalizedEvent } from '../../types/events';
+
+type MonthViewTestProps = Partial<React.ComponentProps<typeof MonthView>>;
+type WeekViewTestProps = Partial<React.ComponentProps<typeof WeekView>>;
+type DayViewTestProps = Partial<React.ComponentProps<typeof DayView>>;
+type TimelineViewTestProps = Partial<React.ComponentProps<typeof TimelineView>>;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -31,33 +36,78 @@ function d(y: number, mo: number, day: number, h = 9, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-type A11yEventOverrides = Partial<{
-  title: string;
-  start: Date;
-  end: Date;
-  allDay: boolean;
-  color: string;
-}> & Record<string, unknown>;
+type A11yEventOverrides = Partial<NormalizedEvent> & Record<string, unknown>;
 
-function makeEvent(id: string, overrides: A11yEventOverrides = {}) {
+function makeEvent(id: string, overrides: A11yEventOverrides = {}): NormalizedEvent {
+  const start = overrides.start instanceof Date ? overrides.start : d(2026, 4, 10, 9);
+  const end = overrides.end instanceof Date ? overrides.end : d(2026, 4, 10, 10);
+  const title = typeof overrides.title === 'string' ? overrides.title : `Event ${id}`;
+  const allDay = typeof overrides.allDay === 'boolean' ? overrides.allDay : false;
+  const color = typeof overrides.color === 'string' ? overrides.color : '#3b82f6';
+  const category = typeof overrides.category === 'string' ? overrides.category : null;
+  const resource = typeof overrides.resource === 'string' ? overrides.resource : null;
+  const status = overrides.status ?? 'confirmed';
+  const meta = (overrides.meta as Record<string, unknown> | undefined) ?? {};
+  const rrule = typeof overrides.rrule === 'string' ? overrides.rrule : null;
+  const exdates = overrides.exdates ?? [];
+
   return {
     id,
-    title: overrides.title ?? `Event ${id}`,
-    start: overrides.start ?? d(2026, 4, 10, 9),
-    end:   overrides.end   ?? d(2026, 4, 10, 10),
-    allDay: overrides.allDay ?? false,
-    color: overrides.color ?? '#3b82f6',
+    title,
+    start,
+    end,
+    allDay,
+    category,
+    color,
+    resource,
+    status,
+    meta,
+    rrule,
+    exdates,
+    _raw: overrides._raw ?? {
+      id,
+      title,
+      start,
+      end,
+      allDay,
+      category: category ?? undefined,
+      color,
+      resource: resource ?? undefined,
+      status,
+      meta,
+      rrule: rrule ?? undefined,
+      exdates,
+    },
+    _recurring: overrides._recurring,
+    _seriesId: overrides._seriesId,
+    _feedLabel: overrides._feedLabel,
+    _col: overrides._col,
+    _numCols: overrides._numCols,
     ...overrides,
   };
 }
 
-const calCtx: React.ContextType<typeof CalendarContext> = null; // CalendarContext.Provider value (null = default)
+const calCtx: React.ContextType<typeof CalendarContext> = null;
 
 function CalCtxWrap({ children }: { children: React.ReactNode }) {
   return (
     <CalendarContext.Provider value={calCtx}>
       {children}
     </CalendarContext.Provider>
+  );
+}
+
+function requireElement<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
+}
+
+function getFocusedGridCell(): HTMLElement {
+  return requireElement(
+    screen.getAllByRole('gridcell').find((cell) => cell.tabIndex === 0),
+    'Expected one focused grid cell',
   );
 }
 
@@ -69,79 +119,76 @@ describe('ScreenReaderAnnouncer', () => {
 
   it('renders two separate live regions', () => {
     render(<ScreenReaderAnnouncer />);
-    const polite     = document.querySelector('[aria-live="polite"]');
-    const assertive  = document.querySelector('[aria-live="assertive"]');
+    const polite = document.querySelector('[aria-live="polite"]');
+    const assertive = document.querySelector('[aria-live="assertive"]');
     expect(polite).toBeInTheDocument();
     expect(assertive).toBeInTheDocument();
   });
 
-  it('routes polite announcements to the polite region', async () => {
-    const ref = createRef<any>();
+  it('routes polite announcements to the polite region', () => {
+    const ref = createRef<{ announce: (message: string, politeness?: 'polite' | 'assertive') => void }>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
-      ref.current.announce('Event created.', 'polite');
+      ref.current?.announce('Event created.', 'polite');
       vi.advanceTimersByTime(100);
     });
 
-    const polite = document.querySelector('[aria-live="polite"]');
+    const polite = requireElement(document.querySelector('[aria-live="polite"]'), 'Expected polite region');
     expect(polite.textContent).toContain('Event created.');
 
-    const assertive = document.querySelector('[aria-live="assertive"]');
+    const assertive = requireElement(document.querySelector('[aria-live="assertive"]'), 'Expected assertive region');
     expect(assertive.textContent).toBe('');
   });
 
-  it('routes assertive announcements to the assertive region', async () => {
-    const ref = createRef<any>();
+  it('routes assertive announcements to the assertive region', () => {
+    const ref = createRef<{ announce: (message: string, politeness?: 'polite' | 'assertive') => void }>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
-      ref.current.announce('Error: end before start.', 'assertive');
+      ref.current?.announce('Error: end before start.', 'assertive');
       vi.advanceTimersByTime(100);
     });
 
-    const assertive = document.querySelector('[aria-live="assertive"]');
+    const assertive = requireElement(document.querySelector('[aria-live="assertive"]'), 'Expected assertive region');
     expect(assertive.textContent).toContain('Error: end before start.');
 
-    const polite = document.querySelector('[aria-live="polite"]');
+    const polite = requireElement(document.querySelector('[aria-live="polite"]'), 'Expected polite region');
     expect(polite.textContent).toBe('');
   });
 
-  it('defaults to polite when no politeness is specified', async () => {
-    const ref = createRef<any>();
+  it('defaults to polite when no politeness is specified', () => {
+    const ref = createRef<{ announce: (message: string, politeness?: 'polite' | 'assertive') => void }>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
     act(() => {
-      ref.current.announce('Default politeness.');
+      ref.current?.announce('Default politeness.');
       vi.advanceTimersByTime(100);
     });
 
-    const polite = document.querySelector('[aria-live="polite"]');
+    const polite = requireElement(document.querySelector('[aria-live="polite"]'), 'Expected polite region');
     expect(polite.textContent).toContain('Default politeness.');
   });
 
-  it('alternates slots so identical messages re-trigger screen readers', async () => {
-    const ref = createRef<any>();
+  it('alternates slots so identical messages re-trigger screen readers', () => {
+    const ref = createRef<{ announce: (message: string, politeness?: 'polite' | 'assertive') => void }>();
     render(<ScreenReaderAnnouncer ref={ref} />);
 
-    // First announcement
     act(() => {
-      ref.current.announce('Event moved.');
+      ref.current?.announce('Event moved.');
       vi.advanceTimersByTime(100);
     });
-    const polite = document.querySelector('[aria-live="polite"]');
-    const firstFilled = [...polite.children].findIndex(el => el.textContent === 'Event moved.');
+    const polite = requireElement(document.querySelector('[aria-live="polite"]'), 'Expected polite region');
+    const firstFilled = [...polite.children].findIndex((el) => el.textContent === 'Event moved.');
     expect(firstFilled).toBeGreaterThanOrEqual(0);
 
-    // Second announcement of same message — should go to the other slot
     act(() => {
-      ref.current.announce('Event moved.');
+      ref.current?.announce('Event moved.');
       vi.advanceTimersByTime(100);
     });
     const spans = [...polite.children];
-    // Previous slot should be cleared, other slot should have the message
-    expect(spans[1 - firstFilled].textContent).toBe('Event moved.');
-    expect(spans[firstFilled].textContent).toBe('');
+    expect(spans[1 - firstFilled]?.textContent).toBe('Event moved.');
+    expect(spans[firstFilled]?.textContent).toBe('');
   });
 });
 
@@ -189,7 +236,6 @@ describe('useFocusTrap', () => {
   });
 
   it('restores focus to the element that was focused before mount', () => {
-    // Create an external button to hold focus before mounting the trap
     const external = document.createElement('button');
     external.textContent = 'Trigger';
     document.body.appendChild(external);
@@ -197,11 +243,9 @@ describe('useFocusTrap', () => {
     expect(document.activeElement).toBe(external);
 
     const { unmount } = render(<TrapFixture onEscape={() => {}} />);
-    // Trap should have moved focus to first button inside
     expect(screen.getByTestId('btn1')).toHaveFocus();
 
     unmount();
-    // Focus should return to the external button
     expect(document.activeElement).toBe(external);
 
     document.body.removeChild(external);
@@ -211,9 +255,9 @@ describe('useFocusTrap', () => {
 // ─── MonthView a11y ───────────────────────────────────────────────────────────
 
 describe('MonthView ARIA semantics', () => {
-  const currentDate = d(2026, 4, 1); // April 2026
+  const currentDate = d(2026, 4, 1);
 
-  function renderMonth(props: any = {}) {
+  function renderMonth(props: MonthViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <MonthView
@@ -239,7 +283,7 @@ describe('MonthView ARIA semantics', () => {
   it('renders column headers with role="columnheader"', () => {
     renderMonth();
     const headers = screen.getAllByRole('columnheader');
-    expect(headers.length).toBe(7); // Sun–Sat
+    expect(headers.length).toBe(7);
   });
 
   it('renders day cells with role="gridcell"', () => {
@@ -251,27 +295,25 @@ describe('MonthView ARIA semantics', () => {
   it('only one cell has tabIndex=0 (the focused day)', () => {
     renderMonth();
     const cells = screen.getAllByRole('gridcell');
-    const focusedCells = cells.filter(c => c.tabIndex === 0);
+    const focusedCells = cells.filter((cell) => cell.tabIndex === 0);
     expect(focusedCells).toHaveLength(1);
   });
 
   it('focused cell has aria-selected=true', () => {
     renderMonth();
     const cells = screen.getAllByRole('gridcell');
-    const selected = cells.filter(c => c.getAttribute('aria-selected') === 'true');
+    const selected = cells.filter((cell) => cell.getAttribute('aria-selected') === 'true');
     expect(selected).toHaveLength(1);
   });
 
   it('cell aria-label includes day-of-week, month, and date', () => {
     renderMonth();
-    // April 1, 2026 is a Wednesday — use data-date for precise selection
-    const cell = document.querySelector('[data-date="2026-04-01"]');
+    const cell = requireElement(document.querySelector('[data-date="2026-04-01"]'), 'Expected April 1 cell');
     expect(cell).toBeInTheDocument();
     expect(cell.getAttribute('aria-label')).toMatch(/Wednesday, April 1/);
   });
 
   it('cell aria-label includes "today" for today\'s date', () => {
-    // Use current actual date for "today" test
     const today = new Date();
     render(
       <CalCtxWrap>
@@ -285,40 +327,35 @@ describe('MonthView ARIA semantics', () => {
         />
       </CalCtxWrap>,
     );
-    // Find a cell with "today" in its label
     const cells = screen.getAllByRole('gridcell');
-    const todayCell = cells.find(c => c.getAttribute('aria-label')?.includes('today'));
+    const todayCell = cells.find((cell) => cell.getAttribute('aria-label')?.includes('today'));
     expect(todayCell).toBeTruthy();
   });
 
   it('ArrowRight on focused cell moves focus to the next day', () => {
     renderMonth();
-    const cells = screen.getAllByRole('gridcell');
-    const focusedCell = cells.find(c => c.tabIndex === 0);
+    const focusedCell = getFocusedGridCell();
     focusedCell.focus();
 
     fireEvent.keyDown(focusedCell, { key: 'ArrowRight' });
 
-    // After ArrowRight, a different cell should have tabIndex=0
-    const newFocused = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
+    const newFocused = getFocusedGridCell();
     expect(newFocused).not.toBe(focusedCell);
-    // The new cell's data-date should be one day later
-    const oldDate = new Date(focusedCell.getAttribute('data-date'));
-    const newDate = new Date(newFocused.getAttribute('data-date'));
+    const oldDate = new Date(requireElement(focusedCell.getAttribute('data-date'), 'Expected old data-date'));
+    const newDate = new Date(requireElement(newFocused.getAttribute('data-date'), 'Expected new data-date'));
     expect(newDate.getDate() - oldDate.getDate()).toBe(1);
   });
 
   it('ArrowDown on focused cell moves focus 7 days ahead', () => {
     renderMonth();
-    const cells = screen.getAllByRole('gridcell');
-    const focusedCell = cells.find(c => c.tabIndex === 0);
+    const focusedCell = getFocusedGridCell();
     focusedCell.focus();
 
     fireEvent.keyDown(focusedCell, { key: 'ArrowDown' });
 
-    const newFocused = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
-    const oldDate = new Date(focusedCell.getAttribute('data-date'));
-    const newDate = new Date(newFocused.getAttribute('data-date'));
+    const newFocused = getFocusedGridCell();
+    const oldDate = new Date(requireElement(focusedCell.getAttribute('data-date'), 'Expected old data-date'));
+    const newDate = new Date(requireElement(newFocused.getAttribute('data-date'), 'Expected new data-date'));
     const dayDiff = Math.round((newDate.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24));
     expect(dayDiff).toBe(7);
   });
@@ -326,8 +363,7 @@ describe('MonthView ARIA semantics', () => {
   it('Enter on focused cell calls onDateSelect', () => {
     const onDateSelect = vi.fn();
     renderMonth({ onDateSelect });
-    const cells = screen.getAllByRole('gridcell');
-    const focusedCell = cells.find(c => c.tabIndex === 0);
+    const focusedCell = getFocusedGridCell();
     focusedCell.focus();
 
     fireEvent.keyDown(focusedCell, { key: 'Enter' });
@@ -337,8 +373,7 @@ describe('MonthView ARIA semantics', () => {
   it('Space on focused cell calls onDateSelect', () => {
     const onDateSelect = vi.fn();
     renderMonth({ onDateSelect });
-    const cells = screen.getAllByRole('gridcell');
-    const focusedCell = cells.find(c => c.tabIndex === 0);
+    const focusedCell = getFocusedGridCell();
     focusedCell.focus();
 
     fireEvent.keyDown(focusedCell, { key: ' ' });
@@ -346,10 +381,9 @@ describe('MonthView ARIA semantics', () => {
   });
 
   it('overflow "more" button has aria-controls linking to the popover id', () => {
-    // Create enough events to overflow
     const events = Array.from({ length: 6 }, (_, i) => makeEvent(`ev${i}`, {
       start: d(2026, 4, 1, 9 + i),
-      end:   d(2026, 4, 1, 10 + i),
+      end: d(2026, 4, 1, 10 + i),
     }));
     renderMonth({ events });
 
@@ -358,7 +392,6 @@ describe('MonthView ARIA semantics', () => {
       const btn = moreBtns[0];
       const controls = btn.getAttribute('aria-controls');
       expect(controls).toBeTruthy();
-      // The controlled popover id should exist in DOM (once expanded)
     }
   });
 });
@@ -366,9 +399,9 @@ describe('MonthView ARIA semantics', () => {
 // ─── WeekView a11y ────────────────────────────────────────────────────────────
 
 describe('WeekView ARIA semantics', () => {
-  const currentDate = d(2026, 4, 6); // A Monday
+  const currentDate = d(2026, 4, 6);
 
-  function renderWeek(props: any = {}) {
+  function renderWeek(props: WeekViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <WeekView
@@ -402,61 +435,55 @@ describe('WeekView ARIA semantics', () => {
   it('renders time slot cells with role="gridcell"', () => {
     renderWeek();
     const cells = screen.getAllByRole('gridcell');
-    // 7 days × (18-8) = 70 slot cells
     expect(cells.length).toBeGreaterThanOrEqual(70);
   });
 
   it('exactly one slot cell has tabIndex=0 (roving tabIndex)', () => {
     renderWeek();
     const cells = screen.getAllByRole('gridcell');
-    const focused = cells.filter(c => c.tabIndex === 0);
+    const focused = cells.filter((cell) => cell.tabIndex === 0);
     expect(focused.length).toBe(1);
   });
 
   it('slot cell aria-label includes day name and time', () => {
     renderWeek();
-    // Should find a cell for "Monday" at "8:00 AM"
     const cells = screen.getAllByRole('gridcell');
-    const mondaySlot = cells.find(c =>
-      c.getAttribute('aria-label')?.includes('Monday') &&
-      c.getAttribute('aria-label')?.includes('8:00 AM'),
+    const mondaySlot = cells.find((cell) =>
+      cell.getAttribute('aria-label')?.includes('Monday') &&
+      cell.getAttribute('aria-label')?.includes('8:00 AM'),
     );
     expect(mondaySlot).toBeTruthy();
   });
 
   it('ArrowRight moves focused slot to the next day column', () => {
     renderWeek();
-    const cells = screen.getAllByRole('gridcell');
-    const firstFocused = cells.find(c => c.tabIndex === 0);
+    const firstFocused = getFocusedGridCell();
     firstFocused.focus();
     const firstLabel = firstFocused.getAttribute('aria-label');
 
     fireEvent.keyDown(firstFocused, { key: 'ArrowRight' });
 
-    const newFocused = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
+    const newFocused = getFocusedGridCell();
     expect(newFocused.getAttribute('aria-label')).not.toBe(firstLabel);
   });
 
   it('ArrowDown moves focused slot to the next hour', () => {
     renderWeek();
-    const cells = screen.getAllByRole('gridcell');
-    const firstFocused = cells.find(c => c.tabIndex === 0);
+    const firstFocused = getFocusedGridCell();
     firstFocused.focus();
 
-    // First focused slot should have day idx 0, hour idx 0
     expect(firstFocused.getAttribute('data-slot')).toBe('0-0');
 
     fireEvent.keyDown(firstFocused, { key: 'ArrowDown' });
 
-    const newFocused = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
+    const newFocused = getFocusedGridCell();
     expect(newFocused.getAttribute('data-slot')).toBe('0-1');
   });
 
   it('Enter on slot cell calls onDateSelect', () => {
     const onDateSelect = vi.fn();
     renderWeek({ onDateSelect });
-    const cells = screen.getAllByRole('gridcell');
-    const focusedCell = cells.find(c => c.tabIndex === 0);
+    const focusedCell = getFocusedGridCell();
     focusedCell.focus();
 
     fireEvent.keyDown(focusedCell, { key: 'Enter' });
@@ -466,7 +493,7 @@ describe('WeekView ARIA semantics', () => {
   it('timed event has role="button" and aria-label with title and time', () => {
     const ev = makeEvent('ev1', {
       start: d(2026, 4, 6, 10),
-      end:   d(2026, 4, 6, 11),
+      end: d(2026, 4, 6, 11),
     });
     renderWeek({ events: [ev] });
 
@@ -478,15 +505,14 @@ describe('WeekView ARIA semantics', () => {
   it('all-day span bar has aria-label instead of title', () => {
     const ev = makeEvent('multi', {
       start: d(2026, 4, 6),
-      end:   d(2026, 4, 8),
+      end: d(2026, 4, 8),
       allDay: true,
     });
     renderWeek({ events: [ev] });
 
-    // The all-day bar is a button; find it by aria-label (not title)
     const btn = screen.getByRole('button', { name: /Event multi/i });
     expect(btn).toBeInTheDocument();
-    expect(btn).not.toHaveAttribute('title'); // title should be gone
+    expect(btn).not.toHaveAttribute('title');
   });
 });
 
@@ -495,7 +521,7 @@ describe('WeekView ARIA semantics', () => {
 describe('DayView ARIA semantics', () => {
   const currentDate = d(2026, 4, 10);
 
-  function renderDay(props: any = {}) {
+  function renderDay(props: DayViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <DayView
@@ -521,45 +547,42 @@ describe('DayView ARIA semantics', () => {
   it('renders time slot cells with role="gridcell"', () => {
     renderDay();
     const cells = screen.getAllByRole('gridcell');
-    // 1 column × 10 hours = 10 slot cells (8–18)
     expect(cells.length).toBeGreaterThanOrEqual(10);
   });
 
   it('exactly one slot cell has tabIndex=0', () => {
     renderDay();
     const cells = screen.getAllByRole('gridcell');
-    const focused = cells.filter(c => c.tabIndex === 0);
+    const focused = cells.filter((cell) => cell.tabIndex === 0);
     expect(focused.length).toBe(1);
   });
 
   it('slot cell aria-label includes day name and time', () => {
     renderDay();
     const cells = screen.getAllByRole('gridcell');
-    const slot = cells.find(c =>
-      c.getAttribute('aria-label')?.includes('Friday, April 10') &&
-      c.getAttribute('aria-label')?.includes('8:00 AM'),
+    const slot = cells.find((cell) =>
+      cell.getAttribute('aria-label')?.includes('Friday, April 10') &&
+      cell.getAttribute('aria-label')?.includes('8:00 AM'),
     );
     expect(slot).toBeTruthy();
   });
 
   it('ArrowDown moves to next hour slot', () => {
     renderDay();
-    const cells = screen.getAllByRole('gridcell');
-    const first = cells.find(c => c.tabIndex === 0);
+    const first = getFocusedGridCell();
     first.focus();
     expect(first.getAttribute('data-slot')).toBe('0');
 
     fireEvent.keyDown(first, { key: 'ArrowDown' });
 
-    const next = screen.getAllByRole('gridcell').find(c => c.tabIndex === 0);
+    const next = getFocusedGridCell();
     expect(next.getAttribute('data-slot')).toBe('1');
   });
 
   it('Enter on slot cell calls onDateSelect', () => {
     const onDateSelect = vi.fn();
     renderDay({ onDateSelect });
-    const cells = screen.getAllByRole('gridcell');
-    const first = cells.find(c => c.tabIndex === 0);
+    const first = getFocusedGridCell();
     first.focus();
 
     fireEvent.keyDown(first, { key: 'Enter' });
@@ -569,7 +592,7 @@ describe('DayView ARIA semantics', () => {
   it('timed event has role="button" and aria-label with title and time range', () => {
     const ev = makeEvent('dayev', {
       start: d(2026, 4, 10, 9),
-      end:   d(2026, 4, 10, 10),
+      end: d(2026, 4, 10, 10),
     });
     renderDay({ events: [ev] });
 
@@ -594,7 +617,7 @@ describe('DayView ARIA semantics', () => {
   it('custom renderEvent still gets role=button and aria-label', () => {
     const ev = makeEvent('custom', {
       start: d(2026, 4, 10, 9),
-      end:   d(2026, 4, 10, 10),
+      end: d(2026, 4, 10, 10),
     });
     const renderEvent = () => <span>Custom Render</span>;
     render(
@@ -623,10 +646,10 @@ describe('TimelineView ARIA semantics', () => {
 
   const employees = [
     { id: 'alice', name: 'Alice Smith', role: 'Developer' },
-    { id: 'bob',   name: 'Bob Jones',  role: 'Designer' },
+    { id: 'bob', name: 'Bob Jones', role: 'Designer' },
   ];
 
-  function renderTimeline(props: any = {}) {
+  function renderTimeline(props: TimelineViewTestProps = {}) {
     return render(
       <CalCtxWrap>
         <TimelineView
@@ -650,14 +673,13 @@ describe('TimelineView ARIA semantics', () => {
   it('renders column headers for each day', () => {
     renderTimeline();
     const headers = screen.getAllByRole('columnheader');
-    // 30 days + 1 corner = 31
     expect(headers.length).toBe(31);
   });
 
   it('renders row headers for each employee', () => {
     renderTimeline();
     const rowHeaders = screen.getAllByRole('rowheader');
-    expect(rowHeaders.length).toBe(2); // alice and bob
+    expect(rowHeaders.length).toBe(2);
     expect(rowHeaders[0]).toHaveAttribute('aria-label', 'Alice Smith');
     expect(rowHeaders[1]).toHaveAttribute('aria-label', 'Bob Jones');
   });
@@ -665,7 +687,7 @@ describe('TimelineView ARIA semantics', () => {
   it('event bar has aria-label with title', () => {
     const ev = makeEvent('tl1', {
       start: d(2026, 4, 5),
-      end:   d(2026, 4, 7),
+      end: d(2026, 4, 7),
       allDay: true,
       resource: 'alice',
       title: 'Timeline Event',
@@ -674,13 +696,13 @@ describe('TimelineView ARIA semantics', () => {
 
     const btn = screen.getByRole('button', { name: /Timeline Event/i });
     expect(btn).toBeInTheDocument();
-    expect(btn).not.toHaveAttribute('title'); // title replaced by aria-label
+    expect(btn).not.toHaveAttribute('title');
   });
 
   it('event bar with category includes category in aria-label', () => {
     const ev = makeEvent('tl2', {
       start: d(2026, 4, 5),
-      end:   d(2026, 4, 7),
+      end: d(2026, 4, 7),
       allDay: true,
       resource: 'alice',
       title: 'Design Sprint',
@@ -695,7 +717,7 @@ describe('TimelineView ARIA semantics', () => {
   it('custom renderEvent still gets role=button and aria-label', () => {
     const ev = makeEvent('custom-tl', {
       start: d(2026, 4, 5),
-      end:   d(2026, 4, 7),
+      end: d(2026, 4, 7),
       allDay: true,
       resource: 'alice',
       title: 'Custom TL',
