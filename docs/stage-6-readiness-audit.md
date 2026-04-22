@@ -337,3 +337,75 @@ Top implicit-any diagnostic codes:
 Stage 5 being complete does **not** mean Stage 6 is automatically safe.
 
 Stage 6 should only happen when the repository is ready for repo-wide enforcement without the protection of `MIGRATED_PATHS`.
+
+---
+
+## Audit Rerun — Post PR3 (2026-04-22)
+
+This section captures the requested post-PR3 full rerun.
+
+### Commands Run
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+```
+
+### 1) Current Root Baseline (`tsconfig.json`)
+
+- **Result:** Pass
+- **TypeScript diagnostics:** 0
+- **Notes:** Root config is still advisory for `noImplicitAny` (`noImplicitAny: false`).
+
+### 2) Repo-wide Implicit-any Debt (`tsconfig.strict.json`)
+
+- **Result:** Fail (`exit 2`)
+- **Total diagnostics:** 84
+- **Implicit-any diagnostics (TS7005/7006/7011/7018/7023/7031/7034/7053):** 82
+- **Unique files with implicit-any diagnostics:** 25
+
+Top implicit-any diagnostic codes:
+
+- `TS7006`: 58
+- `TS7005`: 7
+- `TS7034`: 6
+- `TS7018`: 5
+- `TS7053`: 5
+- `TS7031`: 1
+
+### 3) Migrated vs Non-migrated (`MIGRATED_PATHS`) Debt Split
+
+- **Implicit-any diagnostics in migrated paths:** 0
+- **Implicit-any diagnostics outside migrated paths:** 82
+- **Conclusion:** Ratchet remains green in migrated paths; remaining strict debt is entirely outside the current allowlist.
+
+### 4) Remaining Debt by Directory
+
+| Directory | Error Count | Notes |
+|---|---:|---|
+| `src/views` | 60 | Dominant remaining hotspot, mostly view tests plus `AuditDrawer.tsx` and `ScheduleView.tsx`. |
+| `src/ui` | 17 | Mostly `src/ui/__tests__` callback and helper typing. |
+| `src/hooks` | 5 | Isolated hook test helper typing. |
+
+### Top Offending Files
+
+| File | Error Count |
+|---|---:|
+| `src/views/AuditDrawer.tsx` | 9 |
+| `src/views/__tests__/WeekDayView.offHoursClipping.test.tsx` | 8 |
+| `src/views/__tests__/AgendaView.grouping.test.tsx` | 7 |
+| `src/views/__tests__/AgendaView.touchDnd.test.tsx` | 7 |
+| `src/views/__tests__/TimelineView.grouping.test.tsx` | 7 |
+| `src/views/__tests__/TimelineView.touchDnd.test.tsx` | 7 |
+| `src/ui/__tests__/a11y.test.tsx` | 6 |
+| `src/hooks/__tests__/useTouchDnd.test.tsx` | 4 |
+| `src/views/ScheduleView.tsx` | 4 |
+
+### 5) Non-implicit-any diagnostics
+
+- `TS2345` and `TS2322` remain in `src/WorksCalendar.tsx`; these are outside the implicit-any metric.
+
+### 6) Stage 6 readiness decision
+
+- **Decision:** **NOT READY**.
+- **Rationale:** This rerun is a major improvement versus the earlier 212/52 checkpoint, but **82 diagnostics across 25 files** is still too broad for a safe one-PR Stage 6 root flip. Remaining debt is now heavily concentrated in `src/views`, so another focused cleanup sprint is recommended before attempting Stage 6.
