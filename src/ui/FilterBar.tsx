@@ -3,17 +3,35 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
+import type { FilterField, FilterOption } from '../filters/filterSchema';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import { buildActiveFilterPills, clearFilterValue, hasActiveFilters as computeHasActiveFilters } from '../filters/filterState';
 import styles from './FilterBar.module.css';
 
-function formatDateInput(date) {
+type FilterBarProps = {
+  schema?: FilterField[];
+  filters?: Record<string, unknown>;
+  items?: unknown[];
+  onChange?: (fieldKey: string, value: unknown) => void;
+  onClear?: (fieldKey: string) => void;
+  onClearAll?: () => void;
+  sources?: Array<{ id: string | number; color?: string; type?: string }>;
+  groupLabels?: Partial<Record<'categories' | 'resources' | 'sources' | 'more', string>>;
+  pillHoverTitle?: boolean;
+  onPillHoverTitleToggle?: ((nextValue: boolean) => void) | undefined;
+}
+
+type DateRangeValue = { start?: Date | string | null; end?: Date | string | null } | null;
+type GroupKey = 'categories' | 'resources' | 'sources' | 'more';
+type GroupedFields = Record<GroupKey, FilterField[]>;
+
+function formatDateInput(date: unknown) {
   if (!date) return '';
-  const d = date instanceof Date ? date : new Date(date);
+  const d = date instanceof Date ? date : new Date(date as string | number);
   return d.toISOString().slice(0, 10);
 }
 
-function getGroupKey(fieldKey) {
+function getGroupKey(fieldKey: string): GroupKey {
   if (fieldKey === 'categories') return 'categories';
   if (fieldKey === 'resources') return 'resources';
   if (fieldKey === 'sources') return 'sources';
@@ -38,11 +56,11 @@ export default function FilterBar({
   groupLabels = {},
   pillHoverTitle = false,
   onPillHoverTitleToggle = undefined,
-}: any) {
-  const [openGroup, setOpenGroup] = useState(null);
-  const dropdownRefs = useRef({});
+}: FilterBarProps) {
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  function handleToggle(fieldKey, value) {
+  function handleToggle(fieldKey: string, value: unknown) {
     const current = filters[fieldKey];
     const next = current instanceof Set ? new Set(current) : new Set();
     next.has(value) ? next.delete(value) : next.add(value);
@@ -50,9 +68,9 @@ export default function FilterBar({
   }
 
   useEffect(() => {
-    function onDocClick(e) {
+    function onDocClick(e: MouseEvent) {
       const currentRef = openGroup ? dropdownRefs.current[openGroup] : null;
-      if (currentRef && !currentRef.contains(e.target)) {
+      if (currentRef && e.target instanceof Node && !currentRef.contains(e.target)) {
         setOpenGroup(null);
       }
     }
@@ -61,7 +79,7 @@ export default function FilterBar({
   }, [openGroup]);
 
   const visibleMultiSelectFields = useMemo(() => {
-    return schema.filter(field => {
+    return schema.filter((field) => {
       if (field.type !== 'multi-select') return false;
 
       if (typeof field.hidden === 'function') {
@@ -75,8 +93,8 @@ export default function FilterBar({
     });
   }, [schema, items, filters]);
 
-  const groupedFields = useMemo(() => {
-    const groups = {
+  const groupedFields = useMemo<GroupedFields>(() => {
+    const groups: GroupedFields = {
       categories: [],
       resources: [],
       sources: [],
@@ -98,7 +116,7 @@ export default function FilterBar({
   const hasActiveFilters = computeHasActiveFilters(filters, schema);
   const activePills = buildActiveFilterPills(filters, schema);
 
-  function selectedCountForGroup(groupKey) {
+  function selectedCountForGroup(groupKey: GroupKey) {
     return groupedFields[groupKey].reduce((count, field) => {
       const value = filters[field.key];
       if (value instanceof Set) return count + value.size;
@@ -107,11 +125,11 @@ export default function FilterBar({
     }, 0);
   }
 
-  function renderOption(field, opt) {
+  function renderOption(field: FilterField, opt: FilterOption) {
     const activeValues = filters[field.key] ?? new Set();
     const active = activeValues instanceof Set
       ? activeValues.has(opt.value)
-      : (activeValues ?? []).includes(opt.value);
+      : (Array.isArray(activeValues) ? activeValues : []).includes(opt.value);
 
     const isSourceField = field.key === 'sources';
     const src = isSourceField ? sources.find(s => s.id === opt.value) : null;
@@ -145,8 +163,8 @@ export default function FilterBar({
     <div className={styles.bar}>
       {Object.entries(groupedFields).map(([groupKey, fields]) => {
         if (!fields.length) return null;
-
-        const count = selectedCountForGroup(groupKey);
+        const typedGroupKey = groupKey as GroupKey;
+        const count = selectedCountForGroup(typedGroupKey);
 
         return (
           <div
@@ -159,7 +177,7 @@ export default function FilterBar({
               className={[styles.dropdownBtn, openGroup === groupKey && styles.dropdownBtnOpen].filter(Boolean).join(' ')}
               onClick={() => setOpenGroup(openGroup === groupKey ? null : groupKey)}
             >
-              <span>{mergedGroupLabels[groupKey] ?? DEFAULT_GROUP_LABELS[groupKey] ?? groupKey}</span>
+              <span>{mergedGroupLabels[typedGroupKey] ?? DEFAULT_GROUP_LABELS[typedGroupKey] ?? typedGroupKey}</span>
               {count > 0 && <span className={styles.countBadge}>{count}</span>}
               <span className={styles.chevronIcon}><ChevronDown size={14} /></span>
             </button>
@@ -174,7 +192,7 @@ export default function FilterBar({
                     <div key={field.key} className={styles.menuSection}>
                       <div className={styles.menuHead}>{field.label ?? field.key}</div>
                       <div className={styles.menuOptions}>
-                        {options.map(opt => renderOption(field, opt))}
+                        {options.map((opt) => renderOption(field, opt))}
                       </div>
                     </div>
                   );
@@ -188,7 +206,7 @@ export default function FilterBar({
       {schema
         .filter(field => field.type === 'text' && !field.hidden)
         .map(field => {
-          const value = filters[field.key] ?? '';
+          const value = (filters[field.key] ?? '') as string;
           return (
             <div key={field.key} className={styles.searchWrap}>
               <Search size={14} className={styles.searchIcon} />
@@ -213,9 +231,9 @@ export default function FilterBar({
           );
         })}
 
-      {schema.filter(f => f.type === 'select' && !f.hidden).map(field => {
+      {schema.filter((f) => f.type === 'select' && !f.hidden).map(field => {
         const options = field.getOptions ? field.getOptions(items) : (field.options ?? []);
-        const value = filters[field.key] ?? '';
+        const value = (filters[field.key] ?? '') as string | number;
         return (
           <select
             key={field.key}
@@ -233,7 +251,7 @@ export default function FilterBar({
         );
       })}
 
-      {schema.filter(f => f.type === 'boolean' && !f.hidden).map(field => {
+      {schema.filter((f) => f.type === 'boolean' && !f.hidden).map(field => {
         const value = filters[field.key];
         return (
           <label
@@ -251,8 +269,8 @@ export default function FilterBar({
         );
       })}
 
-      {schema.filter(f => f.type === 'date-range' && !f.hidden).map(field => {
-        const range = filters[field.key];
+      {schema.filter((f) => f.type === 'date-range' && !f.hidden).map(field => {
+        const range = (filters[field.key] ?? null) as DateRangeValue;
         const startVal = range?.start ? formatDateInput(range.start) : '';
         const endVal   = range?.end   ? formatDateInput(range.end)   : '';
 
@@ -333,7 +351,7 @@ export default function FilterBar({
       {onPillHoverTitleToggle && (
         <button
           className={[styles.hoverToggle, pillHoverTitle && styles.hoverToggleActive].filter(Boolean).join(' ')}
-          onClick={onPillHoverTitleToggle}
+          onClick={() => onPillHoverTitleToggle(!pillHoverTitle)}
           aria-pressed={pillHoverTitle}
           title={pillHoverTitle ? 'Disable hover details projection' : 'Project date, category, resource, and notes when hovering events'}
           type="button"

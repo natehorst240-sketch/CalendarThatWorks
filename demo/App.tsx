@@ -229,7 +229,7 @@ const DISPATCH_EVENTS: DemoEvent[] = dispatchShifts.map((shift) => ({
   start: shift.start,
   end: shift.end,
   category: 'dispatch',
-  resource: null,
+  resource: null as string | null | undefined,
   color: DISPATCH_COLOR,
 }));
 
@@ -296,10 +296,10 @@ const REQUEST_EVENTS: DemoEvent[] = requests.map((event) => ({
   },
 }));
 
-const MISSION_LEG_EVENTS: DemoEvent[] = mission.legs.flatMap((leg) => {
+const MISSION_LEG_EVENTS: DemoEvent[] = mission.legs.flatMap((leg: any) => {
   const flightTitle = `${mission.name} — ${leg.from} → ${leg.to}`;
-  const pilotAssignment = mission.assignments.pilots.find((assignment) => assignment.legId === leg.id);
-  const medicalAssignment = mission.assignments.medical.find((assignment) => assignment.legId === leg.id);
+  const pilotAssignment = mission.assignments.pilots.find((assignment: any) => assignment.legId === leg.id);
+  const medicalAssignment = mission.assignments.medical.find((assignment: any) => assignment.legId === leg.id);
 
   const nextEvents: DemoEvent[] = [
     {
@@ -556,7 +556,7 @@ function App() {
       onOfflineReady() {
         console.info('[PWA] App ready to work offline.');
       },
-      onRegisteredSW(_swUrl, registration) {
+      onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
         if (!registration) return;
 
         void registration.update();
@@ -611,7 +611,7 @@ function App() {
   }, [log]);
 
   const handleNoteSave = useCallback((note: DemoNote) => {
-    setNotes((prev) => ({
+    setNotes((prev: DemoNotesMap) => ({
       ...prev,
       [note.eventId]: {
         id: `note-${note.eventId}`,
@@ -623,7 +623,7 @@ function App() {
   }, [log]);
 
   const handleNoteDelete = useCallback((noteId: string) => {
-    setNotes((prev) => {
+    setNotes((prev: DemoNotesMap) => {
       const next = { ...prev };
       const key = Object.keys(next).find((candidate) => next[candidate]?.id === noteId);
 
