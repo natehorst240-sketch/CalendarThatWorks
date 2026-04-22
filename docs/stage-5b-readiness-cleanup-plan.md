@@ -188,6 +188,15 @@ The cleanup order is based on the 2026-04-22 audit:
 **Completion action:**
 - add cleaned files to `MIGRATED_PATHS`
 
+### PR 6 run recorded — 2026-04-22
+
+PR 6 was executed as the final Stage 5b cleanup slice for remaining `src/views/**` debt.
+
+Results observed in the post-PR6 rerun:
+- Remaining repo-wide implicit-any diagnostics: **0**
+- Remaining files with implicit-any diagnostics: **0**
+- Stage 5b objective for non-ratcheted implicit-any cleanup: **complete**
+
 ---
 
 ## Audit Rerun Checkpoints
@@ -257,6 +266,27 @@ Do not retry Stage 6 until the rerun audit shows the remaining non-ratcheted deb
 Practical target:
 - remaining implicit-any debt should be reduced from the current **413 / 67 files** to a small, reviewable remainder
 
+#### Re-audit run recorded — 2026-04-22 (post-PR6)
+
+Commands run:
+
+```bash
+npx tsc --noEmit -p tsconfig.json --pretty false
+npx tsc --noEmit -p tsconfig.strict.json --pretty false
+npm run type-check:strict
+```
+
+Results:
+- Root baseline (`tsconfig.json`): **pass**, 0 diagnostics
+- Strict repo-wide implicit-any diagnostics: **0**
+- Unique files with implicit-any diagnostics: **0**
+- `npm run type-check:strict`: **GREEN**
+- Remaining strict blockers are **non-implicit-any** type-contract errors in `src/WorksCalendar.tsx` (`TS2345`, `TS2322`)
+
+Decision update:
+- Stage 5b is complete for implicit-any cleanup.
+- Pre-Stage-6 readiness is **near-ready but blocked** by the two remaining non-implicit-any strict errors in `src/WorksCalendar.tsx`.
+
 ---
 
 ## Suggested Tracking Table
@@ -268,19 +298,16 @@ Status reconciled against merged PRs and current `MIGRATED_PATHS` on `main` as o
 | 1 | Hook test helpers | **Complete** (PR #295 merged) | **Yes** | No |
 | 2 | Root/integration tests | **Complete** (PR #296 merged) | **Yes** | No |
 | 3 | Small UI forms/dialogs | **Complete** (PR #297 merged) | **Yes** | **Checkpoint recorded below** |
-| 4 | Medium UI utilities | **Complete** (this PR) | **Yes** | No |
+| 4 | Medium UI utilities | **Complete** (PR #298 merged) | **Yes** | No |
 | 5 | Shared UI filtering | **Complete** (PR #299 merged) | **Yes** | **Checkpoint recorded below** |
-| 6 | Remaining non-ratcheted views | Planned | No | Maybe |
+| 6 | Remaining non-ratcheted views | **Complete** (PR #321 + PR #322 merged) | **Yes** | **Re-audit recorded below** |
 
 ### Current status notes
 
-- PRs **1, 2, 3, and 5** have landed on `main`.
-- PR **4** is completed in this branch (`ThemeCustomizer` + `CSVImportDialog`) and adds both files to `MIGRATED_PATHS`.
-- The corresponding files are present in `scripts/typecheck-strict.mjs` under `MIGRATED_PATHS`.
-- No merged Stage 5b PR was found yet for the planned **PR 4** (`ThemeCustomizer` / `CSVImportDialog`) slice.
-- No merged Stage 5b PR was found yet for the planned **PR 6** remaining-views slice.
-- The required post-PR3 checkpoint audit **is recorded in this file** and shows meaningful reduction, but remaining debt is still heavily concentrated in `src/ui`.
-- The required post-PR5 full Stage 6 readiness rerun is now recorded in `docs/stage-6-readiness-audit.md`.
+- PRs **1 through 6** are now complete and reflected in `MIGRATED_PATHS`.
+- The corresponding cleaned files are present in `scripts/typecheck-strict.mjs` under `MIGRATED_PATHS`.
+- The required post-PR3 checkpoint and post-PR5 full rerun are recorded.
+- The post-PR6 re-audit in this file confirms zero remaining implicit-any diagnostics repo-wide under strict mode.
 
 ---
 
