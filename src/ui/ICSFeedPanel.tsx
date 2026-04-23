@@ -295,16 +295,23 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
           color: validation.ok ? '#065f46' : 'var(--wc-danger)',
           display: 'flex', alignItems: 'flex-start', gap: 6,
         }}>
-          {validation.ok
-            ? <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
-            : <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />}
-          <span>
-            {validation.ok
-              ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
-              : validation.corsLikely
-                ? `Could not verify from browser (${validation.error ?? 'Unknown error'}). This may be a CORS restriction — you can still add the feed and it may work.`
-                : `Error: ${validation.error ?? 'Unknown error'}`}
-          </span>
+          {validation.ok ? (
+            <>
+              <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+              <span>
+                Found {validation.count} event{validation.count === 1 ? '' : 's'} — feed looks good.
+              </span>
+            </>
+          ) : (
+            <>
+              <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+              <span>
+                {validation.corsLikely
+                  ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
+                  : `Error: ${validation.error}`}
+              </span>
+            </>
+          )}
         </div>
       )}
 
