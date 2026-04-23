@@ -87,11 +87,20 @@ Goals:
 ### PR Batch 3.1
 Files:
 - src/hooks/useFocusTrap.ts
-- src/hooks/useSomethingElse.ts
+- src/hooks/useEventDraftState.ts
 
 Goals:
 - Fix generic refs
 - Remove HTMLElement mismatches
+- Narrow nullable template defaults in draft state logic
+
+Start checklist (2026-04-23):
+- `src/hooks/useFocusTrap.ts`: 0 strict-null diagnostics
+- `src/hooks/useEventDraftState.ts`: 12 strict-null diagnostics (`TS18047`, `template.defaults` possibly null at lines 201–207)
+
+Validation commands for this batch:
+- `npm run -s type-check:strict-null`
+- `node_modules/.bin/tsc --noEmit --pretty false --strictNullChecks true 2>&1 | rg "^src/hooks/(useFocusTrap|useEventDraftState)\\.ts"`
 
 ### PR Batch 3.2
 Files:
