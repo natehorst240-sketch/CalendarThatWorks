@@ -166,3 +166,9 @@ export default function ViewPanel(props: ViewPanelProps) {
 function matchesAnyPreset(levels: GroupLevel[]): boolean {
   return PRESETS.some(p => levelsMatch(p.levels, levels));
 }
+
+/** Returns the label of the first matching preset, or null if no match. */
+export function resolvePresetLabel(levels: GroupLevel[]): string | null {
+  const match = PRESETS.find(p => levelsMatch(p.levels, levels));
+  return match !== undefined ? match.label : null;
+}

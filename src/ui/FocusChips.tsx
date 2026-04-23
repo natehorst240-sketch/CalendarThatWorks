@@ -11,36 +11,53 @@
  * When any chip is active, only events in the union of active chips'
  * categories render.
  */
-import { Radio, Plane, Wrench, FileText } from 'lucide-react';
+import { MapPin, Plane, Package } from 'lucide-react';
 import styles from './FocusChips.module.css';
 
 export type FocusChipDef = {
   /** Stable id, used for keys and aria. */
   id: string;
-  /** Short label, e.g. "Dispatch". */
+  /** Short label, e.g. "Region". */
   label: string;
   /** Categories this chip toggles on the `categories` filter. */
   categories: string[];
   /** Optional icon name (bundled set). Falls back to no icon. */
-  icon?: 'radio' | 'plane' | 'wrench' | 'file';
+  icon?: 'map-pin' | 'plane' | 'package';
 };
 
 /**
- * Default chip list for operational calendars. Hosts can override via the
- * `focusChips` prop on <WorksCalendar />. The Air EMS demo uses exactly these.
+ * Default chip list for operational Air EMS calendars. Hosts can override via
+ * the `focusChips` prop on <WorksCalendar />.
+ *
+ * - Region        → base-context events (anchor events per base/region)
+ * - Aircraft Type → aviation flight-operation categories
+ * - Asset Requests → request events only
  */
 export const DEFAULT_FOCUS_CHIPS: FocusChipDef[] = [
-  { id: 'dispatch',    label: 'Dispatch',    categories: ['dispatch'],                 icon: 'radio' },
-  { id: 'flights',     label: 'Flights',     categories: ['mission', 'shift'],         icon: 'plane' },
-  { id: 'maintenance', label: 'Maintenance', categories: ['maintenance'],              icon: 'wrench' },
-  { id: 'requests',    label: 'Requests',    categories: ['request'],                  icon: 'file' },
+  {
+    id: 'region',
+    label: 'Region',
+    categories: ['base-event'],
+    icon: 'map-pin',
+  },
+  {
+    id: 'aircraft-type',
+    label: 'Aircraft Type',
+    categories: ['pilot-shift', 'mission-assignment', 'training'],
+    icon: 'plane',
+  },
+  {
+    id: 'asset-requests',
+    label: 'Asset Requests',
+    categories: ['aircraft-request', 'asset-request'],
+    icon: 'package',
+  },
 ];
 
 const ICON_MAP = {
-  radio: Radio,
+  'map-pin': MapPin,
   plane: Plane,
-  wrench: Wrench,
-  file: FileText,
+  package: Package,
 } as const;
 
 export type FocusChipsProps = {
@@ -50,6 +67,16 @@ export type FocusChipsProps = {
   /** Replace the active-categories set. */
   onCategoriesChange: (next: Set<string>) => void;
 };
+
+/** Returns the labels of all chips whose categories are fully active. */
+export function resolveActiveChipLabels(
+  chips: FocusChipDef[],
+  active: Set<string> | null | undefined,
+): string[] {
+  return chips
+    .filter(chip => chipIsActive(chip, active))
+    .map(chip => chip.label);
+}
 
 /** A chip is "active" only when every one of its categories is in the set. */
 function chipIsActive(chip: FocusChipDef, active: Set<string> | null | undefined): boolean {
