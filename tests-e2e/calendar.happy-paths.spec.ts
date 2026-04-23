@@ -59,7 +59,11 @@ test.describe('WorksCalendar happy paths', () => {
     await expect(event).toBeVisible({ timeout: 10000 });
 
     const sourceBox = await event.boundingBox();
-    const targetCell = page.locator(`[data-date="${dateKey(1)}"]`).first();
+    // Use a fixed date (5 days after the hardcoded dispatch shift on 2026-04-21)
+    // that has no other non-schedule events so the moved pill remains visible
+    // as a standalone button rather than being pushed into the "+N more" overflow
+    // by the dense mission-leg spans that land on 2026-04-24.
+    const targetCell = page.locator('[data-date="2026-04-26"]').first();
     await expect(targetCell).toBeVisible();
     const targetBox = await targetCell.boundingBox();
 

@@ -30,6 +30,13 @@ const REFRESH_OPTIONS = [
   { label: 'Manual',     value: null       },
 ];
 
+type FeedValidationState = {
+  ok: boolean;
+  count?: number;
+  error?: string;
+  corsLikely?: boolean;
+} | null;
+
 function colorDot(color: string, size = 10) {
   return (
     <span style={{
@@ -146,9 +153,9 @@ function AddFeedForm({ onAdd }: any) {
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
   const [color,           setColor]           = useState(PRESET_COLORS[0]);
-  const [refreshInterval, setRefreshInterval] = useState(300_000);
+  const [refreshInterval, setRefreshInterval] = useState<number | null>(300_000);
   const [validating,      setValidating]      = useState(false);
-  const [validation,      setValidation]      = useState(null); // { ok, count, error }
+  const [validation,      setValidation]      = useState<FeedValidationState>(null);
 
   function reset() {
     setUrl(''); setLabel(''); setColor(PRESET_COLORS[0]);
@@ -167,13 +174,15 @@ function AddFeedForm({ onAdd }: any) {
       const suggested = label || _suggestLabel(trimmed);
       if (!label) setLabel(suggested);
       setValidation({ ok: true, count: events.length });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       // CORS failures are expected for some feeds — still allow adding with a warning
-      const isCors = err.message?.toLowerCase().includes('cors') ||
-                     err.message?.toLowerCase().includes('fetch') ||
-                     err.message?.toLowerCase().includes('network') ||
-                     err.message?.toLowerCase().includes('failed');
-      setValidation({ ok: false, count: null, error: err.message, corsLikely: isCors });
+      const lowered = message.toLowerCase();
+      const isCors = lowered.includes('cors') ||
+                     lowered.includes('fetch') ||
+                     lowered.includes('network') ||
+                     lowered.includes('failed');
+      setValidation({ ok: false, count: null, error: message, corsLikely: isCors });
     } finally {
       setValidating(false);
     }
@@ -258,8 +267,8 @@ function AddFeedForm({ onAdd }: any) {
             {validation.ok
               ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
               : validation.corsLikely
-                ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
-                : `Error: ${validation.error}`}
+                ? `Could not verify from browser (${validation.error ?? 'Unknown error'}). This may be a CORS restriction — you can still add the feed and it may work.`
+                : `Error: ${validation.error ?? 'Unknown error'}`}
           </span>
         </div>
       )}
