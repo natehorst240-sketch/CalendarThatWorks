@@ -46,8 +46,10 @@ import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
-import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
+import FocusChips, { DEFAULT_FOCUS_CHIPS, resolveActiveChipLabels } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
+import ContextSummary from './ui/ContextSummary';
+import { resolvePresetLabel } from './ui/ViewPanel';
 import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
 import OwnerLock              from './ui/OwnerLock';
@@ -2193,14 +2195,27 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           )
         }
 
-        {/* ── Focus chips (visible quick filters, opt-in) ── */}
-        {focusChips && (
-          <FocusChips
-            chips={Array.isArray(focusChips) ? focusChips : DEFAULT_FOCUS_CHIPS}
-            activeCategories={cal.filters?.categories as Set<string> | undefined}
-            onCategoriesChange={(next) => cal.setFilter('categories', next)}
-          />
-        )}
+        {/* ── Focus chips + context summary (opt-in via focusChips prop) ── */}
+        {focusChips && (() => {
+          const resolvedChips: FocusChipDef[] = Array.isArray(focusChips)
+            ? focusChips
+            : DEFAULT_FOCUS_CHIPS;
+          const activeCategories = cal.filters?.categories as Set<string> | undefined;
+          return (
+            <>
+              <ContextSummary
+                viewLabel={resolvePresetLabel(sidebarGroupLevels)}
+                chipLabels={resolveActiveChipLabels(resolvedChips, activeCategories)}
+                scope="All regions"
+              />
+              <FocusChips
+                chips={resolvedChips}
+                activeCategories={activeCategories}
+                onCategoriesChange={(next) => cal.setFilter('categories', next)}
+              />
+            </>
+          );
+        })()}
 
         {/* ── Filter Bar (legacy, kept for renderFilterBar override) ── */}
         {renderFilterBar && renderFilterBar({
