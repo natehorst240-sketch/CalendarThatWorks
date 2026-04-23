@@ -66,7 +66,7 @@ export default function SetupWizardModal({
   const [selectedTheme,  setSelectedTheme]  = useState('corporate');
   const [createdViews,   setCreatedViews]   = useState<CreatedView[]>([]); // { name, conditions }[]
   const [teamMembers,    setTeamMembers]    = useState<TeamMember[]>(DEFAULT_TEAM_MEMBERS);
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   if (!isOpen) return null;
 

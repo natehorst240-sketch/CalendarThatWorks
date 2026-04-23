@@ -226,7 +226,7 @@ export default function ConfigPanel({
   // Open the section containing the active tab; allow others to be expanded
   // independently. Re-keys when `tab` changes so deep-links auto-expand.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [sectionContaining(tab)]: true }));
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {

@@ -9,7 +9,7 @@ import styles from './ValidationAlert.module.css';
  * Soft  → "Cancel" + "Save anyway" (user can override the warning).
  */
 export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }: any) {
-  const trapRef = useFocusTrap(onCancel);
+  const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
   return (
     <div
       className={styles.overlay}

@@ -17,7 +17,7 @@ import styles from './EventForm.module.css';
 
 export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 

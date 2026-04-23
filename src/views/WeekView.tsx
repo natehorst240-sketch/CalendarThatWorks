@@ -122,7 +122,7 @@ export default function WeekView({
 
   // ── All-day overflow popover ───────────────────────────────────────────────
   const [allDayOverflowOpen, setAllDayOverflowOpen] = useState(false);
-  const overflowTrapRef = useFocusTrap(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
+  const overflowTrapRef = useFocusTrap<HTMLDivElement>(() => setAllDayOverflowOpen(false), allDayOverflowOpen);
 
   const { allDayEvents, timedEvents } = useMemo(() => {
     const allDay: WeekViewEvent[] = [];
