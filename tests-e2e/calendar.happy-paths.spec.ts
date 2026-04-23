@@ -48,11 +48,13 @@ test.describe('WorksCalendar happy paths', () => {
   });
 
   test('can drag an event in month view without crashing', async ({ page }) => {
-    // Schedule-workflow events (shift, on-call, PTO, …) are scoped to the
-    // Schedule tab now, so drag a non-schedule event from Month view. The
-    // Air EMS demo renders dispatch shifts (category 'dispatch', resource
-    // null) on Month.
-    const event = page.getByRole('button', { name: /Dispatch Day Shift/i }).first();
+    // Use the purpose-built regression fixture instead of demo data so the test
+    // does not depend on whether a specific demo event title is visible in the
+    // current month viewport.
+    await page.goto('/regression-bugs.html');
+    await expect(page.getByTestId('works-calendar')).toBeVisible();
+
+    const event = page.getByRole('button', { name: /Drag Crash Pill/i }).first();
     await expect(event).toBeVisible();
 
     const sourceBox = await event.boundingBox();
@@ -73,7 +75,7 @@ test.describe('WorksCalendar happy paths', () => {
     await page.mouse.up();
 
     await expect(page.getByTestId('works-calendar')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Dispatch Day Shift/i }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /Drag Crash Pill/i }).first()).toBeVisible();
   });
 
   test('can create a recurring event from the add-event modal', async ({ page }) => {
