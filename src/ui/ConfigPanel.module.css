@@ -443,6 +443,102 @@
   color: var(--wc-accent);
 }
 
+/* ── Family theme picker (Sprint 2) ────────────────────────────────────── */
+
+.themeFamilyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.themeFamilyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1.5px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  padding: 10px;
+  transition: border-color 120ms ease;
+}
+
+.themeFamilyCardSelected {
+  border-color: var(--wc-accent);
+}
+
+.themeFamilyPreview {
+  height: 44px;
+  border-radius: 5px;
+  border: 1px solid var(--wc-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.themeFamilyAccentBar {
+  height: 4px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.themeFamilyPills {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+}
+
+.themeFamilyPill {
+  height: 8px;
+  width: 32px;
+  display: block;
+}
+
+.themeFamilyName {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.themeFamilyDesc {
+  font-size: 10px;
+  color: var(--wc-text-muted);
+  line-height: 1.3;
+}
+
+.themeModeToggle {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.themeModeBtn {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 0;
+  border: 1px solid var(--wc-border);
+  border-radius: 3px;
+  background: var(--wc-bg);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+
+.themeModeBtnActive {
+  background: var(--wc-accent);
+  color: #fff;
+  border-color: var(--wc-accent);
+}
+
+/* ── Legacy flat theme grid (kept for any remaining usages) ─────────────── */
+
 .themeGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

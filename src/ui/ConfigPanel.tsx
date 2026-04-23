@@ -24,7 +24,7 @@ import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import type { CategoryDef, CategoriesConfig } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { serializeFilters } from '../hooks/useSavedViews';
-import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
+import { THEME_FAMILIES, THEME_META, normalizeTheme } from '../styles/themes';
 import SourcePanel from './SourcePanel';
 import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
@@ -379,17 +379,21 @@ export default function ConfigPanel({
   );
 }
 
-function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  // Stored `preferredTheme` may be a legacy id (e.g. 'corporate', 'ocean')
-  // for upgraded calendars. Normalize for the aria-pressed/selected match
-  // so the active card still highlights after the theme-system rewrite.
-  const selectedTheme = normalizeTheme(config.setup?.preferredTheme ?? 'corporate');
-  const calendarName = config.title ?? 'My WorksCalendar';
+const FAMILY_DESCRIPTORS: Record<string, string> = {
+  canvas:     'Clean / product UI',
+  corporate:  'Polished SaaS',
+  industrial: 'Rugged / practical',
+  grid:       'Dense / spreadsheet',
+  ops:        'Ops / control room',
+  neon:       'Neon / high contrast',
+};
 
-  const setCalendarName = (name: string) => onUpdate(c => ({
-    ...c,
-    title: name,
-  }));
+function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
+  const selectedTheme = normalizeTheme(config.setup?.preferredTheme ?? 'canvas-light');
+  const selectedMeta  = THEME_META[selectedTheme];
+  const calendarName  = config.title ?? 'My WorksCalendar';
+
+  const setCalendarName = (name: string) => onUpdate(c => ({ ...c, title: name }));
 
   const setPreferredTheme = (themeId: string) => onUpdate(c => ({
     ...c,
@@ -409,29 +413,69 @@ function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
           placeholder="My WorksCalendar"
         />
       </label>
-      <div className={styles.themeGrid}>
-        {THEMES.map((id) => {
-          const theme = THEME_META[id];
+      <div className={styles.themeFamilyGrid}>
+        {THEME_FAMILIES.map((family) => {
+          const lightMeta = THEME_META[`${family.id}-light`];
+          const darkMeta  = THEME_META[`${family.id}-dark`];
+          const isSelected = selectedMeta.family === family.id;
           return (
-            <button
-              key={theme.id}
-              className={[styles.themeCard, selectedTheme === theme.id && styles.themeCardSelected].filter(Boolean).join(' ')}
-              onClick={() => setPreferredTheme(theme.id)}
-              title={theme.description}
-              aria-pressed={selectedTheme === theme.id}
+            <div
+              key={family.id}
+              className={[styles.themeFamilyCard, isSelected && styles.themeFamilyCardSelected].filter(Boolean).join(' ')}
             >
-              <div className={styles.themeCardPreview} style={{ background: theme.preview.bg, borderColor: theme.preview.border }}>
-                <div className={styles.themeCardAccent} style={{ background: theme.preview.accent }} />
-                <div className={styles.themeCardLines}>
-                  <span style={{ background: theme.preview.text }} />
-                  <span style={{ background: theme.preview.text, width: '65%' }} />
+              {/* Mini structural preview */}
+              <div
+                className={styles.themeFamilyPreview}
+                style={{ background: (selectedMeta.family === family.id ? selectedMeta : lightMeta).preview.bg }}
+              >
+                <div
+                  className={styles.themeFamilyAccentBar}
+                  style={{ background: (selectedMeta.family === family.id ? selectedMeta : lightMeta).preview.accent }}
+                />
+                <div className={styles.themeFamilyPills}>
+                  <span
+                    className={styles.themeFamilyPill}
+                    style={{
+                      background: (selectedMeta.family === family.id ? selectedMeta : lightMeta).preview.accent,
+                      borderRadius: family.id === 'grid' ? '0' : family.id === 'industrial' ? '2px' : family.id === 'neon' || family.id === 'corporate' ? '10px' : '4px',
+                    }}
+                  />
+                  <span
+                    className={styles.themeFamilyPill}
+                    style={{
+                      background: (selectedMeta.family === family.id ? selectedMeta : lightMeta).preview.text,
+                      opacity: 0.35,
+                      borderRadius: family.id === 'grid' ? '0' : family.id === 'industrial' ? '2px' : family.id === 'neon' || family.id === 'corporate' ? '10px' : '4px',
+                    }}
+                  />
                 </div>
               </div>
-              <div className={styles.themeCardTop}>
-                <span>{theme.label}</span>
-                {selectedTheme === theme.id && <Check size={12} />}
+              {/* Family name + descriptor */}
+              <div className={styles.themeFamilyName}>
+                {family.label}
+                {isSelected && <Check size={11} />}
               </div>
-            </button>
+              <div className={styles.themeFamilyDesc}>{FAMILY_DESCRIPTORS[family.id]}</div>
+              {/* Light / dark mode toggle */}
+              <div className={styles.themeModeToggle}>
+                <button
+                  className={[styles.themeModeBtn, selectedTheme === `${family.id}-light` && styles.themeModeBtnActive].filter(Boolean).join(' ')}
+                  onClick={() => setPreferredTheme(`${family.id}-light`)}
+                  aria-pressed={selectedTheme === `${family.id}-light`}
+                  title={lightMeta.label}
+                >
+                  Light
+                </button>
+                <button
+                  className={[styles.themeModeBtn, selectedTheme === `${family.id}-dark` && styles.themeModeBtnActive].filter(Boolean).join(' ')}
+                  onClick={() => setPreferredTheme(`${family.id}-dark`)}
+                  aria-pressed={selectedTheme === `${family.id}-dark`}
+                  title={darkMeta.label}
+                >
+                  Dark
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>
