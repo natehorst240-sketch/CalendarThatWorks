@@ -20,6 +20,8 @@ import {
   allEvents,
   mission,
 } from './emsData';
+import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
+import missionStyles from './MissionHoverCard.module.css';
 
 /* ─── Demo identity ─────────────────────────────────────────────── */
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
@@ -124,6 +126,9 @@ const INITIAL_EMPLOYEES = [
 // Fleet rows rendered by the Assets view. `group` is the region so the
 // assets view can pivot by region; `meta.base` ties into the base column.
 const REGION_BY_BASE = Object.fromEntries(bases.map(b => [b.id, regions.find(r => r.id === b.regionId)?.name ?? '']));
+
+// Employees eligible for mission slot assignment (pilots + medical)
+const MISSION_EMPLOYEES = [...crew, ...medicalCrew];
 
 const AIRCRAFT_RESOURCES = EMS_ASSETS.map(a => ({
   id:    a.id,
@@ -284,12 +289,17 @@ function UpdateToast({ onUpdate, onDismiss }) {
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
 function App() {
-  const [events,       setEvents]       = useState(INITIAL_EVENTS);
-  const [notes,        setNotes]        = useState({});
-  const [theme,        setTheme]        = useState(INITIAL_THEME);
-  const [employees,    setEmployees]    = useState(INITIAL_EMPLOYEES);
-  const [eventLog,     setEventLog]     = useState([]);
-  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const [events,            setEvents]            = useState(INITIAL_EVENTS);
+  const [notes,             setNotes]             = useState({});
+  const [theme,             setTheme]             = useState(INITIAL_THEME);
+  const [employees,         setEmployees]         = useState(INITIAL_EMPLOYEES);
+  const [eventLog,          setEventLog]          = useState([]);
+  const [needsRefresh,      setNeedsRefresh]      = useState(false);
+  const [missionAssignments, setMissionAssignments] = useState({
+    ...mission.assignments,
+    aircraft: null, // starts unassigned so the pulsing badge is visible on load
+  });
+  const [missionOpen,       setMissionOpen]       = useState(false);
   const [pools, setPools] = useState(() => {
     const persisted = loadPools(DEMO_CALENDAR_ID);
     return persisted.length > 0 ? persisted : DEMO_POOLS_DEFAULT;
@@ -382,6 +392,27 @@ function App() {
     log(`Approval: ${event.title} → ${nextStage}`);
   }, []);
 
+  const handleEventClick = useCallback((ev) => {
+    log(`Clicked: ${ev.title}`);
+    if (ev.category === 'mission-assignment' || ev.category === 'aircraft-request') {
+      setMissionOpen(true);
+    }
+  }, []);
+
+  // Appends pulsing "REQS UNMET" badge to mission pills when not fully staffed
+  const renderEvent = useCallback((ev) => {
+    if (ev.category !== 'mission-assignment' && ev.category !== 'aircraft-request') return null;
+    if (allRequirementsMet(missionAssignments, mission, EMS_ASSETS)) return null;
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden', width: '100%' }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+          {ev.title}
+        </span>
+        <span className={missionStyles.unmetBadge}>REQS UNMET</span>
+      </span>
+    );
+  }, [missionAssignments]);
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
       <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
@@ -409,7 +440,8 @@ function App() {
             onScheduleSave={handleEventSave}
             onAvailabilitySave={handleEventSave}
             onApprovalAction={handleApprovalAction}
-            onEventClick={ev => log(`Clicked: ${ev.title}`)}
+            onEventClick={handleEventClick}
+            renderEvent={renderEvent}
             theme={theme}
             showAddButton={true}
             categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
@@ -426,6 +458,18 @@ function App() {
       }}>
         pw: <code style={{ background: 'rgba(0,0,0,.06)', padding: '1px 4px', borderRadius: 3 }}>demo1234</code>
       </div>
+
+      {/* Mission workflow modal — shown when a mission-assignment or aircraft-request is clicked */}
+      {missionOpen && (
+        <MissionHoverCard
+          mission={mission}
+          assignments={missionAssignments}
+          employees={MISSION_EMPLOYEES}
+          aircraft={EMS_ASSETS}
+          onAssignmentChange={setMissionAssignments}
+          onClose={() => setMissionOpen(false)}
+        />
+      )}
 
       {needsRefresh && (
         <UpdateToast
