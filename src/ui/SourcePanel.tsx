@@ -122,32 +122,38 @@ function rowStyle(enabled: boolean) {
   };
 }
 
+function isSourceEnabled(source: CalendarSource): boolean {
+  return source.enabled ?? true;
+}
+
 // ── ICS feed row ──────────────────────────────────────────────────────────────
 
 function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: CalendarSource; error?: unknown } & SourceHandlers) {
   const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(source.label);
+  const [draft,   setDraft]   = useState(source.label ?? '');
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const enabled = isSourceEnabled(source);
 
   function commitEdit() {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== source.label) onUpdate(source.id, { label: trimmed });
-    else setDraft(source.label);
+    else setDraft(source.label ?? '');
     setEditing(false);
   }
 
-  const statusIcon = !source.enabled
+  const statusIcon = !enabled
     ? null
     : error
       ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error instanceof Error ? error.message : 'Feed error'} />
       : <CheckCircle size={14} color="var(--wc-success, #10b981)" />;
 
   return (
-    <div style={rowStyle(source.enabled)}>
+    <div style={rowStyle(enabled)}>
       <ColorDot
         color={source.color ?? PRESET_COLORS[0]}
         onClick={() => {
-          const idx = PRESET_COLORS.indexOf(source.color);
+          const currentColor = source.color ?? PRESET_COLORS[0];
+          const idx = PRESET_COLORS.indexOf(currentColor);
           onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
         }}
       />
@@ -163,13 +169,19 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
             onBlur={commitEdit}
             onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') commitEdit();
-              if (e.key === 'Escape') { setDraft(source.label); setEditing(false); }
+              if (e.key === 'Escape') {
+                setDraft(source.label ?? '');
+                setEditing(false);
+              }
             }}
             style={{ width: '100%', padding: '3px 6px', fontSize: 12 }}
           />
         ) : (
           <button
-            onClick={() => { setEditing(true); setDraft(source.label); }}
+            onClick={() => {
+              setEditing(true);
+              setDraft(source.label ?? '');
+            }}
             title="Click to rename"
             style={{
               background: 'none', border: 'none', cursor: 'text',
@@ -192,9 +204,9 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
       <div style={{ flexShrink: 0 }}>{statusIcon}</div>
 
       <ToggleSwitch
-        checked={source.enabled}
+        checked={enabled}
         onChange={() => onToggle(source.id)}
-        title={source.enabled ? 'Disable feed' : 'Enable feed'}
+        title={enabled ? 'Disable feed' : 'Enable feed'}
       />
 
       <RemoveBtn onClick={() => onRemove(source.id)} title="Remove feed" />
@@ -206,12 +218,13 @@ function IcsFeedRow({ source, error, onToggle, onRemove, onUpdate }: { source: C
 
 function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: CalendarSource } & SourceHandlers) {
   const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(source.label);
+  const [draft,   setDraft]   = useState(source.label ?? '');
+  const enabled = isSourceEnabled(source);
 
   function commitEdit() {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== source.label) onUpdate(source.id, { label: trimmed });
-    else setDraft(source.label);
+    else setDraft(source.label ?? '');
     setEditing(false);
   }
 
@@ -219,11 +232,12 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
   const importedAt = source.importedAt ? _fmtDate(source.importedAt) : null;
 
   return (
-    <div style={rowStyle(source.enabled)}>
+    <div style={rowStyle(enabled)}>
       <ColorDot
         color={source.color ?? '#8b5cf6'}
         onClick={() => {
-          const idx = PRESET_COLORS.indexOf(source.color);
+          const currentColor = source.color ?? PRESET_COLORS[0];
+          const idx = PRESET_COLORS.indexOf(currentColor);
           onUpdate(source.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
         }}
       />
@@ -238,13 +252,19 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
             onBlur={commitEdit}
             onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') commitEdit();
-              if (e.key === 'Escape') { setDraft(source.label); setEditing(false); }
+              if (e.key === 'Escape') {
+                setDraft(source.label ?? '');
+                setEditing(false);
+              }
             }}
             style={{ width: '100%', padding: '3px 6px', fontSize: 12 }}
           />
         ) : (
           <button
-            onClick={() => { setEditing(true); setDraft(source.label); }}
+            onClick={() => {
+              setEditing(true);
+              setDraft(source.label ?? '');
+            }}
             title="Click to rename"
             style={{
               background: 'none', border: 'none', cursor: 'text',
@@ -263,9 +283,9 @@ function CsvDatasetRow({ source, onToggle, onRemove, onUpdate }: { source: Calen
       </div>
 
       <ToggleSwitch
-        checked={source.enabled}
+        checked={enabled}
         onChange={() => onToggle(source.id)}
-        title={source.enabled ? 'Hide these events' : 'Show these events'}
+        title={enabled ? 'Hide these events' : 'Show these events'}
       />
 
       <RemoveBtn onClick={() => onRemove(source.id)} title="Remove dataset" />
@@ -462,7 +482,17 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
 
 // ── Section heading ───────────────────────────────────────────────────────────
 
-function SectionHeading({ icon: Icon, label, count, errors }: { icon: typeof Link; label: string; count?: number; errors: number | null }) {
+function SectionHeading({
+  icon: Icon,
+  label,
+  count,
+  errors = 0,
+}: {
+  icon: typeof Link;
+  label: string;
+  count?: number;
+  errors?: number;
+}) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
@@ -509,7 +539,11 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
     }),
   );
 
-  const icsErrors = icsSources.filter((s: CalendarSource) => s.enabled && s.url && errorByUrl[s.url]).length;
+  const icsErrors = icsSources.filter((s: CalendarSource) => {
+    const enabled = isSourceEnabled(s);
+    const sourceUrl = s.url ?? '';
+    return enabled && !!sourceUrl && !!errorByUrl[sourceUrl];
+  }).length;
 
   const hasSources = icsSources.length > 0 || csvSources.length > 0;
 
@@ -520,7 +554,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
         Toggle any source to show or hide its events instantly.
         {hasSources && (
           <span style={{ marginLeft: 6 }}>
-            {normalizedSources.filter((s: CalendarSource) => s.enabled).length} of {normalizedSources.length} active.
+            {normalizedSources.filter((s: CalendarSource) => isSourceEnabled(s)).length} of {normalizedSources.length} active.
           </span>
         )}
       </p>
@@ -545,16 +579,20 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-            {icsSources.map((src: CalendarSource) => (
-              <IcsFeedRow
-                key={src.id}
-                source={src}
-                error={src.enabled ? errorByUrl[src.url] : undefined}
-                onToggle={onToggle}
-                onRemove={onRemove}
-                onUpdate={onUpdate}
-              />
-            ))}
+            {icsSources.map((src: CalendarSource) => {
+              const enabled = isSourceEnabled(src);
+              const sourceUrl = src.url ?? '';
+              return (
+                <IcsFeedRow
+                  key={src.id}
+                  source={src}
+                  error={enabled && sourceUrl ? errorByUrl[sourceUrl] : undefined}
+                  onToggle={onToggle}
+                  onRemove={onRemove}
+                  onUpdate={onUpdate}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -568,7 +606,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
             icon={FileSpreadsheet}
             label="CSV Datasets"
             count={csvSources.length}
-            errors={null}
+            errors={0}
           />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {csvSources.map((src: CalendarSource) => (
