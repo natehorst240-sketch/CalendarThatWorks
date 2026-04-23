@@ -27,12 +27,25 @@ function Trap({ onEscape, children, active = true }: {
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
-function tabForward(element = document.activeElement) {
-  fireEvent.keyDown(element, { key: 'Tab', shiftKey: false });
+function requireElement<T>(value: T | null | undefined, message: string): T {
+  if (value == null) {
+    throw new Error(message);
+  }
+  return value;
 }
 
-function tabBackward(element = document.activeElement) {
-  fireEvent.keyDown(element, { key: 'Tab', shiftKey: true });
+function tabForward(element: Element | null = document.activeElement) {
+  fireEvent.keyDown(requireElement(element, 'Expected focused element for Tab'), {
+    key: 'Tab',
+    shiftKey: false,
+  });
+}
+
+function tabBackward(element: Element | null = document.activeElement) {
+  fireEvent.keyDown(requireElement(element, 'Expected focused element for Shift+Tab'), {
+    key: 'Tab',
+    shiftKey: true,
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -57,7 +70,10 @@ describe('useFocusTrap — basic behaviour', () => {
         <button>OK</button>
       </Trap>,
     );
-    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+    fireEvent.keyDown(
+      requireElement(document.activeElement, 'Expected active element for Escape'),
+      { key: 'Escape' },
+    );
     expect(onEscape).toHaveBeenCalledOnce();
   });
 });
