@@ -7,18 +7,37 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from 'react';
 import { Upload } from 'lucide-react';
 import { parseICS } from '../core/icalParser';
+import type { WorksCalendarEvent } from '../types/events';
 import ImportPreview from './ImportPreview';
 import CSVImportDialog from './CSVImportDialog';
 import styles from './ImportZone.module.css';
 
-export default function ImportZone({ onImport, onClose }: any) {
-  const [dragging,  setDragging]  = useState(false);
-  const [parsed,    setParsed]    = useState<any>(null); // ICS parsed events
-  const [csvMode,   setCsvMode]   = useState(false); // switch to CSV dialog
-  const [error,     setError]     = useState<string | null>(null);
+type ImportedEvent = {
+  id?: string;
+  title: string;
+  start: Date | string;
+  end?: Date | string;
+  category?: string;
+  resource?: string;
+  status?: string;
+  color?: string;
+  allDay?: boolean;
+  meta?: Record<string, unknown>;
+};
+
+type ImportZoneProps = {
+  onImport: (events: ImportedEvent[], metadata?: { label?: string }) => void;
+  onClose: () => void;
+};
+
+export default function ImportZone({ onImport, onClose }: ImportZoneProps) {
+  const [dragging, setDragging] = useState(false);
+  const [parsed, setParsed] = useState<ImportedEvent[] | null>(null); // ICS parsed events
+  const [csvMode, setCsvMode] = useState(false); // switch to CSV dialog
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  function processFile(file: File | undefined) {
+  function processFile(file: File | undefined): void {
     if (!file) return;
     setError(null);
 
@@ -40,11 +59,13 @@ export default function ImportZone({ onImport, onClose }: any) {
     const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
       try {
-        const events = parseICS(e.target.result as string);
+        const text = typeof e.target?.result === 'string' ? e.target.result : '';
+        const events = parseICS(text);
         if (!events.length) { setError('No events found in this file.'); return; }
-        setParsed(events);
-      } catch (err: any) {
-        setError(`Could not parse file: ${err.message}`);
+        setParsed(events as ImportedEvent[]);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        setError(`Could not parse file: ${message}`);
       }
     };
     reader.onerror = () => setError('Could not read file.');
@@ -53,7 +74,7 @@ export default function ImportZone({ onImport, onClose }: any) {
 
   // ICS preview
   if (parsed) {
-    return <ImportPreview events={parsed} onImport={onImport} onClose={onClose} />;
+    return <ImportPreview events={parsed as WorksCalendarEvent[]} onImport={onImport} onClose={onClose} />;
   }
 
   // CSV multi-step dialog — mounts fresh with its own file picker
