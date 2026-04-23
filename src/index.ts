@@ -6,6 +6,7 @@
 export * from './api/v1/index';
 
 export type { WorksCalendarEvent, NormalizedEvent, EventStatus, EventVisualPriority } from './types/events';
+export { isVisualPriority } from './types/events';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,

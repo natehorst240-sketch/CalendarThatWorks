@@ -13,17 +13,11 @@ import { useMemo, useState } from 'react';
 import type { FormEvent, ChangeEvent, MouseEvent } from 'react';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { toDatetimeLocal, fromDatetimeLocal } from '../hooks/useEventDraftState';
 import styles from './EventForm.module.css';
 
-type AssetRequestAsset = {
-  id: string;
-  label?: string;
-};
-
-type AssetRequestCategory = {
-  id: string;
-  label?: string;
-};
+type AssetEntry = { id: string; label: string; group?: string; meta?: Record<string, unknown> };
+type CategoryEntry = { id: string; label?: string; color?: string };
 
 type AssetRequestPayload = {
   title: string;
@@ -32,36 +26,17 @@ type AssetRequestPayload = {
   allDay: false;
   category: string;
   resource: string;
-  meta: {
-    notes?: string;
-    approvalStage: {
-      stage: 'requested';
-      updatedAt: string;
-    };
-  };
+  meta: Record<string, unknown>;
 };
 
 type AssetRequestFormProps = {
-  assets: AssetRequestAsset[];
-  categories: AssetRequestCategory[];
+  assets: AssetEntry[];
+  categories: CategoryEntry[];
   initialStart?: Date;
   initialAssetId?: string;
   onSubmit: (payload: AssetRequestPayload) => void;
   onClose: () => void;
 };
-
-function toLocalInput(date: Date): string {
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function fromLocalInput(value: string): Date {
-  // Interpret as local time (same convention as EventForm's fromDatetimeLocal).
-  const [datePart, timePart] = value.split('T');
-  const [y, m, d] = datePart.split('-').map(Number);
-  const [hh, mm] = (timePart || '00:00').split(':').map(Number);
-  return new Date(y, m - 1, d, hh, mm, 0, 0);
-}
 
 export default function AssetRequestForm({
   assets,
@@ -76,11 +51,11 @@ export default function AssetRequestForm({
   const start = initialStart instanceof Date ? initialStart : new Date();
   const defaultEnd = new Date(start.getTime() + 60 * 60 * 1000);
 
-  const [assetId,  setAssetId]  = useState(initialAssetId || assets[0]?.id || '');
-  const [category, setCategory] = useState(categories[0]?.id || '');
+  const [assetId,  setAssetId]  = useState(initialAssetId ?? assets[0]?.id ?? '');
+  const [category, setCategory] = useState(categories[0]?.id ?? '');
   const [title,    setTitle]    = useState('');
-  const [startStr, setStartStr] = useState(toLocalInput(start));
-  const [endStr,   setEndStr]   = useState(toLocalInput(defaultEnd));
+  const [startStr, setStartStr] = useState(toDatetimeLocal(start));
+  const [endStr,   setEndStr]   = useState(toDatetimeLocal(defaultEnd));
   const [notes,    setNotes]    = useState('');
   const [errors,   setErrors]   = useState<Record<string, string>>({});
 
@@ -91,13 +66,15 @@ export default function AssetRequestForm({
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!title.trim())      e.title    = 'Title is required';
-    if (!assetId)           e.assetId  = 'Select an asset';
-    if (!category)          e.category = 'Select a category';
-    if (!startStr)          e.start    = 'Start is required';
-    if (!endStr)            e.end      = 'End is required';
-    if (startStr && endStr && fromLocalInput(endStr) <= fromLocalInput(startStr)) {
-      e.end = 'End must be after start';
+    if (!title.trim()) e.title    = 'Title is required';
+    if (!assetId)      e.assetId  = 'Select an asset';
+    if (!category)     e.category = 'Select a category';
+    if (!startStr)     e.start    = 'Start is required';
+    if (!endStr)       e.end      = 'End is required';
+    if (startStr && endStr) {
+      const s = fromDatetimeLocal(startStr);
+      const en = fromDatetimeLocal(endStr);
+      if (s && en && en <= s) e.end = 'End must be after start';
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -106,17 +83,19 @@ export default function AssetRequestForm({
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!validate()) return;
-    const now = new Date().toISOString();
+    const s = fromDatetimeLocal(startStr);
+    const en = fromDatetimeLocal(endStr);
+    if (!s || !en) return;
     onSubmit({
       title:    title.trim(),
-      start:    fromLocalInput(startStr),
-      end:      fromLocalInput(endStr),
+      start:    s,
+      end:      en,
       allDay:   false,
       category,
       resource: assetId,
       meta: {
         ...(notes.trim() ? { notes: notes.trim() } : {}),
-        approvalStage: { stage: 'requested', updatedAt: now },
+        approvalStage: { stage: 'requested', updatedAt: new Date().toISOString() },
       },
     });
   }
@@ -170,7 +149,7 @@ export default function AssetRequestForm({
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
               >
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label || c.id}</option>
+                  <option key={c.id} value={c.id}>{c.label ?? c.id}</option>
                 ))}
               </select>
               {errors.category && <span className={styles.error}>{errors.category}</span>}

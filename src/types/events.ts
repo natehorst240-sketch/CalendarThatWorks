@@ -6,8 +6,10 @@
  */
 
 import type { EventVisualPriority } from './view';
+import { isVisualPriority } from './view';
 
 export type { EventVisualPriority };
+export { isVisualPriority };
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
 export interface WorksCalendarEvent {

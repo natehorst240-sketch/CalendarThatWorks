@@ -45,11 +45,7 @@
 }
 
 
-/* ── Importance-based event priority ──────────────────────────────────────────
- * [data-wc-priority="muted"]  Normal recurring ops (shifts, on-call) — recede.
- * [data-wc-priority="high"]   Planning exceptions (PTO, missions) — stand out.
- * Themes override these in their own CSS files for glow / border treatments.
- * ─────────────────────────────────────────────────────────────────────────── */
+/* ── Event importance — themes override in family/*.css for glow/border ─────── */
 .root :global([data-wc-priority="muted"]) {
   opacity: 0.55;
 }

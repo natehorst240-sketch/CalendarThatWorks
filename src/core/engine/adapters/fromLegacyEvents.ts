@@ -10,6 +10,7 @@
  */
 
 import type { EngineEvent, EventStatus } from '../schema/eventSchema';
+import { isVisualPriority } from '../../../types/view';
 
 // ─── Legacy shape (from normalizeEvent output) ────────────────────────────────
 
@@ -79,9 +80,8 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     hasRrule              ? id :
     null;
 
-  const vp = raw.visualPriority;
   const metaBase: Record<string, unknown> = { ...(raw.meta ?? {}) };
-  if (vp === 'muted' || vp === 'high') metaBase._visualPriority = vp;
+  if (isVisualPriority(raw.visualPriority)) metaBase._visualPriority = raw.visualPriority;
 
   return {
     id,

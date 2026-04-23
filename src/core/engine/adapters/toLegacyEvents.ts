@@ -8,6 +8,7 @@
 
 import type { EngineEvent } from '../schema/eventSchema';
 import type { EngineOccurrence } from '../schema/occurrenceSchema';
+import { isVisualPriority } from '../../../types/view';
 
 // ─── Legacy shape ─────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export function toLegacyEvent(ev: EngineEvent): LegacyEventOut {
     rrule:         ev.rrule,
     exdates:       Array.from(ev.exdates),
     meta:          { ...ev.meta },
-    visualPriority: vp === 'muted' || vp === 'high' ? vp : undefined,
+    visualPriority: isVisualPriority(vp) ? vp : undefined,
     _seriesId:     ev.seriesId,
     _recurring:    isRecurring,
   };

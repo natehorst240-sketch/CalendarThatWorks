@@ -18,6 +18,11 @@
  */
 export type EventVisualPriority = 'muted' | 'high';
 
+/** Type guard — narrows `unknown` to `EventVisualPriority`. */
+export function isVisualPriority(v: unknown): v is EventVisualPriority {
+  return v === 'muted' || v === 'high';
+}
+
 /** Exhaustive set of operational event categories for the Air EMS demo. */
 export type EventCategory =
   | 'dispatch-shift'

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { EventStatus } from './events';
+import type { EventVisualPriority } from './view';
 
 export type AnyRecord = Record<string, any>;
 
@@ -112,7 +113,7 @@ export interface CalendarViewEvent {
   category?: string | null;
   resource?: string | null;
   status?: EventStatus;
-  visualPriority?: 'muted' | 'high' | null;
+  visualPriority?: EventVisualPriority | null;
   meta?: Record<string, unknown>;
   _col?: number;
   _numCols?: number;
