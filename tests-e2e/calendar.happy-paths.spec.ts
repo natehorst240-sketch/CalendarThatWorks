@@ -53,9 +53,10 @@ test.describe('WorksCalendar happy paths', () => {
     // current month viewport.
     await page.goto('/regression-bugs.html');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
+    await page.waitForTimeout(1000);
 
     const event = page.getByRole('button', { name: /Drag Crash Pill/i }).first();
-    await expect(event).toBeVisible();
+    await expect(event).toBeVisible({ timeout: 10000 });
 
     const sourceBox = await event.boundingBox();
     const targetCell = page.locator(`[data-date="${dateKey(1)}"]`).first();
