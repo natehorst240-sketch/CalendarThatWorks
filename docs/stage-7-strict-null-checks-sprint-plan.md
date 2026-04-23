@@ -141,26 +141,115 @@ Sprint 3 is successful if:
 
 ---
 
+## Sprint 4 — Root Stabilization & Full `strictNullChecks` Enablement
+
+**Status:** PLANNED
+
+### Goal
+
+Enable `strictNullChecks: true` across the entire repository and stabilize the root composition layer so strict typing holds long-term.
+
+---
+
+## Sprint 4 Focus Areas
+
+### 1. Root Composition Stabilization
+
+Target:
+- `src/WorksCalendar.tsx`
+
+Actions:
+- break file into logical zones (props, context, render, handlers)
+- introduce typed boundaries between zones
+- optionally extract small helper builders (NOT full refactor)
+
+---
+
+### 2. Final View Layer Cleanup
+
+Targets:
+- `src/views/WeekView.tsx`
+- remaining `TimelineView.tsx` work
+
+Actions:
+- resolve remaining strict-null issues
+- rely on normalized data from Sprint 3
+
+---
+
+### 3. Controlled Strict Mode Enablement
+
+Steps:
+
+**Phase A — CI Dry Run**
+- run `strictNullChecks` in CI
+- track remaining errors without blocking
+
+**Phase B — Full Enablement**
+- enable in `tsconfig.json`
+- resolve remaining blockers
+- enforce via CI
+
+---
+
+### 4. Remove Escape Hatches
+
+Eliminate:
+- non-null assertions (`!`)
+- `as any`
+- unsafe fallbacks (`||`)
+
+Replace with:
+- proper typing
+- narrowing
+- normalization
+
+---
+
+### 5. CI Enforcement
+
+Actions:
+- fail builds on strict-null errors
+- prevent regression of baseline
+- enforce no new `any`
+
+---
+
+## Sprint 4 PR Plan (ordered)
+
+1. PR1 — Root typing (phase 1: props + state)
+2. PR2 — Root typing (phase 2: handlers + context)
+3. PR3 — View finalization
+4. PR4 — Strict mode dry run (CI only)
+5. PR5 — Full strictNullChecks enablement
+6. PR6 — Enforcement + cleanup
+
+---
+
+## Exit Criteria
+
+Sprint 4 is successful if:
+
+- `strictNullChecks: true` is enabled repo-wide
+- `tsc --noEmit` passes clean
+- minimal or no reliance on `!` or `any`
+- CI enforces strict-null compliance
+
+---
+
 ## What we are NOT doing yet
 
 Still out of scope:
 
-- full root file (`WorksCalendar.tsx`) rewrite
-- large-scale view rewrites
-
----
-
-## Next Sprint Preview (Sprint 4)
-
-- root composition stabilization
-- enable repo-wide `strictNullChecks: true`
+- large-scale architectural rewrites
+- full component refactors unrelated to strict-null
 
 ---
 
 ## Key Insight
 
 Sprint 2 reduced noise.
+Sprint 3 controlled data flow.
+Sprint 4 locks correctness into the system.
 
-Sprint 3 controls the system.
-
-> If data is correct at the boundaries, strict-null becomes easy everywhere else.
+> Once strict-null is enforced at the root, the entire codebase becomes safer by default.
