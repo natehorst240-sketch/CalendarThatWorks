@@ -63,7 +63,11 @@ describe('EventForm focus trap', () => {
     // remain a descendant of the dialog.
     for (let i = 0; i < 20; i++) {
       tabForward();
-      expect(dialog.contains(document.activeElement)).toBe(true);
+      expect(
+        dialog.contains(
+          requireElement(document.activeElement, 'Expected active element after Tab'),
+        ),
+      ).toBe(true);
     }
   });
 
@@ -72,13 +76,21 @@ describe('EventForm focus trap', () => {
 
     for (let i = 0; i < 20; i++) {
       tabBackward();
-      expect(dialog.contains(document.activeElement)).toBe(true);
+      expect(
+        dialog.contains(
+          requireElement(document.activeElement, 'Expected active element after Shift+Tab'),
+        ),
+      ).toBe(true);
     }
   });
 
   it('initial auto-focus lands inside the dialog', () => {
     const dialog = renderForm();
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(
+      dialog.contains(
+        requireElement(document.activeElement, 'Expected active element inside dialog'),
+      ),
+    ).toBe(true);
   });
 
   it('Escape calls onClose', () => {
