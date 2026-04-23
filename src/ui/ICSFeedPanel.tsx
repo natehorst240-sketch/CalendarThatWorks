@@ -9,7 +9,7 @@
  *   onUpdate    — (id: string, patch: Partial<StoredFeed>) => void
  *   onToggle    — (id: string) => void
  */
-import { useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useRef, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Plus, Trash2, RefreshCw, AlertCircle, CheckCircle, Link } from 'lucide-react';
 import { fetchAndParseICS } from '../core/icalParser';
 import styles from './ConfigPanel.module.css';
@@ -31,11 +31,50 @@ const REFRESH_OPTIONS = [
 ];
 
 type FeedValidationState = {
-  ok: boolean;
-  count?: number;
-  error?: string;
-  corsLikely?: boolean;
+  ok: true;
+  count: number;
+} | {
+  ok: false;
+  error: string;
+  corsLikely: boolean;
+  count?: undefined;
 } | null;
+
+type StoredFeed = {
+  id: string;
+  label?: string;
+  url?: string;
+  color?: string;
+  enabled?: boolean;
+  refreshInterval?: number | null;
+};
+
+type FeedRowProps = {
+  feed: StoredFeed;
+  error?: Error;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<StoredFeed>) => void;
+};
+
+type ICSFeedPanelProps = {
+  feeds: StoredFeed[];
+  feedErrors?: Array<{ feed: { url?: string }; err: Error }>;
+  onAdd: (partial: Partial<StoredFeed>) => void;
+  onRemove: (id: string) => void;
+  onToggle: (id: string) => void;
+  onUpdate: (id: string, patch: Partial<StoredFeed>) => void;
+};
+
+function isFeedEnabled(feed: StoredFeed): boolean {
+  return feed.enabled ?? true;
+}
+
+function isValidationFailure(
+  validation: FeedValidationState
+): validation is { ok: false; error: string; corsLikely: boolean; count?: undefined } {
+  return Boolean(validation) && validation.ok === false;
+}
 
 function colorDot(color: string, size = 10) {
   return (
@@ -51,19 +90,21 @@ function colorDot(color: string, size = 10) {
 
 // ── Feed row ──────────────────────────────────────────────────────────────────
 
-function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
+function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: FeedRowProps) {
+  const enabled = isFeedEnabled(feed);
+  const currentColor = feed.color ?? PRESET_COLORS[0];
   const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(feed.label);
+  const [draft,   setDraft]   = useState(feed.label ?? '');
   const inputRef = useRef(null);
 
   function commitEdit() {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== feed.label) onUpdate(feed.id, { label: trimmed });
-    else setDraft(feed.label);
+    else setDraft(feed.label ?? '');
     setEditing(false);
   }
 
-  const statusIcon = !feed.enabled
+  const statusIcon = !enabled
     ? null
     : error
       ? <AlertCircle size={14} color="var(--wc-danger)" aria-label={error.message} />
@@ -76,13 +117,13 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
       background: 'var(--wc-surface)',
       border: '1px solid var(--wc-border)',
       borderRadius: 'var(--wc-radius-sm)',
-      opacity: feed.enabled ? 1 : 0.55,
+      opacity: enabled ? 1 : 0.55,
     }}>
       {/* Color dot — click to cycle through presets */}
       <button
         title="Change colour"
         onClick={() => {
-          const idx = PRESET_COLORS.indexOf(feed.color);
+          const idx = PRESET_COLORS.indexOf(currentColor);
           onUpdate(feed.id, { color: PRESET_COLORS[(idx + 1) % PRESET_COLORS.length] });
         }}
         style={{
@@ -90,7 +131,7 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
           padding: 0, display: 'flex', alignItems: 'center', flexShrink: 0,
         }}
       >
-        {colorDot(feed.color, 12)}
+        {colorDot(currentColor, 12)}
       </button>
 
       {/* Name — click to edit */}
@@ -103,12 +144,12 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
             value={draft}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
             onBlur={commitEdit}
-            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') { setDraft(feed.label); setEditing(false); } }}
+            onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') { setDraft(feed.label ?? ''); setEditing(false); } }}
             style={{ width: '100%', padding: '3px 6px', fontSize: 12 }}
           />
         ) : (
           <button
-            onClick={() => { setEditing(true); setDraft(feed.label); }}
+            onClick={() => { setEditing(true); setDraft(feed.label ?? ''); }}
             title="Click to rename"
             style={{
               background: 'none', border: 'none', cursor: 'text',
@@ -133,8 +174,8 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
       <div style={{ flexShrink: 0 }}>{statusIcon}</div>
 
       {/* Enable toggle */}
-      <label style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }} title={feed.enabled ? 'Disable feed' : 'Enable feed'}>
-        <input type="checkbox" checked={feed.enabled} onChange={() => onToggle(feed.id)} style={{ display: 'none' }} />
+      <label style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center' }} title={enabled ? 'Disable feed' : 'Enable feed'}>
+        <input type="checkbox" checked={enabled} onChange={() => onToggle(feed.id)} style={{ display: 'none' }} />
         <span className={styles.toggleTrack} />
       </label>
 
@@ -148,7 +189,7 @@ function FeedRow({ feed, error, onToggle, onRemove, onUpdate }: any) {
 
 // ── Add feed form ─────────────────────────────────────────────────────────────
 
-function AddFeedForm({ onAdd }: any) {
+function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void }) {
   const [open,            setOpen]            = useState(false);
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
@@ -182,7 +223,7 @@ function AddFeedForm({ onAdd }: any) {
                      lowered.includes('fetch') ||
                      lowered.includes('network') ||
                      lowered.includes('failed');
-      setValidation({ ok: false, count: null, error: message, corsLikely: isCors });
+      setValidation({ ok: false, error: message, corsLikely: isCors });
     } finally {
       setValidating(false);
     }
@@ -209,6 +250,28 @@ function AddFeedForm({ onAdd }: any) {
   }
 
   const canSubmit = !!url.trim();
+  let validationNotice: ReactNode = null;
+  if (validation?.ok) {
+    validationNotice = (
+      <>
+        <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+        <span>
+          Found {validation.count} event{validation.count === 1 ? '' : 's'} — feed looks good.
+        </span>
+      </>
+    );
+  } else if (isValidationFailure(validation)) {
+    validationNotice = (
+      <>
+        <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+        <span>
+          {validation.corsLikely
+            ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
+            : `Error: ${validation.error}`}
+        </span>
+      </>
+    );
+  }
 
   return (
     <div style={{
@@ -260,16 +323,7 @@ function AddFeedForm({ onAdd }: any) {
           color: validation.ok ? '#065f46' : 'var(--wc-danger)',
           display: 'flex', alignItems: 'flex-start', gap: 6,
         }}>
-          {validation.ok
-            ? <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
-            : <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />}
-          <span>
-            {validation.ok
-              ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
-              : validation.corsLikely
-                ? `Could not verify from browser (${validation.error ?? 'Unknown error'}). This may be a CORS restriction — you can still add the feed and it may work.`
-                : `Error: ${validation.error ?? 'Unknown error'}`}
-          </span>
+          {validationNotice}
         </div>
       )}
 
@@ -355,13 +409,22 @@ function AddFeedForm({ onAdd }: any) {
 
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
-export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onToggle, onUpdate }: any) {
+export default function ICSFeedPanel({
+  feeds,
+  feedErrors,
+  onAdd,
+  onRemove,
+  onToggle,
+  onUpdate,
+}: ICSFeedPanelProps) {
   // Build a quick error lookup by URL
   const errorByUrl = Object.fromEntries(
-    (feedErrors ?? []).map(({ feed, err }: { feed: { url: string }; err: Error }) => [feed.url, err])
+    (feedErrors ?? [])
+      .map(({ feed, err }) => [feed.url, err] as const)
+      .filter((entry): entry is [string, Error] => Boolean(entry[0]))
   );
 
-  const enabledCount  = feeds.filter((f: any) => f.enabled).length;
+  const enabledCount  = feeds.filter(isFeedEnabled).length;
   const errorCount    = Object.keys(errorByUrl).length;
 
   return (
@@ -387,16 +450,20 @@ export default function ICSFeedPanel({ feeds, feedErrors, onAdd, onRemove, onTog
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {feeds.map((feed: any) => (
-            <FeedRow
-              key={feed.id}
-              feed={feed}
-              error={feed.enabled ? errorByUrl[feed.url] : undefined}
-              onToggle={onToggle}
-              onRemove={onRemove}
-              onUpdate={onUpdate}
-            />
-          ))}
+          {feeds.map((feed) => {
+            const enabled = isFeedEnabled(feed);
+            const feedUrl = feed.url ?? '';
+            return (
+              <FeedRow
+                key={feed.id}
+                feed={feed}
+                error={enabled && feedUrl ? errorByUrl[feedUrl] : undefined}
+                onToggle={onToggle}
+                onRemove={onRemove}
+                onUpdate={onUpdate}
+              />
+            );
+          })}
         </div>
       )}
 
