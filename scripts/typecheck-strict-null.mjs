@@ -20,15 +20,29 @@ const STRICT_NULL_ERROR_CODES = new Set([
 const MIGRATED_PATHS = [
   'src/grouping/groupRows.ts',
   'src/grouping/__tests__/groupRows.test.ts',
+  'src/hooks/useFocusTrap.ts',
+  'src/hooks/__tests__/useFocusTrap.test.tsx',
 ];
 
 const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');
 
+const tscBin = path.resolve(process.cwd(), 'node_modules/typescript/bin/tsc');
+
+if (!fs.existsSync(tscBin)) {
+  console.error('❌ Local TypeScript compiler not found. Run npm install before strict-null checking.');
+  process.exit(1);
+}
+
 const tscResult = spawnSync(
-  'npx',
-  ['tsc', '--noEmit', '--pretty', 'false', '--strictNullChecks', 'true'],
+  process.execPath,
+  [tscBin, '--noEmit', '--pretty', 'false', '--strictNullChecks', 'true'],
   { encoding: 'utf8' },
 );
+
+if (tscResult.error) {
+  console.error(`❌ Failed to run TypeScript compiler: ${tscResult.error.message}`);
+  process.exit(1);
+}
 
 const output = `${tscResult.stdout ?? ''}${tscResult.stderr ?? ''}`;
 const repoRoot = process.cwd();
@@ -51,6 +65,14 @@ const diagnostics = output
     };
   })
   .filter((entry) => entry !== null);
+
+if (tscResult.status !== 0 && diagnostics.length === 0) {
+  console.error('❌ TypeScript compiler failed without parseable diagnostics.');
+  if (output.trim()) {
+    console.error(output.trim());
+  }
+  process.exit(1);
+}
 
 // === GLOBAL COUNTER RATchet ===
 const strictNullDiagnostics = diagnostics.filter((entry) =>

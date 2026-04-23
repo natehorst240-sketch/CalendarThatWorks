@@ -1,5 +1,5 @@
 {
-  "baselineTotal": 386,
-  "recordedAt": "2026-04-22",
-  "source": "docs/stage-7-strict-null-checks-audit.md root strictNullChecks flip trial"
+  "baselineTotal": 324,
+  "recordedAt": "2026-04-23",
+  "source": "strict-null focus-trap ratchet sprint"
 }
