@@ -89,6 +89,7 @@ import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/as
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from './api/v1/templates.ts';
 
 import styles from './WorksCalendar.module.css';
+import './styles/family/index.css';
 import { customThemeToCssVars } from './core/themeSchema';
 
 import type { WorksCalendarEvent } from './types/events';

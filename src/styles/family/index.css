@@ -1,0 +1,14 @@
+/**
+ * All 6 theme family CSS files.
+ * Import this file to get data-wc-theme-family / data-wc-theme-mode support.
+ *
+ * Each family defines structural variables (density, border, radius, pill shape)
+ * and color variables per mode (light/dark). Legacy data-wc-theme="aviation"
+ * selectors remain in WorksCalendar.module.css for backward compat.
+ */
+@import './canvas.css';
+@import './corporate.css';
+@import './industrial.css';
+@import './grid.css';
+@import './ops.css';
+@import './neon.css';

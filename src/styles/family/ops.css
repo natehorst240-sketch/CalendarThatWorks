@@ -1,0 +1,62 @@
+/**
+ * Ops family — Mission-control / instrument panel aesthetic.
+ *
+ * Structure: normal density, subtle 1px borders, small 4px radius,
+ * monospace font, status-bar style pills. Built for dark; still legible light.
+ * Activated by: data-wc-theme-family="ops"
+ */
+
+/* ── Structure (both modes) ──────────────────────────────────────────────── */
+[data-wc-theme-family="ops"] {
+  --wc-spacing-row-height:     40px;
+  --wc-border-width:           1px;
+  --wc-border-radius-pill:     4px;
+  --wc-grid-line-strength:     1px;
+  --wc-event-pill-font-size:   0.7rem;
+  --wc-event-pill-font-weight: 600;
+  --wc-radius:                 4px;
+  --wc-radius-sm:              2px;
+  --wc-font: 'JetBrains Mono', 'Roboto Mono', 'Courier New', ui-monospace, monospace;
+}
+
+/* ── Light mode ──────────────────────────────────────────────────────────── */
+[data-wc-theme-family="ops"][data-wc-theme-mode="light"] {
+  --wc-bg:          #f8fafc;
+  --wc-surface:     #eef2f7;
+  --wc-surface-2:   #e4eaf2;
+  --wc-accent:      #0ea5e9;
+  --wc-accent-dim:  #e0f2fe;
+  --wc-border:      #cbd5e1;
+  --wc-border-dark: #94a3b8;
+  --wc-text:        #0f172a;
+  --wc-text-muted:  #475569;
+  --wc-text-faint:  #94a3b8;
+  --wc-shadow:      0 1px 4px rgba(0,0,0,.08);
+  --wc-shadow-sm:   0 1px 2px rgba(0,0,0,.05);
+  --wc-danger:      #dc2626;
+  --wc-success:     #059669;
+  --wc-warning:     #d97706;
+  --wc-cat-0: #0ea5e9; --wc-cat-1: #d97706; --wc-cat-2: #dc2626; --wc-cat-3: #059669;
+  --wc-cat-4: #7c3aed; --wc-cat-5: #db2777; --wc-cat-6: #0891b2; --wc-cat-7: #c2410c;
+}
+
+/* ── Dark mode — the primary ops experience ──────────────────────────────── */
+[data-wc-theme-family="ops"][data-wc-theme-mode="dark"] {
+  --wc-bg:          #080c16;
+  --wc-surface:     #0d1525;
+  --wc-surface-2:   #132030;
+  --wc-accent:      #00d4ff;
+  --wc-accent-dim:  #001a22;
+  --wc-border:      #1a3a4a;
+  --wc-border-dark: #1f4d63;
+  --wc-text:        #c8e8f0;
+  --wc-text-muted:  #4a7a8a;
+  --wc-text-faint:  #2a4a5a;
+  --wc-shadow:      0 4px 24px rgba(0,200,255,.08);
+  --wc-shadow-sm:   0 1px 6px rgba(0,200,255,.04);
+  --wc-danger:      #ff4040;
+  --wc-success:     #00ff88;
+  --wc-warning:     #ffaa00;
+  --wc-cat-0: #00d4ff; --wc-cat-1: #ffaa00; --wc-cat-2: #ff4040; --wc-cat-3: #00e87a;
+  --wc-cat-4: #aa55ff; --wc-cat-5: #ff55cc; --wc-cat-6: #55aaff; --wc-cat-7: #ff8000;
+}
