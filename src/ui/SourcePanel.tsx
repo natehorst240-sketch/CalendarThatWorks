@@ -300,7 +300,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
   const [url,             setUrl]             = useState('');
   const [label,           setLabel]           = useState('');
   const [color,           setColor]           = useState(PRESET_COLORS[0]);
-  const [refreshInterval, setRefreshInterval] = useState(300_000);
+  const [refreshInterval, setRefreshInterval] = useState<number | null>(300_000);
   const [validating,      setValidating]      = useState(false);
   const [validation,      setValidation]      = useState<{ ok: boolean; count?: number; error?: string; corsLikely?: boolean } | null>(null);
 
