@@ -52,7 +52,11 @@ describe('ConfigPanel — focus trap & accordion', () => {
   it('initial focus lands inside the dialog', () => {
     mount();
     const dialog = screen.getByRole('dialog', { name: 'Calendar settings' });
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(
+      dialog.contains(
+        requireElement(document.activeElement, 'Expected active element inside dialog'),
+      ),
+    ).toBe(true);
   });
 
   it('Tab cycles focus inside the dialog instead of escaping it', () => {
