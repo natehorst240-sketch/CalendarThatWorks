@@ -9,7 +9,7 @@
  *   onUpdate    — (id: string, patch: Partial<StoredFeed>) => void
  *   onToggle    — (id: string) => void
  */
-import { useState, useRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, useRef, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Plus, Trash2, RefreshCw, AlertCircle, CheckCircle, Link } from 'lucide-react';
 import { fetchAndParseICS } from '../core/icalParser';
 import styles from './ConfigPanel.module.css';
@@ -68,6 +68,12 @@ type ICSFeedPanelProps = {
 
 function isFeedEnabled(feed: StoredFeed): boolean {
   return feed.enabled ?? true;
+}
+
+function isValidationFailure(
+  validation: FeedValidationState
+): validation is { ok: false; error: string; corsLikely: boolean; count?: undefined } {
+  return Boolean(validation) && validation.ok === false;
 }
 
 function colorDot(color: string, size = 10) {
@@ -244,6 +250,28 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
   }
 
   const canSubmit = !!url.trim();
+  let validationNotice: ReactNode = null;
+  if (validation?.ok) {
+    validationNotice = (
+      <>
+        <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+        <span>
+          Found {validation.count} event{validation.count === 1 ? '' : 's'} — feed looks good.
+        </span>
+      </>
+    );
+  } else if (isValidationFailure(validation)) {
+    validationNotice = (
+      <>
+        <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+        <span>
+          {validation.corsLikely
+            ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
+            : `Error: ${validation.error}`}
+        </span>
+      </>
+    );
+  }
 
   return (
     <div style={{
@@ -295,23 +323,7 @@ function AddFeedForm({ onAdd }: { onAdd: (partial: Partial<StoredFeed>) => void 
           color: validation.ok ? '#065f46' : 'var(--wc-danger)',
           display: 'flex', alignItems: 'flex-start', gap: 6,
         }}>
-          {validation.ok ? (
-            <>
-              <CheckCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
-              <span>
-                Found {validation.count} event{validation.count === 1 ? '' : 's'} — feed looks good.
-              </span>
-            </>
-          ) : (
-            <>
-              <AlertCircle size={13} style={{ marginTop: 1, flexShrink: 0 }} />
-              <span>
-                {validation.corsLikely
-                  ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
-                  : `Error: ${validation.error}`}
-              </span>
-            </>
-          )}
+          {validationNotice}
         </div>
       )}
 
