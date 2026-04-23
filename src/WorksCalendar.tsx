@@ -256,14 +256,14 @@ function opAnnouncement(op: LooseValue) {
   }
 }
 
-type ViewDef = { id: ViewId; label: string; alwaysOn: boolean };
+type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string };
 const ALL_VIEWS: readonly ViewDef[] = [
-  { id: 'month',    label: 'Month',    alwaysOn: true  },
-  { id: 'week',     label: 'Week',     alwaysOn: true  },
+  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO' },
+  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day — not staffing or on-call' },
   { id: 'day',      label: 'Day',      alwaysOn: false },
   { id: 'agenda',   label: 'Agenda',   alwaysOn: false },
-  { id: 'schedule', label: 'Schedule', alwaysOn: false },
-  { id: 'base',     label: 'Base',     alwaysOn: false },
+  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status' },
+  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
 ];
 
@@ -2024,6 +2024,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   className={[styles.viewBtn, cal.view === v.id && styles.activeView].filter(Boolean).join(' ')}
                   onClick={() => cal.setView(v.id)}
                   aria-pressed={cal.view === v.id}
+                  title={v.hint}
                 >
                   {v.label}
                 </button>
