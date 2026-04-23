@@ -38,7 +38,7 @@ const SHORTCUTS = [
 ];
 
 export default function KeyboardHelpOverlay({ onClose }: any) {
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   return (
     <div

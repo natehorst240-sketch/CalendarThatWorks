@@ -101,7 +101,7 @@ export default function RequestForm({
   onCancel: () => void;
   title?: string;
 }) {
-  const trapRef = useFocusTrap(onCancel);
+  const trapRef = useFocusTrap<HTMLFormElement>(onCancel);
 
   const fields = useMemo(() => {
     const raw = Array.isArray(schema?.fields) ? schema.fields : [];

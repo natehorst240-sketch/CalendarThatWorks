@@ -17,7 +17,7 @@ function Trap({ onEscape, children, active = true }: {
   children: ReactNode;
   active?: boolean;
 }) {
-  const ref = useFocusTrap(onEscape, active);
+  const ref = useFocusTrap<HTMLDivElement>(onEscape, active);
   return (
     <div ref={ref} role="dialog" aria-modal="true" data-testid="trap">
       {children}

@@ -89,7 +89,7 @@ export function WorkflowBuilderModal(
     }
     onClose()
   }, [onClose])
-  const trapRef = useFocusTrap(handleEscape)
+  const trapRef = useFocusTrap<HTMLDivElement>(handleEscape)
 
   // Validator runs on every draft change — cheap for Phase-2-sized graphs.
   const issues = useMemo(

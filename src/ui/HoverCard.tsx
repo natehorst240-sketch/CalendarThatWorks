@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ChangeEvent, type MouseEvent } from 'react';
+import { useState, useEffect, type ChangeEvent, type MouseEvent } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -7,14 +7,13 @@ import styles from './HoverCard.module.css';
 export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }: any) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const hc = config?.hoverCard ?? {};
 
   // Close on click outside
   useEffect(() => {
     function handler(e: globalThis.MouseEvent) {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) onClose();
+      if (trapRef.current && !trapRef.current.contains(e.target as Node)) onClose();
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -32,7 +31,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
       : `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'MMM d, h:mm a')}`;
 
   return (
-    <div ref={(node) => { cardRef.current = node; trapRef.current = node; }} className={styles.card} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
+    <div ref={trapRef} className={styles.card} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
       {/* Color accent bar */}
       <div className={styles.accent} style={{ background: event.color }} />
 

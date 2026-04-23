@@ -12,7 +12,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './OwnerLoginModal.module.css';
 
 export default function OwnerLoginModal({ authError, isAuthLoading, onAuthenticate, onClose }: any) {
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
 

@@ -22,7 +22,7 @@ export default function ConflictModal({
   onCancel,
   title = 'Conflict detected',
 }: any) {
-  const trapRef = useFocusTrap(onCancel);
+  const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
 
   if (!result || result.severity === 'none' || result.violations.length === 0) {
     return null;

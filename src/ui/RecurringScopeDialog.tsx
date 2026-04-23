@@ -34,7 +34,7 @@ const SCOPE_OPTIONS = [
  */
 export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }: any) {
   const [scope, setScope] = useState('single');
-  const trapRef = useFocusTrap(onCancel);
+  const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
 
   return (
     <div

@@ -133,7 +133,7 @@ export default function ScheduleEditorForm({
   onSave,
   onClose,
 }: ScheduleEditorFormProps) {
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const [mode, setMode] = useState<'onetime' | 'recurring' | 'template'>('onetime');
 

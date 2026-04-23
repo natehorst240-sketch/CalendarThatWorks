@@ -84,7 +84,7 @@ function fromInput(str: string, allDay: boolean): Date | null {
  *   onClose    () => void
  */
 export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;

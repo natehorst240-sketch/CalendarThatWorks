@@ -36,7 +36,7 @@ export default function AssetRequestForm({
   onSubmit,
   onClose,
 }: any) {
-  const trapRef = useFocusTrap(onClose);
+  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const start = initialStart instanceof Date ? initialStart : new Date();
   const defaultEnd = new Date(start.getTime() + 60 * 60 * 1000);

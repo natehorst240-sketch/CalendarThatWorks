@@ -196,7 +196,7 @@ describe('ScreenReaderAnnouncer', () => {
 
 describe('useFocusTrap', () => {
   function TrapFixture({ onEscape }: { onEscape: () => void }) {
-    const trapRef = useFocusTrap(onEscape);
+    const trapRef = useFocusTrap<HTMLDivElement>(onEscape);
     return (
       <div ref={trapRef} data-testid="trap">
         <button data-testid="btn1">First</button>
