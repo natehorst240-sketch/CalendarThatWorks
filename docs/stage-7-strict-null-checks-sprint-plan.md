@@ -121,6 +121,13 @@ Actions:
 4. PR4 — Ghost null cleanup pass
 5. PR5 — Ratchet tightening + baseline reduction
 
+### Sprint 3 Progress Update (2026-04-23)
+
+- ✅ PR4 completed: ghost-null cleanup/narrowing pass landed in strict-null test and adapter seams.
+- ✅ PR5 completed: strict-null ratchet tightened by adding PR4 files to migrated-path enforcement.
+- ✅ Baseline reduced from **324** to **144** strict-null diagnostics (`npm run -s type-check:strict-null`).
+- ⚠️ Remaining strict-null diagnostics are still concentrated in `src/WorksCalendar.tsx` and other non-migrated files.
+
 ---
 
 ## Exit Criteria

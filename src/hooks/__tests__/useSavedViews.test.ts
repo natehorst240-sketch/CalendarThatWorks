@@ -225,7 +225,10 @@ describe('useSavedViews', () => {
         dateRange:  null,
       });
     });
-    const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
+    const storedJson = localStorage.getItem(`wc-saved-views-${CAL_ID}`);
+    expect(storedJson).not.toBeNull();
+    if (!storedJson) throw new Error('Expected saved views payload in localStorage');
+    const stored = JSON.parse(storedJson);
     expect(stored.version).toBe(4);
     expect(stored.views).toHaveLength(1);
     expect(stored.views[0].name).toBe('Persisted');
@@ -691,7 +694,10 @@ describe('useSavedViews — storage v2 → v4 migration', () => {
     act(() => {
       result.current.saveView('New One', EMPTY_FILTERS);
     });
-    const stored = JSON.parse(localStorage.getItem(`wc-saved-views-${CAL_ID}`));
+    const storedJson = localStorage.getItem(`wc-saved-views-${CAL_ID}`);
+    expect(storedJson).not.toBeNull();
+    if (!storedJson) throw new Error('Expected saved views payload in localStorage');
+    const stored = JSON.parse(storedJson);
     expect(stored.version).toBe(4);
     expect(stored.views).toHaveLength(2);
   });
@@ -804,7 +810,9 @@ describe('useSavedViews — zoomLevel persistence', () => {
       act(() => {
         result.current.saveView(`View ${level}`, EMPTY_FILTERS, { zoomLevel: level });
       });
-      expect(result.current.views.at(-1).zoomLevel).toBe(level);
+      const lastView = result.current.views.at(-1);
+      expect(lastView).toBeDefined();
+      expect(lastView?.zoomLevel).toBe(level);
     }
   });
 

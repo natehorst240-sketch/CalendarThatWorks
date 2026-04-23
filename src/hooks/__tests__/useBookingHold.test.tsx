@@ -184,7 +184,7 @@ describe('useBookingHold — missing inputs', () => {
     const { result, rerender } = renderHook(
       (props: { resourceId: string | null }) =>
         useBookingHold(provider, { resourceId: props.resourceId, start: WIN.start, end: WIN.end, holderId: 'alice' }),
-      { initialProps: { resourceId: null } },
+      { initialProps: { resourceId: null as string | null } },
     );
     expect(result.current.status).toBe('idle');
     expect(provider.acquireSpy).not.toHaveBeenCalled();

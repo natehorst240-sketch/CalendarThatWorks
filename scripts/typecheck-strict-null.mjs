@@ -28,6 +28,14 @@ const MIGRATED_PATHS = [
   'src/__tests__/phaseB.integration.test.tsx',
   'src/api/v1/__tests__/sync.test.ts',
   'src/views/TimelineView.tsx',
+  'src/api/v1/adapters/SupabaseAdapter.ts',
+  'src/core/scheduleOverlap.ts',
+  'src/core/__tests__/scheduleMutations.test.ts',
+  'src/filters/__tests__/filterEngine.test.ts',
+  'src/filters/__tests__/filterState.test.ts',
+  'src/hooks/__tests__/useBookingHold.test.tsx',
+  'src/hooks/__tests__/useDrag.test.ts',
+  'src/hooks/__tests__/useSavedViews.test.ts',
 ];
 
 const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');

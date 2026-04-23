@@ -1,5 +1,5 @@
 {
-  "baselineTotal": 324,
+  "baselineTotal": 144,
   "recordedAt": "2026-04-23",
-  "source": "strict-null focus-trap ratchet sprint"
+  "source": "stage-7 sprint-3 pr5 ratchet tightening"
 }

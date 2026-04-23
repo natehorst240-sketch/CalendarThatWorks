@@ -321,7 +321,7 @@ describe('ownerField', () => {
   });
 
   it('getOptions returns unique sorted owners', () => {
-    const opts = field.getOptions(events);
+    const opts = field.getOptions?.(events) ?? [];
     expect(opts.map(o => o.value)).toEqual(['Alice', 'Bob']);
   });
 });
@@ -346,7 +346,7 @@ describe('tagsField', () => {
   });
 
   it('getOptions returns unique sorted tags', () => {
-    const opts = field.getOptions(events);
+    const opts = field.getOptions?.(events) ?? [];
     expect(opts.map(o => o.value)).toEqual(['api', 'backend', 'frontend', 'react']);
   });
 });
@@ -371,7 +371,7 @@ describe('metaSelectField', () => {
   });
 
   it('getOptions returns unique sorted values', () => {
-    const opts = field.getOptions(events);
+    const opts = field.getOptions?.(events) ?? [];
     expect(opts.map(o => o.value)).toEqual(['Design', 'Engineering']);
   });
 });
