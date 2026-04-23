@@ -22,6 +22,11 @@ const MIGRATED_PATHS = [
   'src/grouping/__tests__/groupRows.test.ts',
   'src/hooks/useFocusTrap.ts',
   'src/hooks/__tests__/useFocusTrap.test.tsx',
+  'src/__tests__/WorksCalendar.employees.sync.test.tsx',
+  'src/__tests__/WorksCalendar.recurringScopedEdit.test.tsx',
+  'src/__tests__/groupingFilteringSorting.integration.test.ts',
+  'src/__tests__/phaseB.integration.test.tsx',
+  'src/api/v1/__tests__/sync.test.ts',
 ];
 
 const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');

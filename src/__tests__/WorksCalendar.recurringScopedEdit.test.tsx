@@ -74,9 +74,9 @@ afterEach(() => {
 function firstOccurrenceId(api: CalendarApi, masterId: string): string {
   const occ = api
     .getVisibleEvents()
-    .find((e: any) => (e as any)._eventId === masterId || e.id.startsWith(masterId));
+    .find((e: any) => (e as any)._eventId === masterId || String(e.id ?? '').startsWith(masterId));
   if (!occ) throw new Error('No expanded occurrence found for master ' + masterId);
-  return occ.id;
+  return String(occ.id);
 }
 
 describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () => {
