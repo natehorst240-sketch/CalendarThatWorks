@@ -12,6 +12,11 @@ import '@testing-library/jest-dom';
 
 import OwnerLoginModal from '../OwnerLoginModal';
 
+function requireElement<T>(value: T | null, message: string): T {
+  if (value == null) throw new Error(message);
+  return value;
+}
+
 function mount(props = {}) {
   return render(
     <OwnerLoginModal
@@ -40,7 +45,7 @@ describe('OwnerLoginModal', () => {
   it('Escape calls onClose', () => {
     const onClose = vi.fn();
     mount({ onClose });
-    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+    fireEvent.keyDown(requireElement(document.activeElement, 'Expected active element'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
 
@@ -78,7 +83,7 @@ describe('OwnerLoginModal', () => {
     mount();
     const dialog = screen.getByRole('dialog', { name: 'Owner settings' });
     for (let i = 0; i < 10; i++) {
-      fireEvent.keyDown(document.activeElement, { key: 'Tab' });
+      fireEvent.keyDown(requireElement(document.activeElement, 'Expected active element'), { key: 'Tab' });
       expect(dialog.contains(document.activeElement)).toBe(true);
     }
   });

@@ -113,6 +113,10 @@ describe('TeamTab bidirectional sync (issue #101)', () => {
     // The pending input is the newly-added one (empty value); filter it out.
     const inputs = screen.getAllByPlaceholderText('Employee name');
     const pending = inputs.find(el => (el as HTMLInputElement).value === '');
+    expect(pending).toBeDefined();
+    if (!pending) {
+      throw new Error('Expected a pending employee input to exist');
+    }
     fireEvent.change(pending, { target: { value: 'Nora' } });
     fireEvent.keyDown(pending, { key: 'Enter' });
     expect(getConfig().team.members.map((m: { id: number }) => m.id)).toEqual([5, 6]);

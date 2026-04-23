@@ -328,10 +328,10 @@ export default function ConfigPanel({
             <SourcePanel
               sources={sources ?? []}
               feedErrors={feedErrors ?? []}
-              onAdd={onAddSource}
-              onRemove={onRemoveSource}
-              onToggle={onToggleSource}
-              onUpdate={onUpdateSource}
+              onAdd={(source) => onAddSource?.(source)}
+              onRemove={(id) => onRemoveSource?.(id)}
+              onToggle={(id) => onToggleSource?.(id)}
+              onUpdate={(id, patch) => onUpdateSource?.(id, patch)}
             />
           )}
           {tab === 'templates'   && (
