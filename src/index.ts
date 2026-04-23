@@ -5,7 +5,7 @@
 // ── Versioned public schema (engine types + serialization helpers) ───────────
 export * from './api/v1/index';
 
-export type { WorksCalendarEvent, NormalizedEvent, EventStatus } from './types/events';
+export type { WorksCalendarEvent, NormalizedEvent, EventStatus, EventVisualPriority } from './types/events';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,

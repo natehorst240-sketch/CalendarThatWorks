@@ -79,6 +79,10 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     hasRrule              ? id :
     null;
 
+  const vp = raw.visualPriority;
+  const metaBase: Record<string, unknown> = { ...(raw.meta ?? {}) };
+  if (vp === 'muted' || vp === 'high') metaBase._visualPriority = vp;
+
   return {
     id,
     seriesId,
@@ -97,7 +101,7 @@ export function fromLegacyEvent(raw: LegacyEvent): EngineEvent {
     rrule:         hasRrule ? raw.rrule! : null,
     exdates:       toExdates(raw.exdates),
     constraints:   [],
-    meta:          raw.meta ?? {},
+    meta:          metaBase,
   };
 }
 

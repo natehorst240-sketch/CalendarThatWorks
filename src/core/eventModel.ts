@@ -45,22 +45,20 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
   const end   = toDate(raw.end)   || addHours(start, 1);
 
   return {
-    id:       raw.id       ?? uid(),
-    title:    raw.title    ?? '(untitled)',
+    id:             raw.id             ?? uid(),
+    title:          raw.title          ?? '(untitled)',
     start,
     end,
-    allDay:   raw.allDay   ?? false,
-    category: raw.category ?? null,
-    color:    raw.color    ?? categoryColor(raw.category),
-    resource: raw.resource ?? null,
-    /** 'confirmed' (default) | 'tentative' (striped) | 'cancelled' (strikethrough) */
-    status:   raw.status   ?? 'confirmed',
-    /** iCal RRULE string, e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR" */
-    rrule:    raw.rrule    ?? null,
-    /** Dates excluded from the recurrence rule. */
-    exdates:  raw.exdates  ?? [],
-    meta:     raw.meta     ?? {},
-    _raw:     raw,
+    allDay:         raw.allDay         ?? false,
+    category:       raw.category       ?? null,
+    color:          raw.color          ?? categoryColor(raw.category),
+    resource:       raw.resource       ?? null,
+    visualPriority: raw.visualPriority ?? null,
+    status:         raw.status         ?? 'confirmed',
+    rrule:          raw.rrule          ?? null,
+    exdates:        raw.exdates        ?? [],
+    meta:           raw.meta           ?? {},
+    _raw:           raw,
   };
 }
 

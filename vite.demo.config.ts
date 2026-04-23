@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.svg', 'icon-192.svg', 'icon-512.svg'],
       manifest: {
-        name: 'WorksCalendar — IHC Fleet Demo',
+        name: 'WorksCalendar — Air EMS Operations Demo',
         short_name: 'WorksCalendar',
-        description: 'Drop-in embeddable React calendar with filter pills, hover cards, and Excel export',
+        description: 'WorksCalendar Air EMS Operations Demo — flight coordination, medical staffing, and maintenance coverage in one view',
         theme_color: '#4f46e5',
         background_color: '#f1f5f9',
         display: 'standalone',

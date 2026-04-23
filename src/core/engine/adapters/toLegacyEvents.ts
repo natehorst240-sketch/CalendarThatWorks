@@ -24,6 +24,8 @@ export interface LegacyEventOut {
   rrule: string | null;
   exdates: Date[];
   meta: Record<string, unknown>;
+  /** Importance signal threaded through the engine via meta._visualPriority. */
+  visualPriority?: 'muted' | 'high';
   /** Back-compat: _seriesId if this event is part of a series. */
   _seriesId: string | null;
   /** Back-compat: true if this is an expanded recurrence occurrence. */
@@ -49,21 +51,23 @@ export interface LegacyEventOut {
  */
 export function toLegacyEvent(ev: EngineEvent): LegacyEventOut {
   const isRecurring = ev.seriesId !== null && ev.seriesId !== ev.id;
+  const vp = ev.meta._visualPriority;
   return {
-    id:         ev.id,
-    title:      ev.title,
-    start:      ev.start,
-    end:        ev.end,
-    allDay:     ev.allDay,
-    category:   ev.category,
-    color:      ev.color,
-    resource:   ev.resourceId,
-    status:     ev.status,
-    rrule:      ev.rrule,
-    exdates:    Array.from(ev.exdates),
-    meta:       { ...ev.meta },
-    _seriesId:  ev.seriesId,
-    _recurring: isRecurring,
+    id:            ev.id,
+    title:         ev.title,
+    start:         ev.start,
+    end:           ev.end,
+    allDay:        ev.allDay,
+    category:      ev.category,
+    color:         ev.color,
+    resource:      ev.resourceId,
+    status:        ev.status,
+    rrule:         ev.rrule,
+    exdates:       Array.from(ev.exdates),
+    meta:          { ...ev.meta },
+    visualPriority: vp === 'muted' || vp === 'high' ? vp : undefined,
+    _seriesId:     ev.seriesId,
+    _recurring:    isRecurring,
   };
 }
 
@@ -82,21 +86,23 @@ export function toLegacyEvents(events: EngineEvent[]): LegacyEventOut[] {
  *   - rrule/exdates are null/[] (occurrences are already expanded)
  */
 export function occurrenceToLegacy(occ: EngineOccurrence): LegacyEventOut {
+  const vp = occ.meta._visualPriority;
   return {
-    id:         occ.occurrenceId,
-    title:      occ.title,
-    start:      occ.start,
-    end:        occ.end,
-    allDay:     occ.allDay,
-    category:   occ.category,
-    color:      occ.color,
-    resource:   occ.resourceId,
-    status:     occ.status,
-    rrule:      null,
-    exdates:    [],
-    meta:       { ...occ.meta },
-    _seriesId:  occ.seriesId,
-    _recurring: occ.isRecurring,
-    _eventId:   occ.eventId,
+    id:            occ.occurrenceId,
+    title:         occ.title,
+    start:         occ.start,
+    end:           occ.end,
+    allDay:        occ.allDay,
+    category:      occ.category,
+    color:         occ.color,
+    resource:      occ.resourceId,
+    status:        occ.status,
+    rrule:         null,
+    exdates:       [],
+    meta:          { ...occ.meta },
+    visualPriority: vp === 'muted' || vp === 'high' ? vp : undefined,
+    _seriesId:     occ.seriesId,
+    _recurring:    occ.isRecurring,
+    _eventId:      occ.eventId,
   };
 }

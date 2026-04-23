@@ -207,6 +207,7 @@ export default function AgendaView({
             key={key}
             className={className}
             data-cross-group={crossGroup || undefined}
+            data-wc-priority={ev.visualPriority ?? undefined}
             draggable={dndEnabled || undefined}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
@@ -224,6 +225,7 @@ export default function AgendaView({
         key={key}
         className={className}
         data-cross-group={crossGroup || undefined}
+        data-wc-priority={ev.visualPriority ?? undefined}
         draggable={dndEnabled || undefined}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}

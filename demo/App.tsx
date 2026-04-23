@@ -177,6 +177,7 @@ const INITIAL_EVENTS = allEvents.map(e => ({
   category: e.category,
   resource: e.assignedTo ?? null,
   color: categoryColor(e.category),
+  visualPriority: e.visualPriority,
   ...(e.category === 'on-call' || e.category === 'pto' ? { allDay: true } : {}),
   ...(APPROVAL_CATS.has(e.category) ? {
     meta: { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } },

@@ -112,6 +112,7 @@ export interface CalendarViewEvent {
   category?: string | null;
   resource?: string | null;
   status?: EventStatus;
+  visualPriority?: 'muted' | 'high' | null;
   meta?: Record<string, unknown>;
   _col?: number;
   _numCols?: number;

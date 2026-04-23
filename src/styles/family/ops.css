@@ -60,3 +60,15 @@
   --wc-cat-0: #00d4ff; --wc-cat-1: #ffaa00; --wc-cat-2: #ff4040; --wc-cat-3: #00e87a;
   --wc-cat-4: #aa55ff; --wc-cat-5: #ff55cc; --wc-cat-6: #55aaff; --wc-cat-7: #ff8000;
 }
+
+/* ── Ops-dark priority overrides ─────────────────────────────────────────── */
+[data-wc-theme-family="ops"][data-wc-theme-mode="dark"] [data-wc-priority="muted"] {
+  opacity: 0.42;
+  filter: brightness(0.8) saturate(0.7);
+}
+
+[data-wc-theme-family="ops"][data-wc-theme-mode="dark"] [data-wc-priority="high"] {
+  opacity: 1;
+  filter: brightness(1.15) saturate(1.4);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ev-color, #00d4ff) 55%, transparent);
+}

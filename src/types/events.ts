@@ -5,6 +5,9 @@
  * all fields are guaranteed and all dates are `Date` instances.
  */
 
+import type { EventVisualPriority } from './view';
+
+export type { EventVisualPriority };
 export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
 
 export interface WorksCalendarEvent {
@@ -17,6 +20,8 @@ export interface WorksCalendarEvent {
   color?: string;
   resource?: string;
   status?: EventStatus;
+  /** Importance signal: 'muted' = normal recurring ops; 'high' = planning exceptions. */
+  visualPriority?: EventVisualPriority;
   meta?: Record<string, unknown>;
   rrule?: string;
   exdates?: Array<Date | string>;
@@ -32,6 +37,8 @@ export interface NormalizedEvent {
   color: string;
   resource: string | null;
   status: EventStatus;
+  /** Present when the raw event supplies visualPriority; null otherwise. */
+  visualPriority?: EventVisualPriority | null;
   meta: Record<string, unknown>;
   rrule: string | null;
   exdates: Array<Date | string>;

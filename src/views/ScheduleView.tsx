@@ -100,6 +100,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                           return (
                             <div key={ev.id} className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
                               style={{ '--ev-color': color }}
+                              data-wc-priority={(ev.visualPriority as string | undefined) ?? undefined}
                               onClick={() => onEventClick?.(ev)}>
                               {custom}
                             </div>
@@ -111,6 +112,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                         <button key={ev.id}
                           className={[styles.eventPill, statusClass].filter(Boolean).join(' ')}
                           style={{ '--ev-color': color }}
+                          data-wc-priority={(ev.visualPriority as string | undefined) ?? undefined}
                           onClick={() => onEventClick?.(ev)}
                           title={ev.title}
                         >

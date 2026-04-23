@@ -338,6 +338,7 @@ export default function WeekView({
           isDimmed && styles.dragging,
           ctx?.editMode && styles.editModeEvent,
         ].filter(Boolean).join(' ')}
+        data-wc-priority={ev.visualPriority ?? undefined}
         style={{
           top, height, '--ev-color': color,
           left: `${pctLeft}%`, width: `${pctWidth}%`,

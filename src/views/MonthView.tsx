@@ -323,6 +323,7 @@ export default function MonthView({
             className={[styles.eventPill, statusClass, isDimmed && styles.dragging].filter(Boolean).join(' ')}
             role="button"
             tabIndex={0}
+            data-wc-priority={ev.visualPriority ?? undefined}
             onClick={e => { e.stopPropagation(); onClick(); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onClick(); } }}
             onPointerDown={e => startPillDrag(ev, e)}
@@ -348,6 +349,7 @@ export default function MonthView({
           isDimmed && styles.dragging,
           ctx?.editMode && styles.editModePill,
         ].filter(Boolean).join(' ')}
+        data-wc-priority={ev.visualPriority ?? undefined}
         style={{
           '--ev-color': color,
           fontWeight: display.bold  ? '700' : undefined,

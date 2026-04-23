@@ -45,6 +45,20 @@
 }
 
 
+/* ── Importance-based event priority ──────────────────────────────────────────
+ * [data-wc-priority="muted"]  Normal recurring ops (shifts, on-call) — recede.
+ * [data-wc-priority="high"]   Planning exceptions (PTO, missions) — stand out.
+ * Themes override these in their own CSS files for glow / border treatments.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.root :global([data-wc-priority="muted"]) {
+  opacity: 0.55;
+}
+
+.root :global([data-wc-priority="high"]) {
+  opacity: 1;
+  filter: saturate(1.25);
+}
+
 .root :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--wc-font-heading);
 }
