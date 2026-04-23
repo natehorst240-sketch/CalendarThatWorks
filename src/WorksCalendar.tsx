@@ -154,6 +154,38 @@ type SchedulePreviewResult = {
   conflicts: SchedulePreviewConflict[];
   error: string;
 };
+type SavedViewId = string | null;
+type AnnouncerHandle = { announce: (message: string) => void };
+type PendingAlertState = {
+  violations: Array<{ rule?: string; message?: string }>;
+  isHard: boolean;
+  onConfirm: (() => void) | null;
+} | null;
+type RecurringPromptState = {
+  actionLabel: string;
+  onConfirm: (scope: 'single' | 'following' | 'series') => void;
+  onCancel: () => void;
+} | null;
+type AvailabilityDialogState = {
+  emp: EmployeeRecord;
+  kind: 'pto' | 'unavailable' | 'availability';
+  start?: Date;
+  initialEvent?: WorksCalendarEvent | null;
+} | null;
+type ScheduleEditorDialogState = {
+  emp: EmployeeRecord;
+  start?: Date;
+  end?: Date;
+} | null;
+type InlineEditTargetState = {
+  event: WorksCalendarEvent;
+  x: number;
+  y: number;
+} | null;
+type EngineOpContext = {
+  businessHours: UnknownRecord | null;
+  blockedWindows: UnknownRecord[];
+};
 
 export type CalendarApi = {
   navigateTo: (date: Date) => void;
@@ -594,7 +626,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const eventOptions = useEventOptions(calendarId);
 
   // ── Saved view active state ──────────────────────────────────────────────
-  const [savedViewActiveId, setSavedViewActiveId] = useState(null);
+  const [savedViewActiveId, setSavedViewActiveId] = useState<SavedViewId>(null);
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
@@ -798,7 +830,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   });
 
   // ── Supabase Realtime ────────────────────────────────────────────────────
-  const [supabaseClient, setSupabaseClient] = useState(null);
+  const [supabaseClient, setSupabaseClient] = useState<unknown>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
@@ -828,9 +860,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
   // ── CalendarEngine — single source of truth for mutations & expansions ───
-  const engineRef      = useRef(null);
-  const undoManagerRef = useRef(null);
-  const announcerRef   = useRef(null);
+  const engineRef      = useRef<CalendarEngine | null>(null);
+  const undoManagerRef = useRef<UndoRedoManager | null>(null);
+  const announcerRef   = useRef<AnnouncerHandle | null>(null);
   // Tracks the pools map we last emitted so subsequent engine _notify calls
   // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
   // advance), not on every state tick.
@@ -972,20 +1004,24 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
-  const opCtxRef = useRef(null);
+  const opCtxRef = useRef<EngineOpContext>({
+    businessHours: null,
+    blockedWindows: [],
+  });
   opCtxRef.current = {
     businessHours:  ownerCfg.config?.businessHours ?? businessHours ?? null,
     blockedWindows: blockedWindows ?? [],
   };
 
-  const [pendingAlert,      setPendingAlert]      = useState(null); // { violations, isHard, onConfirm }
+  const [pendingAlert,      setPendingAlert]      = useState<PendingAlertState>(null); // { violations, isHard, onConfirm }
   // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
-  const [recurringPrompt, setRecurringPrompt] = useState(null);
+  const [recurringPrompt, setRecurringPrompt] = useState<RecurringPromptState>(null);
 
   const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
     const engine  = engineRef.current;
     const undoMgr = undoManagerRef.current;
     const ctx     = opCtxRef.current;
+    if (!engine || !undoMgr) return;
 
     // Pre-capture the state BEFORE mutation. We only record this to the undo
     // stack on acceptance to keep the history free of rejected operations.
@@ -1026,25 +1062,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, []); // stable — reads from refs
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [selectedEvent,  setSelectedEvent]  = useState(null);
-  const [formEvent,        setFormEvent]        = useState(null);
+  const [selectedEvent,  setSelectedEvent]  = useState<WorksCalendarEvent | null>(null);
+  const [formEvent,        setFormEvent]        = useState<Partial<WorksCalendarEvent> | null>(null);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
   const [importOpen,       setImportOpen]       = useState(false);
   const [scheduleOpen,     setScheduleOpen]     = useState(false);
   // { emp: { id, name, role? }, kind: 'pto' | 'unavailable' | 'availability', start?: Date, initialEvent?: object | null }
-  const [availabilityState, setAvailabilityState] = useState(null);
+  const [availabilityState, setAvailabilityState] = useState<AvailabilityDialogState>(null);
   // { emp: { id, name, role? }, start?: Date, end?: Date }
-  const [scheduleEditorState, setScheduleEditorState] = useState(null);
+  const [scheduleEditorState, setScheduleEditorState] = useState<ScheduleEditorDialogState>(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
   const [helpOpen,         setHelpOpen]         = useState(false);
   // { event, x, y } — set when an event is clicked in edit mode
-  const [inlineEditTarget, setInlineEditTarget] = useState(null);
+  const [inlineEditTarget, setInlineEditTarget] = useState<InlineEditTargetState>(null);
   // Capture last click coords so InlineEventEditor can position near the pill
   const lastClickCoordsRef = useRef({ x: 0, y: 0 });
   const editModeRef = useRef(false);
   editModeRef.current = editMode;
-  const [remoteTemplates, setRemoteTemplates] = useState([]);
+  const [remoteTemplates, setRemoteTemplates] = useState<UnknownRecord[]>([]);
   const [templateError, setTemplateError] = useState('');
 
   const resolvedScheduleLimits = useMemo(() => {
@@ -1104,14 +1140,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       // Undo: Ctrl+Z / Cmd+Z
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        const did = undoManagerRef.current.undo();
+        const did = undoManagerRef.current?.undo();
         if (did) announcerRef.current?.announce('Undo.');
         return;
       }
       // Redo: Ctrl+Y / Cmd+Y  or  Ctrl+Shift+Z / Cmd+Shift+Z
       if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
         e.preventDefault();
-        const did = undoManagerRef.current.redo();
+        const did = undoManagerRef.current?.redo();
         if (did) announcerRef.current?.announce('Redo.');
         return;
       }
@@ -1132,8 +1168,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     getVisibleEvents: ()     => visibleEvents,
     clearFilters:     ()     => cal.clearFilters(),
     addEvent:         (d={}) => setFormEvent(d),
-    undo:             ()     => undoManagerRef.current.undo(),
-    redo:             ()     => undoManagerRef.current.redo(),
+    undo:             ()     => undoManagerRef.current?.undo() ?? false,
+    redo:             ()     => undoManagerRef.current?.redo() ?? false,
     get canUndo()            { return undoManagerRef.current?.canUndo ?? false; },
     get canRedo()            { return undoManagerRef.current?.canRedo ?? false; },
   }), [cal, expandedEvents, visibleEvents]);
@@ -1157,7 +1193,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const getSavedEventPayload = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
     const normalizedId = eventId == null ? '' : String(eventId);
-    if (normalizedId) {
+    if (normalizedId && engineRef.current) {
       const saved = engineRef.current.state.events.get(normalizedId);
       if (saved) return toLegacyEvent(saved);
     }
@@ -1927,7 +1963,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }
 
-  const swipeAreaRef = useRef(null);
+  const swipeAreaRef = useRef<HTMLDivElement | null>(null);
   const swipeNavigationEnabled = cal.view === 'month' || cal.view === 'schedule';
   useTouchSwipe({
     targetRef: swipeAreaRef,
