@@ -73,7 +73,7 @@ function isFeedEnabled(feed: StoredFeed): boolean {
 function isValidationFailure(
   validation: FeedValidationState
 ): validation is { ok: false; error: string; corsLikely: boolean; count?: undefined } {
-  return Boolean(validation) && validation.ok === false;
+  return validation != null && validation.ok === false;
 }
 
 function colorDot(color: string, size = 10) {

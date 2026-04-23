@@ -78,6 +78,17 @@ function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
   });
 }
 
+
+function normalizeInitialValues(values: ExternalFormValues, fields: ExternalFormField[]): ExternalFormValues {
+  const normalized: ExternalFormValues = { ...values };
+  fields.forEach((field) => {
+    if (normalized[field.name] === undefined) {
+      normalized[field.name] = field.type === 'checkbox' ? false : '';
+    }
+  });
+  return normalized;
+}
+
 function ensureAdapter(adapter: unknown): ExternalFormAdapter {
   if (!adapter || typeof (adapter as { submitEvent?: unknown }).submitEvent !== 'function') {
     throw new Error('CalendarExternalForm adapter must define submitEvent(payload, context).');
@@ -146,12 +157,12 @@ export default function CalendarExternalForm({
   const normalizedFields = normalizeFields(fields);
 
   const mergedInitialValues = useMemo(() => {
-    const fromFields = normalizeFields(fields).reduce<ExternalFormValues>((acc, field) => {
+    const fromFields = normalizedFields.reduce<ExternalFormValues>((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
-    return { ...fromFields, ...initialValues };
-  }, [fields, initialValues]);
+    return normalizeInitialValues({ ...fromFields, ...initialValues }, normalizedFields);
+  }, [initialValues, normalizedFields]);
 
   const [values, setValues] = useState(mergedInitialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
