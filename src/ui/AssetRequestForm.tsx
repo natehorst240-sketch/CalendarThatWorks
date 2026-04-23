@@ -15,17 +15,17 @@ import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './EventForm.module.css';
 
-type AssetRequestAsset = {
+type AssetOption = {
   id: string;
-  label?: string;
+  label?: string | null;
 };
 
 type AssetRequestCategory = {
   id: string;
-  label?: string;
+  label?: string | null;
 };
 
-type AssetRequestPayload = {
+type AssetRequestSubmitPayload = {
   title: string;
   start: Date;
   end: Date;
@@ -42,11 +42,11 @@ type AssetRequestPayload = {
 };
 
 type AssetRequestFormProps = {
-  assets: AssetRequestAsset[];
+  assets: AssetOption[];
   categories: AssetRequestCategory[];
-  initialStart?: Date;
-  initialAssetId?: string;
-  onSubmit: (payload: AssetRequestPayload) => void;
+  initialStart?: Date | null;
+  initialAssetId?: string | null;
+  onSubmit: (payload: AssetRequestSubmitPayload) => void;
   onClose: () => void;
 };
 
@@ -57,9 +57,9 @@ function toLocalInput(date: Date): string {
 
 function fromLocalInput(value: string): Date {
   // Interpret as local time (same convention as EventForm's fromDatetimeLocal).
-  const [datePart, timePart] = value.split('T');
-  const [y, m, d] = datePart.split('-').map(Number);
-  const [hh, mm] = (timePart || '00:00').split(':').map(Number);
+  const [datePart = '', timePart = '00:00'] = value.split('T');
+  const [y = 0, m = 1, d = 1] = datePart.split('-').map(Number);
+  const [hh = 0, mm = 0] = timePart.split(':').map(Number);
   return new Date(y, m - 1, d, hh, mm, 0, 0);
 }
 
@@ -76,8 +76,8 @@ export default function AssetRequestForm({
   const start = initialStart instanceof Date ? initialStart : new Date();
   const defaultEnd = new Date(start.getTime() + 60 * 60 * 1000);
 
-  const [assetId,  setAssetId]  = useState(initialAssetId || assets[0]?.id || '');
-  const [category, setCategory] = useState(categories[0]?.id || '');
+  const [assetId, setAssetId] = useState<string>(initialAssetId ?? assets[0]?.id ?? '');
+  const [category, setCategory] = useState<string>(categories[0]?.id ?? '');
   const [title,    setTitle]    = useState('');
   const [startStr, setStartStr] = useState(toLocalInput(start));
   const [endStr,   setEndStr]   = useState(toLocalInput(defaultEnd));
@@ -85,7 +85,7 @@ export default function AssetRequestForm({
   const [errors,   setErrors]   = useState<Record<string, string>>({});
 
   const assetOptions = useMemo(
-    () => assets.map((a) => ({ value: a.id, label: a.label || a.id })),
+    () => assets.map((a) => ({ value: a.id, label: a.label ?? a.id })),
     [assets],
   );
 
@@ -170,7 +170,9 @@ export default function AssetRequestForm({
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
               >
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label || c.id}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.label ?? c.id}
+                  </option>
                 ))}
               </select>
               {errors.category && <span className={styles.error}>{errors.category}</span>}

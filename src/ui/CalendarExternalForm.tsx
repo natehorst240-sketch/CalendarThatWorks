@@ -146,12 +146,12 @@ export default function CalendarExternalForm({
   const normalizedFields = normalizeFields(fields);
 
   const mergedInitialValues = useMemo(() => {
-    const fromFields = normalizeFields(fields).reduce<ExternalFormValues>((acc, field) => {
+    const fromFields = normalizedFields.reduce<ExternalFormValues>((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
     return { ...fromFields, ...initialValues };
-  }, [fields, initialValues]);
+  }, [normalizedFields, initialValues]);
 
   const [values, setValues] = useState(mergedInitialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
