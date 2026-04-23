@@ -45,7 +45,7 @@ function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
     throw new Error('CalendarExternalForm requires at least one field.');
   }
 
-  const names = new Set();
+  const names = new Set<string>();
   return fields.map((field) => {
     if (!field?.name || typeof field.name !== 'string') {
       throw new Error('Each field requires a string `name`.');
@@ -229,13 +229,13 @@ export default function CalendarExternalForm({
                   onChange={(e) => setValue(field.name, e.target.checked)}
                 />
               )}
-              {!['textarea', 'select', 'checkbox'].includes(field.type) && (
+              {field.type !== 'textarea' && field.type !== 'select' && field.type !== 'checkbox' && (
                 <input
                   id={inputId}
                   className={styles.input}
-                  type={field.type || 'text'}
+                  type={field.type}
                   value={toInputValue(value)}
-                  placeholder={field.placeholder}
+                  placeholder={field.placeholder ?? ''}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 />
               )}
