@@ -67,7 +67,7 @@ if (!storedCfg) {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
     setup: { completed: true, preferredTheme: 'ops-dark' },
-    display: { ...DEFAULT_CONFIG.display, defaultView: 'schedule' },
+    display: { ...DEFAULT_CONFIG.display, defaultView: 'base' },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
@@ -398,7 +398,7 @@ function App() {
             onEmployeeDelete={handleEmployeeDelete}
             calendarId={DEMO_CALENDAR_ID}
             ownerPassword="demo1234"
-            initialView="schedule"
+            initialView="base"
             showSetupLanding
             onConfigSave={handleConfigSave}
             notes={notes}
