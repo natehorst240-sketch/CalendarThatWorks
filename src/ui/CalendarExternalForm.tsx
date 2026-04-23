@@ -1,9 +1,16 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import styles from './CalendarExternalForm.module.css';
 
-const SUPPORTED_FIELD_TYPES = new Set(['text', 'textarea', 'datetime-local', 'date', 'checkbox', 'select']);
-
 type ExternalFormFieldType = 'text' | 'textarea' | 'datetime-local' | 'date' | 'checkbox' | 'select';
+
+const SUPPORTED_FIELD_TYPES = new Set<ExternalFormFieldType>([
+  'text',
+  'textarea',
+  'datetime-local',
+  'date',
+  'checkbox',
+  'select',
+]);
 
 type ExternalFormOption = {
   value: string;

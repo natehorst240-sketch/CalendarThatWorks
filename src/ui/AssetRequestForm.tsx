@@ -15,6 +15,41 @@ import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './EventForm.module.css';
 
+type AssetRequestAsset = {
+  id: string;
+  label?: string;
+};
+
+type AssetRequestCategory = {
+  id: string;
+  label?: string;
+};
+
+type AssetRequestPayload = {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay: false;
+  category: string;
+  resource: string;
+  meta: {
+    notes?: string;
+    approvalStage: {
+      stage: 'requested';
+      updatedAt: string;
+    };
+  };
+};
+
+type AssetRequestFormProps = {
+  assets: AssetRequestAsset[];
+  categories: AssetRequestCategory[];
+  initialStart?: Date;
+  initialAssetId?: string;
+  onSubmit: (payload: AssetRequestPayload) => void;
+  onClose: () => void;
+};
+
 function toLocalInput(date: Date): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -35,7 +70,7 @@ export default function AssetRequestForm({
   initialAssetId,
   onSubmit,
   onClose,
-}: any) {
+}: AssetRequestFormProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
 
   const start = initialStart instanceof Date ? initialStart : new Date();
@@ -50,7 +85,7 @@ export default function AssetRequestForm({
   const [errors,   setErrors]   = useState<Record<string, string>>({});
 
   const assetOptions = useMemo(
-    () => assets.map((a: any) => ({ value: a.id, label: a.label || a.id })),
+    () => assets.map((a) => ({ value: a.id, label: a.label || a.id })),
     [assets],
   );
 
@@ -122,7 +157,7 @@ export default function AssetRequestForm({
                 value={assetId}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setAssetId(e.target.value)}
               >
-                {assetOptions.map((o: { value: string; label: string }) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {assetOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               {errors.assetId && <span className={styles.error}>{errors.assetId}</span>}
             </div>
@@ -134,7 +169,7 @@ export default function AssetRequestForm({
                 value={category}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value)}
               >
-                {categories.map((c: any) => (
+                {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.label || c.id}</option>
                 ))}
               </select>
