@@ -176,7 +176,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
               id="af-title"
               className={[styles.input, errors.title && styles.inputError].filter(Boolean).join(' ')}
               value={title}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => { setTitle(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, title: undefined })); }}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                setTitle(e.target.value);
+                setErrors((v: Record<string, string>) => {
+                  const next = { ...v };
+                  delete next.title;
+                  return next;
+                });
+              }}
               placeholder="e.g. Vacation, Doctor appointment…"
               autoFocus
             />
@@ -216,7 +223,15 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.start && styles.inputError].filter(Boolean).join(' ')}
                 value={start}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => { setStart(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, start: undefined, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setStart(e.target.value);
+                  setErrors((v: Record<string, string>) => {
+                    const next = { ...v };
+                    delete next.start;
+                    delete next.end;
+                    return next;
+                  });
+                }}
               />
               {errors.start && <span className={styles.error}>{errors.start}</span>}
             </div>
@@ -229,7 +244,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
                 type={allDay ? 'date' : 'datetime-local'}
                 className={[styles.input, errors.end && styles.inputError].filter(Boolean).join(' ')}
                 value={end}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => { setEnd(e.target.value); setErrors((v: Record<string, string>) => ({ ...v, end: undefined })); }}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setEnd(e.target.value);
+                  setErrors((v: Record<string, string>) => {
+                    const next = { ...v };
+                    delete next.end;
+                    return next;
+                  });
+                }}
               />
               {errors.end && <span className={styles.error}>{errors.end}</span>}
             </div>

@@ -104,7 +104,11 @@ function DropStep({ onFile, onClose }: DropStepProps) {
       <div
         className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
-        onDrop={e => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
+        onDrop={e => {
+          e.preventDefault();
+          setDragging(false);
+          processFile(e.dataTransfer.files?.[0]);
+        }}
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDragEnter={e => { e.preventDefault(); setDragging(true); }}
@@ -124,7 +128,7 @@ function DropStep({ onFile, onClose }: DropStepProps) {
         <input
           ref={inputRef} type="file" accept=".csv,text/csv"
           className={styles.hiddenInput}
-          onChange={e => processFile(e.target.files[0])}
+          onChange={e => processFile(e.currentTarget.files?.[0])}
         />
         <button className={styles.cancelLink} onClick={onClose}>Cancel</button>
       </div>

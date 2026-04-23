@@ -66,7 +66,11 @@ export default function ImportZone({ onImport, onClose }: any) {
       <div
         className={[styles.zone, dragging && styles.dragging].filter(Boolean).join(' ')}
         onClick={e => e.stopPropagation()}
-        onDrop={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(false); processFile(e.dataTransfer.files[0]); }}
+        onDrop={(e: DragEvent<HTMLDivElement>) => {
+          e.preventDefault();
+          setDragging(false);
+          processFile(e.dataTransfer.files?.[0]);
+        }}
         onDragOver={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDragEnter={(e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setDragging(true); }}
@@ -113,7 +117,7 @@ export default function ImportZone({ onImport, onClose }: any) {
           type="file"
           accept=".ics,.csv,text/calendar,text/csv"
           className={styles.hiddenInput}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => processFile(e.target.files?.[0])}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => processFile(e.currentTarget.files?.[0])}
         />
 
         <button className={styles.cancelLink} onClick={onClose}>Cancel</button>
