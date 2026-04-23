@@ -59,6 +59,23 @@ type FeedErrorEntry = {
   err?: unknown;
 };
 
+
+type FeedValidationState = {
+  ok: true;
+  count: number;
+} | {
+  ok: false;
+  error: string;
+  corsLikely: boolean;
+  count?: undefined;
+} | null;
+
+function isValidationFailure(
+  validation: FeedValidationState,
+): validation is { ok: false; error: string; corsLikely: boolean; count?: undefined } {
+  return validation != null && validation.ok === false;
+}
+
 type SourceHandlers = {
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
@@ -302,7 +319,7 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
   const [color,           setColor]           = useState(PRESET_COLORS[0]);
   const [refreshInterval, setRefreshInterval] = useState<number | null>(300_000);
   const [validating,      setValidating]      = useState(false);
-  const [validation,      setValidation]      = useState<{ ok: boolean; count?: number; error?: string; corsLikely?: boolean } | null>(null);
+  const [validation,      setValidation]      = useState<FeedValidationState>(null);
 
   function reset() {
     setUrl(''); setLabel(''); setColor(PRESET_COLORS[0]);
@@ -403,9 +420,11 @@ function AddFeedForm({ onAdd }: { onAdd: (source: Partial<CalendarSource>) => vo
           <span>
             {validation.ok
               ? `Found ${validation.count} event${validation.count === 1 ? '' : 's'} — feed looks good.`
-              : validation.corsLikely
+              : isValidationFailure(validation) && validation.corsLikely
                 ? `Could not verify from browser (${validation.error}). This may be a CORS restriction — you can still add the feed and it may work.`
-                : `Error: ${validation.error}`}
+                : isValidationFailure(validation)
+                  ? `Error: ${validation.error}`
+                  : 'Unable to validate feed.'}
           </span>
         </div>
       )}
@@ -533,10 +552,13 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
   const csvSources = normalizedSources.filter((s: CalendarSource) => s.type === 'csv');
 
   const errorByUrl = Object.fromEntries(
-    (feedErrors ?? []).map((entry) => {
-      const value = entry as FeedErrorEntry;
-      return [value.feed?.url ?? '', value.err];
-    }),
+    (feedErrors ?? [])
+      .map((entry) => {
+        const value = entry as FeedErrorEntry;
+        const url = value.feed?.url ?? '';
+        return [url, value.err] as const;
+      })
+      .filter((entry): entry is readonly [string, unknown] => entry[0] !== ''),
   );
 
   const icsErrors = icsSources.filter((s: CalendarSource) => {

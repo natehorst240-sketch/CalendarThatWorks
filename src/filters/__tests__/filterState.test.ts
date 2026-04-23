@@ -155,6 +155,8 @@ describe('buildActiveFilterPills', () => {
     };
     const pills = buildActiveFilterPills(filters, DEFAULT_FILTER_SCHEMA);
     const catPill = pills.find(p => p.key === 'categories');
+    expect(catPill).toBeDefined();
+    if (!catPill) throw new Error('Expected categories pill to be present');
     expect(catPill.fieldLabel).toBe('Category');
   });
 

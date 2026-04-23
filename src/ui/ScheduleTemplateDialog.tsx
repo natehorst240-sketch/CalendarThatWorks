@@ -207,7 +207,7 @@ export default function ScheduleTemplateDialog({
                     >
                       <div className={styles.previewSummary}>
                         <span>{ev.title ?? '(untitled)'}</span>
-                        <span>{toDatetimeLocal(ev.start)}</span>
+                        <span>{ev.start == null ? '' : toDatetimeLocal(ev.start)}</span>
                       </div>
                       {conflictsByIndex.has(idx) && (
                         <ul className={styles.conflictList}>

@@ -1,9 +1,16 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import styles from './CalendarExternalForm.module.css';
 
-const SUPPORTED_FIELD_TYPES = new Set(['text', 'textarea', 'datetime-local', 'date', 'checkbox', 'select']);
-
 type ExternalFormFieldType = 'text' | 'textarea' | 'datetime-local' | 'date' | 'checkbox' | 'select';
+
+const SUPPORTED_FIELD_TYPES = new Set<ExternalFormFieldType>([
+  'text',
+  'textarea',
+  'datetime-local',
+  'date',
+  'checkbox',
+  'select',
+]);
 
 type ExternalFormOption = {
   value: string;
@@ -45,7 +52,7 @@ function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
     throw new Error('CalendarExternalForm requires at least one field.');
   }
 
-  const names = new Set();
+  const names = new Set<string>();
   return fields.map((field) => {
     if (!field?.name || typeof field.name !== 'string') {
       throw new Error('Each field requires a string `name`.');
@@ -69,6 +76,17 @@ function normalizeFields(fields: ExternalFormField[]): ExternalFormField[] {
       options: field.options ?? [],
     };
   });
+}
+
+
+function normalizeInitialValues(values: ExternalFormValues, fields: ExternalFormField[]): ExternalFormValues {
+  const normalized: ExternalFormValues = { ...values };
+  fields.forEach((field) => {
+    if (normalized[field.name] === undefined) {
+      normalized[field.name] = field.type === 'checkbox' ? false : '';
+    }
+  });
+  return normalized;
 }
 
 function ensureAdapter(adapter: unknown): ExternalFormAdapter {
@@ -139,12 +157,12 @@ export default function CalendarExternalForm({
   const normalizedFields = normalizeFields(fields);
 
   const mergedInitialValues = useMemo(() => {
-    const fromFields = normalizeFields(fields).reduce<ExternalFormValues>((acc, field) => {
+    const fromFields = normalizedFields.reduce<ExternalFormValues>((acc, field) => {
       acc[field.name] = field.type === 'checkbox' ? false : '';
       return acc;
     }, {});
-    return { ...fromFields, ...initialValues };
-  }, [fields, initialValues]);
+    return normalizeInitialValues({ ...fromFields, ...initialValues }, normalizedFields);
+  }, [initialValues, normalizedFields]);
 
   const [values, setValues] = useState(mergedInitialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -229,13 +247,13 @@ export default function CalendarExternalForm({
                   onChange={(e) => setValue(field.name, e.target.checked)}
                 />
               )}
-              {!['textarea', 'select', 'checkbox'].includes(field.type) && (
+              {field.type !== 'textarea' && field.type !== 'select' && field.type !== 'checkbox' && (
                 <input
                   id={inputId}
                   className={styles.input}
-                  type={field.type || 'text'}
+                  type={field.type}
                   value={toInputValue(value)}
-                  placeholder={field.placeholder}
+                  placeholder={field.placeholder ?? ''}
                   onChange={(e) => setValue(field.name, e.target.value)}
                 />
               )}

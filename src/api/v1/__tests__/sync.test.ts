@@ -276,20 +276,22 @@ describe('SyncManager', () => {
     // Immediately (before adapter resolves), optimistic event is in map
     const tempIds = [...manager.events.keys()];
     expect(tempIds.length).toBe(1);
-    expect(manager.events.get(tempIds[0])?.title).toBe('New Event');
+    const firstTempId = tempIds[0];
+    expect(firstTempId).toBeDefined();
+    expect(manager.events.get(firstTempId!)?.title).toBe('New Event');
 
     await promise;
   });
 
   it('createEvent replaces temp id with server id', async () => {
-    vi.mocked(adapter.createEvent).mockResolvedValue({ ...ev(), id: 'server-1', title: 'Meeting' });
+    vi.mocked(adapter.createEvent!).mockResolvedValue({ ...ev(), id: 'server-1', title: 'Meeting' });
     await manager.createEvent(ev({ id: undefined }));
     await Promise.resolve(); // flush microtasks
     expect(manager.events.has('server-1')).toBe(true);
   });
 
   it('createEvent marks status synced after success', async () => {
-    vi.mocked(adapter.createEvent).mockResolvedValue({ ...ev(), id: 'server-1' });
+    vi.mocked(adapter.createEvent!).mockResolvedValue({ ...ev(), id: 'server-1' });
     await manager.createEvent(ev({ id: undefined }));
     await Promise.resolve();
     expect(manager.queue.isSyncing).toBe(false);
@@ -324,7 +326,7 @@ describe('SyncManager', () => {
 
   it('updateEvent merges server response into local map', async () => {
     vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
-    vi.mocked(adapter.updateEvent).mockResolvedValue(ev({ title: 'Server Title' }));
+    vi.mocked(adapter.updateEvent!).mockResolvedValue(ev({ title: 'Server Title' }));
     await manager.loadRange(S, E);
     await manager.updateEvent('ev-1', { title: 'Local Title' });
     await Promise.resolve();
@@ -351,7 +353,7 @@ describe('SyncManager', () => {
 
   it('deleteEvent rollbacks on adapter error', async () => {
     vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
-    vi.mocked(adapter.deleteEvent).mockRejectedValue(new Error('server error'));
+    vi.mocked(adapter.deleteEvent!).mockRejectedValue(new Error('server error'));
     await manager.loadRange(S, E);
     await manager.deleteEvent('ev-1');
     await Promise.resolve();
@@ -392,7 +394,7 @@ describe('SyncManager', () => {
   it('onError is called after max retries exceeded', async () => {
     const onError = vi.fn();
     vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
-    vi.mocked(adapter.updateEvent).mockRejectedValue(new Error('network'));
+    vi.mocked(adapter.updateEvent!).mockRejectedValue(new Error('network'));
     const m = new SyncManager({ adapter, maxRetries: 0, onError });
 
     await m.loadRange(S, E);
@@ -407,7 +409,7 @@ describe('SyncManager', () => {
 
   it('clearErrors removes error operations from queue', async () => {
     vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
-    vi.mocked(adapter.updateEvent).mockRejectedValue(new Error('fail'));
+    vi.mocked(adapter.updateEvent!).mockRejectedValue(new Error('fail'));
     const m = new SyncManager({ adapter, maxRetries: 0 });
 
     await m.loadRange(S, E);
@@ -426,7 +428,7 @@ describe('SyncManager', () => {
     const serverEv = ev({ title: 'Server', sync: { externalId: 'x', syncSource: 's', version: 2 } });
 
     vi.mocked(adapter.loadRange).mockResolvedValue([localEv]);
-    vi.mocked(adapter.updateEvent).mockResolvedValue(serverEv);
+    vi.mocked(adapter.updateEvent!).mockResolvedValue(serverEv);
 
     const m = new SyncManager({ adapter, conflictResolution: 'server-wins' });
     await m.loadRange(S, E);
@@ -441,7 +443,7 @@ describe('SyncManager', () => {
     const serverEv = ev({ title: 'Server', sync: { externalId: 'x', syncSource: 's', version: 2 } });
 
     vi.mocked(adapter.loadRange).mockResolvedValue([localEv]);
-    vi.mocked(adapter.updateEvent).mockResolvedValue(serverEv);
+    vi.mocked(adapter.updateEvent!).mockResolvedValue(serverEv);
 
     const m = new SyncManager({ adapter, conflictResolution: 'client-wins' });
     await m.loadRange(S, E);
@@ -458,7 +460,7 @@ describe('SyncManager', () => {
     const merged   = ev({ title: 'Merged' });
 
     vi.mocked(adapter.loadRange).mockResolvedValue([localEv]);
-    vi.mocked(adapter.updateEvent).mockResolvedValue(serverEv);
+    vi.mocked(adapter.updateEvent!).mockResolvedValue(serverEv);
 
     const onConflict = vi.fn().mockResolvedValue(merged);
     const m = new SyncManager({ adapter, conflictResolution: 'manual', onConflict });
@@ -487,7 +489,7 @@ describe('SyncManager', () => {
 
   it('connectLive merges insert change into events', () => {
     let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    vi.mocked(adapter.subscribe!).mockImplementation((cb) => {
       pushChange = cb;
       return () => {};
     });
@@ -500,7 +502,7 @@ describe('SyncManager', () => {
 
   it('connectLive handles reload change', () => {
     let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    vi.mocked(adapter.subscribe!).mockImplementation((cb) => {
       pushChange = cb;
       return () => {};
     });
@@ -516,7 +518,7 @@ describe('SyncManager', () => {
     await manager.loadRange(S, E);
 
     let pushChange: ((c: import('../adapters/CalendarAdapter.js').AdapterChange) => void) | null = null;
-    vi.mocked(adapter.subscribe).mockImplementation((cb) => {
+    vi.mocked(adapter.subscribe!).mockImplementation((cb) => {
       pushChange = cb;
       return () => {};
     });

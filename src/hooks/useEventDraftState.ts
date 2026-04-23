@@ -188,6 +188,7 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
     setTemplateId(nextTemplateId);
     const template = getEventTemplateById(nextTemplateId);
     if (!template?.defaults) return;
+    const defaults = template.defaults;
     setValues((v) => {
       const startDate = fromDatetimeLocal(v.start);
       const next: DraftValues = {
@@ -198,21 +199,21 @@ export function useEventDraftState(event: EventDraftInput | null | undefined, ca
           templateVersion: template.version,
         },
       };
-      if (template.defaults.title) next.title = template.defaults.title;
-      if (template.defaults.category) next.category = template.defaults.category;
-      if (template.defaults.resource) next.resource = String(template.defaults.resource);
-      if (template.defaults.color) next.color = template.defaults.color;
-      if (typeof template.defaults.allDay === 'boolean') next.allDay = template.defaults.allDay;
-      if (startDate && Number.isFinite(template.defaults.durationMinutes)) {
-        const durationMinutes = template.defaults.durationMinutes ?? 0;
+      if (defaults.title) next.title = defaults.title;
+      if (defaults.category) next.category = defaults.category;
+      if (defaults.resource) next.resource = String(defaults.resource);
+      if (defaults.color) next.color = defaults.color;
+      if (typeof defaults.allDay === 'boolean') next.allDay = defaults.allDay;
+      if (startDate && Number.isFinite(defaults.durationMinutes)) {
+        const durationMinutes = defaults.durationMinutes ?? 0;
         const nextEnd = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
         next.end = toDatetimeLocal(nextEnd);
       }
       return next;
     });
-    if (template.defaults.recurrencePreset) {
-      setRecurrencePreset(template.defaults.recurrencePreset);
-      if (template.defaults.recurrencePreset !== 'custom') setCustomRrule('');
+    if (defaults.recurrencePreset) {
+      setRecurrencePreset(defaults.recurrencePreset);
+      if (defaults.recurrencePreset !== 'custom') setCustomRrule('');
     }
   }
 

@@ -9,202 +9,247 @@ This document starts the Stage 7 planning effort for enabling `strictNullChecks`
 ## Sprint 2 — Targeted UI + Test Reduction Sprint (Post-Pilot)
 
 **Date:** 2026-04-22  
-**Status:** ACTIVE (based on latest CI checkpoint)
+**Status:** COMPLETE
+
+### Outcome
+
+Sprint 2 successfully:
+
+- reduced strict-null diagnostic noise
+- stabilized UI seams
+- cleaned up test null-safety issues
+- proved view micro-slicing works (TimelineView)
+
+This created a lower-noise environment for deeper structural work.
+
+---
+
+## Sprint 3 — Core Boundary Hardening & Type Flow Control
+
+**Status:** IN PROGRESS (PR4 + PR5 update recorded on 2026-04-23)
 
 ### Goal
 
-Reduce strict-null error count by attacking **mid-sized UI seams + mechanical test debt** while continuing to avoid root composition (`WorksCalendar.tsx`).
+Prevent null/undefined from propagating through the system by enforcing strict typing at **core boundaries and data flow layers**.
 
-This sprint is designed to:
+Shift from:
+> fixing errors
 
-- shrink total diagnostics meaningfully
-- reduce noise before view-layer work
-- prepare for future `views/**` slicing
-
----
-
-## Why this sprint focus
-
-Latest CI checkpoint shows:
-
-- root file (`WorksCalendar.tsx`) still too high-cascade
-- views still high-risk and not yet ready for broad changes
-- **UI panels and tests contain high-density, low-risk fixes**
-
-This sprint targets the highest ROI per PR.
+To:
+> preventing errors from existing
 
 ---
 
-## Sprint 2 Target Areas
+## Sprint 3 Focus Areas
 
-### Slice A — ICSFeedPanel (UI seam)
-
-Files:
-- `src/ui/ICSFeedPanel.tsx`
-
-Problems:
-- state inferred as `null`, later treated as object
-- `never` cascades on `ok`, `count`, `error`
-
-Fix pattern:
-
-```ts
-type FeedState = {
-  ok: boolean;
-  count?: number;
-  error?: string;
-} | null;
-```
-
-- explicitly type state
-- guard before access
-
-PR size: 1 file
-Risk: LOW
-
----
-
-### Slice B — SourcePanel (UI seam)
-
-Files:
-- `src/ui/SourcePanel.tsx`
-
-Problems:
-- `boolean | undefined` used as boolean
-- `string | undefined` used as string
-- nullable draft objects
-
-Fix pattern:
-
-- normalize inputs at boundary
-- use defaulting (`?? false`, `?? ''`)
-- guard draft before usage
-
-PR size: 1 file
-Risk: LOW–MED
-
----
-
-### Slice C — Form normalization fixes
-
-Files:
-- `AvailabilityForm.tsx`
-- `CalendarExternalForm.tsx`
-
-Problems:
-- writing `undefined` into `Record<string,string>`
-
-Fix pattern:
-
-```ts
-setState(prev => ({
-  ...prev,
-  title: value ?? ''
-}))
-```
-
-PR size: 1–2 files
-Risk: LOW
-
----
-
-### Slice D — Mechanical test cleanup batch
+### 1. Core Data Normalization
 
 Targets:
-- `src/__tests__/**`
-- `src/hooks/__tests__/**`
-- `src/api/v1/__tests__/sync.test.ts`
+- `src/core/**`
+- parsing layers
+- event/data transformation logic
 
-Patterns to fix:
+Actions:
+- introduce/standardize normalize functions
+- eliminate partial/nullable data before it reaches UI
 
-- `.get(...)!` or guard instead of assuming existence
-- `element!` or null check before fireEvent
-- `.find(...)` → guard or fallback
-
-Example:
+Pattern:
 
 ```ts
-const el = screen.queryByText('foo');
-expect(el).not.toBeNull();
-fireEvent.click(el!);
+function normalizeEvent(raw: RawEvent): Event
 ```
 
-PR size: 3–5 files per PR
-Risk: LOW (mechanical)
+---
+
+### 2. API & Adapter Boundaries
+
+Targets:
+- `src/api/**`
+- sync adapters
+- external integrations
+
+Actions:
+- explicitly type all inputs/outputs
+- remove `any` from adapters
+- constrain null handling to entry points only
 
 ---
 
-### Slice E — First view micro-slice (TimelineView)
+### 3. Context & Global State Hardening
 
-Files:
-- `src/views/TimelineView.tsx`
+Targets:
+- `src/core/CalendarContext.ts`
+- global config/state providers
 
-Scope (STRICTLY limited):
-
-- one ref or scroll handler cluster
-- one hover/selection state cluster
-
-Do NOT:
-- touch full render pipeline
-- refactor entire file
-
-Goal:
-- prove view-level slicing works without cascade
-
-PR size: 1 file
-Risk: MEDIUM
+Actions:
+- eliminate optional context usage
+- enforce full context contracts
+- remove defensive optional chaining in consumers
 
 ---
 
-## Sprint 2 PR Plan (ordered)
+### 4. Ghost Null Elimination
 
-1. PR1 — ICSFeedPanel
-2. PR2 — SourcePanel
-3. PR3 — Form normalization
-4. PR4–PR6 — test cleanup batches
-5. PR7 — TimelineView micro-slice
+Patterns to remove:
+
+```ts
+value || ''
+thing?.value?.data
+```
+
+Replace with:
+- explicit narrowing
+- `??` where appropriate
+- early normalization
+
+---
+
+### 5. Strict-Null Ratchet Tightening
+
+Actions:
+- reduce baseline again
+- fail PRs on regression
+- track diagnostic categories
+
+---
+
+## Sprint 3 PR Plan (ordered)
+
+1. PR1 — Core data normalization
+2. PR2 — API & adapter boundary typing
+3. PR3 — Context hardening
+4. PR4 — Ghost null cleanup pass
+5. PR5 — Ratchet tightening + baseline reduction
+
+### Sprint 3 Progress Update (2026-04-23)
+
+- ✅ PR4 completed: ghost-null cleanup/narrowing pass landed in strict-null test and adapter seams.
+- ✅ PR5 completed: strict-null ratchet tightened by adding PR4 files to migrated-path enforcement.
+- ✅ Baseline reduced from **324** to **144** strict-null diagnostics (`npm run -s type-check:strict-null`).
+- ⚠️ Remaining strict-null diagnostics are still concentrated in `src/WorksCalendar.tsx` and other non-migrated files.
 
 ---
 
 ## Exit Criteria
 
-Sprint 2 is successful if:
+Sprint 3 is successful if:
 
-- strict-null error count decreases meaningfully
-- no new regressions introduced
-- at least one view file is partially migrated safely
-- noise from tests is reduced
+- core data flows are normalized and non-null by default
+- null handling is isolated to boundaries
+- context is fully typed without optional chaining
+- strict-null baseline is reduced again
+
+---
+
+## Sprint 4 — Root Stabilization & Full `strictNullChecks` Enablement
+
+**Status:** PLANNED
+
+### Goal
+
+Enable `strictNullChecks: true` across the entire repository and stabilize the root composition layer so strict typing holds long-term.
+
+---
+
+## Sprint 4 Focus Areas
+
+### 1. Root Composition Stabilization
+
+Target:
+- `src/WorksCalendar.tsx`
+
+Actions:
+- break file into logical zones (props, context, render, handlers)
+- introduce typed boundaries between zones
+- optionally extract small helper builders (NOT full refactor)
+
+---
+
+### 2. Final View Layer Cleanup
+
+Targets:
+- `src/views/WeekView.tsx`
+- remaining `TimelineView.tsx` work
+
+Actions:
+- resolve remaining strict-null issues
+- rely on normalized data from Sprint 3
+
+---
+
+### 3. Controlled Strict Mode Enablement
+
+Steps:
+
+**Phase A — CI Dry Run**
+- run `strictNullChecks` in CI
+- track remaining errors without blocking
+
+**Phase B — Full Enablement**
+- enable in `tsconfig.json`
+- resolve remaining blockers
+- enforce via CI
+
+---
+
+### 4. Remove Escape Hatches
+
+Eliminate:
+- non-null assertions (`!`)
+- `as any`
+- unsafe fallbacks (`||`)
+
+Replace with:
+- proper typing
+- narrowing
+- normalization
+
+---
+
+### 5. CI Enforcement
+
+Actions:
+- fail builds on strict-null errors
+- prevent regression of baseline
+- enforce no new `any`
+
+---
+
+## Sprint 4 PR Plan (ordered)
+
+1. PR1 — Root typing (phase 1: props + state)
+2. PR2 — Root typing (phase 2: handlers + context)
+3. PR3 — View finalization
+4. PR4 — Strict mode dry run (CI only)
+5. PR5 — Full strictNullChecks enablement
+6. PR6 — Enforcement + cleanup
+
+---
+
+## Exit Criteria
+
+Sprint 4 is successful if:
+
+- `strictNullChecks: true` is enabled repo-wide
+- `tsc --noEmit` passes clean
+- minimal or no reliance on `!` or `any`
+- CI enforces strict-null compliance
 
 ---
 
 ## What we are NOT doing yet
 
-Explicitly out of scope:
+Still out of scope:
 
-- `src/WorksCalendar.tsx`
-- full `views/**` migrations
-- root config flip stabilization
-
-Those require a later dedicated sprint after noise reduction.
-
----
-
-## Next Sprint Preview (Sprint 3)
-
-If Sprint 2 succeeds:
-
-- expand view slicing (Timeline + WeekView)
-- begin hook normalization (`useSyncedCalendar`, etc.)
-- prepare for root composition stabilization sprint
+- large-scale architectural rewrites
+- full component refactors unrelated to strict-null
 
 ---
 
 ## Key Insight
 
-The fastest path to `strictNullChecks: true` is **not fixing the biggest file first**.
+Sprint 2 reduced noise.
+Sprint 3 controlled data flow.
+Sprint 4 locks correctness into the system.
 
-It is:
-
-> reduce cascade pressure → shrink error surface → then attack root composition cleanly
-
-This sprint executes that strategy.
+> Once strict-null is enforced at the root, the entire codebase becomes safer by default.

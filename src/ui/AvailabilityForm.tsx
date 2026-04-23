@@ -128,6 +128,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
 
     const s = fromInput(start, allDay);
     const en = fromInput(end, allDay);
+    if (!s || !en) {
+      setErrors((prev) => ({
+        ...prev,
+        start: prev.start ?? `Enter a valid ${allDay ? 'start date' : 'start date/time'}`,
+        end: prev.end ?? `Enter a valid ${allDay ? 'end date' : 'end date/time'}`,
+      }));
+      return;
+    }
 
     onSave({
       id:         initialEvent?.id ?? createId('avail'),

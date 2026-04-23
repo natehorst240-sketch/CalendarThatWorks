@@ -58,6 +58,7 @@ describe('useDrag — yToMinutes clamp boundary', () => {
 
     const start = result.current.ghost?.start;
     expect(start).toBeDefined();
+    if (!start) throw new Error('Expected drag ghost start time');
     const startMinutes = start.getHours() * 60 + start.getMinutes();
     expect(startMinutes).toBe(DAY_END * 60 - SNAP_MIN); // 22*60 - 15 = 1305 = 21:45
   });

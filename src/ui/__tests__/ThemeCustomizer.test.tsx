@@ -6,6 +6,12 @@ import { render, fireEvent, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ThemeCustomizer from '../ThemeCustomizer';
 
+function getLatestConfig(setConfig: ReturnType<typeof vi.fn>) {
+  const latestCall = setConfig.mock.calls.at(-1);
+  if (!latestCall) throw new Error('Expected ThemeCustomizer to emit an onChange update');
+  return latestCall[0];
+}
+
 function renderWithConfig(customTheme = {}) {
   const setConfig = vi.fn();
 
@@ -29,7 +35,7 @@ describe('ThemeCustomizer', () => {
     const accent = screen.getByLabelText('Accent');
     fireEvent.change(accent, { target: { value: '#111111' } });
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme.colors.accent).toBe('#111111');
   });
 
@@ -39,7 +45,7 @@ describe('ThemeCustomizer', () => {
     const density = screen.getByLabelText(/Density/);
     fireEvent.change(density, { target: { value: '1.15' } });
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme.spacing.density).toBe(1.15);
   });
 
@@ -50,7 +56,7 @@ describe('ThemeCustomizer', () => {
       target: { value: "'Roboto', 'Helvetica Neue', Arial, sans-serif" },
     });
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme.typography.fontFamily).toBe("'Roboto', 'Helvetica Neue', Arial, sans-serif");
   });
 
@@ -62,7 +68,7 @@ describe('ThemeCustomizer', () => {
       target: { value: "Georgia, 'Times New Roman', serif" },
     });
 
-    const headingLatest = heading.setConfig.mock.calls.at(-1)[0];
+    const headingLatest = getLatestConfig(heading.setConfig);
     expect(headingLatest.customTheme.typography.headingFontFamily).toBe("Georgia, 'Times New Roman', serif");
 
     cleanup();
@@ -72,7 +78,7 @@ describe('ThemeCustomizer', () => {
       target: { value: "'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace" },
     });
 
-    const monoLatest = mono.setConfig.mock.calls.at(-1)[0];
+    const monoLatest = getLatestConfig(mono.setConfig);
     expect(monoLatest.customTheme.typography.monoFontFamily).toBe("'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace");
   });
 
@@ -81,7 +87,7 @@ describe('ThemeCustomizer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme).toEqual({});
   });
 
@@ -90,7 +96,7 @@ describe('ThemeCustomizer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Midnight' }));
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme.colors.bg).toBe('#0b1020');
     expect(latest.customTheme.colors.accent).toBe('#8b5cf6');
   });
@@ -103,7 +109,7 @@ describe('ThemeCustomizer', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Apply imported JSON' }));
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme.colors.accent).toBe('#0ea5e9');
     expect(screen.getByRole('status')).toHaveTextContent('Imported and merged');
   });
@@ -117,7 +123,7 @@ describe('ThemeCustomizer', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Apply imported JSON' }));
 
-    const latest = setConfig.mock.calls.at(-1)[0];
+    const latest = getLatestConfig(setConfig);
     expect(latest.customTheme).toEqual({ colors: { accent: '#0ea5e9' } });
     expect(screen.getByRole('status')).toHaveTextContent('Imported and replaced');
   });

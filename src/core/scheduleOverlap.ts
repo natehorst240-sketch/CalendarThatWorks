@@ -65,8 +65,8 @@ export function detectShiftConflicts({
   onCallCategory = 'on-call',
 }: {
   employeeId: string;
-  requestStart: Date;
-  requestEnd: Date;
+  requestStart: Date | null | undefined;
+  requestEnd: Date | null | undefined;
   allEvents: OverlapEventLike[];
   onCallCategory?: string;
 }): { conflictingEvents: OverlapEventLike[]; hasConflict: boolean } {

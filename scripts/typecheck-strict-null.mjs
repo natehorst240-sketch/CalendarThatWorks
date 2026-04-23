@@ -20,15 +20,45 @@ const STRICT_NULL_ERROR_CODES = new Set([
 const MIGRATED_PATHS = [
   'src/grouping/groupRows.ts',
   'src/grouping/__tests__/groupRows.test.ts',
+  'src/hooks/useFocusTrap.ts',
+  'src/hooks/useEventDraftState.ts',
+  'src/hooks/__tests__/useFocusTrap.test.tsx',
+  'src/__tests__/WorksCalendar.employees.sync.test.tsx',
+  'src/__tests__/WorksCalendar.recurringScopedEdit.test.tsx',
+  'src/__tests__/groupingFilteringSorting.integration.test.ts',
+  'src/__tests__/phaseB.integration.test.tsx',
+  'src/api/v1/adapters/SupabaseAdapter.ts',
+  'src/api/v1/__tests__/sync.test.ts',
+  'src/views/TimelineView.tsx',
+  'src/api/v1/adapters/SupabaseAdapter.ts',
+  'src/core/scheduleOverlap.ts',
+  'src/core/__tests__/scheduleMutations.test.ts',
+  'src/filters/__tests__/filterEngine.test.ts',
+  'src/filters/__tests__/filterState.test.ts',
+  'src/hooks/__tests__/useBookingHold.test.tsx',
+  'src/hooks/__tests__/useDrag.test.ts',
+  'src/hooks/__tests__/useSavedViews.test.ts',
 ];
 
 const BASELINE_PATH = path.resolve(process.cwd(), 'scripts/strict-null-baseline.json');
 
+const tscBin = path.resolve(process.cwd(), 'node_modules/typescript/bin/tsc');
+
+if (!fs.existsSync(tscBin)) {
+  console.error('❌ Local TypeScript compiler not found. Run npm install before strict-null checking.');
+  process.exit(1);
+}
+
 const tscResult = spawnSync(
-  'npx',
-  ['tsc', '--noEmit', '--pretty', 'false', '--strictNullChecks', 'true'],
+  process.execPath,
+  [tscBin, '--noEmit', '--pretty', 'false', '--strictNullChecks', 'true'],
   { encoding: 'utf8' },
 );
+
+if (tscResult.error) {
+  console.error(`❌ Failed to run TypeScript compiler: ${tscResult.error.message}`);
+  process.exit(1);
+}
 
 const output = `${tscResult.stdout ?? ''}${tscResult.stderr ?? ''}`;
 const repoRoot = process.cwd();
@@ -51,6 +81,14 @@ const diagnostics = output
     };
   })
   .filter((entry) => entry !== null);
+
+if (tscResult.status !== 0 && diagnostics.length === 0) {
+  console.error('❌ TypeScript compiler failed without parseable diagnostics.');
+  if (output.trim()) {
+    console.error(output.trim());
+  }
+  process.exit(1);
+}
 
 // === GLOBAL COUNTER RATchet ===
 const strictNullDiagnostics = diagnostics.filter((entry) =>

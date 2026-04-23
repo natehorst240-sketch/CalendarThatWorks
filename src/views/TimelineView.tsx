@@ -24,6 +24,7 @@ import type {
   DragEvent as ReactDragEvent,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
+  ReactNode,
   TouchEvent as ReactTouchEvent,
 } from 'react';
 import {
@@ -80,6 +81,20 @@ interface TimelineViewProps {
   roles?: string[];
   bases?: TimelineBase[];
 }
+
+type TimelineContextValue = {
+  emptyState?: ReactNode;
+  colorRules?: Array<Record<string, unknown>>;
+  renderEvent?: (
+    ev: LooseEvent,
+    options: { view: 'timeline'; isCompact: boolean; onClick: () => void; color: string | undefined },
+  ) => ReactNode;
+};
+
+type ShiftMenuState = { ev: LooseEvent; rect: DOMRect };
+type CoverMenuState = { ev: LooseEvent; rect: DOMRect };
+type EmpCardState = { emp: TimelineEmployee; rect: DOMRect };
+type DragState = { ev: LooseEvent; sourceRowKey: string };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -163,14 +178,14 @@ export default function TimelineView({
   roles = [],
   bases = [],
 }: TimelineViewProps) {
-  const ctx        = useCalendarContext();
+  const ctx = useCalendarContext() as TimelineContextValue | null;
 
   // ── Shift coverage menu state ─────────────────────────────────────────────
-  const [shiftMenu, setShiftMenu] = useState(null); // { ev, rect } | null
-  const [coverMenu, setCoverMenu] = useState(null); // { ev, rect } | null
-  const [empCard,   setEmpCard]   = useState(null); // { emp, rect } | null
-  const shiftMenuRef = useRef(null);
-  const coverMenuRef = useRef(null);
+  const [shiftMenu, setShiftMenu] = useState<ShiftMenuState | null>(null);
+  const [coverMenu, setCoverMenu] = useState<CoverMenuState | null>(null);
+  const [empCard, setEmpCard] = useState<EmpCardState | null>(null);
+  const shiftMenuRef = useRef<HTMLDivElement | null>(null);
+  const coverMenuRef = useRef<HTMLDivElement | null>(null);
 
   const triggerEmployeeAction = useCallback((empId: string, action: string | Record<string, unknown>, options: Record<string, unknown> = {}) => {
     if (!onEmployeeAction) return false;
@@ -182,8 +197,9 @@ export default function TimelineView({
   useEffect(() => {
     if (!anyMenuOpen) return;
     function handler(e: globalThis.MouseEvent) {
-      if (shiftMenuRef.current && !shiftMenuRef.current.contains(e.target)) setShiftMenu(null);
-      if (coverMenuRef.current && !coverMenuRef.current.contains(e.target)) setCoverMenu(null);
+      const target = e.target as Node | null;
+      if (shiftMenuRef.current && !shiftMenuRef.current.contains(target)) setShiftMenu(null);
+      if (coverMenuRef.current && !coverMenuRef.current.contains(target)) setCoverMenu(null);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -194,7 +210,7 @@ export default function TimelineView({
   const [addName,     setAddName]       = useState('');
   const [addRole,     setAddRole]       = useState('');
   const [addBase,     setAddBase]       = useState('');
-  const nameInputRef                    = useRef(null);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   // ── Base filter ───────────────────────────────────────────────────────────
   const [baseFilter, setBaseFilter]     = useState('');
@@ -209,15 +225,15 @@ export default function TimelineView({
   // ── Keyboard grid navigation ───────────────────────────────────────────────
   const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
   const lastKeyNavCell = useRef(false);
-  const gridRef        = useRef(null); // ref on .inner (for querySelector)
-  const wrapRef        = useRef(null); // ref on .wrap (scroll container)
+  const gridRef = useRef<HTMLDivElement | null>(null); // ref on .inner (for querySelector)
+  const wrapRef = useRef<HTMLDivElement | null>(null); // ref on .wrap (scroll container)
 
   // ── DnD: drag an event from one row to another to reassign it. ────────────
   // The drag source is the <button> around an event; the drop target is the
   // owning row.  dragRef carries { ev, sourceRowKey } across handler calls so
   // onDrop can skip same-row drops.
-  const dragRef = useRef(null);
-  const [dropTargetKey, setDropTargetKey] = useState(null);
+  const dragRef = useRef<DragState | null>(null);
+  const [dropTargetKey, setDropTargetKey] = useState<string | null>(null);
 
   // Touch-drag pathway (mobile).  Mirrors the HTML5 DnD branch using long-press
   // + elementFromPoint hit-testing.  Drop targets are rows with `data-wc-drop`.
@@ -373,7 +389,7 @@ export default function TimelineView({
       });
     }
 
-    return resourceList.map((resource: string) => {
+    return (resourceList ?? []).map((resource: string) => {
       const resEvents = events.filter(
         e => (e.resource ?? '(Unassigned)') === resource,
       );
@@ -412,7 +428,7 @@ export default function TimelineView({
     return buildGroupTree(pseudoEvents as any, groupBy as any);
   }, [isGrouped, pseudoEvents, groupBy]);
 
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const toggleGroup = useCallback((path: string) => {
     setCollapsedGroups(prev => {
       const next = new Set(prev);
@@ -506,7 +522,7 @@ export default function TimelineView({
     // Focus the keyboard cell — try immediately (works when row already rendered),
     // then via rAF after any scroll-triggered re-render.
     const tryFocus = () => {
-      const el = gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`);
+      const el = gridRef.current?.querySelector(`[data-cell="${rowIdx}-${dayIdx}"]`) as HTMLElement | null;
       el?.focus({ preventScroll: false });
     };
     tryFocus();
@@ -755,7 +771,7 @@ export default function TimelineView({
 
             const { key, emp, empIdx, resource, events: rowEvents, rowH, baseH, coveringPills, hasStatusPills } = rowData;
             const label = emp ? emp.name : resource;
-            const color = emp ? employeeColor(emp, empIdx) : null;
+            const color = emp ? employeeColor(emp, empIdx) : undefined;
             const topOffset = rowOffsets[rowIdx];
 
             // Drop-target wiring: only active when a consumer wires
@@ -1018,7 +1034,7 @@ export default function TimelineView({
                             <span className={styles.evTitle}>{ev.title}</span>
                             {hasStatus && (
                               <span className={styles.shiftStatusBadge}>
-                                {ev.meta.shiftStatus === 'pto' ? 'PTO' : 'Unavail.'}
+                                {ev.meta?.shiftStatus === 'pto' ? 'PTO' : 'Unavail.'}
                               </span>
                             )}
                           </button>
@@ -1027,7 +1043,7 @@ export default function TimelineView({
                             onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setShiftMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
+                              setShiftMenu((prev) => prev?.ev?.id === ev.id ? null : { ev, rect });
                             }}
                             title="Shift-only availability shortcut"
                             aria-label="Set shift availability"
@@ -1078,7 +1094,7 @@ export default function TimelineView({
                       const top   = baseH + 3;
                       const isCovered = !!ev.meta?.coveredBy;
                       const coveredByEmp = isCovered
-                        ? employees.find(e => String(e.id) === String(ev.meta.coveredBy))
+                        ? employees.find(e => String(e.id) === String(ev.meta?.coveredBy))
                         : null;
                       const coveredByName = coveredByEmp?.name ?? 'Someone';
 
@@ -1091,7 +1107,7 @@ export default function TimelineView({
                             onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
                               const rect = e.currentTarget.getBoundingClientRect();
-                              setCoverMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
+                              setCoverMenu((prev) => prev?.ev?.id === ev.id ? null : { ev, rect });
                             }}
                             title={`Shift covered by ${coveredByName}`}
                             aria-label={`Shift covered by ${coveredByName} — click to edit coverage`}
@@ -1108,7 +1124,7 @@ export default function TimelineView({
                           onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             const rect = e.currentTarget.getBoundingClientRect();
-                            setCoverMenu((prev: { ev?: LooseEvent } | null) => prev?.ev?.id === ev.id ? null : { ev, rect });
+                            setCoverMenu((prev) => prev?.ev?.id === ev.id ? null : { ev, rect });
                           }}
                           aria-label="Shift not covered — click to assign coverage"
                           title="Click to assign coverage"

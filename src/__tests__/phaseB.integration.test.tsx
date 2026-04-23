@@ -158,7 +158,7 @@ function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config:
         <div data-testid="committed-pill">
           <span>{committed.title}</span>
           <ApprovalActionMenu
-            stage={committed.meta.approvalStage.stage}
+            stage={committed.meta?.approvalStage?.stage ?? 'requested'}
             approvalsConfig={config.approvals}
             onAction={vi.fn()}
             variant="inline"

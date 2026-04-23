@@ -54,7 +54,9 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
 
     // Owner config was patched with the new member as well.
     await waitFor(() => expect(onConfigSave).toHaveBeenCalled());
-    const lastConfig = onConfigSave.mock.calls.at(-1)[0];
+    const lastCall = onConfigSave.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const [lastConfig] = lastCall!;
     expect(lastConfig.team?.members ?? []).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: 'Dana Morgan' })]),
     );
@@ -83,7 +85,9 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
     fireEvent.keyDown(nameInput, { key: 'Enter' });
 
     await waitFor(() => expect(onEmployeeAdd).toHaveBeenCalled());
-    const lastConfig = onConfigSave.mock.calls.at(-1)[0];
+    const lastCall = onConfigSave.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const [lastConfig] = lastCall!;
     const echoCount = (lastConfig.team?.members ?? []).filter((m: TeamMemberLike) => m.name === 'Echo').length;
     expect(echoCount).toBe(1);
   });

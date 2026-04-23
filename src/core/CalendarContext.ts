@@ -5,10 +5,17 @@
 import { createContext, useContext } from 'react';
 import type { NormalizedEvent } from '../types/events';
 
-export const CalendarContext = createContext(null);
+export type CalendarContextValue = {
+  renderEvent?: (...args: any[]) => any;
+  [key: string]: any;
+};
 
-export function useCalendarContext() {
-  return useContext(CalendarContext);
+const DEFAULT_CALENDAR_CONTEXT: CalendarContextValue = {};
+
+export const CalendarContext = createContext<CalendarContextValue | null>(null);
+
+export function useCalendarContext(): CalendarContextValue {
+  return useContext(CalendarContext) ?? DEFAULT_CALENDAR_CONTEXT;
 }
 
 /**

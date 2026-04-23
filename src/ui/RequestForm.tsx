@@ -54,7 +54,8 @@ function normalizeField(field: RequestFormFieldDraft, idx: number): RequestFormF
   const key = typeof field?.key === 'string' && field.key.trim()
     ? field.key.trim()
     : `field-${idx + 1}`;
-  const type = INPUT_TYPES.has(field?.type) ? field.type : 'text';
+  const draftType = field?.type;
+  const type: RequestFormFieldType = draftType && INPUT_TYPES.has(draftType) ? draftType : 'text';
   return {
     key,
     label:       typeof field?.label === 'string' ? field.label : key,

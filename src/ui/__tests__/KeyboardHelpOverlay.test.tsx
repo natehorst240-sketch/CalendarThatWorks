@@ -8,6 +8,11 @@ import '@testing-library/jest-dom';
 
 import KeyboardHelpOverlay from '../KeyboardHelpOverlay';
 
+function requireElement<T>(value: T | null, message: string): T {
+  if (value == null) throw new Error(message);
+  return value;
+}
+
 describe('KeyboardHelpOverlay', () => {
   it('renders an aria-modal dialog labelled "Keyboard shortcuts"', () => {
     render(<KeyboardHelpOverlay onClose={vi.fn()} />);
@@ -25,7 +30,7 @@ describe('KeyboardHelpOverlay', () => {
   it('Escape calls onClose', () => {
     const onClose = vi.fn();
     render(<KeyboardHelpOverlay onClose={onClose} />);
-    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+    fireEvent.keyDown(requireElement(document.activeElement, 'Expected active element'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledOnce();
   });
 

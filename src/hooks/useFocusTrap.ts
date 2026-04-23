@@ -37,8 +37,8 @@ function canFocus(value: Element | null): value is HTMLElement {
 export function useFocusTrap<T extends HTMLElement = HTMLElement>(
   onEscape?: (() => void) | null,
   active = true,
-): RefObject<T | null> {
-  const containerRef = useRef<T | null>(null);
+): RefObject<T> {
+  const containerRef = useRef<T>(null);
   const onEscapeRef = useRef<(() => void) | null | undefined>(onEscape);
 
   useEffect(() => {
@@ -48,18 +48,19 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
   useEffect(() => {
     if (!active) return;
 
-    const el = containerRef.current;
-    if (!el) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const activeContainer: T = container;
 
     const previouslyFocused = document.activeElement;
 
-    if (!el.contains(document.activeElement)) {
-      const first = getFocusableElements(el)[0];
+    if (!activeContainer.contains(document.activeElement)) {
+      const first = getFocusableElements(activeContainer)[0];
       first?.focus();
     }
 
     function handleKeyDown(e: KeyboardEvent): void {
-      if (!el.contains(document.activeElement)) return;
+      if (!activeContainer.contains(document.activeElement)) return;
 
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -70,7 +71,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(
 
       if (e.key !== 'Tab') return;
 
-      const focusables = getFocusableElements(el);
+      const focusables = getFocusableElements(activeContainer);
       const first = focusables[0];
       const last = focusables.at(-1);
 

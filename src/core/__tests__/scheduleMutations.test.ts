@@ -31,7 +31,10 @@ describe('scheduleMutations helpers', () => {
   it('finds linked open shifts by id/source', () => {
     const found = findLinkedOpenShifts([openShift], shift);
     expect(found).toHaveLength(1);
-    expect(found[0].id).toBe('open-1');
+    const first = found[0];
+    expect(first).toBeDefined();
+    if (!first) throw new Error('Expected linked open shift');
+    expect(first.id).toBe('open-1');
   });
 
   it('finds linked mirrors by source shift id', () => {

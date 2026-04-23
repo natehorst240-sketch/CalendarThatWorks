@@ -15,27 +15,32 @@ type ShiftEventLike = {
   kind?: unknown;
 } | null | undefined;
 
+type ShiftEventRecord = Exclude<ShiftEventLike, null | undefined>;
+
 export function resolveEventId(ev: ShiftEventLike): string {
   return String(ev?._eventId ?? ev?.id ?? '');
 }
 
-export function findLinkedOpenShifts(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventLike[] {
+export function findLinkedOpenShifts(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventRecord[] {
   const shiftId = resolveEventId(shiftEvent);
   if (!shiftId) return [];
-  return events.filter((candidate) => {
+  return events.filter((candidate): candidate is ShiftEventRecord => {
+    if (!candidate) return false;
     if (!isOpenShiftEvent(candidate)) return false;
     const candidateId = resolveEventId(candidate);
-    const linkedById = shiftEvent?.meta?.openShiftId && candidateId === String(shiftEvent.meta.openShiftId);
+    const linkedById = Boolean(shiftEvent?.meta?.openShiftId)
+      && candidateId === String(shiftEvent?.meta?.openShiftId);
     const linkedBySource = String(candidate?.meta?.sourceShiftId ?? '') === shiftId;
     return linkedById || linkedBySource;
   });
 }
 
-export function findLinkedMirroredCoverage(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventLike[] {
+export function findLinkedMirroredCoverage(events: ShiftEventLike[], shiftEvent: ShiftEventLike): ShiftEventRecord[] {
   const shiftId = resolveEventId(shiftEvent);
   if (!shiftId) return [];
   return events.filter(
-    (candidate) => isCoveringEvent(candidate)
+    (candidate): candidate is ShiftEventRecord => Boolean(candidate)
+      && isCoveringEvent(candidate)
       && String(candidate?.meta?.sourceShiftId ?? '') === shiftId,
   );
 }
@@ -72,7 +77,13 @@ export function buildOpenShiftPatch(
   existingOpenShift: ShiftEventLike,
   shiftEvent: ShiftEventLike,
   reason: string,
-): Record<string, any> {
+): {
+  title: string;
+  start: Date;
+  end: Date;
+  resource: null;
+  meta: MutableMeta;
+} {
   const shiftId = resolveEventId(shiftEvent);
   return {
     title: `Open: ${shiftEvent?.title ?? 'Shift'}`,
