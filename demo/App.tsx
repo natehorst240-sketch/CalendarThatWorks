@@ -15,6 +15,7 @@ import {
   bases,
   assets as EMS_ASSETS,
   crew,
+  dispatchers,
   medicalCrew,
   mechanics,
   allEvents,
@@ -97,8 +98,16 @@ const PILOT_COLOR    = '#3b82f6';
 const MEDICAL_COLOR  = '#10b981';
 const SPECIAL_COLOR  = '#a855f7'; // ECMO specialist
 const MECHANIC_COLOR = '#f97316';
+const DISPATCHER_COLOR = '#0ea5e9';
 
 const INITIAL_EMPLOYEES = [
+  ...dispatchers.map(d => ({
+    id:    d.id,
+    name:  d.name,
+    role:  `Dispatcher (${d.shiftType})`,
+    color: DISPATCHER_COLOR,
+    base:  d.basedAt,
+  })),
   ...crew.map(c => ({
     id:    c.id,
     name:  c.name,
