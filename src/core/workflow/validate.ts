@@ -426,6 +426,7 @@ function reachableNodeIds(workflow: Workflow): Set<string> {
   reachable.add(workflow.startNodeId)
   for (let head = 0; head < queue.length; head++) {
     const id = queue[head]
+    if (id === undefined) continue
     const neighbors = adj.get(id)
     if (!neighbors) continue
     for (const to of neighbors) {
@@ -503,7 +504,7 @@ function requiredSignalsFor(node: WorkflowNode): readonly EdgeGuard[] {
 }
 
 function capitalize(s: string): string {
-  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1)
+  return s.length === 0 ? s : s[0]!.toUpperCase() + s.slice(1)
 }
 
 /**

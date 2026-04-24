@@ -86,6 +86,7 @@ export function useTouchDnd({
       const list = evt.touches;
       if (!list || list.length !== 1) return;
       const t = list[0];
+      if (t === undefined) return;
       const dist = Math.hypot(t.clientX - s.startX, t.clientY - s.startY);
 
       if (!s.dragging) {

@@ -107,7 +107,10 @@ export function expandRRule(
   const byDays: ByDay[] | null = rule.BYDAY
     ? rule.BYDAY.split(',').map(s => {
         const m = s.match(/^([+-]?\d*)([A-Z]{2})$/);
-        return m ? { n: m[1] ? parseInt(m[1], 10) : null, day: DAYS[m[2]] } : null;
+        if (!m || m[2] === undefined) return null;
+        const day = DAYS[m[2]];
+        if (day === undefined) return null;
+        return { n: m[1] ? parseInt(m[1], 10) : null, day };
       }).filter((bd): bd is ByDay => bd !== null)
     : null;
 

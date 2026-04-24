@@ -39,7 +39,7 @@ export interface WorkingCalendar {
 export function parseHours(value: number | string): number {
   if (typeof value === 'number') return value;
   const [h, m = '0'] = value.split(':');
-  return parseInt(h, 10) + parseInt(m, 10) / 60;
+  return parseInt(h ?? '0', 10) + parseInt(m, 10) / 60;
 }
 
 /** Build the default business-hours working calendar. */

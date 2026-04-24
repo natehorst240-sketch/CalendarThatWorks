@@ -40,6 +40,7 @@ function buildGroups(
   if (!configs.length || !events.length) return []
 
   const [config, ...rest] = configs
+  if (config === undefined) return []
 
   // Bucket events by their key for this level
   const buckets = new Map<string, NormalizedEvent[]>()

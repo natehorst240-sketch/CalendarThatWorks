@@ -31,7 +31,8 @@ const KIND_META = {
   },
 };
 
-const INTENT_META: Record<string, { heading: string; submitLabel: string; allDayLocked: boolean; allDayHelp: string | null }> = {
+type IntentMeta = { heading: string; submitLabel: string; allDayLocked: boolean; allDayHelp: string | null };
+const INTENT_META = {
   pto: {
     heading: 'Request PTO',
     submitLabel: 'Save PTO Request',
@@ -50,7 +51,7 @@ const INTENT_META: Record<string, { heading: string; submitLabel: string; allDay
     allDayLocked: false,
     allDayHelp: null,
   },
-};
+} satisfies Record<string, IntentMeta>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
-  const intentMeta = INTENT_META[kind] ?? INTENT_META.pto;
+  const intentMeta: IntentMeta = (INTENT_META as Record<string, IntentMeta>)[kind] ?? INTENT_META.pto;
   const isAllDayLocked = Boolean(intentMeta.allDayLocked);
   const heading = isEdit && kind === 'availability' ? 'Edit Availability' : intentMeta.heading;
 

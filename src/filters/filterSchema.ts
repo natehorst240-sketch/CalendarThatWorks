@@ -463,7 +463,8 @@ export function viewScopedSchema(schema: FilterField[], view: string): FilterFie
         const seen = new Set(derived.map(o => String(o.value).toLowerCase()))
         const out = derived.slice()
         seeds.forEach((v, i) => {
-          if (!seen.has(seedLower[i])) out.push({ value: v, label: v })
+          const lower = seedLower[i]
+          if (lower !== undefined && !seen.has(lower)) out.push({ value: v, label: v })
         })
         return out
       },

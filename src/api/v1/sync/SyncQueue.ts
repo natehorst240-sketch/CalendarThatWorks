@@ -91,7 +91,8 @@ export class SyncQueue {
   forEvent(eventId: string): QueuedOperation | undefined {
     // Search in reverse so we get the most recent
     for (let i = this._ops.length - 1; i >= 0; i--) {
-      if (this._ops[i].eventId === eventId) return this._ops[i];
+      const op = this._ops[i];
+      if (op?.eventId === eventId) return op;
     }
     return undefined;
   }

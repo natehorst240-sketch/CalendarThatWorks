@@ -48,6 +48,7 @@ export function useTouchSwipe({
         return;
       }
       const touch = e.touches[0];
+      if (touch === undefined) return;
       gestureRef.current = {
         x: touch.clientX,
         y: touch.clientY,
@@ -61,6 +62,7 @@ export function useTouchSwipe({
       if (!start || e.changedTouches.length === 0) return;
 
       const touch = e.changedTouches[0];
+      if (touch === undefined) return;
       const dx = touch.clientX - start.x;
       const dy = touch.clientY - start.y;
       const dt = Date.now() - start.ts;

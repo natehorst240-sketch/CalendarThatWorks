@@ -87,6 +87,7 @@ export function verifyAuditChain(
 
   for (let i = 0; i < history.length; i++) {
     const e = history[i]
+    if (e === undefined) continue
     if (e.hash === undefined) {
       if (expectedPrev !== null) {
         return { ok: false, failedIndex: i, reason: 'MISSING_HASH_AFTER_CHAIN_STARTED' }

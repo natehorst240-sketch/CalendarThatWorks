@@ -20,7 +20,7 @@ function eventsToRows(events: NormalizedEvent[]): Row[] {
 
 function toCSV(rows: Row[]): string {
   if (rows.length === 0) return '';
-  const headers = Object.keys(rows[0]);
+  const headers = Object.keys(rows[0]!);
   const escape  = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   return [
     headers.join(','),

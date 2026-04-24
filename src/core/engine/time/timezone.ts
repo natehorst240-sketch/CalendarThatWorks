@@ -54,12 +54,12 @@ export function partsInTimezone(
   );
 
   return {
-    year:   parseInt(parts.year,   10),
-    month:  parseInt(parts.month,  10),
-    day:    parseInt(parts.day,    10),
-    hour:   parseInt(parts.hour,   10) % 24, // hour12=false can give 24
-    minute: parseInt(parts.minute, 10),
-    second: parseInt(parts.second, 10),
+    year:   parseInt(parts.year   ?? '0', 10),
+    month:  parseInt(parts.month  ?? '0', 10),
+    day:    parseInt(parts.day    ?? '0', 10),
+    hour:   parseInt(parts.hour   ?? '0', 10) % 24, // hour12=false can give 24
+    minute: parseInt(parts.minute ?? '0', 10),
+    second: parseInt(parts.second ?? '0', 10),
   };
 }
 

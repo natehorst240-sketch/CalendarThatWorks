@@ -693,7 +693,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     if (levels.length === 0) {
       setActiveGroupBy(null);
     } else if (levels.length === 1) {
-      setActiveGroupBy(levels[0].field);
+      setActiveGroupBy(levels[0]!.field);
     } else {
       setActiveGroupBy(levels.map(l => ({ field: l.field, showEmpty: l.showEmpty })));
     }
@@ -1264,6 +1264,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // 2. If there is a linked open-shift record, mark it as covered too
     if (primaryOpenShift) {
       const [openShiftEv, ...duplicateOpenShifts] = openShiftCandidates;
+      if (openShiftEv === undefined) return;
       duplicateOpenShifts.forEach((duplicateOpenShift) => {
         const duplicateId = resolveEventId(duplicateOpenShift);
         if (!duplicateId) return;
@@ -1831,6 +1832,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         meta: typeof ev.meta === 'object' && ev.meta ? ev.meta as Record<string, unknown> : {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
+      if (previewEvent === undefined) return;
       const op = { type: 'create' as const, event: previewEvent };
       const validation = validateOperation(op, { ...ctx, events: seededEvents }, seededEvents);
       if (validation.violations.length > 0) {

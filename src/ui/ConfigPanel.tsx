@@ -76,7 +76,7 @@ const SECTIONS = [
 ];
 
 function sectionContaining(tabId: ConfigPanelTabId | string) {
-  return SECTIONS.find(s => s.tabs.includes(tabId))?.id ?? SECTIONS[0].id;
+  return SECTIONS.find(s => s.tabs.includes(tabId))?.id ?? SECTIONS[0]!.id;
 }
 
 const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
@@ -1053,7 +1053,8 @@ function EventFieldsTab({ config, categories, onUpdate }: ConfigPanelSectionProp
   function updateField(idx: number, patch: Partial<EventFieldDraft>) {
     onUpdate(c => {
       const arr = [...(((c.eventFields ?? {}) as EventFieldsByCategory)[selCat] || [])];
-      arr[idx] = { ...arr[idx], ...patch };
+      const existing = arr[idx];
+      if (existing !== undefined) arr[idx] = { ...existing, ...patch };
       return { ...c, eventFields: { ...c.eventFields, [selCat]: arr } };
     });
   }
@@ -1176,7 +1177,7 @@ export function CategoriesTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const resetToDefaults = () => patchConfig({
     categories: DEFAULT_CATEGORIES.map(c => ({ ...c })),
     pillStyle: 'hue',
-    defaultCategoryId: DEFAULT_CATEGORIES[0].id,
+    defaultCategoryId: DEFAULT_CATEGORIES[0]!.id,
   });
 
   return (
@@ -1352,6 +1353,7 @@ export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
     if (target < 0 || target >= assets.length) return;
     const next = [...assets];
     const [moved] = next.splice(idx, 1);
+    if (moved === undefined) return;
     next.splice(target, 0, moved);
     writeAssets(next);
   };
@@ -1846,6 +1848,7 @@ export function ApprovalsTab({ config, onUpdate }: ConfigPanelSectionProps) {
     if (target < 0 || target >= tiers.length) return;
     const next = [...tiers];
     const [moved] = next.splice(idx, 1);
+    if (moved === undefined) return;
     next.splice(target, 0, moved);
     writeTiers(next);
   };
@@ -2058,6 +2061,7 @@ export function RequestFormTab({ config, onUpdate }: ConfigPanelSectionProps) {
     if (target < 0 || target >= fields.length) return;
     const next = [...fields];
     const [moved] = next.splice(idx, 1);
+    if (moved === undefined) return;
     next.splice(target, 0, moved);
     writeFields(next);
   };

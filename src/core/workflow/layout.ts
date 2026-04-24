@@ -63,7 +63,8 @@ export function layoutWorkflow(
   const positions: Record<string, NodePosition> = {}
   for (const node of workflow.nodes) {
     const override = overridesMatch ? overrides!.positions[node.id] : undefined
-    positions[node.id] = override ?? auto[node.id]
+    const resolved = override ?? auto[node.id]
+    if (resolved !== undefined) positions[node.id] = resolved
   }
 
   const edgePaths: EdgePath[] = workflow.edges.map(edge => {
@@ -125,7 +126,9 @@ function extremesOfPath(d: string): readonly NodePosition[] {
   for (const t of tokens) {
     const nums = t.trim().split(/[\s,]+/).map(Number).filter(n => !Number.isNaN(n))
     for (let i = 0; i + 1 < nums.length; i += 2) {
-      pts.push({ x: nums[i], y: nums[i + 1] })
+      const x = nums[i]
+      const y = nums[i + 1]
+      if (x !== undefined && y !== undefined) pts.push({ x, y })
     }
   }
   return pts
@@ -231,7 +234,9 @@ function bfsPlacement(
     placement.set(workflow.startNodeId, { rank: 0, col: 0 })
     colsInRank.set(0, 1)
     for (let head = 0; head < queue.length; head++) {
-      const { id, rank } = queue[head]
+      const entry = queue[head]
+      if (entry === undefined) continue
+      const { id, rank } = entry
       if (rank > maxReachableRank) maxReachableRank = rank
       const neighbors = adj.get(id)
       if (!neighbors) continue

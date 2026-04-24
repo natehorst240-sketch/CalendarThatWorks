@@ -23,14 +23,14 @@ const CATEGORY_COLORS = [
 const _catColorMap = new Map<string, string>();
 let _catColorIdx = 0;
 function categoryColor(cat: string | null | undefined): string {
-  if (!cat) return CATEGORY_COLORS[0];
+  if (!cat) return CATEGORY_COLORS[0]!;
   if (!_catColorMap.has(cat)) {
     const idx = _catColorIdx++;
     // Use the curated palette for the first 8 categories; beyond that derive
     // colours via the golden-angle hue distribution so they stay visually
     // distinct without ever repeating.
     const color = idx < CATEGORY_COLORS.length
-      ? CATEGORY_COLORS[idx]
+      ? CATEGORY_COLORS[idx]!
       : `hsl(${Math.round((idx * 137.508) % 360)}, 62%, 45%)`;
     _catColorMap.set(cat, color);
   }

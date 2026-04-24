@@ -103,6 +103,7 @@ export function useWorkflowTicker(opts: UseWorkflowTickerOptions): void {
 function findEnteredAt(instance: WorkflowInstance, nodeId: string): string | null {
   for (let i = instance.history.length - 1; i >= 0; i--) {
     const entry = instance.history[i]
+    if (entry === undefined) continue
     if (entry.nodeId !== nodeId) continue
     if (entry.exitedAt !== undefined) continue
     return entry.enteredAt

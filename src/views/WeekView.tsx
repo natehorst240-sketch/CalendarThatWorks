@@ -83,8 +83,9 @@ export default function WeekView({
     return eachDayOfInterval({ start, end });
   }, [currentDate, weekStartDay]);
 
-  const weekStart = days[0];
-  const weekEnd   = days[6];
+  // days is built by generating exactly 7 entries above, so [0] and [6] are safe.
+  const weekStart = days[0]!;
+  const weekEnd   = days[6]!;
 
   // Slot hours = hours that have a full 1-hour slot below them
   const slotHours = useMemo(() => {
@@ -224,8 +225,10 @@ export default function WeekView({
     const dayIdx = clamp(Math.floor(relX / colWidth), 0, days.length - 1);
     const clickedHour = Math.floor(relY / pxPerHour) + dayStart;
     const h = clamp(clickedHour, dayStart, dayEnd - 1);
-    const start = new Date(days[dayIdx]); start.setHours(h, 0, 0, 0);
-    const end   = new Date(days[dayIdx]); end.setHours(h + 1, 0, 0, 0);
+    const day = days[dayIdx];
+    if (day === undefined) return;
+    const start = new Date(day); start.setHours(h, 0, 0, 0);
+    const end   = new Date(day); end.setHours(h + 1, 0, 0, 0);
     onDateSelect?.(start, end);
   }, [ctx?.permissions?.canAddEvent, days, dayStart, dayEnd, pxPerHour, onDateSelect]);
 

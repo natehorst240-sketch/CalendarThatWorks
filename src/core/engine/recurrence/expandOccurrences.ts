@@ -85,6 +85,7 @@ function expandRecurring(
   let occIdx = 0;
   for (let i = 0; i < starts.length && occIdx < maxCount; i++) {
     const start = starts[i];
+    if (start === undefined) continue;
     const end   = new Date(start.getTime() + durationMillis);
 
     // Only emit if this occurrence overlaps the requested range (not the padded range)
