@@ -37,7 +37,7 @@ describe('defaultOperatorsForType', () => {
   it('returns 1 operator for boolean', () => {
     const ops = defaultOperatorsForType('boolean')
     expect(ops).toHaveLength(1)
-    expect(ops[0].value).toBe('is')
+    expect(ops[0]!.value).toBe('is')
   })
 
   it('returns empty array for custom', () => {

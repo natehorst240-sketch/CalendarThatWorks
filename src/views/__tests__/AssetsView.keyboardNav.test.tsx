@@ -50,7 +50,7 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
     // Two headers ("region: East", "region: West") + their data rows.
     const headers = screen.getAllByRole('treeitem');
     // Focus the first header and press ArrowDown.
-    headers[0].focus();
+    headers[0]!.focus();
     fireEvent.keyDown(headers[0], { key: 'ArrowDown' });
     // Focus should have moved onto a gridcell in the row immediately below.
     const active = document.activeElement;
@@ -60,7 +60,7 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
   it('ArrowUp from a data cell in the first data row focuses the preceding header', () => {
     renderView();
     const headers = screen.getAllByRole('treeitem');
-    const firstHeaderId = headers[0].getAttribute('id');
+    const firstHeaderId = headers[0]!.getAttribute('id');
     // Find a gridcell whose row is right after the first header. The
     // rowheader in that row has data-resource; its sibling cells are the
     // day columns. We pick the first day cell (data-cell ends in "-0").
@@ -75,28 +75,28 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
   it('ArrowLeft on an expanded header collapses that group', () => {
     renderView();
     const header = screen.getAllByRole('treeitem')[0];
-    expect(header.getAttribute('aria-expanded')).toBe('true');
-    header.focus();
+    expect(header!.getAttribute('aria-expanded')).toBe('true');
+    header!.focus();
     fireEvent.keyDown(header, { key: 'ArrowLeft' });
     // Same text but now collapsed (headers re-render with same ARIA label).
     const refreshed = screen.getAllByRole('treeitem')[0];
-    expect(refreshed.getAttribute('aria-expanded')).toBe('false');
+    expect(refreshed!.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('ArrowRight on a collapsed header expands it', () => {
     renderView();
     const header = screen.getAllByRole('treeitem')[0];
     fireEvent.keyDown(header, { key: 'ArrowLeft' }); // collapse first
-    expect(screen.getAllByRole('treeitem')[0].getAttribute('aria-expanded')).toBe('false');
+    expect(screen!.getAllByRole!('treeitem')[0].getAttribute('aria-expanded')).toBe('false');
     fireEvent.keyDown(screen.getAllByRole('treeitem')[0], { key: 'ArrowRight' });
-    expect(screen.getAllByRole('treeitem')[0].getAttribute('aria-expanded')).toBe('true');
+    expect(screen!.getAllByRole!('treeitem')[0].getAttribute('aria-expanded')).toBe('true');
   });
 
   it('ArrowRight on an already-expanded header descends to the first child', () => {
     renderView();
     const header = screen.getAllByRole('treeitem')[0];
-    expect(header.getAttribute('aria-expanded')).toBe('true');
-    header.focus();
+    expect(header!.getAttribute('aria-expanded')).toBe('true');
+    header!.focus();
     fireEvent.keyDown(header, { key: 'ArrowRight' });
     expect(document.activeElement?.getAttribute('role')).toBe('gridcell');
   });
@@ -106,12 +106,12 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
     const header = screen.getAllByRole('treeitem')[0];
     fireEvent.keyDown(header, { key: 'ArrowLeft' }); // first collapse
     const collapsed = screen.getAllByRole('treeitem')[0];
-    collapsed.focus();
+    collapsed!.focus();
     fireEvent.keyDown(collapsed, { key: 'ArrowLeft' });
     // Still collapsed; focus still on the header.
     const after = screen.getAllByRole('treeitem')[0];
-    expect(after.getAttribute('aria-expanded')).toBe('false');
-    expect(document.activeElement?.id).toBe(collapsed.getAttribute('id'));
+    expect(after!.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement?.id).toBe(collapsed!.getAttribute('id'));
   });
 
   it('ArrowDown steps through consecutive headers when they are adjacent (empty groups collapsed)', () => {
@@ -121,7 +121,7 @@ describe('AssetsView keyboard — header focus + arrow key contract', () => {
     const headers = screen.getAllByRole('treeitem');
     fireEvent.keyDown(headers[0], { key: 'ArrowLeft' });
     const refreshed = screen.getAllByRole('treeitem');
-    refreshed[0].focus();
+    refreshed[0]!.focus();
     fireEvent.keyDown(refreshed[0], { key: 'ArrowDown' });
     // Focus should move to the second header (treeitem), not a gridcell.
     expect(document.activeElement?.getAttribute('role')).toBe('treeitem');

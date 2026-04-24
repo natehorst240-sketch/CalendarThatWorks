@@ -51,10 +51,10 @@ describe('CalendarEngine → EventBus — create / delete', () => {
     expect(result.status).toBe('accepted')
     await flush()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler.mock.calls[0][0]).toMatchObject({
+    expect(handler.mock.calls[0][0]!).toMatchObject({
       sourceActionId: 'op:create',
     })
-    expect(handler.mock.calls[0][0].eventSnapshot?.title).toBe('Team offsite')
+    expect(handler.mock.calls[0][0].eventSnapshot!?.title).toBe('Team offsite')
   })
 
   it('emits booking.cancelled on delete', async () => {
@@ -71,7 +71,7 @@ describe('CalendarEngine → EventBus — create / delete', () => {
     engine.applyMutation({ type: 'delete', id: 'x1' })
     await flush()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler.mock.calls[0][0].eventId).toBe('x1')
+    expect(handler.mock.calls[0][0].eventId!).toBe('x1')
   })
 })
 
@@ -98,7 +98,7 @@ describe('CalendarEngine → EventBus — approval stage transitions', () => {
 
     await flush()
     expect(approved).toHaveBeenCalledTimes(1)
-    expect(approved.mock.calls[0][0]).toMatchObject({
+    expect(approved.mock.calls[0][0]!).toMatchObject({
       eventId: 'ev',
       actor: 'alice',
       sourceActionId: 'op:update',
@@ -152,7 +152,7 @@ describe('CalendarEngine → EventBus — approval stage transitions', () => {
     })
     await flush()
     expect(denied).toHaveBeenCalledTimes(1)
-    expect(denied.mock.calls[0][0].reason).toBe('budget')
+    expect(denied.mock.calls[0][0].reason!).toBe('budget')
   })
 
   it('does not emit when an unrelated field changes', async () => {
@@ -210,7 +210,7 @@ describe('CalendarEngine → EventBus — assignments', () => {
     engine.upsertAssignment({ id: 'a1', eventId: 'ev-1', resourceId: 'r-1', units: 50 })
     await flush()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler.mock.calls[0][0].assignment.id).toBe('a1')
+    expect(handler.mock.calls[0][0].assignment.id!).toBe('a1')
   })
 
   it('does not re-emit assignment.created when replacing an existing assignment', async () => {
@@ -237,7 +237,7 @@ describe('CalendarEngine → EventBus — assignments', () => {
     engine.removeAssignment('a1')
     await flush()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler.mock.calls[0][0].assignment.id).toBe('a1')
+    expect(handler.mock.calls[0][0].assignment.id!).toBe('a1')
   })
 
   it('no-op remove does not emit', async () => {

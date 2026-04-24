@@ -19,7 +19,7 @@ const templates = [
 describe('ScheduleTemplateDialog', () => {
   it('submits selected template and overrides', () => {
     const onInstantiate = vi.fn();
-    const onPreview = vi.fn(() => ({ generated: templates[0].entries, conflicts: [], error: '' }));
+    const onPreview = vi.fn(() => ({ generated: templates[0]!.entries, conflicts: [], error: '' }));
 
     render(
       <ScheduleTemplateDialog
@@ -35,12 +35,12 @@ describe('ScheduleTemplateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
 
     expect(onInstantiate).toHaveBeenCalledTimes(1);
-    expect(onInstantiate.mock.calls[0][0]).toMatchObject({
+    expect(onInstantiate.mock.calls[0][0]!).toMatchObject({
       templateId: 'sched-ops',
       resource: 'Ops Team',
       category: 'On-call',
     });
-    expect(onInstantiate.mock.calls[0][0].anchor).toBeInstanceOf(Date);
+    expect(onInstantiate.mock.calls[0][0].anchor!).toBeInstanceOf(Date);
     expect(onPreview).toHaveBeenCalled();
   });
 
@@ -86,7 +86,7 @@ describe('ScheduleTemplateDialog', () => {
       <ScheduleTemplateDialog
         templates={templates}
         onPreview={() => ({
-          generated: templates[0].entries,
+          generated: templates[0]!.entries,
           conflicts: [
             {
               index: 0,

@@ -38,8 +38,8 @@ describe('loadSources', () => {
 
     const sources = loadSources(CAL_ID);
     expect(sources).toHaveLength(1);
-    expect(sources[0].type).toBe('ics');
-    expect(sources[0].id).toBe('f1');
+    expect(sources[0]!.type).toBe('ics');
+    expect(sources[0]!.id).toBe('f1');
     // Migration persists under new key
     expect(localStorage.getItem(sourceKey(CAL_ID))).not.toBeNull();
   });
@@ -49,7 +49,7 @@ describe('loadSources', () => {
     persistSources(CAL_ID, newSrc);
     localStorage.setItem(legacyKey(CAL_ID), JSON.stringify([{ id: 'old' }]));
 
-    expect(loadSources(CAL_ID)[0].id).toBe('new');
+    expect(loadSources!(CAL_ID)[0].id).toBe('new');
   });
 
   it('returns [] on JSON parse error', () => {
@@ -77,22 +77,22 @@ describe('useSourceStore — addSource', () => {
     const { result } = renderStore();
     act(() => { result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', label: 'A' }); });
     expect(result.current.sources).toHaveLength(1);
-    expect(result.current.sources[0].id).toMatch(/^src-/);
-    expect(result.current.sources[0].type).toBe('ics');
+    expect(result.current.sources[0].id!).toMatch(/^src-/);
+    expect(result.current.sources[0].type!).toBe('ics');
   });
 
   it('adds a CSV source with events', () => {
     const { result } = renderStore();
     const events = [{ id: 'e1', title: 'Meeting', start: new Date() }];
     act(() => { result.current.addSource({ type: 'csv', label: 'My CSV', events }); });
-    expect(result.current.sources[0].type).toBe('csv');
-    expect(result.current.sources[0].events).toHaveLength(1);
+    expect(result.current.sources[0].type!).toBe('csv');
+    expect(result.current.sources[0].events!).toHaveLength(1);
   });
 
   it('defaults to enabled:true', () => {
     const { result } = renderStore();
     act(() => { result.current.addSource({ type: 'ics', url: 'https://x.com/x.ics' }); });
-    expect(result.current.sources[0].enabled).toBe(true);
+    expect(result.current.sources[0].enabled!).toBe(true);
   });
 
   it('returns the created source object', () => {
@@ -135,7 +135,7 @@ describe('useSourceStore — removeSource', () => {
     const s2Id = s2.id;
     act(() => { result.current.removeSource(s1Id); });
     expect(result.current.sources).toHaveLength(1);
-    expect(result.current.sources[0].id).toBe(s2Id);
+    expect(result.current.sources[0].id!).toBe(s2Id);
   });
 });
 
@@ -147,7 +147,7 @@ describe('useSourceStore — updateSource', () => {
     if (!src) throw new Error('Expected source to exist');
     const srcId = src.id;
     act(() => { result.current.updateSource(srcId, { label: 'New' }); });
-    expect(result.current.sources[0].label).toBe('New');
+    expect(result.current.sources[0].label!).toBe('New');
   });
 
   it('does not affect unrelated fields', () => {
@@ -157,7 +157,7 @@ describe('useSourceStore — updateSource', () => {
     if (!src) throw new Error('Expected source to exist');
     const srcId = src.id;
     act(() => { result.current.updateSource(srcId, { label: 'Updated' }); });
-    expect(result.current.sources[0].color).toBe('#ff0000');
+    expect(result.current.sources[0].color!).toBe('#ff0000');
   });
 });
 
@@ -169,9 +169,9 @@ describe('useSourceStore — toggleSource', () => {
     if (!src) throw new Error('Expected source to exist');
     const srcId = src.id;
     act(() => { result.current.toggleSource(srcId); });
-    expect(result.current.sources[0].enabled).toBe(false);
+    expect(result.current.sources[0].enabled!).toBe(false);
     act(() => { result.current.toggleSource(srcId); });
-    expect(result.current.sources[0].enabled).toBe(true);
+    expect(result.current.sources[0].enabled!).toBe(true);
   });
 });
 
@@ -184,7 +184,7 @@ describe('useSourceStore — activeIcsSources', () => {
       result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', label: 'A', enabled: true });
     });
     expect(result.current.activeIcsSources).toHaveLength(1);
-    expect(result.current.activeIcsSources[0].url).toBe('https://a.com/a.ics');
+    expect(result.current.activeIcsSources[0].url!).toBe('https://a.com/a.ics');
   });
 
   it('excludes disabled ICS sources', () => {
@@ -212,7 +212,7 @@ describe('useSourceStore — activeIcsSources', () => {
     });
     const feed = result.current.activeIcsSources[0];
     expect(Object.keys(feed)).toEqual(expect.arrayContaining(['url', 'label', 'refreshInterval']));
-    expect(feed.refreshInterval).toBe(900000);
+    expect(feed!.refreshInterval).toBe(900000);
   });
 });
 
@@ -252,7 +252,7 @@ describe('useSourceStore — persistence', () => {
   it('loads persisted sources on mount', () => {
     persistSources(CAL_ID, [{ id: 'pre', type: 'csv', label: 'Pre', enabled: true, events: [] }]);
     const { result } = renderStore();
-    expect(result.current.sources[0].id).toBe('pre');
+    expect(result.current.sources[0].id!).toBe('pre');
   });
 });
 
@@ -268,8 +268,8 @@ describe('useSourceStore — calendarId switching', () => {
       { initialProps: { calendarId: 'cal-a' } },
     );
 
-    expect(result.current.sources[0].id).toBe('a1');
+    expect(result.current.sources[0].id!).toBe('a1');
     rerender({ calendarId: 'cal-b' });
-    expect(result.current.sources[0].id).toBe('b1');
+    expect(result.current.sources[0].id!).toBe('b1');
   });
 });

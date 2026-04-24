@@ -390,7 +390,7 @@ describe('MonthView ARIA semantics', () => {
     const moreBtns = document.querySelectorAll('[aria-expanded]');
     if (moreBtns.length > 0) {
       const btn = moreBtns[0];
-      const controls = btn.getAttribute('aria-controls');
+      const controls = btn!.getAttribute('aria-controls');
       expect(controls).toBeTruthy();
     }
   });

@@ -35,8 +35,8 @@ describe('sortEvents', () => {
     const b = makeEvent({ id: 'b', title: 'Alpha' })
     const original = [a, b]
     const sorted = sortEvents(original, [{ field: 'title', direction: 'asc' }])
-    expect(original[0].id).toBe('a') // unchanged
-    expect(sorted[0].id).toBe('b')
+    expect(original[0]!.id).toBe('a') // unchanged
+    expect(sorted[0]!.id).toBe('b')
   })
 
   it('sorts by direct string field ascending', () => {
@@ -55,7 +55,7 @@ describe('sortEvents', () => {
       makeEvent({ id: 'b', title: 'Zulu' }),
     ]
     const sorted = sortEvents(events, [{ field: 'title', direction: 'desc' }])
-    expect(sorted[0].id).toBe('b')
+    expect(sorted[0]!.id).toBe('b')
   })
 
   it('sorts by Date field (start) ascending', () => {
@@ -74,7 +74,7 @@ describe('sortEvents', () => {
       makeEvent({ id: 'late', start: new Date('2024-03-01') }),
     ]
     const sorted = sortEvents(events, [{ field: 'start', direction: 'desc' }])
-    expect(sorted[0].id).toBe('late')
+    expect(sorted[0]!.id).toBe('late')
   })
 
   it('sorts by meta field', () => {
@@ -84,7 +84,7 @@ describe('sortEvents', () => {
     ]
     const sorted = sortEvents(events, [{ field: 'priority', direction: 'asc' }])
     // 'high' < 'low' lexicographically
-    expect(sorted[0].id).toBe('b')
+    expect(sorted[0]!.id).toBe('b')
   })
 
   it('places nulls last regardless of direction', () => {
@@ -93,10 +93,10 @@ describe('sortEvents', () => {
       makeEvent({ id: 'val', category: 'Surgery' }),
     ]
     const ascSorted = sortEvents(events, [{ field: 'category', direction: 'asc' }])
-    expect(ascSorted[ascSorted.length - 1].id).toBe('null')
+    expect(ascSorted[ascSorted.length - 1]!.id).toBe('null')
 
     const descSorted = sortEvents(events, [{ field: 'category', direction: 'desc' }])
-    expect(descSorted[descSorted.length - 1].id).toBe('null')
+    expect(descSorted[descSorted.length - 1]!.id).toBe('null')
   })
 
   it('applies tiebreaker when primary field is equal', () => {
@@ -123,7 +123,7 @@ describe('sortEvents', () => {
       getValue: e => (e.meta as any).score as number,
     }
     const sorted = sortEvents(events, [config])
-    expect(sorted[0].id).toBe('a') // 90 desc first
+    expect(sorted[0]!.id).toBe('a') // 90 desc first
   })
 
   it('uses numeric locale sort for strings containing numbers', () => {
@@ -142,7 +142,7 @@ describe('sortEvents', () => {
       makeEvent({ id: 'no', allDay: false }),
     ]
     const sorted = sortEvents(events, [{ field: 'allDay', direction: 'desc' }])
-    expect(sorted[0].id).toBe('yes')
+    expect(sorted[0]!.id).toBe('yes')
   })
 })
 

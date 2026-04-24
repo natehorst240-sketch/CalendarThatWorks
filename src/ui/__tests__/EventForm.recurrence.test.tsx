@@ -38,7 +38,7 @@ describe('EventForm recurrence controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0][0].rrule).toBe('FREQ=DAILY');
+    expect(onSave.mock.calls[0][0].rrule!).toBe('FREQ=DAILY');
   });
 
   it('applies the Daily standup template defaults', () => {
@@ -59,7 +59,7 @@ describe('EventForm recurrence controls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0][0].meta).toMatchObject({
+    expect(onSave.mock.calls[0][0].meta!).toMatchObject({
       templateId: 'dailyStandup',
       templateVersion: 1,
     });
@@ -75,6 +75,6 @@ describe('EventForm recurrence controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0][0].resource).toBe('[object Object]');
+    expect(onSave.mock.calls[0][0].resource!).toBe('[object Object]');
   });
 });

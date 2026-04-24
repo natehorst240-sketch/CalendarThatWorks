@@ -221,7 +221,7 @@ describe('useGroupingEngine — multi-level (2 levels)', () => {
       .find(g => g.key === 'ICU')!
       .children.find(c => c.key === 'Day')!
     expect(icuDay.events.length).toBe(1)
-    expect(icuDay.events[0].id).toBe('a')
+    expect(icuDay.events[0].id!).toBe('a')
   })
 })
 
@@ -304,7 +304,7 @@ describe('useGroupingEngine — custom GroupConfig', () => {
         },
       }),
     )
-    expect(result.current.groups[0].label).toBe('Unit: ICU')
+    expect(result.current.groups[0].label!).toBe('Unit: ICU')
   })
 
   it('getKey returning null puts event in (Ungrouped)', () => {
@@ -317,6 +317,6 @@ describe('useGroupingEngine — custom GroupConfig', () => {
         },
       }),
     )
-    expect(result.current.groups[0].key).toBe('(Ungrouped)')
+    expect(result.current.groups[0].key!).toBe('(Ungrouped)')
   })
 })

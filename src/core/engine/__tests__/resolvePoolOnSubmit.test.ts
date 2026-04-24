@@ -53,10 +53,10 @@ describe('applyMutation — pool resolve on submit', () => {
     expect(result.status).toBe('accepted');
 
     const saved = Array.from(engine.state.events.values())[0];
-    expect(saved.resourceId).toBe('d1');
-    expect(saved.resourcePoolId).toBeNull();
-    expect(saved.meta.resolvedFromPoolId).toBe('drivers');
-    expect(saved.meta.poolEvaluated).toEqual(['d1']);
+    expect(saved!.resourceId).toBe('d1');
+    expect(saved!.resourcePoolId).toBeNull();
+    expect(saved!.meta.resolvedFromPoolId).toBe('drivers');
+    expect(saved!.meta.poolEvaluated).toEqual(['d1']);
   });
 
   it('skips members in hard conflict and picks the next available', () => {
@@ -135,7 +135,7 @@ describe('applyMutation — pool resolve on submit', () => {
     }));
     expect(result.status).toBe('accepted');
     const saved = Array.from(engine.state.events.values())[0];
-    expect(saved.resourceId).toBe('preset');
+    expect(saved!.resourceId).toBe('preset');
     expect(engine.getPool('agents')?.rrCursor).toBeUndefined();
   });
 
@@ -144,8 +144,8 @@ describe('applyMutation — pool resolve on submit', () => {
     const result = engine.applyMutation(createOp({ resourceId: 'r1' }));
     expect(result.status).toBe('accepted');
     const saved = Array.from(engine.state.events.values())[0];
-    expect(saved.resourceId).toBe('r1');
-    expect(saved.meta.resolvedFromPoolId).toBeUndefined();
+    expect(saved!.resourceId).toBe('r1');
+    expect(saved!.meta.resolvedFromPoolId).toBeUndefined();
   });
 
   it('fires a single notify per mutation (event + pool commit are atomic)', () => {
@@ -197,7 +197,7 @@ describe('applyMutation — pool resolve on submit', () => {
     const retry = engine.applyMutation(createOp({ resourcePoolId: 'agents' }));
     expect(retry.status).toBe('accepted');
     const savedAfter = Array.from(engine.state.events.values())[0];
-    expect(savedAfter.resourceId).toBe('a');
+    expect(savedAfter!.resourceId).toBe('a');
     expect(engine.getPool('agents')?.rrCursor).toBe(0);
   });
 

@@ -42,10 +42,10 @@ describe('AgendaView grouping', () => {
     renderAgenda({ groupBy: 'category' });
     const [first, second] = screen.getAllByRole('treeitem');
     // Insertion order: Exercise first (2 events), then Work (1 event)
-    expect(first.textContent).toMatch(/Exercise/);
-    expect(first.textContent).toMatch(/2/);
-    expect(second.textContent).toMatch(/Work/);
-    expect(second.textContent).toMatch(/1/);
+    expect(first!.textContent).toMatch(/Exercise/);
+    expect(first!.textContent).toMatch(/2/);
+    expect(second!.textContent).toMatch(/Work/);
+    expect(second!.textContent).toMatch(/1/);
     expect(screen.getByText('Morning Run')).toBeInTheDocument();
     expect(screen.getByText('Lunch Walk')).toBeInTheDocument();
     expect(screen.getByText('Team Meeting')).toBeInTheDocument();
@@ -121,8 +121,8 @@ describe('AgendaView grouping', () => {
     );
     const titles = screen.getAllByText(/Late|Early/);
     // With a sort prop, upstream ordering is trusted — Late comes first.
-    expect(titles[0].textContent).toBe('Late');
-    expect(titles[1].textContent).toBe('Early');
+    expect(titles[0]!.textContent).toBe('Late');
+    expect(titles[1]!.textContent).toBe('Early');
   });
 
   describe('showAllGroups', () => {
@@ -272,7 +272,7 @@ describe('AgendaView grouping', () => {
       );
       // Find the one under Exercise (not Work — but in this fixture Bob only
       // exists under Exercise, so there's exactly one).
-      const target = exerciseBob[0].closest('[role="group"]');
+      const target = exerciseBob[0]!.closest('[role="group"]');
       expect(target).toBeTruthy();
       if (!source || !target) throw new Error('source/target missing');
 
@@ -327,8 +327,8 @@ describe('AgendaView grouping', () => {
       </CalendarContext.Provider>,
     );
     const titles = screen.getAllByText(/Late|Early/);
-    expect(titles[0].textContent).toBe('Early');
-    expect(titles[1].textContent).toBe('Late');
+    expect(titles[0]!.textContent).toBe('Early');
+    expect(titles[1]!.textContent).toBe('Late');
   });
 
   describe('multi-day rendering (#148)', () => {

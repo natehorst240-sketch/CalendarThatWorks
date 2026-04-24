@@ -41,7 +41,7 @@ describe('layout span end-day behavior', () => {
     const spans = layoutSpans([first, second], weekStart, weekEnd);
 
     expect(spans).toHaveLength(2);
-    expect(spans[0].lane).toBe(0);
-    expect(spans[1].lane).toBe(0);
+    expect(spans[0]!.lane).toBe(0);
+    expect(spans[1]!.lane).toBe(0);
   });
 });

@@ -62,13 +62,13 @@ function buildEvents(
       category: ['training', 'maintenance', 'charter', 'ops', 'admin'][i % 5],
       start:    new Date(2026, 3, dayStart),
       end:      new Date(2026, 3, dayEnd),
-      resource: asset.id,
+      resource: asset!.id,
       meta: {
-        region: asset.group,
-        fleet:  asset.meta.fleet,
-        base:   asset.meta.base,
-        ops:    asset.meta.ops,
-        status: asset.meta.status,
+        region: asset!.group,
+        fleet:  asset!.meta.fleet,
+        base:   asset!.meta.base,
+        ops:    asset!.meta.ops,
+        status: asset!.meta.status,
       },
     };
   });
@@ -159,9 +159,9 @@ describe('AssetsView — virtualization (ticket #134-7)', () => {
     const treeItems = container.querySelectorAll('[role="treeitem"]');
     expect(treeItems.length).toBeGreaterThan(0);
     const header = treeItems[0];
-    expect(header.getAttribute('aria-expanded')).toBe('true'); // starts expanded
+    expect(header!.getAttribute('aria-expanded')).toBe('true'); // starts expanded
     fireEvent.click(header);
-    expect(header.getAttribute('aria-expanded')).toBe('false'); // now collapsed
+    expect(header!.getAttribute('aria-expanded')).toBe('false'); // now collapsed
   });
 
   it('renders with 5-level nesting (groupBy array) without error', () => {

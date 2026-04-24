@@ -66,7 +66,7 @@ describe('AssetRequestForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit Request' }));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    const payload = onSubmit.mock.calls[0][0];
+    const payload = onSubmit.mock.calls[0][0]!;
     expect(payload.title).toBe('A-check');
     expect(payload.resource).toBe('n200bb');
     expect(payload.category).toBe('maintenance');
@@ -101,7 +101,7 @@ describe('AssetRequestForm', () => {
     fireEvent.change(screen.getByLabelText(/Notes/),    { target: { value: 'KPHX → KBOS repositioning' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit Request' }));
 
-    const payload = onSubmit.mock.calls[0][0];
+    const payload = onSubmit.mock.calls[0][0]!;
     expect(payload.meta.notes).toBe('KPHX → KBOS repositioning');
     expect(payload.meta.approvalStage.stage).toBe('requested');
   });
@@ -111,7 +111,7 @@ describe('AssetRequestForm', () => {
     renderForm({ onSubmit });
     fireEvent.change(screen.getByLabelText(/Title/), { target: { value: 'training' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit Request' }));
-    const payload = onSubmit.mock.calls[0][0];
+    const payload = onSubmit.mock.calls[0][0]!;
     expect(payload.meta).not.toHaveProperty('notes');
   });
 });

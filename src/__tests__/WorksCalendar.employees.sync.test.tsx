@@ -50,7 +50,7 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
 
     // Consumer callback fired.
     await waitFor(() => expect(onEmployeeAdd).toHaveBeenCalledTimes(1));
-    expect(onEmployeeAdd.mock.calls[0][0]).toMatchObject({ name: 'Dana Morgan' });
+    expect(onEmployeeAdd.mock.calls[0][0]!).toMatchObject({ name: 'Dana Morgan' });
 
     // Owner config was patched with the new member as well.
     await waitFor(() => expect(onConfigSave).toHaveBeenCalled());

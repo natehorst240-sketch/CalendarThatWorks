@@ -58,7 +58,7 @@ describe('recurrence × custom-field regression', () => {
     // Submit — tailNo must still be in meta
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
     expect(onSave).toHaveBeenCalledOnce();
-    expect(onSave.mock.calls[0][0].meta.tailNo).toBe('N737BA');
+    expect(onSave.mock.calls[0][0].meta.tailNo!).toBe('N737BA');
   });
 
   it('changing recurrence preset preserves multiple custom field values', () => {
@@ -70,7 +70,7 @@ describe('recurrence × custom-field regression', () => {
     fireEvent.change(screen.getByLabelText('Repeat', { selector: 'select' }), { target: { value: 'weekdays' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
-    const saved = onSave.mock.calls[0][0];
+    const saved = onSave.mock.calls[0][0]!;
     expect(saved.meta.tailNo).toBe('N737BA');
     expect(saved.meta.paxCount).toBe('150');
     expect(saved.rrule).toBe('FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR');
@@ -93,7 +93,7 @@ describe('recurrence × custom-field regression', () => {
     );
     fireEvent.change(screen.getByLabelText('Repeat', { selector: 'select' }), { target: { value: 'daily' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
-    expect(onSave.mock.calls[0][0].meta).toEqual({});
+    expect(onSave.mock.calls[0][0].meta!).toEqual({});
   });
 });
 
@@ -110,7 +110,7 @@ describe('EventForm end-to-end regression', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
     expect(onSave).toHaveBeenCalledOnce();
-    const saved = onSave.mock.calls[0][0];
+    const saved = onSave.mock.calls[0][0]!;
     expect(saved.title).toBe('My Flight');
     expect(saved.resource).toBe('Gate 12');
   });
@@ -119,7 +119,7 @@ describe('EventForm end-to-end regression', () => {
     const { onSave } = renderForm();
     fireEvent.change(screen.getByLabelText('Repeat', { selector: 'select' }), { target: { value: 'weekly' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
-    expect(onSave.mock.calls[0][0].rrule).toMatch(/^FREQ=WEEKLY;BYDAY=/);
+    expect(onSave.mock.calls[0][0].rrule!).toMatch(/^FREQ=WEEKLY;BYDAY=/);
   });
 
   it('applies dailyStandup template and submits with meta', () => {
@@ -128,7 +128,7 @@ describe('EventForm end-to-end regression', () => {
     fireEvent.change(templateSelect, { target: { value: 'dailyStandup' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
 
-    const saved = onSave.mock.calls[0][0];
+    const saved = onSave.mock.calls[0][0]!;
     expect(saved.title).toBe('Daily standup');
     expect(saved.meta).toMatchObject({ templateId: 'dailyStandup', templateVersion: 1 });
   });
@@ -175,6 +175,6 @@ describe('EventForm end-to-end regression', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     expect(onSave).toHaveBeenCalledOnce();
-    expect(onSave.mock.calls[0][0].resource).toBe('1');
+    expect(onSave.mock.calls[0][0].resource!).toBe('1');
   });
 });

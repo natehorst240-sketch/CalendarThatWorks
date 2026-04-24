@@ -202,8 +202,8 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
       category: 'pr',
     });
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit.mock.calls[0][0].title).toBe('PR shoot');
-    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage).toBe('requested');
+    expect(onCommit.mock.calls[0][0].title!).toBe('PR shoot');
+    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage!).toBe('requested');
     // No conflict modal rendered.
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
@@ -247,7 +247,7 @@ describe('Phase B pipeline — RequestForm → conflictEngine → approval pill'
     expect(proceed).not.toBeDisabled();
     fireEvent.click(proceed);
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage).toBe('requested');
+    expect(onCommit.mock.calls[0][0].meta.approvalStage.stage!).toBe('requested');
   });
 
   it('bypasses the conflict engine entirely when conflicts.enabled is false', () => {

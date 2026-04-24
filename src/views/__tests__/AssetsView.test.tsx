@@ -85,7 +85,7 @@ describe('AssetsView — rows & rendering', () => {
     renderAssets({ onEventClick });
     fireEvent.click(screen.getByRole('button', { name: /Training block/ }));
     expect(onEventClick).toHaveBeenCalledTimes(1);
-    expect(onEventClick.mock.calls[0][0].id).toBe('ev-1');
+    expect(onEventClick.mock.calls[0][0].id!).toBe('ev-1');
   });
 });
 

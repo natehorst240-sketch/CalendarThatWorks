@@ -90,7 +90,7 @@ describe('WorksCalendar schedule model integration', () => {
 
     await waitFor(() => {
       expect(onAvailabilitySave).toHaveBeenCalledTimes(1);
-      const saved = onAvailabilitySave.mock.calls[0][0];
+      const saved = onAvailabilitySave.mock.calls[0][0]!;
       expect(saved.category).toBe('pto');
       expect(saved.meta?.kind).toBe('pto');
       expect(saved.resource).toBe('emp-1');
@@ -135,13 +135,13 @@ describe('WorksCalendar schedule model integration', () => {
 
       const openShift = getByKind(visible, 'open-shift')[0];
       expect(openShift).toBeTruthy();
-      expect(String(openShift.meta?.coveredBy ?? '')).toBe('emp-2');
-      expect(openShift.meta?.status).toBe('covered');
+      expect(String(openShift!.meta?.coveredBy ?? '')).toBe('emp-2');
+      expect(openShift!.meta?.status).toBe('covered');
 
       const mirrored = getByKind(visible, 'covering');
       expect(mirrored).toHaveLength(1);
-      expect(String(mirrored[0].meta?.sourceShiftId ?? '')).toBe('shift-1');
-      expect(String(mirrored[0].meta?.coveredEmployeeId ?? '')).toBe('emp-1');
+      expect(String(mirrored[0]!.meta?.sourceShiftId ?? '')).toBe('shift-1');
+      expect(String(mirrored[0]!.meta?.coveredEmployeeId ?? '')).toBe('emp-1');
     });
   }, 30000);
 
@@ -251,8 +251,8 @@ describe('WorksCalendar schedule model integration', () => {
 
       const openShift = getByKind(visible, 'open-shift')[0];
       expect(openShift).toBeTruthy();
-      expect(openShift.meta?.coveredBy).toBeNull();
-      expect(openShift.meta?.status).toBe('open');
+      expect(openShift!.meta?.coveredBy).toBeNull();
+      expect(openShift!.meta?.status).toBe('open');
 
       const coveringEvents = getByKind(visible, 'covering');
       expect(coveringEvents).toHaveLength(0);

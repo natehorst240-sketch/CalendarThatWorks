@@ -137,7 +137,7 @@ describe('SyncQueue', () => {
     const id2 = q.enqueue('create', 'ev-2', ev({ id: 'ev-2' }), null);
     q.remove(id1);
     expect(q.all.length).toBe(1);
-    expect(q.all[0].id).toBe(id2);
+    expect(q.all[0].id!).toBe(id2);
   });
 
   it('cancelForEvent removes all operations for an event', () => {

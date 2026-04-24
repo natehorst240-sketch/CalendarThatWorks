@@ -28,6 +28,6 @@ describe('AssetsDemoExample', () => {
     expect(rowheaders.length).toBeGreaterThanOrEqual(5);
     // Rowheader's visible text includes registration + sublabel + banner;
     // assert that the registration pattern appears somewhere.
-    expect(rowheaders[0].textContent).toMatch(/N\d{3}[A-Z]{2}/);
+    expect(rowheaders[0]!.textContent).toMatch(/N\d{3}[A-Z]{2}/);
   });
 });

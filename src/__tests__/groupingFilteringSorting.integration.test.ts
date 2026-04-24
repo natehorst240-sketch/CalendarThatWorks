@@ -150,7 +150,7 @@ describe('integration — filter × group', () => {
       groupBy: 'category',
     });
     expect(tree.map(g => g.key)).toEqual(['training']);
-    expect(tree[0].events).toHaveLength(3);
+    expect(tree[0]!.events).toHaveLength(3);
   });
 
   it('resource filter shrinks per-group counts without dropping the group', () => {
@@ -160,7 +160,7 @@ describe('integration — filter × group', () => {
       groupBy: 'region',
     });
     expect(tree.map(g => g.key)).toEqual(['West']);
-    expect(tree[0].events.map(e => e.id)).toEqual(['e1', 'e3', 'e5']);
+    expect(tree[0]!.events.map(e => e.id)).toEqual(['e1', 'e3', 'e5']);
   });
 
   it('filtering to zero events produces an empty tree', () => {

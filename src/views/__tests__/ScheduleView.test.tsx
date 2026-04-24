@@ -99,8 +99,8 @@ describe('ScheduleView — grid mode (resource fields present)', () => {
   it('resources are sorted alphabetically in the header', () => {
     wrap({ events });
     const headers = screen.getAllByText(/^(Alpha|Beta)$/);
-    expect(headers[0].textContent).toBe('Alpha');
-    expect(headers[1].textContent).toBe('Beta');
+    expect(headers[0]!.textContent).toBe('Alpha');
+    expect(headers[1]!.textContent).toBe('Beta');
   });
 });
 

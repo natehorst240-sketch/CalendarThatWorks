@@ -40,13 +40,13 @@ describe('group-change op', () => {
     expect(result.status).toBe('accepted');
     expect(result.changes).toHaveLength(1);
     const ch = result.changes[0];
-    expect(ch.type).toBe('updated');
-    if (ch.type === 'updated') {
-      expect(ch.before.resourceId).toBe('alice');
-      expect(ch.after.resourceId).toBe('bob');
+    expect(ch!.type).toBe('updated');
+    if (ch!.type === 'updated') {
+      expect(ch!.before.resourceId).toBe('alice');
+      expect(ch!.after.resourceId).toBe('bob');
       // Time fields are untouched by a group-change.
-      expect(ch.after.start).toEqual(ch.before.start);
-      expect(ch.after.end).toEqual(ch.before.end);
+      expect(ch!.after.start).toEqual(ch!.before.start);
+      expect(ch!.after.end).toEqual(ch!.before.end);
     }
   });
 
@@ -61,9 +61,9 @@ describe('group-change op', () => {
 
     expect(result.status).toBe('accepted');
     const ch = result.changes[0];
-    if (ch.type === 'updated') {
-      expect(ch.after.category).toBe('Exercise');
-      expect(ch.after.resourceId).toBe('bob');
+    if (ch!.type === 'updated') {
+      expect(ch!.after.category).toBe('Exercise');
+      expect(ch!.after.resourceId).toBe('bob');
     }
   });
 
@@ -102,7 +102,7 @@ describe('group-change op', () => {
 
     expect(result.status).toBe('rejected');
     expect(result.validation.severity).toBe('hard');
-    expect(result.validation.violations[0].rule).toBe('on-call-owner');
+    expect(result.validation.violations[0].rule!).toBe('on-call-owner');
     expect(result.changes).toEqual([]);
   });
 

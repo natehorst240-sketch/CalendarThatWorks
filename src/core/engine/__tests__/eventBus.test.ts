@@ -36,7 +36,7 @@ describe('EventBus — subscribe + emit basics', () => {
     expect(handler).not.toHaveBeenCalled() // async
     await flushMicrotasks()
     expect(handler).toHaveBeenCalledTimes(1)
-    expect(handler.mock.calls[0][0]).toMatchObject({ eventId: 'a' })
+    expect(handler.mock.calls[0][0]!).toMatchObject({ eventId: 'a' })
   })
 
   it('does not cross channels', async () => {
@@ -104,7 +104,7 @@ describe('EventBus — async + error isolation', () => {
     expect(bad).toHaveBeenCalledTimes(1)
     expect(good).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledTimes(1)
-    expect(onError.mock.calls[0][1]).toBe('booking.denied')
+    expect(onError.mock.calls[0][1]!).toBe('booking.denied')
   })
 
   it('synchronous throws are caught and reported, siblings still fire', async () => {

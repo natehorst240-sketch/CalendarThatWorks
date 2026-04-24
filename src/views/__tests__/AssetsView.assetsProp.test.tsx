@@ -90,7 +90,7 @@ describe('AssetsView — assets registry prop', () => {
     });
     const rowheaders = screen.getAllByRole('rowheader');
     expect(rowheaders).toHaveLength(1);
-    expect(rowheaders[0].getAttribute('aria-label')).toBe('N100AA');
+    expect(rowheaders[0]!.getAttribute('aria-label')).toBe('N100AA');
   });
 
   it('falls back to event.resource-derived rows when the registry is absent', () => {
@@ -128,7 +128,7 @@ describe('AssetsView — assets registry prop', () => {
       // Foreign-id event must not create an Unassigned row.
       const rowheaders = screen.getAllByRole('rowheader');
       expect(rowheaders).toHaveLength(1);
-      expect(rowheaders[0].getAttribute('aria-label')).toBe('N100AA');
+      expect(rowheaders[0]!.getAttribute('aria-label')).toBe('N100AA');
     });
 
     it('also drops null-resource events (no leaked (Unassigned) row)', () => {

@@ -145,7 +145,7 @@ describe('buildActiveFilterPills', () => {
       pillLabel: (v: unknown) => `Status: ${v}`,
     }];
     const pills = buildActiveFilterPills({ status: new Set(['open']) }, schema);
-    expect(pills[0].displayValue).toBe('Status: open');
+    expect(pills[0]!.displayValue).toBe('Status: open');
   });
 
   it('includes fieldLabel on each pill', () => {
@@ -164,18 +164,18 @@ describe('buildActiveFilterPills', () => {
     const schema = [{ key: 'priority', label: 'Priority', type: 'select' }];
     const pills = buildActiveFilterPills({ priority: 'high' }, schema);
     expect(pills).toHaveLength(1);
-    expect(pills[0].key).toBe('priority');
-    expect(pills[0].value).toBe('high');
-    expect(pills[0].displayValue).toBe('high');
-    expect(pills[0].fieldLabel).toBe('Priority');
+    expect(pills[0]!.key).toBe('priority');
+    expect(pills[0]!.value).toBe('high');
+    expect(pills[0]!.displayValue).toBe('high');
+    expect(pills[0]!.fieldLabel).toBe('Priority');
   });
 
   it('produces one pill for an active boolean field', () => {
     const schema = [{ key: 'urgent', label: 'Urgent only', type: 'boolean' }];
     const pills = buildActiveFilterPills({ urgent: true }, schema);
     expect(pills).toHaveLength(1);
-    expect(pills[0].key).toBe('urgent');
-    expect(pills[0].value).toBe(true);
+    expect(pills[0]!.key).toBe('urgent');
+    expect(pills[0]!.value).toBe(true);
   });
 
   it('skips null/false boolean values', () => {
@@ -191,7 +191,7 @@ describe('buildActiveFilterPills', () => {
       pillLabel: (v: unknown) => `Status: ${v}`,
     }];
     const pills = buildActiveFilterPills({ status: 'open' }, schema);
-    expect(pills[0].displayValue).toBe('Status: open');
+    expect(pills[0]!.displayValue).toBe('Status: open');
   });
 
   it('select with null value produces no pill', () => {
@@ -217,17 +217,17 @@ describe('buildFilterSummary', () => {
     const schema = [{ key: 'categories', label: 'Category', type: 'multi-select' }];
     const result = buildFilterSummary({ categories: ['Meeting', 'PTO'] }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].key).toBe('categories');
-    expect(result[0].label).toBe('Category');
-    expect(result[0].type).toBe('multi-select');
-    expect(result[0].displayValues).toEqual(['Meeting', 'PTO']);
+    expect(result[0]!.key).toBe('categories');
+    expect(result[0]!.label).toBe('Category');
+    expect(result[0]!.type).toBe('multi-select');
+    expect(result[0]!.displayValues).toEqual(['Meeting', 'PTO']);
   });
 
   it('multi-select handles Set values', () => {
     const schema = [{ key: 'categories', label: 'Category', type: 'multi-select' }];
     const result = buildFilterSummary({ categories: new Set(['Meeting']) }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].displayValues).toEqual(['Meeting']);
+    expect(result[0]!.displayValues).toEqual(['Meeting']);
   });
 
   it('select fields resolve option labels', () => {
@@ -241,20 +241,20 @@ describe('buildFilterSummary', () => {
     }];
     const result = buildFilterSummary({ priority: 'high' }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].displayValues).toEqual(['High']);
+    expect(result[0]!.displayValues).toEqual(['High']);
   });
 
   it('select fields fall back to String(value) when option not found', () => {
     const schema = [{ key: 'priority', label: 'Priority', type: 'select' }];
     const result = buildFilterSummary({ priority: 'custom-val' }, schema);
-    expect(result[0].displayValues).toEqual(['custom-val']);
+    expect(result[0]!.displayValues).toEqual(['custom-val']);
   });
 
   it('text fields show the search string in quotes', () => {
     const schema = [{ key: 'search', label: 'Search', type: 'text' }];
     const result = buildFilterSummary({ search: 'quarterly' }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].displayValues).toEqual(['"quarterly"']);
+    expect(result[0]!.displayValues).toEqual(['"quarterly"']);
   });
 
   it('text fields with empty/whitespace string are excluded', () => {
@@ -269,10 +269,10 @@ describe('buildFilterSummary', () => {
       dateRange: { start: '2026-04-01', end: '2026-04-30' },
     }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].type).toBe('date-range');
+    expect(result[0]!.type).toBe('date-range');
     // Should contain an en-dash between start and end
-    expect(result[0].displayValues[0]).toMatch(/Apr/);
-    expect(result[0].displayValues[0]).toContain('\u2013');
+    expect(result[0]!.displayValues[0]).toMatch(/Apr/);
+    expect(result[0]!.displayValues[0]).toContain('\u2013');
   });
 
   it('date-range with only start shows "From ..."', () => {
@@ -280,7 +280,7 @@ describe('buildFilterSummary', () => {
     const result = buildFilterSummary({
       dateRange: { start: '2026-04-01', end: null },
     }, schema);
-    expect(result[0].displayValues[0]).toMatch(/^From /);
+    expect(result[0]!.displayValues[0]).toMatch(/^From /);
   });
 
   it('date-range with only end shows "Until ..."', () => {
@@ -288,7 +288,7 @@ describe('buildFilterSummary', () => {
     const result = buildFilterSummary({
       dateRange: { start: null, end: '2026-04-30' },
     }, schema);
-    expect(result[0].displayValues[0]).toMatch(/^Until /);
+    expect(result[0]!.displayValues[0]).toMatch(/^Until /);
   });
 
   it('date-range with Date objects works', () => {
@@ -297,15 +297,15 @@ describe('buildFilterSummary', () => {
       dateRange: { start: new Date('2026-04-01'), end: new Date('2026-04-30') },
     }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].displayValues[0]).toContain('\u2013');
+    expect(result[0]!.displayValues[0]).toContain('\u2013');
   });
 
   it('boolean fields show Yes/No', () => {
     const schema = [{ key: 'urgent', label: 'Urgent', type: 'boolean' }];
     const trueResult = buildFilterSummary({ urgent: true }, schema);
-    expect(trueResult[0].displayValues).toEqual(['Yes']);
+    expect(trueResult[0]!.displayValues).toEqual(['Yes']);
     const falseResult = buildFilterSummary({ urgent: false }, schema);
-    expect(falseResult[0].displayValues).toEqual(['No']);
+    expect(falseResult[0]!.displayValues).toEqual(['No']);
   });
 
   it('empty/cleared filters are excluded from summary', () => {
@@ -331,15 +331,15 @@ describe('buildFilterSummary', () => {
       customField: 'hello',
     }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].key).toBe('customField');
-    expect(result[0].label).toBe('CustomField');
-    expect(result[0].type).toBe('unknown');
-    expect(result[0].displayValues).toEqual(['hello']);
+    expect(result[0]!.key).toBe('customField');
+    expect(result[0]!.label).toBe('CustomField');
+    expect(result[0]!.type).toBe('unknown');
+    expect(result[0]!.displayValues).toEqual(['hello']);
   });
 
   it('unknown keys with array values produce multiple display values', () => {
     const result = buildFilterSummary({ unknownList: ['a', 'b'] }, []);
-    expect(result[0].displayValues).toEqual(['a', 'b']);
+    expect(result[0]!.displayValues).toEqual(['a', 'b']);
   });
 
   it('pillLabel overrides are respected', () => {
@@ -348,7 +348,7 @@ describe('buildFilterSummary', () => {
       pillLabel: (v: unknown) => `Cat: ${v}`,
     }];
     const result = buildFilterSummary({ categories: ['Meeting'] }, schema);
-    expect(result[0].displayValues).toEqual(['Cat: Meeting']);
+    expect(result[0]!.displayValues).toEqual(['Cat: Meeting']);
   });
 
   it('multi-select with options resolves labels', () => {
@@ -360,23 +360,23 @@ describe('buildFilterSummary', () => {
       ],
     }];
     const result = buildFilterSummary({ categories: ['meeting', 'pto'] }, schema);
-    expect(result[0].displayValues).toEqual(['Meetings', 'Time Off']);
+    expect(result[0]!.displayValues).toEqual(['Meetings', 'Time Off']);
   });
 
   it('statusField() factory produces correct summary', () => {
     const schema = [statusField()];
     const result = buildFilterSummary({ status: 'tentative' }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].label).toBe('Status');
-    expect(result[0].displayValues).toEqual(['Tentative']);
+    expect(result[0]!.label).toBe('Status');
+    expect(result[0]!.displayValues).toEqual(['Tentative']);
   });
 
   it('tagsField() factory produces correct summary', () => {
     const schema = [tagsField()];
     const result = buildFilterSummary({ tags: ['urgent', 'review'] }, schema);
     expect(result).toHaveLength(1);
-    expect(result[0].label).toBe('Tag');
-    expect(result[0].displayValues).toEqual(['urgent', 'review']);
+    expect(result[0]!.label).toBe('Tag');
+    expect(result[0]!.displayValues).toEqual(['urgent', 'review']);
   });
 
   it('preserves schema ordering in output', () => {
@@ -385,8 +385,8 @@ describe('buildFilterSummary', () => {
       { key: 'a', label: 'Alpha', type: 'text' },
     ];
     const result = buildFilterSummary({ a: 'x', b: 'y' }, schema);
-    expect(result[0].key).toBe('b');
-    expect(result[1].key).toBe('a');
+    expect(result[0]!.key).toBe('b');
+    expect(result[1]!.key).toBe('a');
   });
 
   it('date-range with empty start and end is excluded', () => {

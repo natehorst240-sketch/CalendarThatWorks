@@ -101,7 +101,7 @@ describe('SmartViewsTab edit UI (issue #100)', () => {
     fireEvent.click(screen.getByLabelText('Edit Alpha'));
     fireEvent.click(screen.getByRole('button', { name: 'Update Smart View' }));
     expect(onUpdateView).toHaveBeenCalledTimes(1);
-    expect(onUpdateView.mock.calls[0][0]).toBe('v1');
-    expect(onUpdateView.mock.calls[0][1]).toMatchObject({ name: 'Alpha' });
+    expect(onUpdateView.mock.calls[0][0]!).toBe('v1');
+    expect(onUpdateView.mock.calls[0][1]!).toMatchObject({ name: 'Alpha' });
   });
 });

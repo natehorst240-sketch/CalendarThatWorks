@@ -52,7 +52,7 @@ describe('useSavedWorkflows — save / update / delete', () => {
 
     const { result: r2 } = renderHook(() => useSavedWorkflows(CAL_ID))
     expect(r2.current.workflows).toHaveLength(1)
-    expect(r2.current.workflows[0].name).toBe('My flow')
+    expect(r2.current.workflows[0].name!).toBe('My flow')
   })
 
   it('isolates storage per calendar id', () => {
@@ -138,9 +138,9 @@ describe('useSavedWorkflows — save / update / delete', () => {
     })
 
     const updated = result.current.workflows[0]
-    expect(updated.workflow.version).toBe(originalVersion + 1)
-    expect(updated.layout.workflowVersion).toBe(originalVersion + 1)
-    expect(updated.workflow.nodes.some(n => n.id === 'extra')).toBe(true)
+    expect(updated!.workflow.version).toBe(originalVersion + 1)
+    expect(updated!.layout.workflowVersion).toBe(originalVersion + 1)
+    expect(updated!.workflow.nodes.some(n => n.id === 'extra')).toBe(true)
   })
 
   it('updateWorkflow with only a layout patch does NOT bump version', () => {
@@ -161,8 +161,8 @@ describe('useSavedWorkflows — save / update / delete', () => {
     })
 
     const updated = result.current.workflows[0]
-    expect(updated.workflow.version).toBe(originalVersion)
-    expect(updated.layout.positions.approve).toEqual({ x: 200, y: 200 })
+    expect(updated!.workflow.version).toBe(originalVersion)
+    expect(updated!.layout.positions.approve).toEqual({ x: 200, y: 200 })
   })
 
   it('updateWorkflow can rename without touching version', () => {
@@ -177,8 +177,8 @@ describe('useSavedWorkflows — save / update / delete', () => {
       result.current.updateWorkflow(saved!.id, { name: 'renamed' })
     })
 
-    expect(result.current.workflows[0].name).toBe('renamed')
-    expect(result.current.workflows[0].workflow.version).toBe(originalVersion)
+    expect(result.current.workflows[0].name!).toBe('renamed')
+    expect(result.current.workflows[0].workflow.version!).toBe(originalVersion)
   })
 
   it('deleteWorkflow removes the matching entry', () => {
@@ -193,7 +193,7 @@ describe('useSavedWorkflows — save / update / delete', () => {
       result.current.deleteWorkflow(saved!.id)
     })
     expect(result.current.workflows).toHaveLength(1)
-    expect(result.current.workflows[0].name).toBe('keep')
+    expect(result.current.workflows[0].name!).toBe('keep')
   })
 })
 
@@ -226,6 +226,6 @@ describe('useSavedWorkflows — storage hygiene', () => {
     )
     const { result } = renderHook(() => useSavedWorkflows(CAL_ID))
     expect(result.current.workflows).toHaveLength(1)
-    expect(result.current.workflows[0].id).toBe('ok')
+    expect(result.current.workflows[0].id!).toBe('ok')
   })
 })

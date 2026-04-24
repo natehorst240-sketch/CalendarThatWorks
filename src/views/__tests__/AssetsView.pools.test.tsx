@@ -79,7 +79,7 @@ describe('AssetsView — resource pools (issue #212)', () => {
     fireEvent.click(firstCell);
 
     expect(onPoolDateSelect).toHaveBeenCalledTimes(1);
-    expect(onPoolDateSelect.mock.calls[0][2]).toBe('fleet-west');
+    expect(onPoolDateSelect.mock.calls[0][2]!).toBe('fleet-west');
     expect(onDateSelect).not.toHaveBeenCalled();
   });
 
@@ -128,7 +128,7 @@ describe('AssetsView — resource pools (issue #212)', () => {
     fireEvent.click(cells[2] as HTMLElement);
 
     expect(onPoolDateSelect).toHaveBeenCalledTimes(1);
-    expect(onPoolDateSelect.mock.calls[0][2]).toBe('fleet-west');
+    expect(onPoolDateSelect.mock.calls[0][2]!).toBe('fleet-west');
     expect(onEventClick).not.toHaveBeenCalled();
   });
 

@@ -111,8 +111,8 @@ describe('WorkflowSimulator — emit log + history', () => {
     const rows = screen.getByTestId('sim-history').querySelectorAll('tbody tr')
     expect(rows.length).toBeGreaterThan(0)
     // First row should be 'approve' with signal 'approved'.
-    expect(rows[0].textContent).toMatch(/approve/)
-    expect(rows[0].textContent).toMatch(/approved/)
+    expect(rows[0]!.textContent).toMatch(/approve/)
+    expect(rows[0]!.textContent).toMatch(/approved/)
   })
 })
 

@@ -127,7 +127,7 @@ describe('eventV1ToEngine: recurrence', () => {
     const x = new Date('2026-04-17T09:00:00.000Z');
     const ev = eventV1ToEngine(baseV1({ exdates: [x] }));
     expect(ev.exdates).toHaveLength(1);
-    expect(ev.exdates[0].getTime()).toBe(x.getTime());
+    expect(ev.exdates[0].getTime!()).toBe(x.getTime());
   });
 });
 
@@ -141,9 +141,9 @@ describe('eventV1ToEngine: constraints', () => {
       ],
     }));
     expect(ev.constraints).toHaveLength(2);
-    expect(ev.constraints[0].type).toBe('must-start-on');
-    expect(ev.constraints[0].date!.getTime()).toBe(pinDate.getTime());
-    expect(ev.constraints[1].type).toBe('alap');
+    expect(ev.constraints[0].type!).toBe('must-start-on');
+    expect(ev.constraints[0].date!.getTime!()).toBe(pinDate.getTime());
+    expect(ev.constraints[1].type!).toBe('alap');
   });
 
   it('defaults constraints to [] when not provided', () => {
@@ -300,7 +300,7 @@ describe('eventV1ToEngine → engineToV1: round-trip', () => {
     const pin = new Date('2026-04-10T09:00:00.000Z');
     const input = baseV1({ constraints: [{ type: 'must-start-on', date: pin }] });
     const back  = engineToV1(eventV1ToEngine(input));
-    expect(back.constraints![0].date!.getTime()).toBe(pin.getTime());
+    expect(back!.constraints![0].date!.getTime!()).toBe(pin.getTime());
   });
 });
 
@@ -450,8 +450,8 @@ describe('normalizeInputEvent: constraints field (regression)', () => {
       ],
     });
     expect(ev.constraints).toHaveLength(2);
-    expect(ev.constraints[0].type).toBe('must-start-on');
-    expect(ev.constraints[1].type).toBe('alap');
+    expect(ev.constraints[0].type!).toBe('must-start-on');
+    expect(ev.constraints[1].type!).toBe('alap');
   });
 
   it('silently drops constraints with unknown types', () => {

@@ -67,7 +67,7 @@ describe('dispatchWorkflowEvents', () => {
 
     expect(slack).toHaveBeenCalledTimes(1)
     expect(email).toHaveBeenCalledTimes(1)
-    expect(slack.mock.calls[0][0]).toMatchObject({ channel: 'slack', message: 'hi slack' })
+    expect(slack.mock.calls[0][0]!).toMatchObject({ channel: 'slack', message: 'hi slack' })
     expect(report.dispatched).toBe(2)
     expect(report.failed).toBe(0)
   })
@@ -141,7 +141,7 @@ describe('dispatchWorkflowEvents', () => {
       [notify('slack', { template: 'Hello {{ name }}', message: 'Hello Alice' })],
       r,
     )
-    expect(send.mock.calls[0][0]).toMatchObject({
+    expect(send.mock.calls[0][0]!).toMatchObject({
       template: 'Hello {{ name }}',
       message: 'Hello Alice',
     })
@@ -163,7 +163,7 @@ describe('createSlackChannel', () => {
     const send = vi.fn()
     const adapter = createSlackChannel({ send })
     await adapter.dispatch({ nodeId: 'n', channel: 'slack', at: 't', template: 'raw' })
-    expect(send.mock.calls[0][0].text).toBe('raw')
+    expect(send.mock.calls[0][0].text!).toBe('raw')
   })
 
   it('allows a custom id', () => {

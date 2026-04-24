@@ -64,7 +64,7 @@ describe('recurring expansion baseline (phase 0)', () => {
     );
 
     expect(expanded).toHaveLength(10);
-    expect(expanded[0].occurrenceIndex).toBe(0);
-    expect(expanded[9].occurrenceIndex).toBe(9);
+    expect(expanded[0]!.occurrenceIndex).toBe(0);
+    expect(expanded[9]!.occurrenceIndex).toBe(9);
   });
 });

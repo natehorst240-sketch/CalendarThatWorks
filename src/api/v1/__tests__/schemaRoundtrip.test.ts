@@ -233,8 +233,8 @@ describe('event serialization: exdates', () => {
     const ev = makeBaseEvent({ exdates: [d1, d2] });
     const back = deserializeEvent(serializeEvent(ev));
     expect(back.exdates).toHaveLength(2);
-    expect(back.exdates[0].getTime()).toBe(d1.getTime());
-    expect(back.exdates[1].getTime()).toBe(d2.getTime());
+    expect(back.exdates[0].getTime!()).toBe(d1.getTime());
+    expect(back.exdates[1].getTime!()).toBe(d2.getTime());
   });
 });
 
@@ -249,9 +249,9 @@ describe('event serialization: constraints', () => {
     });
     const back = deserializeEvent(serializeEvent(ev));
     expect(back.constraints).toHaveLength(2);
-    expect(back.constraints[0].type).toBe('must-start-on');
-    expect(back.constraints[0].date!.getTime()).toBe(pin.getTime());
-    expect(back.constraints[1].type).toBe('alap');
+    expect(back.constraints[0].type!).toBe('must-start-on');
+    expect(back.constraints[0].date!.getTime!()).toBe(pin.getTime());
+    expect(back.constraints[1].type!).toBe('alap');
   });
 });
 
@@ -263,7 +263,7 @@ describe('event serialization: recurring series', () => {
     });
     const back = deserializeEvent(serializeEvent(ev));
     expect(back.rrule).toBe('FREQ=WEEKLY;BYDAY=MO');
-    expect(back.exdates[0].toISOString()).toBe('2026-04-20T09:00:00.000Z');
+    expect(back.exdates[0].toISOString!()).toBe('2026-04-20T09:00:00.000Z');
   });
 });
 
@@ -320,9 +320,9 @@ describe('event serialization: JSON transport path', () => {
     expect(back.start.getTime()).toBe(ev.start.getTime());
     expect(back.end.getTime()).toBe(ev.end.getTime());
     expect(back.rrule).toBe('FREQ=DAILY;COUNT=5');
-    expect(back.exdates[0].getTime()).toBe(ev.exdates[0].getTime());
+    expect(back.exdates[0].getTime!()).toBe(ev.exdates[0].getTime!());
     expect(back.timezone).toBe('America/Chicago');
-    expect(back.constraints[0].date!.getTime()).toBe(ev.constraints[0].date!.getTime());
+    expect(back.constraints[0].date!.getTime!()).toBe(ev.constraints[0].date!.getTime!());
   });
 });
 
@@ -365,7 +365,7 @@ describe('Assignment helpers', () => {
       ['a2', { id: 'a2', eventId: 'e2', resourceId: 'r1', units: 100 }],
     ]);
     expect(assignmentsForEvent(map, 'e1')).toHaveLength(1);
-    expect(assignmentsForEvent(map, 'e2')[0].id).toBe('a2');
+    expect(assignmentsForEvent!(map, 'e2')[0].id).toBe('a2');
     expect(assignmentsForEvent(map, 'e3')).toHaveLength(0);
   });
 

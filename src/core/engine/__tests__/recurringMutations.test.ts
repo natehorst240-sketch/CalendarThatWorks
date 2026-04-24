@@ -59,15 +59,15 @@ describe('delete single occurrence', () => {
     expect(result.changes).toHaveLength(1);
 
     const change = result.changes[0];
-    expect(change.type).toBe('updated');
-    if (change.type !== 'updated') return;
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
 
     // Master should now have exactly one EXDATE
-    expect(change.after.exdates).toHaveLength(1);
-    expect(change.after.exdates[0].getTime()).toBe(occurrenceDate.getTime());
+    expect(change!.after.exdates).toHaveLength(1);
+    expect(change.after.exdates[0].getTime!()).toBe(occurrenceDate.getTime());
 
     // The rrule should be untouched
-    expect(change.after.rrule).toBe(master.rrule);
+    expect(change!.after.rrule).toBe(master.rrule);
 
     // No detached standalone event should be created
     const created = result.changes.filter(c => c.type === 'created');
@@ -105,19 +105,19 @@ describe('delete this-and-following', () => {
     expect(result.changes).toHaveLength(1);
 
     const change = result.changes[0];
-    expect(change.type).toBe('updated');
-    if (change.type !== 'updated') return;
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
 
     // RRULE should now contain an UNTIL clause
-    const newRrule = change.after.rrule ?? '';
+    const newRrule = change!.after.rrule ?? '';
     expect(newRrule).toMatch(/UNTIL=/i);
 
     // The UNTIL date should be before the occurrence (1 ms before)
     const untilMatch = newRrule.match(/UNTIL=([^;]+)/i);
     expect(untilMatch).not.toBeNull();
     // Verify start/end/exdates are unchanged
-    expect(change.after.start.getTime()).toBe(master.start.getTime());
-    expect(change.after.exdates).toHaveLength(0);
+    expect(change!.after.start.getTime()).toBe(master.start.getTime());
+    expect(change!.after.exdates).toHaveLength(0);
 
     // No new series should be created
     const created = result.changes.filter(c => c.type === 'created');
@@ -169,16 +169,16 @@ describe('series-scope title edit from a later occurrence', () => {
     expect(result.changes).toHaveLength(1);
 
     const change = result.changes[0];
-    expect(change.type).toBe('updated');
-    if (change.type !== 'updated') return;
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
 
     // Title should be updated
-    expect(change.after.title).toBe('Morning standup');
+    expect(change!.after.title).toBe('Morning standup');
 
     // Master start/end must stay at the ORIGINAL series anchor (Jan 5),
     // NOT shift to the occurrence date (Jan 7)
-    expect(change.after.start.getTime()).toBe(master.start.getTime());
-    expect(change.after.end.getTime()).toBe(master.end.getTime());
+    expect(change!.after.start.getTime()).toBe(master.start.getTime());
+    expect(change!.after.end.getTime()).toBe(master.end.getTime());
   });
 
   it('is safe when the occurrence is months later than the master anchor', () => {
@@ -206,12 +206,12 @@ describe('series-scope title edit from a later occurrence', () => {
 
     expect(result.status).toBe('accepted');
     const change = result.changes[0];
-    if (change.type !== 'updated') return;
+    if (change!.type !== 'updated') return;
 
-    expect(change.after.title).toBe('Renamed standup');
-    expect(change.after.category).toBe('engineering');
+    expect(change!.after.title).toBe('Renamed standup');
+    expect(change!.after.category).toBe('engineering');
     // Anchor must remain Jan 5
-    expect(change.after.start.getTime()).toBe(master.start.getTime());
+    expect(change!.after.start.getTime()).toBe(master.start.getTime());
   });
 });
 

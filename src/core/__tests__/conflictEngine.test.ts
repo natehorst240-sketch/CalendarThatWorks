@@ -78,7 +78,7 @@ describe('conflictEngine — resource-overlap rule', () => {
     expect(result.allowed).toBe(false);
     expect(result.severity).toBe('hard');
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].conflictingEventId).toBe('e1');
+    expect(result.violations[0].conflictingEventId!).toBe('e1');
   });
 
   it('ignores a non-overlapping event', () => {
@@ -165,7 +165,7 @@ describe('conflictEngine — category-mutex rule', () => {
     };
     const result = evaluateConflicts({ proposed, events: [shift], rules: [rule] });
     expect(result.allowed).toBe(false);
-    expect(result.violations[0].details).toMatchObject({ type: 'category-mutex' });
+    expect(result.violations[0].details!).toMatchObject({ type: 'category-mutex' });
   });
 
   it('does not flag when only one side is in the mutex set', () => {
@@ -232,7 +232,7 @@ describe('conflictEngine — min-rest rule', () => {
     expect(result.allowed).toBe(true); // soft severity
     expect(result.severity).toBe('soft');
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({ type: 'min-rest' });
+    expect(result.violations[0].details!).toMatchObject({ type: 'min-rest' });
   });
 
   it('does not flag when the gap meets the rest requirement', () => {
@@ -431,7 +431,7 @@ describe('conflictEngine — outside-business-hours rule', () => {
     const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
     expect(result.allowed).toBe(true); // soft by default
     expect(result.severity).toBe('soft');
-    expect(result.violations[0].details).toMatchObject({ reason: 'closed-day' });
+    expect(result.violations[0].details!).toMatchObject({ reason: 'closed-day' });
   });
 
   it('flags an event starting before business-hours open', () => {
@@ -440,7 +440,7 @@ describe('conflictEngine — outside-business-hours rule', () => {
     const proposed: ConflictEvent = { ...base, start: earlyStart, end: earlyEnd };
     const resources = withHours({ days: [1, 2, 3, 4, 5], start: '09:00', end: '17:00' });
     const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
-    expect(result.violations[0].details).toMatchObject({ reason: 'outside-hours' });
+    expect(result.violations[0].details!).toMatchObject({ reason: 'outside-hours' });
   });
 
   it('flags an event ending after business-hours close', () => {
@@ -532,7 +532,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
     });
     expect(result.allowed).toBe(false);
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'policy-violation',
       check: 'min-lead-time',
       requiredMinutes: 120,
@@ -556,7 +556,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
       now: day(10, 0),
     });
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'policy-violation',
       check: 'max-duration',
       maxMinutes: 60,
@@ -580,7 +580,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
       now: day(1, 0),
     });
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'policy-violation',
       check: 'max-advance',
       maxDays: 3,
@@ -603,7 +603,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
       now: day(9, 0),
     });
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'policy-violation',
       check: 'blackout-dates',
       blackoutDate: '2026-04-10',
@@ -637,7 +637,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
       now: new Date(Date.UTC(2026, 3, 10, 0, 0)),
     });
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({ blackoutDate: '2026-04-11' });
+    expect(result.violations[0].details!).toMatchObject({ blackoutDate: '2026-04-11' });
   });
 
   it('aggregates multiple sub-check violations into separate entries', () => {
@@ -669,7 +669,7 @@ describe('conflictEngine — policy-violation rule (#213)', () => {
       now: day(10, 8, 30),
     });
     expect(result.violations).toHaveLength(1);
-    expect((result.violations[0].details as { check: string }).check).toBe('min-lead-time');
+    expect((result.violations[0].details! as { check: string }).check).toBe('min-lead-time');
   });
 
   it('respects severity override to "soft"', () => {
@@ -708,7 +708,7 @@ describe('conflictEngine — hold-conflict rule (#211)', () => {
     expect(result.allowed).toBe(true);
     expect(result.severity).toBe('soft');
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'hold-conflict',
       holdId: 'h1',
       holderId: 'alice',
@@ -779,7 +779,7 @@ describe('conflictEngine — availability-violation rule (#214)', () => {
     };
     const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
     expect(result.allowed).toBe(false);
-    expect(result.violations[0].details).toMatchObject({
+    expect(result.violations[0].details!).toMatchObject({
       type: 'availability-violation',
       reason: 'blackout',
       availabilityRuleId: 'b',
@@ -811,7 +811,7 @@ describe('conflictEngine — availability-violation rule (#214)', () => {
     };
     const result = evaluateConflicts({ proposed, events: [], rules: [rule], resources });
     expect(result.allowed).toBe(false);
-    expect(result.violations[0].details).toMatchObject({ reason: 'outside-open-hours' });
+    expect(result.violations[0].details!).toMatchObject({ reason: 'outside-open-hours' });
   });
 
   it('respects ignoreCategories', () => {

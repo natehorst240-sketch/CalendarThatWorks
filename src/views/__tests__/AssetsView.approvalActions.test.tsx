@@ -141,8 +141,8 @@ describe('AssetsView approval caret — opens + fires action', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approval actions for PR flight' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Approve' }));
     expect(onApprovalAction).toHaveBeenCalledTimes(1);
-    expect(onApprovalAction.mock.calls[0][0].id).toBe('ev-requested');
-    expect(onApprovalAction.mock.calls[0][1]).toBe('approve');
+    expect(onApprovalAction.mock.calls[0][0].id!).toBe('ev-requested');
+    expect(onApprovalAction.mock.calls[0][1]!).toBe('approve');
   });
 
   it('caret click does not fire the pill onEventClick (stopPropagation)', () => {

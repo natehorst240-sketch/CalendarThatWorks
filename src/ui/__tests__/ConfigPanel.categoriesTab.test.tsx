@@ -38,7 +38,7 @@ describe('CategoriesTab — defaults', () => {
 
   it('defaults defaultCategoryId to the first category id', () => {
     renderTab();
-    expect(screen.getByLabelText('Default category')).toHaveValue(DEFAULT_CATEGORIES[0].id);
+    expect(screen.getByLabelText('Default category')).toHaveValue(DEFAULT_CATEGORIES[0]!.id);
   });
 });
 
@@ -109,7 +109,7 @@ describe('CategoriesTab — mutations', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
     const cats = getConfig().categoriesConfig.categories;
     expect(cats).toHaveLength(DEFAULT_CATEGORIES.length);
-    expect(cats[0].id).toBe(DEFAULT_CATEGORIES[0].id);
+    expect(cats[0].id).toBe(DEFAULT_CATEGORIES[0]!.id);
     expect(getConfig().categoriesConfig.pillStyle).toBe('hue');
   });
 });

@@ -189,7 +189,7 @@ describe('parallelSecurityAndFinanceApproval', () => {
     expect(s.ok).toBe(true)
     if (!s.ok) return
     expect(s.instance.status).toBe('awaiting')
-    expect(s.instance.parallelFrames?.[0].branches.map(b => b.activeNodeId))
+    expect(s!.instance.parallelFrames!?.[0].branches.map(b => b.activeNodeId))
       .toEqual(['security-approval', 'finance-approval'])
 
     const s2 = advance({

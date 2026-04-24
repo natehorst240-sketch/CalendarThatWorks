@@ -70,7 +70,7 @@ describe('WorksCalendar — pool booking (end-to-end, #212)', () => {
       expect(onEventSave).toHaveBeenCalledTimes(1);
     });
 
-    const saved = onEventSave.mock.calls[0][0];
+    const saved = onEventSave.mock.calls[0][0]!;
     expect(saved.title).toBe('Charter run');
     // Concrete resource in the pool — not the pool id, not null.
     expect(['N121AB', 'N505CD']).toContain(saved.resource);

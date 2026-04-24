@@ -36,9 +36,9 @@ describe('poolStore', () => {
 
     const loaded = loadPools(CAL);
     expect(loaded).toHaveLength(2);
-    expect(loaded[0].id).toBe('agents');
-    expect(loaded[0].rrCursor).toBe(2);
-    expect(loaded[1].strategy).toBe('first-available');
+    expect(loaded[0]!.id).toBe('agents');
+    expect(loaded[0]!.rrCursor).toBe(2);
+    expect(loaded[1]!.strategy).toBe('first-available');
   });
 
   it('accepts a Map and serializes only the values', () => {

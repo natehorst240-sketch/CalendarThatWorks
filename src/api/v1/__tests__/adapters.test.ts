@@ -92,7 +92,7 @@ describe('RestAdapter.loadRange', () => {
     try {
       const result = await a2.loadRange(S, E);
       expect(stub).toHaveBeenCalledOnce();
-      const calledUrl = stub.mock.calls[0][0] as string;
+      const calledUrl = stub.mock.calls[0][0]! as string;
       expect(calledUrl).toContain('start=');
       expect(calledUrl).toContain('end=');
       expect(result).toEqual(events);
@@ -109,7 +109,7 @@ describe('RestAdapter.loadRange', () => {
     try {
       const a = new RestAdapter({ baseUrl: 'http://api/events', startParam: 'from', endParam: 'to' });
       await a.loadRange(S, E);
-      const url = stub.mock.calls[0][0] as string;
+      const url = stub.mock.calls[0][0]! as string;
       expect(url).toContain('from=');
       expect(url).toContain('to=');
       expect(url).not.toContain('start=');
@@ -146,8 +146,8 @@ describe('RestAdapter.loadRange', () => {
         }),
       });
       const [result] = await a.loadRange(S, E);
-      expect(result.id).toBe('99');
-      expect(result.title).toBe('Flight');
+      expect(result!.id).toBe('99');
+      expect(result!.title).toBe('Flight');
     } finally {
       globalThis.fetch = origFetch;
     }
@@ -229,7 +229,7 @@ describe('RestAdapter.exportFeed', () => {
     const a = new RestAdapter({ baseUrl: 'http://api/events' });
     const json = await a.exportFeed([ev()]);
     const parsed = JSON.parse(json) as CalendarEventV1[];
-    expect(parsed[0].title).toBe('Meeting');
+    expect(parsed[0]!.title).toBe('Meeting');
   });
 });
 
@@ -243,8 +243,8 @@ describe('RestAdapter schedule template scaffolding', () => {
     try {
       const a = new RestAdapter({ baseUrl: 'http://api/events' });
       const templates = await a.listScheduleTemplates();
-      expect(stub.mock.calls[0][0]).toContain('/templates/schedules');
-      expect(templates[0].id).toBe('sched-1');
+      expect(stub.mock.calls[0][0]!).toContain('/templates/schedules');
+      expect(templates[0]!.id).toBe('sched-1');
     } finally {
       globalThis.fetch = origFetch;
     }
@@ -357,7 +357,7 @@ describe('SupabaseAdapter.loadRange', () => {
       fromRow: row => ({ ...(row as unknown as CalendarEventV1), title: 'mapped' }),
     });
     const result = await a.loadRange(S, E);
-    expect(result[0].title).toBe('mapped');
+    expect(result[0]!.title).toBe('mapped');
   });
 });
 
@@ -452,7 +452,7 @@ describe('ICSAdapter.loadRange', () => {
     );
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(events.length).toBeGreaterThan(0);
-    expect(events[0].title).toBe('Stand-up');
+    expect(events[0]!.title).toBe('Stand-up');
   });
 
   it('filters out events outside the range', async () => {
@@ -479,7 +479,7 @@ describe('ICSAdapter.loadRange', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => SAMPLE_ICS });
     const a = new ICSAdapter({ url: 'https://example.com/feed.ics', label: 'My Cal', fetchImpl: fetchMock });
     const events = await a.loadRange(new Date('2026-04-01Z'), new Date('2026-04-30Z'));
-    expect(events[0].meta?.['_feedLabel']).toBe('My Cal');
+    expect(events[0]!.meta?.['_feedLabel']).toBe('My Cal');
   });
 });
 
@@ -571,6 +571,6 @@ describe('serializeToICS', () => {
       rangeEnd:   new Date('2027-01-01'),
     });
     expect(reparsed.length).toBe(1);
-    expect(reparsed[0].title).toBe('Round-trip');
+    expect(reparsed[0]!.title).toBe('Round-trip');
   });
 });

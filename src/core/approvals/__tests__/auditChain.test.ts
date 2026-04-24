@@ -20,27 +20,27 @@ describe('appendAuditEntry', () => {
   it('seeds the first entry with empty prevHash and a non-empty hash', () => {
     const out = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
     expect(out).toHaveLength(1)
-    expect(out[0].prevHash).toBe('')
-    expect(out[0].hash).toMatch(/^[0-9a-f]{64}$/)
+    expect(out[0]!.prevHash).toBe('')
+    expect(out[0]!.hash).toMatch(/^[0-9a-f]{64}$/)
   })
 
   it('links subsequent entries via prevHash = previous.hash', () => {
     const h1 = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
     const h2 = appendAuditEntry(h1, approve('2026-04-20T10:05:00Z'))
-    expect(h2[1].prevHash).toBe(h1[0].hash)
-    expect(h2[1].hash).not.toBe(h1[0].hash)
+    expect(h2[1]!.prevHash).toBe(h1[0]!.hash)
+    expect(h2[1]!.hash).not.toBe(h1[0]!.hash)
   })
 
   it('produces the same hash for semantically identical entries', () => {
     const a = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
     const b = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
-    expect(a[0].hash).toBe(b[0].hash)
+    expect(a[0]!.hash).toBe(b[0]!.hash)
   })
 
   it('produces different hashes when actor differs', () => {
     const a = appendAuditEntry([], submit('2026-04-20T10:00:00Z', 'alice'))
     const b = appendAuditEntry([], submit('2026-04-20T10:00:00Z', 'eve'))
-    expect(a[0].hash).not.toBe(b[0].hash)
+    expect(a[0]!.hash).not.toBe(b[0]!.hash)
   })
 
   it('does not mutate the input history array', () => {
@@ -104,8 +104,8 @@ describe('verifyAuditChain', () => {
   it('skips pre-chain legacy entries at the start', () => {
     const legacy: ApprovalHistoryEntry = { action: 'submit', at: '2026-04-20T09:00:00Z' }
     const mixed = appendAuditEntry([legacy], approve('2026-04-20T10:00:00Z'))
-    expect(mixed[0].hash).toBeUndefined()
-    expect(mixed[1].prevHash).toBe('')
+    expect(mixed[0]!.hash).toBeUndefined()
+    expect(mixed[1]!.prevHash).toBe('')
     expect(verifyAuditChain(mixed)).toEqual({ ok: true })
   })
 

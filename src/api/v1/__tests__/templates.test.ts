@@ -23,13 +23,13 @@ describe('instantiateScheduleTemplate', () => {
 
     expect(result.templateId).toBe('sched-team-oncall');
     expect(result.generated).toHaveLength(2);
-    expect(result.generated[0].title).toBe('Primary on-call');
-    expect(result.generated[0].resource).toBe('Ops Team');
-    expect(result.generated[0].category).toBe('On-call');
-    expect(result.generated[0].rrule).toBe('FREQ=DAILY');
-    expect(result.generated[0].start).toEqual(new Date('2026-04-20T08:00:00.000Z'));
-    expect(result.generated[1].start).toEqual(new Date('2026-04-20T09:00:00.000Z'));
-    expect(result.generated[0].meta).toMatchObject({
+    expect(result.generated[0].title!).toBe('Primary on-call');
+    expect(result.generated[0].resource!).toBe('Ops Team');
+    expect(result.generated[0].category!).toBe('On-call');
+    expect(result.generated[0].rrule!).toBe('FREQ=DAILY');
+    expect(result.generated[0].start!).toEqual(new Date('2026-04-20T08:00:00.000Z'));
+    expect(result.generated[1].start!).toEqual(new Date('2026-04-20T09:00:00.000Z'));
+    expect(result.generated[0].meta!).toMatchObject({
       scheduleTemplateId: 'sched-team-oncall',
       scheduleTemplateEntryId: 'primary',
       generatedBy: 'wizard',

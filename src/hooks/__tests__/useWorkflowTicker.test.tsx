@@ -159,7 +159,7 @@ describe('useWorkflowTicker', () => {
 
     // Simulate host persisting: advance into the escalated node 'b'
     // (also has no SLA — tick should now do nothing regardless).
-    const escalated = onTimeout.mock.calls[0][0].instance as WorkflowInstance
+    const escalated = onTimeout.mock.calls[0][0].instance! as WorkflowInstance
     rerender({ instance: escalated })
     act(() => { vi.advanceTimersByTime(5000) })
     expect(onTimeout).toHaveBeenCalledTimes(1)

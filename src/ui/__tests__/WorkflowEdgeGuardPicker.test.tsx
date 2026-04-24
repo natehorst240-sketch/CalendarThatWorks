@@ -110,7 +110,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     )
     const buttons = document.querySelectorAll('[data-guard]')
     expect(buttons.length).toBe(1)
-    expect(buttons[0].getAttribute('data-guard')).toBe('default')
+    expect(buttons[0]!.getAttribute('data-guard')).toBe('default')
   })
 
   it('renders only default for a parallel source', () => {
@@ -123,7 +123,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     )
     const buttons = document.querySelectorAll('[data-guard]')
     expect(buttons.length).toBe(1)
-    expect(buttons[0].getAttribute('data-guard')).toBe('default')
+    expect(buttons[0]!.getAttribute('data-guard')).toBe('default')
   })
 
   it('renders only default for a join source', () => {
@@ -136,7 +136,7 @@ describe('WorkflowEdgeGuardPicker — rendering', () => {
     )
     const buttons = document.querySelectorAll('[data-guard]')
     expect(buttons.length).toBe(1)
-    expect(buttons[0].getAttribute('data-guard')).toBe('default')
+    expect(buttons[0]!.getAttribute('data-guard')).toBe('default')
   })
 
   it('renders nothing for a terminal source (defensive)', () => {

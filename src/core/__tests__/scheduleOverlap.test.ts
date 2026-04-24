@@ -74,7 +74,7 @@ describe('detectShiftConflicts', () => {
     });
     expect(result.hasConflict).toBe(true);
     expect(result.conflictingEvents).toHaveLength(1);
-    expect(result.conflictingEvents[0].id).toBe('shift-1');
+    expect(result.conflictingEvents[0].id!).toBe('shift-1');
   });
 
   it('does NOT flag events belonging to a different employee', () => {

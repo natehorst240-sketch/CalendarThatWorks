@@ -74,7 +74,7 @@ describe('move — single occurrence', () => {
 
     // Master gets the EXDATE for the original occurrence
     expect(updated.after.exdates).toHaveLength(1);
-    expect(updated.after.exdates[0].getTime()).toBe(occurrenceDate.getTime());
+    expect(updated.after.exdates[0].getTime!()).toBe(occurrenceDate.getTime());
     // Master rrule is unchanged
     expect(updated.after.rrule).toBe(master.rrule);
 
@@ -210,13 +210,13 @@ describe('move — series-wide', () => {
     expect(result.changes).toHaveLength(1);
 
     const change = result.changes[0];
-    expect(change.type).toBe('updated');
-    if (change.type !== 'updated') return;
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
 
-    expect(change.after.start.getTime()).toBe(d(2026, 1, 5, 10, 0).getTime());
-    expect(change.after.end.getTime()).toBe(d(2026, 1, 5, 10, 30).getTime());
+    expect(change!.after.start.getTime()).toBe(d(2026, 1, 5, 10, 0).getTime());
+    expect(change!.after.end.getTime()).toBe(d(2026, 1, 5, 10, 30).getTime());
     // rrule is unchanged
-    expect(change.after.rrule).toBe(master.rrule);
+    expect(change!.after.rrule).toBe(master.rrule);
     // No new events
     expect(result.changes.filter(c => c.type === 'created')).toHaveLength(0);
   });
@@ -237,9 +237,9 @@ describe('move — series-wide', () => {
     );
 
     const change = result.changes[0];
-    expect(change.type).toBe('updated');
-    if (change.type !== 'updated') return;
-    expect(change.after.start.getTime()).toBe(d(2026, 1, 5, 10, 0).getTime());
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
+    expect(change!.after.start.getTime()).toBe(d(2026, 1, 5, 10, 0).getTime());
     expect(result.changes).toHaveLength(1);
   });
 });
@@ -350,10 +350,10 @@ describe('resize — series-wide', () => {
     expect(result.changes).toHaveLength(1);
 
     const change = result.changes[0];
-    if (change.type !== 'updated') return;
-    expect(change.after.end.getTime()).toBe(d(2026, 1, 5, 11, 0).getTime());
+    if (change!.type !== 'updated') return;
+    expect(change!.after.end.getTime()).toBe(d(2026, 1, 5, 11, 0).getTime());
     // rrule unchanged
-    expect(change.after.rrule).toBe(master.rrule);
+    expect(change!.after.rrule).toBe(master.rrule);
   });
 });
 

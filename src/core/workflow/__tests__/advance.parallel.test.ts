@@ -60,8 +60,8 @@ describe('advance — parallel fan-out', () => {
     expect(r.instance.currentNodeId).toBeNull()
     expect(r.instance.parallelFrames).toHaveLength(1)
     const frame = r.instance.parallelFrames![0]
-    expect(frame.branches.map(b => b.activeNodeId)).toEqual(['a', 'b', 'c'])
-    expect(frame.branches.every(b => b.completedSignal === undefined)).toBe(true)
+    expect(frame!.branches.map(b => b.activeNodeId)).toEqual(['a', 'b', 'c'])
+    expect(frame!.branches.every(b => b.completedSignal === undefined)).toBe(true)
     // One node_entered per branch approval, plus one for the parallel itself.
     expect(r.emit.filter(e => e.type === 'node_entered').map(e => 'nodeId' in e && e.nodeId))
       .toEqual(['fan', 'a', 'b', 'c'])
@@ -250,8 +250,8 @@ describe('advance — parallel with notify inside a branch', () => {
     expect(s1.emit.some(e => e.type === 'notify')).toBe(true)
     // Branch a completed immediately (notify-only), branch b still pending.
     const frame = s1.instance.parallelFrames![0]
-    expect(frame.branches[0].completedSignal).toBe('default')
-    expect(frame.branches[1].activeNodeId).toBe('b-approval')
+    expect(frame.branches[0].completedSignal!).toBe('default')
+    expect(frame.branches[1].activeNodeId!).toBe('b-approval')
 
     const final = advanceOk(wf, s1.instance, { type: 'approve', targetNodeId: 'b-approval' })
     expect(final.status).toBe('completed')

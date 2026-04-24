@@ -13,7 +13,7 @@ describe('layoutWorkflow — BFS-leveled', () => {
     const start = r.positions[singleApproverWorkflow.startNodeId]
     for (const [id, p] of Object.entries(r.positions)) {
       if (id === singleApproverWorkflow.startNodeId) continue
-      expect(p.y).toBeGreaterThanOrEqual(start.y)
+      expect(p.y).toBeGreaterThanOrEqual(start!.y)
     }
   })
 
@@ -54,7 +54,7 @@ describe('layoutWorkflow — overrides', () => {
     expect(r.positions.approve).toEqual({ x: 1000, y: 2000 })
     // Other nodes fall back to BFS positions.
     expect(r.positions.done).toBeDefined()
-    expect(r.positions.done.y).not.toBe(2000)
+    expect(r!.positions.done.y!).not.toBe(2000)
   })
 
   it('ignores overrides whose workflowId does not match', () => {
@@ -103,14 +103,14 @@ describe('layoutWorkflow — BFS visitation-order columns', () => {
     }
     const r = layoutWorkflow(wf)
     // rank → y (start is above its children)
-    expect(r.positions.start.y).toBeLessThan(r.positions.childA.y)
-    expect(r.positions.start.y).toBeLessThan(r.positions.childB.y)
+    expect(r!.positions.start.y!).toBeLessThan(r!.positions.childA.y!)
+    expect(r!.positions.start.y!).toBeLessThan(r!.positions.childB.y!)
     // start is alone at rank 0 → col 0 (same x as the first child).
-    expect(r.positions.start.x).toBe(r.positions.childA.x)
+    expect(r!.positions.start.x!).toBe(r!.positions.childA.x!)
     // childA visited before childB (edge declaration order) → A < B on x.
-    expect(r.positions.childA.x).toBeLessThan(r.positions.childB.x)
+    expect(r!.positions.childA.x!).toBeLessThan(r!.positions.childB.x!)
     // Same rank → same y.
-    expect(r.positions.childA.y).toBe(r.positions.childB.y)
+    expect(r!.positions.childA.y!).toBe(r!.positions.childB.y!)
   })
 })
 
@@ -174,11 +174,11 @@ describe('layoutWorkflow — corner cases', () => {
     }
     const r = layoutWorkflow(wf)
     const maxReachableY = Math.max(
-      r.positions.approve.y,
-      r.positions.done.y,
-      r.positions.denied.y,
+      r!.positions.approve.y!,
+      r!.positions.done.y!,
+      r!.positions.denied.y!,
     )
-    expect(r.positions.orphan.y).toBeGreaterThan(maxReachableY)
+    expect(r!.positions.orphan.y!).toBeGreaterThan(maxReachableY)
   })
 
   it('back-edges get a detour path (different from forward L-shape)', () => {
