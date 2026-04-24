@@ -59,14 +59,14 @@ export function sha256Hex(message: string): string {
   for (let chunk = 0; chunk < padded.length; chunk += 64) {
     for (let i = 0; i < 16; i++) {
       const j = chunk + (i << 2)
-      W[i] = ((padded[j] << 24) | (padded[j + 1] << 16) | (padded[j + 2] << 8) | padded[j + 3]) >>> 0
+      W[i] = ((padded[j]! << 24) | (padded[j + 1]! << 16) | (padded[j + 2]! << 8) | padded[j + 3]!) >>> 0
     }
     for (let i = 16; i < 64; i++) {
-      const w15 = W[i - 15]
-      const w2  = W[i - 2]
+      const w15 = W[i - 15]!
+      const w2  = W[i - 2]!
       const s0 = rotr(w15, 7) ^ rotr(w15, 18) ^ (w15 >>> 3)
       const s1 = rotr(w2, 17) ^ rotr(w2, 19) ^ (w2 >>> 10)
-      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) >>> 0
+      W[i] = (W[i - 16]! + s0 + W[i - 7]! + s1) >>> 0
     }
 
     let a = h0, b = h1, c = h2, d = h3
@@ -74,7 +74,7 @@ export function sha256Hex(message: string): string {
     for (let i = 0; i < 64; i++) {
       const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)
       const ch = (e & f) ^ (~e & g)
-      const t1 = (h + S1 + ch + K[i] + W[i]) >>> 0
+      const t1 = (h + S1 + ch + K[i]! + W[i]!) >>> 0
       const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)
       const mj = (a & b) ^ (a & c) ^ (b & c)
       const t2 = (S0 + mj) >>> 0

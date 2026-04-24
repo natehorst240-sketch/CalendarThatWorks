@@ -77,14 +77,20 @@ function tokenize(src: string): Token[] {
   const tokens: Token[] = []
   let i = 0
   while (i < src.length) {
-    const c = src[i]
+    // i < src.length is guaranteed by the outer while loop.
+    const c = src[i]!
     if (c === ' ' || c === '\t' || c === '\n' || c === '\r') { i++; continue }
     const start = i
 
     // Number
-    if ((c >= '0' && c <= '9') || (c === '.' && src[i + 1] >= '0' && src[i + 1] <= '9')) {
+    const nextCh = src[i + 1]
+    if ((c >= '0' && c <= '9') || (c === '.' && nextCh !== undefined && nextCh >= '0' && nextCh <= '9')) {
       let j = i
-      while (j < src.length && ((src[j] >= '0' && src[j] <= '9') || src[j] === '.')) j++
+      while (j < src.length) {
+        const cj = src[j]!
+        if (!((cj >= '0' && cj <= '9') || cj === '.')) break
+        j++
+      }
       tokens.push({ type: 'number', value: src.slice(i, j), pos: start })
       i = j
       continue
@@ -97,11 +103,11 @@ function tokenize(src: string): Token[] {
       let out = ''
       while (j < src.length && src[j] !== quote) {
         if (src[j] === '\\' && j + 1 < src.length) {
-          const next = src[j + 1]
+          const next = src[j + 1]!
           out += next === 'n' ? '\n' : next === 't' ? '\t' : next
           j += 2
         } else {
-          out += src[j]
+          out += src[j]!
           j++
         }
       }
@@ -115,7 +121,7 @@ function tokenize(src: string): Token[] {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_') {
       let j = i
       while (j < src.length) {
-        const ch = src[j]
+        const ch = src[j]!
         const isAlnum = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
                         (ch >= '0' && ch <= '9') || ch === '_' || ch === '.'
         if (!isAlnum) break
@@ -166,8 +172,16 @@ interface ParseState {
   pos: number
 }
 
-function peek(s: ParseState): Token { return s.tokens[s.pos] }
-function advance(s: ParseState): Token { return s.tokens[s.pos++] }
+function peek(s: ParseState): Token {
+  const t = s.tokens[s.pos]
+  if (t === undefined) throw new ExpressionError('Unexpected end of expression', 'syntax', s.pos)
+  return t
+}
+function advance(s: ParseState): Token {
+  const t = s.tokens[s.pos++]
+  if (t === undefined) throw new ExpressionError('Unexpected end of expression', 'syntax', s.pos - 1)
+  return t
+}
 
 function parseExpr(s: ParseState): AstNode { return parseOr(s) }
 

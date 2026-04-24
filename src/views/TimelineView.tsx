@@ -101,7 +101,7 @@ type DragState = { ev: LooseEvent; sourceRowKey: string };
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/);
   return parts.length >= 2
-    ? parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase()
+    ? parts[0]![0]!.toUpperCase() + parts[parts.length - 1]![0]!.toUpperCase()
     : name.slice(0, 2).toUpperCase();
 }
 
@@ -130,7 +130,7 @@ function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
   for (const ev of clipped) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
-      if (laneEnd[i] < ev._dayStart) {
+      if (laneEnd[i]! < ev._dayStart) {
         (ev as any)._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
@@ -489,10 +489,10 @@ export default function TimelineView({
     let s = 0;
     let e = flatRows.length - 1;
     for (let i = 0; i < flatRows.length; i++) {
-      if (rowOffsets[i + 1] <= top) s = i + 1;
+      if ((rowOffsets[i + 1] ?? Infinity) <= top) s = i + 1;
     }
     for (let i = flatRows.length - 1; i >= 0; i--) {
-      if (rowOffsets[i] < top + viewH) { e = i; break; }
+      if ((rowOffsets[i] ?? 0) < top + viewH) { e = i; break; }
     }
     return [
       Math.max(0, s - OVERSCAN_ROWS),
@@ -512,10 +512,12 @@ export default function TimelineView({
     if (wrap && rowOffsets.length > rowIdx + 1) {
       const rowTop    = rowOffsets[rowIdx];
       const rowBottom = rowOffsets[rowIdx + 1];
-      if (rowTop < wrap.scrollTop) {
-        wrap.scrollTop = rowTop;
-      } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
-        wrap.scrollTop = rowBottom - wrap.clientHeight;
+      if (rowTop !== undefined && rowBottom !== undefined) {
+        if (rowTop < wrap.scrollTop) {
+          wrap.scrollTop = rowTop;
+        } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
+          wrap.scrollTop = rowBottom - wrap.clientHeight;
+        }
       }
     }
 
@@ -565,7 +567,9 @@ export default function TimelineView({
         } else {
           // Empty cell — trigger creation for this resource + day
           const dayDate = days[di];
-          onDateSelect?.(startOfDay(dayDate), addDays(startOfDay(dayDate), 1), resourceId);
+          if (dayDate !== undefined) {
+            onDateSelect?.(startOfDay(dayDate), addDays(startOfDay(dayDate), 1), resourceId);
+          }
         }
         return;
       }
