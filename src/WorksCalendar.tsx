@@ -2245,7 +2245,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onClick={() => handleContextSegmentClick('scope')}
                   title="Change scope"
                 >
-                  All regions
+                  <span>All regions</span>
+                  <span className={styles['scopePillChevron']} aria-hidden="true">›</span>
                 </button>
               </>
             ) : null;

@@ -202,17 +202,16 @@ export default function ProfileBar({
               })}
             </div>
           )}
-          <div className={styles['stripTail']}>
+          <div className={[styles['stripTail'], compactChips.length === 0 && styles['stripTailLeading']].filter(Boolean).join(' ')}>
             {tailSlot && <div className={styles['tailSlot']}>{tailSlot}</div>}
             <button
               type="button"
               className={styles['tailSaveBtn']}
               onClick={() => setSaveOpen(v => !v)}
               title="Save current filters as a new saved view"
-              aria-label="Save current view"
             >
               <Plus size={13} aria-hidden="true" />
-              <span>Save</span>
+              <span>Save view</span>
             </button>
             {hasActiveFilters && (
               <button
