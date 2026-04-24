@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 function load(calendarId: string): string[] {
   try {
     const raw = localStorage.getItem(`wc-options-${calendarId}`);
+    if (raw === null) return [];
     return JSON.parse(raw)?.categories ?? [];
   } catch {
     return [];

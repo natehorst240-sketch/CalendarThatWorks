@@ -145,7 +145,7 @@ function normalizeSavedView(view: unknown): SavedView | null {
 
 function normalizeViews(views: unknown): SavedView[] {
   if (!Array.isArray(views)) return [];
-  return views.map(normalizeSavedView).filter(Boolean);
+  return views.map(normalizeSavedView).filter((v): v is SavedView => v !== null);
 }
 
 function migrateSavedViewsPayload(payload: unknown, calendarId: string): SavedView[] {

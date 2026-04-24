@@ -211,20 +211,22 @@ export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
     const relX = e.clientX - rect.left;
 
     if (type === 'move') {
-      const snappedStart = yToMinutes(relY - s.current.offsetY);
+      const snappedStart = yToMinutes(relY - (s.current.offsetY ?? 0));
       const colIdx    = clamp(Math.floor((relX - gutterWidth) / colWidth), 0, days.length - 1);
       const targetDay = days[colIdx];
       const newStart  = dateFromDayAndMinutes(targetDay, snappedStart);
-      const newEnd    = new Date(newStart.getTime() + s.current.durationMs);
+      const newEnd    = new Date(newStart.getTime() + (s.current.durationMs ?? 0));
       updateGhost({ ev, start: newStart, end: newEnd });
 
     } else if (type === 'resize') {
+      if (ev === null) return;
       const snappedEnd = yToMinutes(relY);
       const clamped    = Math.max((s.current.startMin ?? 0) + SNAP_MIN, snappedEnd);
       const newEnd     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);
       updateGhost({ ev, start: ev.start, end: newEnd });
 
     } else if (type === 'resize-top') {
+      if (ev === null) return;
       const snappedStart = yToMinutes(relY);
       const clamped      = Math.min((s.current.endMin ?? dayEnd * 60) - SNAP_MIN, snappedStart);
       const newStart     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);

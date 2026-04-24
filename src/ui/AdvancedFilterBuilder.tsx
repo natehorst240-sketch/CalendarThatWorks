@@ -103,7 +103,7 @@ export default function AdvancedFilterBuilder({
   // Clear the "Saved!" feedback timeout on unmount to avoid state updates on
   // an unmounted component (can happen in edit mode when the parent unmounts
   // the builder immediately after onUpdate).
-  useEffect(() => () => { clearTimeout(savedTimerRef.current); }, []);
+  useEffect(() => () => { if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current); }, []);
 
   // On mount in edit mode, scroll the builder into view and focus the name
   // input so users immediately see the editor populate after clicking pencil.
@@ -121,7 +121,7 @@ export default function AdvancedFilterBuilder({
 
   const showSaved = () => {
     setSaved(true);
-    clearTimeout(savedTimerRef.current);
+    if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current);
     savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
   };
 

@@ -62,7 +62,7 @@ describe('persistSources', () => {
   it('saves sources to localStorage', () => {
     const sources = [{ id: 's1', type: 'ics' }];
     persistSources(CAL_ID, sources);
-    expect(JSON.parse(localStorage.getItem(sourceKey(CAL_ID)))).toEqual(sources);
+    expect(JSON.parse(localStorage.getItem(sourceKey(CAL_ID)) ?? 'null')).toEqual(sources);
   });
 });
 
@@ -117,7 +117,8 @@ describe('useSourceStore — removeSource', () => {
     let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics' }); });
     if (!src) throw new Error('Expected source to exist');
-    act(() => { result.current.removeSource(src.id); });
+    const srcId = src.id;
+    act(() => { result.current.removeSource(srcId); });
     expect(result.current.sources).toHaveLength(0);
   });
 
@@ -130,9 +131,11 @@ describe('useSourceStore — removeSource', () => {
       s2 = result.current.addSource({ type: 'ics', url: 'https://b.com/b.ics', label: 'B' });
     });
     if (!s1 || !s2) throw new Error('Expected both sources to be created');
-    act(() => { result.current.removeSource(s1.id); });
+    const s1Id = s1.id;
+    const s2Id = s2.id;
+    act(() => { result.current.removeSource(s1Id); });
     expect(result.current.sources).toHaveLength(1);
-    expect(result.current.sources[0].id).toBe(s2.id);
+    expect(result.current.sources[0].id).toBe(s2Id);
   });
 });
 
@@ -142,7 +145,8 @@ describe('useSourceStore — updateSource', () => {
     let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', label: 'Old', url: 'https://a.com/a.ics' }); });
     if (!src) throw new Error('Expected source to exist');
-    act(() => { result.current.updateSource(src.id, { label: 'New' }); });
+    const srcId = src.id;
+    act(() => { result.current.updateSource(srcId, { label: 'New' }); });
     expect(result.current.sources[0].label).toBe('New');
   });
 
@@ -151,7 +155,8 @@ describe('useSourceStore — updateSource', () => {
     let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', color: '#ff0000' }); });
     if (!src) throw new Error('Expected source to exist');
-    act(() => { result.current.updateSource(src.id, { label: 'Updated' }); });
+    const srcId = src.id;
+    act(() => { result.current.updateSource(srcId, { label: 'Updated' }); });
     expect(result.current.sources[0].color).toBe('#ff0000');
   });
 });
@@ -162,9 +167,10 @@ describe('useSourceStore — toggleSource', () => {
     let src: ReturnType<ReturnType<typeof useSourceStore>['addSource']> | undefined;
     act(() => { src = result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', enabled: true }); });
     if (!src) throw new Error('Expected source to exist');
-    act(() => { result.current.toggleSource(src.id); });
+    const srcId = src.id;
+    act(() => { result.current.toggleSource(srcId); });
     expect(result.current.sources[0].enabled).toBe(false);
-    act(() => { result.current.toggleSource(src.id); });
+    act(() => { result.current.toggleSource(srcId); });
     expect(result.current.sources[0].enabled).toBe(true);
   });
 });
@@ -238,7 +244,7 @@ describe('useSourceStore — persistence', () => {
   it('persists sources to localStorage', () => {
     const { result } = renderStore();
     act(() => { result.current.addSource({ type: 'ics', url: 'https://a.com/a.ics', label: 'A' }); });
-    const stored = JSON.parse(localStorage.getItem(sourceKey(CAL_ID)));
+    const stored = JSON.parse(localStorage.getItem(sourceKey(CAL_ID)) ?? 'null');
     expect(stored).toHaveLength(1);
     expect(stored[0].label).toBe('A');
   });

@@ -101,34 +101,37 @@ export function useSyncedCalendar({
       retryBaseDelay,
     });
   }
+  // Narrow into a non-null local for the rest of render — the init block
+  // above runs synchronously and makes managerRef a singleton.
+  const manager = managerRef.current;
+  if (manager === null) {
+    throw new Error('SyncManager failed to initialize');
+  }
 
   // ── Sync state ─────────────────────────────────────────────────────────────
   const [syncState, setSyncState] = useState<SyncState | null>(null);
 
   // ── Subscribe to SyncManager ────────────────────────────────────────────────
   useEffect(() => {
-    const manager = managerRef.current;
     const unsub = manager.subscribe((state: SyncState) => setSyncState(state));
     return unsub;
-  }, []);
+  }, [manager]);
 
   // ── Load range whenever start/end changes ───────────────────────────────────
   useEffect(() => {
-    const manager = managerRef.current;
     const controller = new AbortController();
     manager.loadRange(start, end, controller.signal).catch((err: unknown) => {
       if (!controller.signal.aborted) console.error('[useSyncedCalendar] loadRange error:', err);
     });
     return () => controller.abort();
-  }, [start, end]);
+  }, [manager, start, end]);
 
   // ── Live subscription ───────────────────────────────────────────────────────
   useEffect(() => {
-    const manager = managerRef.current;
     if (!live) return;
     manager.connectLive();
     return () => manager.disconnectLive();
-  }, [live]);
+  }, [manager, live]);
 
   // ── Stable mutation callbacks ───────────────────────────────────────────────
   const createEvent = useCallback(

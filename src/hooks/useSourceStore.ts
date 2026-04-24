@@ -167,7 +167,7 @@ export function useSourceStore(calendarId: string): {
 
   // CSV datasets with at least one event
   const activeCsvSources = useMemo<CsvSource[]>(
-    () => sources.filter((s): s is CsvSource => s.type === 'csv' && s.enabled && (s.events?.length ?? 0) > 0),
+    () => sources.filter((s): s is CsvSource => s.type === 'csv' && s.enabled === true && (s.events?.length ?? 0) > 0),
     [sources],
   );
 
