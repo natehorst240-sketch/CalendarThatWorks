@@ -233,6 +233,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   transition: opacity 0.1s;
+  box-shadow: var(--wc-event-glow, none);
   /* Touch: claim the pointer for move so the browser doesn't fire tap
      through to a date-cell pointer-down. */
   touch-action: none;

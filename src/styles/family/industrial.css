@@ -60,3 +60,9 @@
   --wc-cat-0: #fb923c; --wc-cat-1: #fcd34d; --wc-cat-2: #fca5a5; --wc-cat-3: #86efac;
   --wc-cat-4: #c4b5fd; --wc-cat-5: #f9a8d4; --wc-cat-6: #67e8f9; --wc-cat-7: #fdba74;
 }
+
+/* Structural accent on high-priority events — rugged outline, no glow. */
+[data-wc-theme-family="industrial"] [data-wc-priority="high"] {
+  outline: 2px solid color-mix(in srgb, var(--ev-color, var(--wc-accent)) 80%, #fff);
+  outline-offset: 1px;
+}

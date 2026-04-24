@@ -33,7 +33,10 @@
 
   font-family: var(--wc-font);
   font-size: var(--wc-base-font-size, 14px);
-  background: var(--wc-bg);
+  background-color: var(--wc-bg);
+  background-image: var(--wc-bg-image, none);
+  background-size: cover;
+  background-position: center;
   color: var(--wc-text);
   border-radius: var(--wc-radius);
   overflow: hidden;
@@ -250,6 +253,14 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-right: 4px;
 }
 
 .navBtn {

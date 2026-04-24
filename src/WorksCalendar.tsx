@@ -51,6 +51,8 @@ import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar
 import FocusChips, { DEFAULT_FOCUS_CHIPS, resolveActiveChipLabels } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
 import ContextSummary from './ui/ContextSummary';
+import type { ContextSummarySegment } from './ui/ContextSummary';
+import type { SidebarTab } from './ui/FilterGroupSidebar';
 import { resolvePresetLabel } from './ui/ViewPanel';
 import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
@@ -268,6 +270,13 @@ export type WorksCalendarProps = {
    * cursor survives page reloads. Omit to skip persistence entirely.
    */
   onPoolsChange?: (pools: ResourcePool[]) => void;
+
+  /** Optional logo image displayed at the left of the toolbar. */
+  logoSrc?: string;
+  /** Alt text for the logo image. Treated as decorative if omitted. */
+  logoAlt?: string;
+  /** Optional background image URL applied to the calendar root. */
+  backgroundImage?: string;
 };
 
 
@@ -500,6 +509,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // ── Resource pools (#212) ──
     pools: rawPools,
     onPoolsChange,
+
+    // ── Branding ──
+    logoSrc,
+    logoAlt,
+    backgroundImage,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -510,6 +524,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.['display']?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.['customTheme']), [ownerCfg.config?.['customTheme']]);
+  const rootStyle = useMemo<React.CSSProperties>(() => ({
+    ...(customThemeVars ?? {}),
+    ...(backgroundImage ? ({ '--wc-bg-image': `url(${backgroundImage})` } as React.CSSProperties) : {}),
+  }), [customThemeVars, backgroundImage]);
   // The raw theme value (from props, owner config, or default). The new theme
   // system uses `family-mode` IDs (see src/styles/themes.ts); the CSS runtime
   // still matches the historical single-word selectors, so we resolve the
@@ -674,6 +692,17 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── FilterGroupSidebar state ──
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarInitialTab, setSidebarInitialTab] = useState<SidebarTab>('view');
+
+  const handleContextSegmentClick = useCallback((segment: ContextSummarySegment) => {
+    const tabMap: Record<ContextSummarySegment, SidebarTab> = {
+      view: 'view',
+      focus: 'focus',
+      scope: 'view',
+    };
+    setSidebarInitialTab(tabMap[segment]);
+    setSidebarOpen(true);
+  }, []);
 
   // Derive GroupLevel[] from activeGroupBy for the sidebar's GroupsPanel
   const sidebarGroupLevels = useMemo<GroupLevel[]>(() => {
@@ -2036,7 +2065,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           data-wc-theme-family={themeFamily}
           data-wc-theme-mode={themeMode}
           data-testid="works-calendar-setup"
-          style={customThemeVars as React.CSSProperties}
+          style={rootStyle}
         >
           <SetupLanding
             onSkip={handleSetupSkip}
@@ -2052,7 +2081,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
+        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
         {/* ── Toolbar ── */}
         {renderToolbar ? (
@@ -2060,6 +2089,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         ) : (
           <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
             <div className={styles['navGroup']}>
+              {logoSrc && (
+                <img
+                  src={logoSrc}
+                  alt={logoAlt ?? ''}
+                  className={styles['logo']}
+                  aria-hidden={!logoAlt ? 'true' : undefined}
+                />
+              )}
               <button
                 className={styles['navBtn']}
                 onClick={() => cal.navigate(-1)}
@@ -2225,6 +2262,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 viewLabel={resolvePresetLabel(sidebarGroupLevels)}
                 chipLabels={resolveActiveChipLabels(resolvedChips, activeCategories)}
                 scope="All regions"
+                onSegmentClick={handleContextSegmentClick}
               />
               <FocusChips
                 chips={resolvedChips}
@@ -2250,6 +2288,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         {/* ── View area (with sidebar overlay) ── */}
         <FilterGroupSidebar
           open={sidebarOpen}
+          initialTab={sidebarInitialTab}
           onClose={() => setSidebarOpen(false)}
           // Groups tab
           groupLevels={sidebarGroupLevels}

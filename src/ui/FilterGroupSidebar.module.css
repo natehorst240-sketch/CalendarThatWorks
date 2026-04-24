@@ -166,6 +166,23 @@
   background: var(--wc-accent-dim);
 }
 
+.toggleArrow {
+  font-size: 12px;
+  opacity: 0.6;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.toggleBtn:hover .toggleArrow {
+  transform: translateX(3px);
+  opacity: 1;
+}
+
+.toggleBtn.active .toggleArrow {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
 /* Responsive: overlay mode on narrow screens */
 @media (max-width: 1200px) {
   .sidebar {

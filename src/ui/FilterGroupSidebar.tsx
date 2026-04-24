@@ -31,6 +31,8 @@ export type FilterGroupSidebarProps = {
   open: boolean;
   /** Called to close the sidebar. */
   onClose: () => void;
+  /** Tab to focus each time the sidebar opens. Defaults to 'view'. */
+  initialTab?: SidebarTab;
 
   // Groups tab
   /** Current group-by levels. */
@@ -80,6 +82,7 @@ export type FilterGroupSidebarProps = {
 export default function FilterGroupSidebar({
   open,
   onClose,
+  initialTab,
   // Groups
   groupLevels,
   onGroupLevelsChange,
@@ -105,8 +108,15 @@ export default function FilterGroupSidebar({
 }: FilterGroupSidebarProps) {
   // Default to the View tab so the perspective picker is the owner's
   // first stop. Focus/Saved open via explicit tab clicks.
-  const [activeTab, setActiveTab] = useState<SidebarTab>('view');
+  const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'view');
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Reset to the requested initial tab every time the sidebar opens, so
+  // callers can deep-link to a tab (e.g. clicking "Focus" in ContextSummary).
+  useEffect(() => {
+    if (open) setActiveTab(initialTab ?? 'view');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: reset only on each open
+  }, [open]);
 
   // Condition builder for the Filters tab
   const conditionBuilder = useConditionBuilder({
@@ -300,7 +310,8 @@ export function SidebarToggleButton({
       title="Perspective, focus & saved views"
     >
       <SlidersHorizontal size={15} />
-      <span>View Controls</span>
+      <span>Customize View</span>
+      <span className={styles['toggleArrow']} aria-hidden="true">→</span>
       {totalActive > 0 && (
         <span className={styles['badge']}>{totalActive}</span>
       )}

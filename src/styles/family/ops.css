@@ -72,3 +72,14 @@
   filter: brightness(1.15) saturate(1.4);
   box-shadow: 0 0 6px color-mix(in srgb, var(--ev-color, #00d4ff) 55%, transparent);
 }
+
+/* Base glow on all events in ops dark — subtle ambient hum. */
+[data-wc-theme-family="ops"][data-wc-theme-mode="dark"] {
+  --wc-event-glow: 0 0 4px color-mix(in srgb, var(--ev-color, var(--wc-accent)) 30%, transparent);
+}
+
+/* Ops light: subtle shadow lift for high-priority. */
+[data-wc-theme-family="ops"][data-wc-theme-mode="light"] [data-wc-priority="high"] {
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--ev-color, var(--wc-accent)) 35%, transparent);
+  filter: brightness(1.08) saturate(1.3);
+}

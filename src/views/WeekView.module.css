@@ -86,6 +86,7 @@
   overflow: hidden;
   box-sizing: border-box;
   transition: filter 0.1s;
+  box-shadow: var(--wc-event-glow, none);
   z-index: 2;
   touch-action: none;
 }
@@ -307,6 +308,7 @@
   gap: 1px;
   z-index: 5;
   transition: filter 0.1s;
+  box-shadow: var(--wc-event-glow, none);
   box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;

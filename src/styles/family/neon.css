@@ -70,3 +70,12 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.25);
 }
+
+/* Event-level glow in neon dark — base for all pills, stronger on high-priority. */
+[data-wc-theme-family="neon"][data-wc-theme-mode="dark"] {
+  --wc-event-glow: 0 0 8px color-mix(in srgb, var(--ev-color, var(--wc-accent)) 60%, transparent);
+}
+[data-wc-theme-family="neon"][data-wc-theme-mode="dark"] [data-wc-priority="high"] {
+  box-shadow: 0 0 16px color-mix(in srgb, var(--ev-color, var(--wc-accent)) 80%, transparent);
+  filter: brightness(1.2) saturate(1.4);
+}
