@@ -97,7 +97,7 @@ interface AssetsViewProps {
   onEditAssets?: () => void;
   onRequestAsset?: () => void;
   approvalsConfig?: unknown;
-  onApprovalAction?: (event: AssetsViewEvent, action: string) => void;
+  onApprovalAction?: (event: AssetsViewEvent, action: string) => void | Promise<void>;
   resolveResourceLabel?: (resourceId: string) => string;
   strictAssetFiltering?: boolean;
   zoomLevel?: string;

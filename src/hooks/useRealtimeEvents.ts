@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from 'react';
 type RealtimeStatus = 'disabled' | 'connecting' | 'live' | 'error';
 type RealtimeRow = any;
 
-export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseClient: any; table: string; filter?: string }): { events: RealtimeRow[]; status: RealtimeStatus } {
+export function useRealtimeEvents({ supabaseClient, table, filter }: { supabaseClient: any; table?: string; filter?: string }): { events: RealtimeRow[]; status: RealtimeStatus } {
   const [events, setEvents] = useState<RealtimeRow[]>([]);
   const [status, setStatus] = useState<RealtimeStatus>('disabled');
   const channelRef = useRef<any>(null);

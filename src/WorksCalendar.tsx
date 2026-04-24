@@ -1733,6 +1733,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
 
     result.generated.forEach((ev, index) => {
+      if (ev.start == null || ev.end == null) return;
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
       const end = ev.end instanceof Date ? ev.end : new Date(ev.end);
       const templateEventId = String(ev.id ?? createId(`template-${template.id}-${index}`));
@@ -1856,7 +1857,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       ...ev,
       end: ev.end instanceof Date || typeof ev.end === 'string'
         ? ev.end
-        : new Date(ev.end),
+        : new Date(ev.end ?? 0),
     }));
     return { generated: normalizedPreview, conflicts, error: '' };
   }, [resolvedScheduleLimits.previewMax, trackScheduleTemplateAnalytics, visibleScheduleTemplates]);
@@ -2342,7 +2343,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.approvals}
-                  onApprovalAction={onApprovalAction}
+                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                 />
               )}
             </>
@@ -2472,7 +2473,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             resources={resources}
             schema={schema}
             items={expandedEvents}
-            initialTab={ownerCfg.configInitialTab}
+            initialTab={ownerCfg.configInitialTab ?? undefined}
             initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
