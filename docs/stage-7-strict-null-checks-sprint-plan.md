@@ -153,11 +153,35 @@ Sprint 3 is successful if:
 
 ## Sprint 4 — Root Stabilization & Full `strictNullChecks` Enablement
 
-**Status:** PLANNED
+**Status:** COMPLETE (full enablement recorded on 2026-04-24)
 
 ### Goal
 
 Enable `strictNullChecks: true` across the entire repository and stabilize the root composition layer so strict typing holds long-term.
+
+### Sprint 4 Completion Summary (2026-04-24)
+
+- ✅ PR1a: typed the five core engine refs in `src/WorksCalendar.tsx`
+  (engineRef, undoManagerRef, announcerRef, opCtxRef, swipeAreaRef) and
+  narrowed them to non-null locals via the init-time invariant pattern.
+- ✅ PR1b: typed the 10 `useState(null)` / `useState([])` hooks in the
+  root component with `LooseValue | null` / `LooseValue[]`.
+- ✅ PR1c: ratcheted baseline **131 → 72**.
+- ✅ PR2: cleared the last 5 root diagnostics — `useRealtimeEvents`
+  table relaxed to optional, schedule-template date narrowing, ConfigPanel
+  `initialTab` null handling, onApprovalAction contravariance cast.
+- ✅ PR3: view finalization — `AssetsView`, `WeekView`, `DayView`,
+  `MonthView` all strict-null clean via typed DOM refs, drag-ref
+  null-guards, and `color ?? ''` fallbacks.
+- ✅ PR4: production hook cleanup — `useSyncedCalendar` managerRef
+  narrowed to non-null local, `useDrag` pointermove guards, `useEventOptions`
+  localStorage null-guard, `useSavedViews` typed filter, `useSourceStore`
+  predicate strict boolean, `AdvancedFilterBuilder` clearTimeout guard.
+- ✅ PR5: view test harness guards — 14 diagnostics cleared across
+  `AgendaView`, `AssetsView`, `TimelineView` test files.
+- ✅ PR6: `strictNullChecks: true` enabled in `tsconfig.json`; baseline
+  ratcheted to **0**; `npm run type-check` and `npm run type-check:strict-null`
+  both pass clean repo-wide.
 
 ---
 

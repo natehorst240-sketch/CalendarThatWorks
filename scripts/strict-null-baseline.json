@@ -1,5 +1,5 @@
 {
-  "baselineTotal": 72,
+  "baselineTotal": 0,
   "recordedAt": "2026-04-24",
-  "source": "stage-7 sprint-4 pr1 root typing (engine refs + useState nullability)"
+  "source": "stage-7 sprint-4 pr6 full strictNullChecks enablement"
 }
