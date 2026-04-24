@@ -60,7 +60,15 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 /* ─── Config seed ───────────────────────────────────────────────── */
 // Bumped for the Air EMS identity change. Existing visitors on the IHC seed
 // see the new defaults on their next load without a manual storage wipe.
-const DEMO_SEED_VERSION = 4;
+//
+// Seed v5 — force-resync `team.bases` to DEMO_BASES on upgrade. Earlier
+// versions preserved any non-empty `existing.team.bases`, which left
+// returning visitors with stale base ids (e.g. IHC-era numeric ids) that
+// no longer matched the employee `basedAt` / aircraft `meta.base`
+// values. The result was a By-Base view counting 0 people / 0 assets at
+// every base. Bases are demo-controlled identity, not user data, so
+// overwriting them is safe.
+const DEMO_SEED_VERSION = 5;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -81,7 +89,7 @@ if (!storedCfg) {
     ...existing,
     title:     existing.title ?? 'Air EMS Operations',
     setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
-    team:      { ...existing.team, bases: existing.team?.bases?.length ? existing.team.bases : DEMO_BASES },
+    team:      { ...existing.team, bases: DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
   });
   localStorage.setItem(SEED_VER_KEY, String(DEMO_SEED_VERSION));
