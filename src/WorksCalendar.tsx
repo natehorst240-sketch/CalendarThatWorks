@@ -47,14 +47,11 @@ import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
-import ViewPicker             from './ui/ViewPicker';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
-import FocusChips, { DEFAULT_FOCUS_CHIPS, resolveActiveChipLabels } from './ui/FocusChips';
+import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
-import ContextSummary from './ui/ContextSummary';
 import type { ContextSummarySegment } from './ui/ContextSummary';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
-import { resolvePresetLabel } from './ui/ViewPanel';
 import type { GroupLevel } from './ui/GroupsPanel';
 import HoverCard              from './ui/HoverCard';
 import OwnerLock              from './ui/OwnerLock';
@@ -2120,12 +2117,18 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
             </div>
 
-            <div className={styles['viewPickerWrap']}>
-              <ViewPicker
-                views={VIEWS}
-                activeView={cal.view}
-                onChange={(id) => cal.setView(id as ViewId)}
-              />
+            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
+              {VIEWS.map(v => (
+                <button
+                  key={v.id}
+                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
+                  onClick={() => cal.setView(v.id)}
+                  aria-pressed={cal.view === v.id}
+                  title={v.hint}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
 
             <div className={styles['actions']}>
@@ -2220,54 +2223,59 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema,
               buildFilterSummary: (filters: LooseValue) => buildFilterSummary(filters, schema),
             })
-          : (
-            <ProfileBar
-              compact
-              views={savedViews.views}
-              activeId={savedViewActiveId}
-              isDirty={savedViewDirty}
-              schema={schema}
-              currentView={cal.view}
-              viewOrder={ALL_VIEWS.map(v => v.id)}
-              enabledViews={VIEWS.map(v => v.id)}
-              locationLabel={locationLabel}
-              hasActiveFilters={hasActiveFilters(cal.filters, schema)}
-              onApply={handleApplyView}
-              onAdd={({ name, color }: { name: LooseValue; color: LooseValue }) =>
-                savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
-              }
-              onResave={(id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
-              onUpdate={savedViews.updateView}
-              onDelete={handleDeleteView}
-              onToggleVisibility={savedViews.toggleStripVisibility}
-              onClearFilters={cal.clearFilters}
-              onEditConditions={ownerCfg.isOwner ? (id: LooseValue) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
-            />
-          )
+          : (() => {
+            // Build the merged "tail" for compact ProfileBar: focus chips +
+            // scope text live inline on the same row as saved-view chips.
+            // ContextSummary's View/Focus segments are dropped — the sidebar
+            // already surfaces grouping and the chips themselves show focus.
+            const resolvedFocusChips: FocusChipDef[] | null = focusChips
+              ? (Array.isArray(focusChips) ? focusChips : DEFAULT_FOCUS_CHIPS)
+              : null;
+            const activeCategories = cal.filters?.['categories'] as Set<string> | undefined;
+            const tailSlot = resolvedFocusChips ? (
+              <>
+                <FocusChips
+                  chips={resolvedFocusChips}
+                  activeCategories={activeCategories}
+                  onCategoriesChange={(next) => cal.setFilter('categories', next)}
+                />
+                <button
+                  type="button"
+                  className={styles['scopePill']}
+                  onClick={() => handleContextSegmentClick('scope')}
+                  title="Change scope"
+                >
+                  All regions
+                </button>
+              </>
+            ) : null;
+            return (
+              <ProfileBar
+                compact
+                views={savedViews.views}
+                activeId={savedViewActiveId}
+                isDirty={savedViewDirty}
+                schema={schema}
+                currentView={cal.view}
+                viewOrder={ALL_VIEWS.map(v => v.id)}
+                enabledViews={VIEWS.map(v => v.id)}
+                locationLabel={locationLabel}
+                hasActiveFilters={hasActiveFilters(cal.filters, schema)}
+                tailSlot={tailSlot}
+                onApply={handleApplyView}
+                onAdd={({ name, color }: { name: LooseValue; color: LooseValue }) =>
+                  savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
+                }
+                onResave={(id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+                onUpdate={savedViews.updateView}
+                onDelete={handleDeleteView}
+                onToggleVisibility={savedViews.toggleStripVisibility}
+                onClearFilters={cal.clearFilters}
+                onEditConditions={ownerCfg.isOwner ? (id: LooseValue) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
+              />
+            );
+          })()
         }
-
-        {/* ── Focus chips + context summary (opt-in via focusChips prop) ── */}
-        {focusChips && (() => {
-          const resolvedChips: FocusChipDef[] = Array.isArray(focusChips)
-            ? focusChips
-            : DEFAULT_FOCUS_CHIPS;
-          const activeCategories = cal.filters?.['categories'] as Set<string> | undefined;
-          return (
-            <>
-              <ContextSummary
-                viewLabel={resolvePresetLabel(sidebarGroupLevels)}
-                chipLabels={resolveActiveChipLabels(resolvedChips, activeCategories)}
-                scope="All regions"
-                onSegmentClick={handleContextSegmentClick}
-              />
-              <FocusChips
-                chips={resolvedChips}
-                activeCategories={activeCategories}
-                onCategoriesChange={(next) => cal.setFilter('categories', next)}
-              />
-            </>
-          );
-        })()}
 
         {/* ── Filter Bar (legacy, kept for renderFilterBar override) ── */}
         {renderFilterBar && renderFilterBar({

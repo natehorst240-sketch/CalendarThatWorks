@@ -6,22 +6,41 @@
   background: var(--wc-surface);
 }
 
-/* Compact mode: chip strip only, no header action row.
-   Power-user controls (Customize, Clear, Save-view) live inline at the
-   strip tail, so the bar renders as a single slim row. */
+/* Compact mode: single row — saved-view chips on the left, Save + focus
+   slot + Clear on the right. The section header ("AGENDA VIEW" etc.) is
+   dropped because the toolbar already shows which view is active.
+   Power-user controls live in the sidebar; the strip tail keeps only
+   the actions relevant to the current view state. */
 .barCompact {
   background: var(--wc-bg);
 }
 .barCompact .strip {
   padding: 4px 12px;
+  overflow-x: visible;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.barCompact .group {
+  padding-left: 0;
+}
+.barCompact .groupDivider {
+  display: none;
 }
 
 .stripTail {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-left: auto;
-  padding-left: 8px;
+  padding-left: 12px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--wc-border);
+}
+
+.tailSlot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -39,6 +58,7 @@
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 .tailSaveBtn:hover {
   border-color: var(--wc-accent);
@@ -58,6 +78,7 @@
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 .tailClearBtn:hover {
   border-color: var(--wc-danger, var(--wc-accent));

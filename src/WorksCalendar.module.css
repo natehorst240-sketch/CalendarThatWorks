@@ -323,7 +323,29 @@
   min-width: 0;
 }
 
-/* View switcher (legacy 7-button group — retained for potential custom toolbars) */
+/* Scope pill — subtle right-aligned "All regions" label in the compact
+   ProfileBar tail; clickable to open the sidebar's scope controls. */
+.scopePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--wc-border);
+  background: transparent;
+  color: var(--wc-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.scopePill:hover {
+  border-color: var(--wc-accent);
+  color: var(--wc-accent);
+}
+
+/* View switcher */
 .viewGroup {
   display: flex;
   background: var(--wc-surface);
@@ -331,12 +353,6 @@
   border-radius: var(--wc-radius-sm);
   overflow: hidden;
   margin-left: auto;
-}
-
-/* View picker (single-dropdown replacement) sits next to the date label;
-   .actions picks up margin-left: auto so secondary controls flow right. */
-.viewPickerWrap {
-  display: flex;
 }
 
 .viewBtn {
@@ -364,7 +380,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
 }
 
 .devBadge {

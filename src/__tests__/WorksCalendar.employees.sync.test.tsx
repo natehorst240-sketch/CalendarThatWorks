@@ -40,8 +40,7 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
     );
 
     // Switch to schedule/timeline view.
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
 
     // Open the add-person form from the timeline header.
     fireEvent.click(await screen.findByRole('button', { name: 'Add person' }));
@@ -78,8 +77,7 @@ describe('WorksCalendar employees ↔ TeamTab bidirectional sync (issue #101)', 
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Add person' }));
 
     const nameInput = await screen.findByPlaceholderText('Name');

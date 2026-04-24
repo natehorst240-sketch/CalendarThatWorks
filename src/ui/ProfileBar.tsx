@@ -51,6 +51,7 @@ export default function ProfileBar({
   locationLabel = 'Base',
   hasActiveFilters = false,
   compact = false,
+  tailSlot,
   onApply,
   onAdd,
   onResave,
@@ -91,6 +92,20 @@ export default function ProfileBar({
 
   const nonEmpty = [...grouped.entries()].filter(([, list]) => list.length > 0);
 
+  // Compact mode scopes the strip to the active view only so the section
+  // header ("AGENDA VIEW", "BASE VIEW", …) becomes redundant — the toolbar
+  // already tells the user which tab they're on. Globally-pinned views ride
+  // along so cross-view favorites stay accessible.
+  const compactChips = useMemo(() => {
+    if (!compact) return [];
+    const flat: any[] = [];
+    const scoped = grouped.get(currentView);
+    if (scoped) flat.push(...scoped);
+    const global = grouped.get(GLOBAL_GROUP_KEY);
+    if (global) flat.push(...global);
+    return flat;
+  }, [compact, grouped, currentView]);
+
   return (
     <div className={[styles['bar'], compact && styles['barCompact']].filter(Boolean).join(' ')}>
       {!compact && (
@@ -129,7 +144,7 @@ export default function ProfileBar({
         </div>
       )}
 
-      {nonEmpty.length > 0 && (
+      {!compact && nonEmpty.length > 0 && (
         <div className={styles['strip']}>
           {nonEmpty.map(([key, list], idx) => {
             const meta = key === GLOBAL_GROUP_KEY
@@ -163,35 +178,42 @@ export default function ProfileBar({
               </div>
             );
           })}
-          {compact && (
-            <div className={styles['stripTail']}>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  className={styles['tailClearBtn']}
-                  onClick={onClearFilters}
-                  title="Clear all filters"
-                >
-                  Clear filters
-                </button>
-              )}
-              <button
-                type="button"
-                className={styles['tailSaveBtn']}
-                onClick={() => setSaveOpen(v => !v)}
-                title="Save current filters as a new saved view"
-                aria-label="Save current view"
-              >
-                <Plus size={13} aria-hidden="true" />
-                <span>Save</span>
-              </button>
-            </div>
-          )}
         </div>
       )}
-      {compact && nonEmpty.length === 0 && (
+
+      {compact && (
         <div className={styles['strip']}>
+          {compactChips.length > 0 && (
+            <div className={styles['group']} data-active="true">
+              {compactChips.map((savedView: any) => {
+                const chipEnabled = !savedView.view || isViewEnabled(savedView.view);
+                return (
+                  <ViewChip
+                    key={savedView.id}
+                    savedView={savedView}
+                    isActive={savedView.id === activeId}
+                    isDirty={isDirty && savedView.id === activeId}
+                    isEnabled={chipEnabled}
+                    onApply={chipEnabled
+                      ? () => { onApply(savedView); setSaveOpen(false); }
+                      : undefined}
+                  />
+                );
+              })}
+            </div>
+          )}
           <div className={styles['stripTail']}>
+            {tailSlot && <div className={styles['tailSlot']}>{tailSlot}</div>}
+            <button
+              type="button"
+              className={styles['tailSaveBtn']}
+              onClick={() => setSaveOpen(v => !v)}
+              title="Save current filters as a new saved view"
+              aria-label="Save current view"
+            >
+              <Plus size={13} aria-hidden="true" />
+              <span>Save</span>
+            </button>
             {hasActiveFilters && (
               <button
                 type="button"
@@ -199,18 +221,9 @@ export default function ProfileBar({
                 onClick={onClearFilters}
                 title="Clear all filters"
               >
-                Clear filters
+                Clear
               </button>
             )}
-            <button
-              type="button"
-              className={styles['tailSaveBtn']}
-              onClick={() => setSaveOpen(v => !v)}
-              title="Save current filters as a new saved view"
-            >
-              <Plus size={13} aria-hidden="true" />
-              <span>Save view</span>
-            </button>
           </div>
         </div>
       )}

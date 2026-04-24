@@ -12,8 +12,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
   it('opens employee action card when employee name is clicked', async () => {
     render(<WorksCalendar events={[]} employees={employees} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
 
     expect(await screen.findByRole('menu', { name: 'Actions for Alex Rivera' })).toBeInTheDocument();
@@ -23,8 +22,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
   it('routes empty schedule-cell click to ScheduleEditorForm instead of EventForm', async () => {
     render(<WorksCalendar events={[]} employees={employees} showAddButton />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('gridcell', { name: /^Alex Rivera, April 1, empty/ }));
 
     expect(await screen.findByRole('dialog', { name: 'Create schedule for Alex Rivera' })).toBeInTheDocument();
@@ -37,8 +35,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
     render(<WorksCalendar events={[]} employees={employees} showAddButton />);
 
     expect(screen.getByRole('button', { name: 'Add new event' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
 
     expect(screen.queryByRole('button', { name: 'Add new event' })).not.toBeInTheDocument();
   });
@@ -46,8 +43,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
   it('opens PTO-focused form when Request PTO is selected', async () => {
     render(<WorksCalendar events={[]} employees={employees} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Request PTO' }));
 
@@ -59,8 +55,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
   it('opens unavailable-focused form when Mark Unavailable is selected', async () => {
     render(<WorksCalendar events={[]} employees={employees} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Mark Unavailable' }));
 
@@ -87,8 +82,7 @@ describe('WorksCalendar schedule workflow entry points', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Change view' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Schedule/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Actions for Alex Rivera' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Set Availability' }));
 
