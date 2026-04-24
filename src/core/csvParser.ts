@@ -52,12 +52,13 @@ export function parseCSV(text: string): { headers: string[]; rows: CsvRow[] } {
   const firstNonBlank = lines.findIndex(l => l.trim() !== '');
   if (firstNonBlank === -1) return { headers: [], rows: [] };
 
-  const headers = _parseLine(lines[firstNonBlank]).map(h => h.trim());
+  const headers = _parseLine(lines[firstNonBlank]!).map(h => h.trim());
   const rows: CsvRow[] = [];
 
   for (let i = firstNonBlank + 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const values = _parseLine(lines[i]);
+    const line = lines[i];
+    if (!line || !line.trim()) continue;
+    const values = _parseLine(line);
     const row: CsvRow = {};
     headers.forEach((h, j) => { row[h] = (values[j] ?? '').trim(); });
     rows.push(row);
@@ -234,9 +235,11 @@ function _looksISO(v: string): boolean {
 function _parseMDY(v: string): Date {
   // MM/DD/YYYY or MM/DD/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
+  if (datePart === undefined) return new Date(v);
   const parts = datePart.split('/');
   if (parts.length !== 3) return new Date(v);
   const [m, d, y] = parts;
+  if (m === undefined || d === undefined || y === undefined) return new Date(v);
   const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
   return new Date(iso);
 }
@@ -244,9 +247,11 @@ function _parseMDY(v: string): Date {
 function _parseDMY(v: string): Date {
   // DD/MM/YYYY or DD/MM/YYYY HH:MM[:SS]
   const [datePart, timePart] = v.split(/[\sT]/);
+  if (datePart === undefined) return new Date(v);
   const parts = datePart.split('/');
   if (parts.length !== 3) return new Date(v);
   const [d, m, y] = parts;
+  if (m === undefined || d === undefined || y === undefined) return new Date(v);
   const iso = `${y.padStart(4, '20')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}${timePart ? 'T' + timePart : ''}`;
   return new Date(iso);
 }

@@ -184,6 +184,7 @@ export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
     const relX     = e.clientX - rect.left;
     const colIdx   = clamp(Math.floor((relX - gutterWidth) / colWidth), 0, days.length - 1);
     const anchorDay = days[colIdx];
+    if (anchorDay === undefined) return;
     const anchorMin = yToMinutes(relY);
     s.current = {
       type: 'create', ev: null, gridEl, days, gutterWidth, colWidth,
@@ -214,6 +215,7 @@ export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
       const snappedStart = yToMinutes(relY - (s.current.offsetY ?? 0));
       const colIdx    = clamp(Math.floor((relX - gutterWidth) / colWidth), 0, days.length - 1);
       const targetDay = days[colIdx];
+      if (targetDay === undefined) return;
       const newStart  = dateFromDayAndMinutes(targetDay, snappedStart);
       const newEnd    = new Date(newStart.getTime() + (s.current.durationMs ?? 0));
       updateGhost({ ev, start: newStart, end: newEnd });
@@ -222,22 +224,28 @@ export function useDrag<TEvent extends DragEventBase = NormalizedEvent>(
       if (ev === null) return;
       const snappedEnd = yToMinutes(relY);
       const clamped    = Math.max((s.current.startMin ?? 0) + SNAP_MIN, snappedEnd);
-      const newEnd     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);
+      const resizeDay  = days[s.current.dayIndex ?? 0];
+      if (resizeDay === undefined) return;
+      const newEnd     = dateFromDayAndMinutes(resizeDay, clamped);
       updateGhost({ ev, start: ev.start, end: newEnd });
 
     } else if (type === 'resize-top') {
       if (ev === null) return;
       const snappedStart = yToMinutes(relY);
       const clamped      = Math.min((s.current.endMin ?? dayEnd * 60) - SNAP_MIN, snappedStart);
-      const newStart     = dateFromDayAndMinutes(days[s.current.dayIndex ?? 0], clamped);
+      const resizeTopDay = days[s.current.dayIndex ?? 0];
+      if (resizeTopDay === undefined) return;
+      const newStart     = dateFromDayAndMinutes(resizeTopDay, clamped);
       updateGhost({ ev, start: newStart, end: ev.end });
 
     } else if (type === 'create') {
       const currentMin = yToMinutes(relY);
       const rawStart   = Math.min(s.current.anchorMin ?? currentMin, currentMin);
       const rawEnd     = Math.max((s.current.anchorMin ?? currentMin) + SNAP_MIN, currentMin);
-      const newStart   = dateFromDayAndMinutes(s.current.anchorDay ?? days[0], rawStart);
-      const newEnd     = dateFromDayAndMinutes(s.current.anchorDay ?? days[0], rawEnd);
+      const createDay  = s.current.anchorDay ?? days[0];
+      if (createDay === undefined) return;
+      const newStart   = dateFromDayAndMinutes(createDay, rawStart);
+      const newEnd     = dateFromDayAndMinutes(createDay, rawEnd);
       updateGhost({ ev: null, start: newStart, end: newEnd });
     }
   }, [pxPerHour, dayStart, dayEnd]);

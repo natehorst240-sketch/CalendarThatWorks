@@ -197,7 +197,7 @@ function assignLanes(events: AssetsViewEvent[], monthStart: Date, monthEnd: Date
   for (const ev of clipped) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
-      if (laneEnd[i] < ev._dayStart) {
+      if (laneEnd[i]! < ev._dayStart) {
         ev._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
@@ -725,7 +725,7 @@ export default function AssetsView({
   // ── Cumulative row offsets ─────────────────────────────────────────────────
   const rowOffsets = useMemo(() => {
     const offsets = [0];
-    for (const row of flatRows) offsets.push(offsets[offsets.length - 1] + row.rowH);
+    for (const row of flatRows) offsets.push((offsets[offsets.length - 1] ?? 0) + row.rowH);
     return offsets;
   }, [flatRows]);
 
@@ -740,13 +740,13 @@ export default function AssetsView({
     let lo = 0, hi = flatRows.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (rowOffsets[mid + 1] <= top) { s = mid + 1; lo = mid + 1; } else hi = mid - 1;
+      if ((rowOffsets[mid + 1] ?? Infinity) <= top) { s = mid + 1; lo = mid + 1; } else hi = mid - 1;
     }
     // Binary search for last visible row
     lo = 0; hi = flatRows.length - 1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (rowOffsets[mid] < top + viewH) { e = mid; lo = mid + 1; } else hi = mid - 1;
+      if ((rowOffsets[mid] ?? 0) < top + viewH) { e = mid; lo = mid + 1; } else hi = mid - 1;
     }
     return [
       Math.max(0, s - OVERSCAN_ROWS),
@@ -779,10 +779,12 @@ export default function AssetsView({
     if (wrap && rowOffsets.length > rowIdx + 1) {
       const rowTop    = rowOffsets[rowIdx];
       const rowBottom = rowOffsets[rowIdx + 1];
-      if (rowTop < wrap.scrollTop) {
-        wrap.scrollTop = rowTop;
-      } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
-        wrap.scrollTop = rowBottom - wrap.clientHeight;
+      if (rowTop !== undefined && rowBottom !== undefined) {
+        if (rowTop < wrap.scrollTop) {
+          wrap.scrollTop = rowTop;
+        } else if (rowBottom > wrap.scrollTop + wrap.clientHeight) {
+          wrap.scrollTop = rowBottom - wrap.clientHeight;
+        }
       }
     }
 
@@ -833,10 +835,12 @@ export default function AssetsView({
           else onEventClick?.(hit);
         } else {
           const dayDate = days[di];
-          const from = startOfDay(dayDate);
-          const to   = addDays(startOfDay(dayDate), 1);
-          if (isPoolRow) onPoolDateSelect?.(from, to, resourceId);
-          else           onDateSelect?.(from, to, resourceId);
+          if (dayDate !== undefined) {
+            const from = startOfDay(dayDate);
+            const to   = addDays(startOfDay(dayDate), 1);
+            if (isPoolRow) onPoolDateSelect?.(from, to, resourceId);
+            else           onDateSelect?.(from, to, resourceId);
+          }
         }
         return;
       }
