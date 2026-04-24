@@ -46,10 +46,12 @@ export type GroupsPanelProps = {
   onShowAllGroupsChange: (show: boolean) => void;
 };
 
-/** Derive groupable fields from schema: multi-select and select types. */
+/** Derive groupable fields from schema: multi-select and select types,
+ *  minus any field that explicitly opts out via `groupable: false`. */
 function getGroupableFields(schema: FilterField[]) {
   return schema.filter(
-    f => f.type === 'multi-select' || f.type === 'select' || f.type === 'text',
+    f => (f.type === 'multi-select' || f.type === 'select' || f.type === 'text')
+      && f.groupable !== false,
   );
 }
 

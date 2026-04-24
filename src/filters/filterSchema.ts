@@ -104,6 +104,14 @@ export type FilterField = {
   hidden?: boolean | ((ctx: { items: unknown[]; filters: Record<string, unknown> }) => boolean)
   /** Operators available for this field. Defaults to defaultOperatorsForType(type). */
   operators?: FilterOperator[]
+  /**
+   * Whether this field appears as a grouping option in the group builder.
+   * Defaults to `true` when the field type is groupable (select / multi-select /
+   * text). Set to `false` to allow filtering on a field without offering it
+   * as a grouping pivot — useful for "Source" / noisy resource ids that make
+   * lousy group headers but are still valuable to filter on.
+   */
+  groupable?: boolean
 }
 
 /** Generic filter state — one key per FilterField, value shape depends on type. */
