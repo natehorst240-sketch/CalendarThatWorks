@@ -15,6 +15,7 @@ This index is the canonical docs entrypoint for the package.
 - [Advanced filters](./AdvancedFilters.md)
 - [Setup wizard](./SetupWizard.md)
 - [Data adapter](./DataAdapter.md)
+- [Resource scheduling and asset management](./ResourceScheduling.md)
 - [Resource pools](./ResourcePools.md)
 - [Location provider](./LocationProvider.md)
 
