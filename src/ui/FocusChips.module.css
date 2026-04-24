@@ -3,9 +3,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--wc-border);
-  background: var(--wc-bg);
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
 }
 
 .label {

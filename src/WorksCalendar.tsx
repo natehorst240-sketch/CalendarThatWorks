@@ -1,5 +1,5 @@
 /**
- * WorksCalendar — main component.
+ * WorksCalendar â€” main component.
  */
 import {
   useState, useCallback, useEffect, useRef, useReducer,
@@ -216,9 +216,9 @@ export type WorksCalendarProps = {
   renderSavedViewsBar?: (args: UnknownRecord) => ReactNode;
   /**
    * Visible quick-filter chips rendered above the view area. Opt-in:
-   *   - omitted (default) → no chip row renders
-   *   - `true`            → renders the library's DEFAULT_FOCUS_CHIPS
-   *   - `FocusChipDef[]`  → renders that custom chip list
+   *   - omitted (default) â†’ no chip row renders
+   *   - `true`            â†’ renders the library's DEFAULT_FOCUS_CHIPS
+   *   - `FocusChipDef[]`  â†’ renders that custom chip list
    * Clicking a chip toggles its categories on the calendar's `category`
    * filter. Hosts that don't define the referenced categories render a
    * no-op chip (harmless).
@@ -230,7 +230,7 @@ export type WorksCalendarProps = {
   /**
    * Opt-in interactive setup landing page. When true, first-time owners
    * (those with `config.setup.completed === false`) see a full-page
-   * guided walkthrough before the calendar renders — with a prominent
+   * guided walkthrough before the calendar renders â€” with a prominent
    * "Skip setup guide" button for owners who already know the product.
    *
    * Defaults to false so hosts and test fixtures keep their current
@@ -243,7 +243,7 @@ export type WorksCalendarProps = {
   sort?: SortConfig | SortConfig[];
   showAllGroups?: boolean;
 
-  // ── Assets view ──
+  // â”€â”€ Assets view â”€â”€
   locationProvider?: LocationProvider;
   categoriesConfig?: Record<string, unknown>;
   assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
@@ -276,7 +276,7 @@ export type WorksCalendarProps = {
 // loose while removing implicit `any` from root handlers.
 type LooseValue = any;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Human-readable announcement text for a completed engine operation. */
 function opAnnouncement(op: LooseValue) {
@@ -293,12 +293,12 @@ function opAnnouncement(op: LooseValue) {
 
 type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string };
 const ALL_VIEWS: readonly ViewDef[] = [
-  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO' },
-  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day — not staffing or on-call' },
+  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events â€” appointments, missions, PTO' },
+  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day â€” not staffing or on-call' },
   { id: 'day',      label: 'Day',      alwaysOn: false },
   { id: 'agenda',   label: 'Agenda',   alwaysOn: false },
-  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status' },
-  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
+  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing â€” day/night shifts, on-call rotation, duty status' },
+  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style â€” employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
 ];
 
@@ -400,7 +400,7 @@ function viewRange(view: LooseValue, date: LooseValue, weekStartDay: 0 | 1 | 2 |
 
 export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
   {
-    // ── Data ──
+    // â”€â”€ Data â”€â”€
     events:     rawEvents   = [],
     fetchEvents,
     icalFeeds,
@@ -410,22 +410,22 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     scheduleInstantiationLimits = DEFAULT_SCHEDULE_INSTANTIATION_LIMITS,
     onScheduleTemplateAnalytics,
 
-    // ── Identity ──
+    // â”€â”€ Identity â”€â”€
     calendarId              = 'default',
 
-    // ── Owner ──
+    // â”€â”€ Owner â”€â”€
     ownerPassword           = '',
     onConfigSave,
 
-    // ── Dev mode — unlocks all admin features without a password ──
+    // â”€â”€ Dev mode â€” unlocks all admin features without a password â”€â”€
     devMode                 = false,
 
-    // ── Notes ──
+    // â”€â”€ Notes â”€â”€
     notes       = {},
     onNoteSave,
     onNoteDelete,
 
-    // ── Event callbacks ──
+    // â”€â”€ Event callbacks â”€â”€
     onEventClick: onEventClickProp,
     onEventSave,
     onEventMove,
@@ -434,16 +434,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventGroupChange,
     onDateSelect,
 
-    // ── Supabase realtime ──
+    // â”€â”€ Supabase realtime â”€â”€
     supabaseUrl,
     supabaseKey,
     supabaseTable,
     supabaseFilter,
 
-    // ── Access control ──
+    // â”€â”€ Access control â”€â”€
     role        = 'admin',   // 'admin' | 'user' | 'readonly'
 
-    // ── Employees (for schedule/timeline view) ──
+    // â”€â”€ Employees (for schedule/timeline view) â”€â”€
     employees   = [],
     onEmployeeAdd,
     onEmployeeDelete,
@@ -451,15 +451,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onAvailabilitySave,
     onScheduleSave,
 
-    // ── Validation ──
+    // â”€â”€ Validation â”€â”€
     blockedWindows,
 
-    // ── Appearance ──
+    // â”€â”€ Appearance â”€â”€
     theme       = 'light',
     colorRules,
     businessHours,
 
-    // ── Custom rendering ──
+    // â”€â”€ Custom rendering â”€â”€
     renderEvent,
     renderHoverCard,
     renderToolbar,
@@ -468,25 +468,25 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     focusChips,
     emptyState,
 
-    // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
+    // â”€â”€ Filter schema (pass a custom FilterField[] to extend or replace defaults) â”€â”€
     filterSchema,
 
-    // ── UI toggles ──
+    // â”€â”€ UI toggles â”€â”€
     showAddButton           = false,
     showSetupLanding        = false,
 
-    // ── Initial view (overrides saved config on first render) ──
+    // â”€â”€ Initial view (overrides saved config on first render) â”€â”€
     initialView,
 
-    // ── Week start day (prop takes priority over owner config) ──
+    // â”€â”€ Week start day (prop takes priority over owner config) â”€â”€
     weekStartDay: weekStartDayProp,
 
-    // ── Grouping ──
+    // â”€â”€ Grouping â”€â”€
     groupBy,
     sort,
     showAllGroups,
 
-    // ── Assets view ──
+    // â”€â”€ Assets view â”€â”€
     locationProvider,
     categoriesConfig,
     assets,
@@ -497,7 +497,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     renderAssetLocation,
     renderConflictBody,
 
-    // ── Resource pools (#212) ──
+    // â”€â”€ Resource pools (#212) â”€â”€
     pools: rawPools,
     onPoolsChange,
   }: WorksCalendarProps,
@@ -506,7 +506,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // SSR guard: avoid touching browser-only APIs during server rendering.
   if (typeof window === 'undefined') return null;
 
-  // ── View / date / filter state ───────────────────────────────────────────
+  // â”€â”€ View / date / filter state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
   const weekStartDay = weekStartDayProp ?? ownerCfg.config?.['display']?.weekStartDay ?? 0;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.['customTheme']), [ownerCfg.config?.['customTheme']]);
@@ -521,7 +521,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const themeMode   = THEME_META[themeId].mode;
   const calendarTitle = ownerCfg.config?.['title'] || 'My WorksCalendar';
   // Merge parent's employees prop with owner-config team.members so edits
-  // made from the Settings → Employees tab (e.g. renaming a member) are
+  // made from the Settings â†’ Employees tab (e.g. renaming a member) are
   // reflected live in the schedule, even when the parent's prop is stale.
   // Config entries take precedence for matching ids; parent-only entries
   // (not yet mirrored into config) are preserved.
@@ -577,7 +577,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
 
   // Honor defaultView from owner config (applied once after config loads).
-  // Explicit initialView prop takes precedence — hosts that opt into a
+  // Explicit initialView prop takes precedence â€” hosts that opt into a
   // specific startup view shouldn't be overridden by DEFAULT_CONFIG's 'month'.
   const defaultViewApplied = useRef(false);
   useEffect(() => {
@@ -589,19 +589,19 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [ownerCfg.config?.['display']?.defaultView, initialView]);
 
-  // ── Permissions ──────────────────────────────────────────────────────────
+  // â”€â”€ Permissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const perms = usePermissions(role);
 
-  // ── Admin-managed event options (categories) ─────────────────────────────
+  // â”€â”€ Admin-managed event options (categories) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const eventOptions = useEventOptions(calendarId);
 
-  // ── Saved view active state ──────────────────────────────────────────────
+  // â”€â”€ Saved view active state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [savedViewActiveId, setSavedViewActiveId] = useState<string | null>(null);
   const [savedViewDirty,    setSavedViewDirty]    = useState(false);
   const skipDirtyRef = useRef(false);
   const savedViews = useSavedViews(calendarId);
 
-  // ── Setup landing gate ──────────────────────────────────────────────────
+  // â”€â”€ Setup landing gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Shown before the calendar for first-time owners until they finish or
   // skip the guide. The landing persists its decision via setup.completed;
   // this session flag is just for "show on demand" re-opens later.
@@ -658,7 +658,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSetupDismissed(true);
   }, [ownerCfg.updateConfig, savedViews, weekStartDay]);
 
-  // ── Active groupBy / sort (controlled by props; overridden when a saved view is applied) ──
+  // â”€â”€ Active groupBy / sort (controlled by props; overridden when a saved view is applied) â”€â”€
   const [activeGroupBy, setActiveGroupBy] = useState<GroupByInput | null>(groupBy ?? null);
   useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
 
@@ -672,7 +672,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
   useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
 
-  // ── FilterGroupSidebar state ──
+  // â”€â”€ FilterGroupSidebar state â”€â”€
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Derive GroupLevel[] from activeGroupBy for the sidebar's GroupsPanel
@@ -715,13 +715,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // ── Assets view: zoom level + collapse state + location provider ──
+  // â”€â”€ Assets view: zoom level + collapse state + location provider â”€â”€
   const [activeAssetsZoom, setActiveAssetsZoom] = useState<AssetsZoomLevel>('month');
   const [activeAssetsCollapsed, setActiveAssetsCollapsed] = useState<Set<string>>(
     () => new Set(),
   );
 
-  // ── Base/Region view: multi-base selection ──
+  // â”€â”€ Base/Region view: multi-base selection â”€â”€
   const [selectedBaseIds, setSelectedBaseIds] = useState<string[]>([]);
   const effectiveLocationProvider = useMemo<LocationProvider>(
     () => locationProvider ?? createManualLocationProvider(),
@@ -779,27 +779,27 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [savedViews, savedViewActiveId]);
 
-  // ── Visible date range (drives fetch + occurrence expansion) ─────────────
+  // â”€â”€ Visible date range (drives fetch + occurrence expansion) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const range = useMemo(
     () => viewRange(cal.view, cal.currentDate, weekStartDay),
     [cal.view, cal.currentDate, weekStartDay],
   );
 
-  // ── Async fetch ──────────────────────────────────────────────────────────
+  // â”€â”€ Async fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { fetchedEvents, loading: fetchLoading } = useFetchEvents(
     fetchEvents, cal.view, cal.currentDate, weekStartDay,
   );
 
-  // ── Source store (ICS feeds + CSV datasets, persisted per calendarId) ───
+  // â”€â”€ Source store (ICS feeds + CSV datasets, persisted per calendarId) â”€â”€â”€
   const sourceStore = useSourceStore(calendarId);
 
-  // ── Aggregator: merges prop feeds + stored ICS + stored CSV ─────────────
+  // â”€â”€ Aggregator: merges prop feeds + stored ICS + stored CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { events: sourceEvents, feedErrors } = useSourceAggregator({
     icalFeedsProp: icalFeeds,
     sourceStore,
   });
 
-  // ── Supabase Realtime ────────────────────────────────────────────────────
+  // â”€â”€ Supabase Realtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
@@ -814,11 +814,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     filter: supabaseFilter,
   });
 
-  // ── Merge all sources → normalize ────────────────────────────────────────
+  // â”€â”€ Merge all sources â†’ normalize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const allNormalized = useMemo(() => {
     // Deduplicate by id across sources (static + fetch + feed + realtime).
     // Events without an id cannot be reliably deduplicated so they are
-    // included as-is — using title+start as a fallback key would silently
+    // included as-is â€” using title+start as a fallback key would silently
     // drop events that happen to share the same title and start time.
     const map = new Map();
     const noId: LooseValue[] = [];
@@ -829,7 +829,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return normalizeEvents([...map.values(), ...noId]);
   }, [rawEvents, fetchedEvents, sourceEvents, realtimeEvents]);
 
-  // ── CalendarEngine — single source of truth for mutations & expansions ───
+  // â”€â”€ CalendarEngine â€” single source of truth for mutations & expansions â”€â”€â”€
   const engineRef      = useRef<CalendarEngine | null>(null);
   const undoManagerRef = useRef<UndoRedoManager | null>(null);
   const announcerRef   = useRef<AnnouncerRef | null>(null);
@@ -895,9 +895,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
   }, [engine, undoManager, allNormalized]);
 
-  // ── Expand recurring events within the visible range (via engine) ────────
+  // â”€â”€ Expand recurring events within the visible range (via engine) â”€â”€â”€â”€â”€â”€â”€â”€
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // Cast preserves the file's existing loose typing pattern — expandedEvents
+  // Cast preserves the file's existing loose typing pattern â€” expandedEvents
   // was previously inferred as `any` via a nullable ref, and many consumers
   // still rely on that looseness. Tightening is out of scope for this PR.
   const expandedEvents: LooseValue[] = useMemo(
@@ -905,11 +905,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [engine, engineVer, range],
   );
 
-  // ── Base/Region view config ───────────────────────────────────────────────
+  // â”€â”€ Base/Region view config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const configuredBases = ownerCfg.config?.['team']?.bases ?? [];
   const locationLabel   = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
 
-  // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
+  // â”€â”€ Visible-tabs config (Setup/ConfigPanel â†’ Views) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const VIEWS = useMemo(() => {
     const enabled = new Set<string>(ownerCfg.config?.['display']?.enabledViews ?? []);
     return ALL_VIEWS
@@ -926,8 +926,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
 
-  // ── Derive categories / resources / filtered events ──────────────────────
-  // Events scoped to the active tab — drives BOTH FilterBar option lists and
+  // â”€â”€ Derive categories / resources / filtered events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Events scoped to the active tab â€” drives BOTH FilterBar option lists and
   // applyFilters, so they can never drift. See src/core/viewScope.ts.
   const scopedEvents = useTabScopedEvents(cal.view, expandedEvents, {
     employees: configuredEmployees ?? [],
@@ -937,14 +937,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   });
 
   const categories    = useMemo(() => getCategories(scopedEvents), [scopedEvents]);
-  // Categories offered in the generic EventForm — hide schedule-workflow
+  // Categories offered in the generic EventForm â€” hide schedule-workflow
   // categories (shift/PTO/etc) which are managed through EmployeeActionCard.
   const eventFormCats = useMemo(
     () => categories.filter(c => !SCHEDULE_WORKFLOW_CATEGORIES.has(c) && !SCHEDULE_WORKFLOW_CATEGORIES.has(String(c).toLowerCase())),
     [categories],
   );
 
-  // Resolve asset-request category ids → {id, label} pairs by looking up the
+  // Resolve asset-request category ids â†’ {id, label} pairs by looking up the
   // host's configured categories. Falls back to using the id as the label so
   // the modal never renders a blank dropdown.
   const resolvedAssetRequestCategories = useMemo(() => {
@@ -982,9 +982,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [filteredEvents, activeSort],
   );
 
-  // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
+  // â”€â”€ Mutation pipeline (engine-authoritative) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Stable ref so applyEngineOp closure never goes stale.
-  // Cast preserves the prior loose-typed assignment — the prop shapes for
+  // Cast preserves the prior loose-typed assignment â€” the prop shapes for
   // businessHours/blockedWindows don't yet match OperationContext's structured
   // type. Narrowing those prop types is out of scope for this PR.
   const opCtxRef = useRef<OperationContext | null>(null);
@@ -994,7 +994,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   } as unknown as OperationContext;
 
   const [pendingAlert,      setPendingAlert]      = useState<LooseValue | null>(null); // { violations, isHard, onConfirm }
-  // { op, occurrenceDate, onAccepted, actionLabel } — set when a recurring event edit needs a scope choice
+  // { op, occurrenceDate, onAccepted, actionLabel } â€” set when a recurring event edit needs a scope choice
   const [recurringPrompt, setRecurringPrompt] = useState<LooseValue | null>(null);
 
   const applyEngineOp = useCallback((op: LooseValue, onAccepted: LooseValue) => {
@@ -1008,7 +1008,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const result = engine.applyMutation(op, ctx);
 
     if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
-      // State has changed — record the pre-mutation snapshot.
+      // State has changed â€” record the pre-mutation snapshot.
       undoManager.record(preSnap, op.type);
       announcerRef.current?.announce(opAnnouncement(op));
       // Each emitted onEventSave call will trigger an allNormalized update; count
@@ -1034,12 +1034,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       });
 
     } else {
-      // Rejected — state unchanged, nothing to record.
+      // Rejected â€” state unchanged, nothing to record.
       setPendingAlert({ violations: result.validation.violations, isHard: true, onConfirm: null });
     }
-  }, [engine, undoManager]); // engine/undoManager are singleton refs — stable
+  }, [engine, undoManager]); // engine/undoManager are singleton refs â€” stable
 
-  // ── Local UI state ───────────────────────────────────────────────────────
+  // â”€â”€ Local UI state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [selectedEvent,  setSelectedEvent]  = useState<LooseValue | null>(null);
   const [formEvent,        setFormEvent]        = useState<LooseValue | null>(null);
   const [assetRequestOpen, setAssetRequestOpen] = useState(false);
@@ -1052,7 +1052,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode,         setEditMode]         = useState(false);
   const [helpOpen,         setHelpOpen]         = useState(false);
-  // { event, x, y } — set when an event is clicked in edit mode
+  // { event, x, y } â€” set when an event is clicked in edit mode
   const [inlineEditTarget, setInlineEditTarget] = useState<LooseValue | null>(null);
   // Capture last click coords so InlineEventEditor can position near the pill
   const lastClickCoordsRef = useRef({ x: 0, y: 0 });
@@ -1108,7 +1108,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [mergedScheduleTemplates, ownerCfg.isOwner, role],
   );
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  // â”€â”€ Keyboard shortcuts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const onKeyDown = (e: LooseValue) => {
@@ -1134,7 +1134,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [undoManager]);
 
-  // ── CalendarApi / imperative handle ─────────────────────────────────────
+  // â”€â”€ CalendarApi / imperative handle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const api = useMemo(() => ({
     navigateTo:       (date: LooseValue) => cal.setCurrentDate(date),
     setView:          (view: LooseValue) => cal.setView(view),
@@ -1154,7 +1154,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   useImperativeHandle(ref, () => api, [api]);
 
-  // ── Callbacks ────────────────────────────────────────────────────────────
+  // â”€â”€ Callbacks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleEventClick = useCallback((ev: LooseValue) => {
     if (editModeRef.current) {
       setSelectedEvent(null);
@@ -1293,7 +1293,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     // 3. Create or update the mirrored on-call event on the covering employee's row.
     //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
     //    when available, so the coverage bar only spans the days actually needing
-    //    coverage — not the entire underlying shift.
+    //    coverage â€” not the entire underlying shift.
     const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
     const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
@@ -1333,8 +1333,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   /**
    * Handle employee action card clicks.
-   * - 'pto' | 'unavailable' | 'availability' → opens AvailabilityForm
-   * - 'schedule' → opens ScheduleEditorForm
+   * - 'pto' | 'unavailable' | 'availability' â†’ opens AvailabilityForm
+   * - 'schedule' â†’ opens ScheduleEditorForm
    * All actions also bubble to the external onEmployeeAction prop.
    */
   const handleEmployeeAction = useCallback((empId: LooseValue, actionInput: LooseValue) => {
@@ -1533,7 +1533,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
 
     if (!eventId) {
-      // New event — no scope picker needed.
+      // New event â€” no scope picker needed.
       const createdId = String(rawEv.id ?? createId('event'));
       const op = {
         type:  'create',
@@ -1558,7 +1558,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       };
       applyEngineOp(op, (result: LooseValue) => {
         // applyCreate generates its own engine id, so look the saved
-        // record up by the id the engine actually assigned — otherwise
+        // record up by the id the engine actually assigned â€” otherwise
         // pool-resolved events fall through to the fallback payload,
         // which still carries resource: null from the form (#212).
         const createdChange = result?.changes?.find((c: any) => c.type === 'created');
@@ -1570,7 +1570,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       return;
     }
 
-    // Existing event — may be a recurring occurrence.
+    // Existing event â€” may be a recurring occurrence.
     applyWithRecurringCheck(
       rawEv,
       (scope: LooseValue) => ({
@@ -1889,7 +1889,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleEditFromHoverCard = useCallback((ev: LooseValue) => {
     setSelectedEvent(null);
     let formEv = ev._raw ?? ev;
-    // Recurring occurrences carry rrule:null — look up the series master so the
+    // Recurring occurrences carry rrule:null â€” look up the series master so the
     // EventForm shows the correct repeat cadence and preserves it on save.
     if (ev._recurring && ev._eventId) {
       const master = engine.state.events.get(ev._eventId);
@@ -1917,14 +1917,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     });
   }, [inlineEditTarget, applyEngineOp, getSavedEventPayload, onEventSave]);
 
-  // ── Context value ────────────────────────────────────────────────────────
+  // â”€â”€ Context value â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const ctxValue = useMemo(() => ({
     renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
     permissions: perms,
     editMode,
   }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode]);
 
-  // ── Toolbar date label ───────────────────────────────────────────────────
+  // â”€â”€ Toolbar date label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function getDateLabel() {
     const d = cal.currentDate;
     switch (cal.view) {
@@ -1935,9 +1935,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         const we = endOfWeek(d,   { weekStartsOn: weekStartDay });
         const sameMo = ws.getMonth() === we.getMonth();
         const sameYr = ws.getFullYear() === we.getFullYear();
-        if (sameMo)  return `${format(ws, 'MMM d')} – ${format(we, 'd, yyyy')}`;
-        if (sameYr)  return `${format(ws, 'MMM d')} – ${format(we, 'MMM d, yyyy')}`;
-        return `${format(ws, 'MMM d, yyyy')} – ${format(we, 'MMM d, yyyy')}`;
+        if (sameMo)  return `${format(ws, 'MMM d')} â€“ ${format(we, 'd, yyyy')}`;
+        if (sameYr)  return `${format(ws, 'MMM d')} â€“ ${format(we, 'MMM d, yyyy')}`;
+        return `${format(ws, 'MMM d, yyyy')} â€“ ${format(we, 'MMM d, yyyy')}`;
       }
       default:
         return format(d, 'MMMM yyyy');
@@ -1964,15 +1964,39 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const hasScheduleTemplates = Array.isArray(visibleScheduleTemplates) && visibleScheduleTemplates.length > 0;
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
+  const currentViewLabel = VIEWS.find(v => v.id === cal.view)?.label ?? cal.view;
+  const resolvedFocusChips: FocusChipDef[] = Array.isArray(focusChips)
+    ? focusChips
+    : focusChips
+      ? DEFAULT_FOCUS_CHIPS
+      : [];
+  const activeCategories = cal.filters?.['categories'] as Set<string> | undefined;
+  const activeFocusLabels = resolveActiveChipLabels(resolvedFocusChips, activeCategories);
+  const filterSummaryItems = buildFilterSummary(cal.filters, filterBarSchema);
+  const filterSummaryText = filterSummaryItems.length > 0
+    ? (() => {
+        const labels = filterSummaryItems.flatMap((item) =>
+          item.displayValues.map((value) => `${item.label}: ${value}`),
+        );
+        if (labels.length <= 2) return labels.join(' Â· ');
+        return `${labels.slice(0, 2).join(' Â· ')} +${labels.length - 2} more`;
+      })()
+    : 'All items';
+  const groupingSummary = resolvePresetLabel(sidebarGroupLevels)
+    ?? (sidebarGroupLevels.length > 0 ? `${sidebarGroupLevels.length} grouping levels` : 'Ungrouped');
+  const activeSavedView = savedViews.views.find((view: LooseValue) => view.id === savedViewActiveId) ?? null;
+  const activeLensSummary = activeFocusLabels.length > 0
+    ? activeFocusLabels.join(' + ')
+    : filterSummaryText;
 
-  // Date-select (drag-to-create or day click) → open form seeded with the range
+  // Date-select (drag-to-create or day click) â†’ open form seeded with the range
   const handleDateSelect = useCallback((start: LooseValue, end: LooseValue) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end);
     setFormEvent({ start, end });
   }, [hasAddButton, onDateSelect]);
 
-  // Schedule cell select → route to schedule-specific editor, not generic EventForm.
+  // Schedule cell select â†’ route to schedule-specific editor, not generic EventForm.
   // When the dropped cell isn't a known employee (no resource match), fall back
   // to the generic EventForm so the user still has a way to create an event.
   const handleScheduleDateSelect = useCallback((start: LooseValue, end: LooseValue, resourceId: LooseValue) => {
@@ -1994,7 +2018,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // Pool cell select (AssetsView pool row, #212). The EventForm spreads
   // the initial formEvent into its submit payload, so seeding
   // resourcePoolId here is enough to get the engine to resolve it on
-  // save — the generic form doesn't need a pool-picker field.
+  // save â€” the generic form doesn't need a pool-picker field.
   const handlePoolDateSelect = useCallback((start: LooseValue, end: LooseValue, poolId: LooseValue) => {
     if (!hasAddButton) return;
     const startDate = start instanceof Date ? start : new Date(start);
@@ -2054,111 +2078,122 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       <CalendarContext.Provider value={ctxValue}>
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={customThemeVars as React.CSSProperties}>
 
-        {/* ── Toolbar ── */}
+        {/* â”€â”€ Toolbar â”€â”€ */}
         {renderToolbar ? (
           <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
         ) : (
           <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
-            <div className={styles['navGroup']}>
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(-1)}
-                aria-label="Previous"
-                title={`Previous ${cal.view}`}
-              >
-                <ChevronLeft size={18} aria-hidden="true" />
-              </button>
-              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(1)}
-                aria-label="Next"
-                title={`Next ${cal.view}`}
-              >
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-              <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
-              <span className={styles['calendarTitle']}>{calendarTitle}</span>
-              {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
+            <div className={styles['toolbarPrimary']}>
+              <div className={styles['navGroup']}>
+                <div className={styles['navCluster']}>
+                  <button
+                    className={styles['navBtn']}
+                    onClick={() => cal.navigate(-1)}
+                    aria-label="Previous"
+                    title={`Previous ${cal.view}`}
+                  >
+                    <ChevronLeft size={18} aria-hidden="true" />
+                  </button>
+                  <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
+                  <button
+                    className={styles['navBtn']}
+                    onClick={() => cal.navigate(1)}
+                    aria-label="Next"
+                    title={`Next ${cal.view}`}
+                  >
+                    <ChevronRight size={18} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className={styles['titleGroup']}>
+                  <span className={styles['calendarTitle']}>{calendarTitle}</span>
+                  <div className={styles['titleRow']}>
+                    <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+                    {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
+                  </div>
+                </div>
+              </div>
+              <div className={styles['primaryActions']}>
+                {hasAddButton && cal.view !== 'schedule' && (
+                  <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
+                  </button>
+                )}
+                {hasAddButton && hasScheduleTemplates && (
+                  <button
+                    className={styles['addBtn']}
+                    onClick={() => {
+                      setScheduleOpen(true);
+                      trackScheduleTemplateAnalytics('schedule_dialog_opened', {
+                        templateCount: visibleScheduleTemplates.length,
+                      });
+                    }}
+                    aria-label="Add schedule from template"
+                  >
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
-              {VIEWS.map(v => (
-                <button
-                  key={v.id}
-                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
-                  onClick={() => cal.setView(v.id)}
-                  aria-pressed={cal.view === v.id}
-                  title={v.hint}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
+            <div className={styles['toolbarSecondary']}>
+              <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
+                {VIEWS.map(v => (
+                  <button
+                    key={v.id}
+                    className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
+                    onClick={() => cal.setView(v.id)}
+                    aria-pressed={cal.view === v.id}
+                    title={v.hint}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
 
-            <div className={styles['actions']}>
-              <SidebarToggleButton
-                isOpen={sidebarOpen}
-                onClick={() => setSidebarOpen(v => !v)}
-                filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
-                groupCount={sidebarGroupLevels.length}
-              />
-              {devMode && <span className={styles['devBadge']}>Dev</span>}
-              {(ownerCfg.isOwner || devMode) && (
-                <button
-                  className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
-                  onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
-                  aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
-                  title={editMode ? 'Exit edit mode' : 'Customize events'}
-                >
-                  <Sparkles size={15} aria-hidden="true" />
-                </button>
-              )}
-              {hasAddButton && cal.view !== 'schedule' && (
-                <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
-                </button>
-              )}
-              {hasAddButton && hasScheduleTemplates && (
-                <button
-                  className={styles['addBtn']}
-                  onClick={() => {
-                    setScheduleOpen(true);
-                    trackScheduleTemplateAnalytics('schedule_dialog_opened', {
-                      templateCount: visibleScheduleTemplates.length,
-                    });
-                  }}
-                  aria-label="Add schedule from template"
-                >
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
-                </button>
-              )}
-              {hasImport && (
-                <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
-                  <Upload size={15} aria-hidden="true" />
-                </button>
-              )}
-              <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
-                <Download size={15} aria-hidden="true" />
-              </button>
-              {ownerPassword && (
-                <OwnerLock
-                  isOwner={ownerCfg.isOwner}
-                  authError={ownerCfg.authError}
-                  isAuthLoading={ownerCfg.isAuthLoading}
-                  onAuthenticate={ownerCfg.authenticate}
-                  onOpen={() => ownerCfg.setConfigOpen(true)}
+              <div className={styles['actions']}>
+                <SidebarToggleButton
+                  isOpen={sidebarOpen}
+                  onClick={() => setSidebarOpen(v => !v)}
+                  filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
+                  groupCount={sidebarGroupLevels.length}
                 />
-              )}
+                {devMode && <span className={styles['devBadge']}>Dev</span>}
+                {(ownerCfg.isOwner || devMode) && (
+                  <button
+                    className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
+                    onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
+                    aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode - click events to customize them'}
+                    title={editMode ? 'Exit edit mode' : 'Customize events'}
+                  >
+                    <Sparkles size={15} aria-hidden="true" />
+                  </button>
+                )}
+                {hasImport && (
+                  <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                    <Upload size={15} aria-hidden="true" />
+                  </button>
+                )}
+                <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
+                  <Download size={15} aria-hidden="true" />
+                </button>
+                {ownerPassword && (
+                  <OwnerLock
+                    isOwner={ownerCfg.isOwner}
+                    authError={ownerCfg.authError}
+                    isAuthLoading={ownerCfg.isAuthLoading}
+                    onAuthenticate={ownerCfg.authenticate}
+                    onOpen={() => ownerCfg.setConfigOpen(true)}
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* ── Edit mode banner ── */}
         {editMode && (
           <div className={styles['editModeBanner']} role="status" aria-live="polite">
             <Sparkles size={13} aria-hidden="true" />
-            <span>Edit mode — click any event to customize it</span>
+            <span>Edit mode - click any event to customize it</span>
             <button
               className={styles['editModeExit']}
               onClick={() => { setEditMode(false); setInlineEditTarget(null); }}
@@ -2169,7 +2204,44 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           </div>
         )}
 
-        {/* ── Profile / Saved-views Bar ── */}
+        {/* â”€â”€ Profile / Saved-views Bar â”€â”€ */}
+        <div className={styles['overviewBar']}>
+          <div className={styles['overviewStatus']}>
+            {activeSavedView && (
+              <span className={[styles['summaryBadge'], styles['summaryBadgeAccent']].join(' ')}>
+                <span className={styles['summaryBadgeLabel']}>Saved view</span>
+                <span>{activeSavedView.name}</span>
+              </span>
+            )}
+            {!activeSavedView && hasActiveFilters(cal.filters, schema) && (
+              <span className={styles['summaryBadge']}>
+                <span className={styles['summaryBadgeLabel']}>Mode</span>
+                <span>Custom focus</span>
+              </span>
+            )}
+            {savedViewDirty && (
+              <span className={[styles['summaryBadge'], styles['summaryBadgeMuted']].join(' ')}>
+                <span className={styles['summaryBadgeLabel']}>State</span>
+                <span>Unsaved changes</span>
+              </span>
+            )}
+          </div>
+          <ContextSummary
+            viewLabel={currentViewLabel}
+            focusLabel={activeLensSummary}
+            scopeLabel={groupingSummary}
+          />
+          {resolvedFocusChips.length > 0 && (
+            <div className={styles['overviewFocus']}>
+              <FocusChips
+                chips={resolvedFocusChips}
+                activeCategories={activeCategories}
+                onCategoriesChange={(next) => cal.setFilter('categories', next)}
+              />
+            </div>
+          )}
+        </div>
+
         {renderSavedViewsBar
           ? renderSavedViewsBar({
               views:       savedViews.views,
@@ -2213,8 +2285,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           )
         }
 
-        {/* ── Focus chips + context summary (opt-in via focusChips prop) ── */}
-        {focusChips && (() => {
+        {/* â”€â”€ Focus chips + context summary (opt-in via focusChips prop) â”€â”€ */}
+        {false && (() => {
           const resolvedChips: FocusChipDef[] = Array.isArray(focusChips)
             ? focusChips
             : DEFAULT_FOCUS_CHIPS;
@@ -2235,7 +2307,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           );
         })()}
 
-        {/* ── Filter Bar (legacy, kept for renderFilterBar override) ── */}
+        {/* â”€â”€ Filter Bar (legacy, kept for renderFilterBar override) â”€â”€ */}
         {renderFilterBar && renderFilterBar({
           schema:        filterBarSchema,
           filters:       cal.filters,
@@ -2247,7 +2319,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           items:         scopedEvents,
         })}
 
-        {/* ── View area (with sidebar overlay) ── */}
+        {/* â”€â”€ View area (with sidebar overlay) â”€â”€ */}
         <FilterGroupSidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -2274,7 +2346,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           onToggleViewVisibility={savedViews.toggleStripVisibility}
         />
 
-        {/* ── View area ── */}
+        {/* â”€â”€ View area â”€â”€ */}
         <div
           ref={swipeAreaRef}
           className={styles['viewArea']}
@@ -2352,7 +2424,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           )}
         </div>
 
-        {/* ── Hover card ── */}
+        {/* â”€â”€ Hover card â”€â”€ */}
         {selectedEvent && (
           renderHoverCard
             ? renderHoverCard(selectedEvent, () => setSelectedEvent(null))
@@ -2371,7 +2443,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             )
         )}
 
-        {/* ── Event form ── */}
+        {/* â”€â”€ Event form â”€â”€ */}
         {formEvent !== null && perms.canAddEvent && (
           <EventForm
             // Pass formEvent through (not null) for pool-seeded drafts so
@@ -2389,7 +2461,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Asset request form ── */}
+        {/* â”€â”€ Asset request form â”€â”€ */}
         {assetRequestOpen && canRequestAsset && perms.canAddEvent && (
           <AssetRequestForm
             assets={effectiveAssets}
@@ -2404,7 +2476,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Availability / PTO form ── */}
+        {/* â”€â”€ Availability / PTO form â”€â”€ */}
         {availabilityState && (
           <AvailabilityForm
             emp={availabilityState.emp}
@@ -2416,7 +2488,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Schedule editor form ── */}
+        {/* â”€â”€ Schedule editor form â”€â”€ */}
         {scheduleEditorState && (
           <ScheduleEditorForm
             emp={scheduleEditorState.emp}
@@ -2428,12 +2500,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Import zone ── */}
+        {/* â”€â”€ Import zone â”€â”€ */}
         {importOpen && (
           <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
         )}
 
-        {/* ── Schedule templates ── */}
+        {/* â”€â”€ Schedule templates â”€â”€ */}
         {scheduleOpen && (
           <ScheduleTemplateDialog
             templates={visibleScheduleTemplates}
@@ -2443,7 +2515,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Recurring scope picker ── */}
+        {/* â”€â”€ Recurring scope picker â”€â”€ */}
         {recurringPrompt && (
           <RecurringScopeDialog
             actionLabel={recurringPrompt.actionLabel}
@@ -2452,7 +2524,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Validation alert ── */}
+        {/* â”€â”€ Validation alert â”€â”€ */}
         {pendingAlert && (
           <ValidationAlert
             violations={pendingAlert.violations}
@@ -2466,7 +2538,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Owner config panel ── */}
+        {/* â”€â”€ Owner config panel â”€â”€ */}
         {ownerCfg.configOpen && (
           <ConfigPanel
             config={ownerCfg.config}
@@ -2498,14 +2570,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           />
         )}
 
-        {/* ── Keyboard shortcuts cheat sheet ── */}
+        {/* â”€â”€ Keyboard shortcuts cheat sheet â”€â”€ */}
         {helpOpen && <KeyboardHelpOverlay onClose={() => setHelpOpen(false)} />}
 
-        {/* ── Screen reader live region ── */}
+        {/* â”€â”€ Screen reader live region â”€â”€ */}
         <ScreenReaderAnnouncer ref={announcerRef} />
         </div>
 
-        {/* ── Inline event editor (edit mode) ── */}
+        {/* â”€â”€ Inline event editor (edit mode) â”€â”€ */}
         {inlineEditTarget && (
           <InlineEventEditor
             key={`${inlineEditTarget.event?._eventId ?? inlineEditTarget.event?.id ?? 'inline'}-${inlineEditTarget.event?.id ?? 'event'}`}

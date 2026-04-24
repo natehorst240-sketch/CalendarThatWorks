@@ -3,13 +3,14 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  padding: 5px 14px;
-  background: var(--wc-surface, #f8f9fa);
-  border-bottom: 1px solid var(--wc-border, #e5e7eb);
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
   font-size: 11px;
   color: var(--wc-text-muted, #6b7280);
   line-height: 1;
   user-select: none;
+  flex: 1 1 260px;
 }
 
 .segment {

@@ -237,19 +237,58 @@
 /* Toolbar */
 .toolbar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: calc(10px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
+  flex-direction: column;
+  gap: 10px;
+  padding: calc(12px * var(--wc-density, 1));
   border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
   background: var(--wc-bg);
   flex-shrink: 0;
+}
+
+.toolbarPrimary,
+.toolbarSecondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  width: 100%;
   flex-wrap: wrap;
 }
 
 .navGroup {
   display: flex;
   align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.navCluster {
+  display: flex;
+  align-items: center;
   gap: 4px;
+  flex-shrink: 0;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.primaryActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .navBtn {
@@ -291,10 +330,9 @@
 }
 
 .dateLabel {
-  font-size: calc(15px * var(--wc-font-scale, 1));
+  font-size: calc(18px * var(--wc-font-scale, 1));
   font-weight: 700;
   color: var(--wc-text);
-  padding-left: 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -302,10 +340,11 @@
 }
 
 .calendarTitle {
-  font-size: calc(12px * var(--wc-font-scale, 1));
+  font-size: calc(11px * var(--wc-font-scale, 1));
   font-weight: 600;
   color: var(--wc-text-muted);
-  padding-left: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -319,7 +358,8 @@
   border: var(--wc-border-width, 1px) solid var(--wc-border);
   border-radius: var(--wc-radius-sm);
   overflow: hidden;
-  margin-left: auto;
+  flex: 1 1 420px;
+  min-width: 0;
 }
 
 .viewBtn {
@@ -347,6 +387,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .devBadge {
@@ -488,6 +530,62 @@
   background: var(--wc-accent);
   animation: wc-pulse 1s ease-in-out infinite;
   flex-shrink: 0;
+}
+
+.toolbarPrimary > .loadingDot {
+  display: none;
+}
+
+.overviewBar {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--wc-surface) 70%, var(--wc-bg));
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.overviewStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.summaryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+  color: var(--wc-text);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.summaryBadgeAccent {
+  border-color: color-mix(in srgb, var(--wc-accent) 30%, var(--wc-border));
+  background: color-mix(in srgb, var(--wc-accent) 10%, var(--wc-bg));
+}
+
+.summaryBadgeMuted {
+  color: var(--wc-text-muted);
+}
+
+.summaryBadgeLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+}
+
+.overviewFocus {
+  flex: 1 1 100%;
 }
 @keyframes wc-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
