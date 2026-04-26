@@ -12,10 +12,17 @@ import { BUILT_IN_EVENT_TEMPLATES } from '../core/engine/recurrence/templates.ts
 import { RecurrenceSection } from './EventFormSections/RecurrenceSection';
 import { CategorySection } from './EventFormSections/CategorySection';
 import { CustomFieldsSection } from './EventFormSections/CustomFieldsSection';
+import { MaintenanceSection } from './EventFormSections/MaintenanceSection';
+import { completeMaintenance } from '../core/maintenance';
+import type { MaintenanceMeta, MaintenanceRule, MeterType } from '../types/maintenance';
+import type { WorksCalendarEvent } from '../types/events';
 import ConfirmDialog from './ConfirmDialog';
 import styles from './EventForm.module.css';
 
-export default function EventForm({ event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory }: any) {
+export default function EventForm({
+  event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory,
+  maintenanceRules,
+}: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const draft   = useEventDraftState(event, categories, config);
@@ -25,19 +32,60 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
     e.preventDefault();
     if (!draft.validate()) return;
     const normalizedResource = draft.values.resource == null ? '' : String(draft.values.resource);
+    const resource = normalizedResource.trim() || null;
+    const start    = fromDatetimeLocal(draft.values.start);
+    const end      = fromDatetimeLocal(draft.values.end);
+
+    let meta = draft.values.meta;
+
+    // When the user marks a maintenance event complete, run completeMaintenance
+    // so the projected nextDue* fields land on event.meta.maintenance without
+    // the consumer having to wire it themselves. No-op when the form had no
+    // rules supplied or the section wasn't used.
+    const maintMeta = meta?.['maintenance'] as MaintenanceMeta | undefined;
+    if (maintMeta?.lifecycle === 'complete' && maintMeta.ruleId && Array.isArray(maintenanceRules)) {
+      const rule = (maintenanceRules as readonly MaintenanceRule[]).find(r => r.id === maintMeta.ruleId);
+      const meterType = inferMeterType(rule);
+      if (rule && (meterType ? maintMeta.meterAtService != null : true)) {
+        const partialEvent: WorksCalendarEvent = {
+          id:    event?.id,
+          title: draft.values.title.trim(),
+          start: start as Date,
+          ...(end && { end }),
+          meta,
+        };
+        const { event: completed } = completeMaintenance(partialEvent, rule, {
+          assetId: resource ?? '',
+          type:    meterType ?? 'miles', // arbitrary placeholder for date-only rules
+          value:   maintMeta.meterAtService ?? 0,
+          asOf:    (end ?? start ?? new Date()).toISOString(),
+        });
+        meta = completed.meta as Record<string, unknown>;
+      }
+    }
+
     onSave({
       ...(event || {}),
       title:    draft.values.title.trim(),
-      start:    fromDatetimeLocal(draft.values.start),
-      end:      fromDatetimeLocal(draft.values.end),
+      start,
+      end,
       allDay:   draft.values.allDay,
       category: draft.values.category || null,
-      resource: normalizedResource.trim() || null,
+      resource,
       color:    draft.values.color || undefined,
-      meta:     draft.values.meta,
+      meta,
       rrule:    draft.buildRRule(),
       exdates:  event?.exdates ?? [],
     });
+  }
+
+  function inferMeterType(rule: MaintenanceRule | undefined): MeterType | null {
+    const i = rule?.interval;
+    if (!i) return null;
+    if (i.miles  != null) return 'miles';
+    if (i.hours  != null) return 'hours';
+    if (i.cycles != null) return 'cycles';
+    return null;
   }
 
   const d = draft; // short alias for JSX readability
@@ -118,6 +166,18 @@ export default function EventForm({ event, config, categories, onSave, onDelete,
                 )}
               </div>
             </div>
+            {Array.isArray(maintenanceRules) && maintenanceRules.length > 0 && (() => {
+              const completedAt = fromDatetimeLocal(d.values.end)?.toISOString()
+                ?? fromDatetimeLocal(d.values.start)?.toISOString();
+              return (
+                <MaintenanceSection
+                  value={d.values.meta?.['maintenance'] as MaintenanceMeta | undefined}
+                  rules={maintenanceRules}
+                  {...(completedAt && { completedAt })}
+                  onChange={(next) => d.setMeta('maintenance', next)}
+                />
+              );
+            })()}
             <CustomFieldsSection category={d.values.category} customFields={d.customFields}
               metaValues={d.values.meta} errors={d.errors} onMetaChange={d.setMeta} />
             <div className={styles['actions']}>

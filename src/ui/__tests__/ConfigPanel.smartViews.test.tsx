@@ -92,7 +92,7 @@ describe('SmartViewsTab edit UI (issue #100)', () => {
     fireEvent.click(screen.getByLabelText('Edit Alpha'));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByText(/Editing conditions for/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Create Smart Views once categories/)).toBeInTheDocument();
+    expect(screen.getByText(/Create saved views once categories/)).toBeInTheDocument();
   });
 
   it('Update Smart View button calls onUpdateView with the view id', () => {

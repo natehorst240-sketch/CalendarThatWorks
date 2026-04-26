@@ -211,6 +211,145 @@ describe('mapToEvents', () => {
   });
 });
 
+// ── Billing + maintenance metadata ────────────────────────────────────────────
+
+describe('mapToEvents — billing fields', () => {
+  it('attaches billing meta when billing columns are mapped', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job 12', S: '2026-04-10', Bill: 'true', Cust: 'ABC Logistics', Rate: '120', Qty: '5', Inv: 'Unbilled' }],
+      { title: 'T', start: 'S', billable: 'Bill', customer: 'Cust', rate: 'Rate', quantity: 'Qty', invoiceStatus: 'Inv' },
+      'iso',
+    );
+    expect(errors).toHaveLength(0);
+    const billing = (events[0]!.meta as any).billing;
+    expect(billing).toEqual({
+      billable: true,
+      customer: 'ABC Logistics',
+      rate: 120,
+      quantity: 5,
+      invoiceStatus: 'unbilled',
+    });
+  });
+
+  it('tolerates currency symbols and thousand separators in rate', () => {
+    const { events } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Rate: '$1,250.50' }],
+      { title: 'T', start: 'S', rate: 'Rate' },
+      'iso',
+    );
+    expect((events[0]!.meta as any).billing.rate).toBe(1250.5);
+  });
+
+  it('reports a per-row error when rate is non-numeric', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Rate: 'cheap' }],
+      { title: 'T', start: 'S', rate: 'Rate' },
+      'iso',
+    );
+    expect(events).toHaveLength(0);
+    expect(errors[0]!.message).toMatch(/rate/i);
+  });
+
+  it('rejects symbol-only rate ("$") instead of importing it as 0', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Rate: '$' }],
+      { title: 'T', start: 'S', rate: 'Rate' },
+      'iso',
+    );
+    expect(events).toHaveLength(0);
+    expect(errors[0]!.message).toMatch(/rate/i);
+  });
+
+  it('rejects comma-only quantity (",") instead of importing it as 0', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Q: ',' }],
+      { title: 'T', start: 'S', quantity: 'Q' },
+      'iso',
+    );
+    expect(events).toHaveLength(0);
+    expect(errors[0]!.message).toMatch(/quantity/i);
+  });
+
+  it('does not attach meta when no billing columns map and values exist', () => {
+    const { events } = mapToEvents(
+      [{ T: 'Plain', S: '2026-04-10' }],
+      { title: 'T', start: 'S' },
+      'iso',
+    );
+    expect(events[0]!.meta).toBeUndefined();
+  });
+
+  it('skips billable when value is unrecognised (not true/false-like)', () => {
+    const { events } = mapToEvents(
+      [{ T: 'Job', S: '2026-04-10', Bill: 'maybe' }],
+      { title: 'T', start: 'S', billable: 'Bill' },
+      'iso',
+    );
+    expect(events[0]!.meta).toBeUndefined();
+  });
+});
+
+describe('mapToEvents — maintenance fields', () => {
+  it('attaches maintenance + meter meta when maintenance columns are mapped', () => {
+    const { events, errors } = mapToEvents(
+      [{ T: 'Oil change', S: '2026-04-10', Rule: 'oil-10k', LC: 'Scheduled', M: '120000', MT: 'Miles' }],
+      { title: 'T', start: 'S', maintenanceRule: 'Rule', lifecycle: 'LC', meterValue: 'M', meterType: 'MT' },
+      'iso',
+    );
+    expect(errors).toHaveLength(0);
+    const meta = events[0]!.meta as any;
+    expect(meta.maintenance).toEqual({
+      ruleId: 'oil-10k',
+      lifecycle: 'scheduled',
+      meterAtService: 120000,
+    });
+    expect(meta.meter).toEqual({ value: 120000, type: 'miles' });
+  });
+
+  it('omits meter block when only meter type is present (no reading)', () => {
+    const { events } = mapToEvents(
+      [{ T: 'Service', S: '2026-04-10', MT: 'hours' }],
+      { title: 'T', start: 'S', meterType: 'MT' },
+      'iso',
+    );
+    expect((events[0]!.meta as any).meter).toEqual({ type: 'hours' });
+  });
+
+  it('produces independent billing and maintenance blocks for the same event', () => {
+    const { events } = mapToEvents(
+      [{ T: 'Service', S: '2026-04-10', Cust: 'Internal', Rule: 'inspection-50h' }],
+      { title: 'T', start: 'S', customer: 'Cust', maintenanceRule: 'Rule' },
+      'iso',
+    );
+    const meta = events[0]!.meta as any;
+    expect(meta.billing.customer).toBe('Internal');
+    expect(meta.maintenance.ruleId).toBe('inspection-50h');
+    expect(meta.meter).toBeUndefined();
+  });
+});
+
+describe('suggestMapping — domain vocabulary', () => {
+  it('maps "Truck" to resource', () => {
+    expect(suggestMapping(['Title', 'Date', 'Truck'])['resource']).toBe('Truck');
+  });
+
+  it('maps "Tail Number" to resource (aviation)', () => {
+    expect(suggestMapping(['Subject', 'Date', 'Tail Number'])['resource']).toBe('Tail Number');
+  });
+
+  it('maps "Customer" to customer billing field', () => {
+    expect(suggestMapping(['Title', 'Date', 'Customer'])['customer']).toBe('Customer');
+  });
+
+  it('maps "Hobbs" to meterValue (aviation)', () => {
+    expect(suggestMapping(['Title', 'Date', 'Hobbs'])['meterValue']).toBe('Hobbs');
+  });
+
+  it('maps "Odometer" to meterValue (trucking)', () => {
+    expect(suggestMapping(['Title', 'Date', 'Odometer'])['meterValue']).toBe('Odometer');
+  });
+});
+
 // ── Preset storage ────────────────────────────────────────────────────────────
 
 describe('presets', () => {

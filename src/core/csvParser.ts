@@ -16,15 +16,26 @@
 // ── Event fields ──────────────────────────────────────────────────────────────
 
 export const EVENT_FIELDS = [
-  { key: 'title',    label: 'Title',          required: true,  hint: 'Event name / summary'        },
-  { key: 'start',    label: 'Start',          required: true,  hint: 'Start date or date + time'   },
-  { key: 'end',      label: 'End',            required: false, hint: 'End date or date + time'     },
-  { key: 'allDay',   label: 'All-day',        required: false, hint: '"true" / "false" / "1" / "0"' },
-  { key: 'category', label: 'Category',       required: false, hint: 'Meeting, Incident, PTO, …'   },
-  { key: 'resource', label: 'Resource',       required: false, hint: 'Person, room, or team'        },
-  { key: 'status',   label: 'Status',         required: false, hint: 'confirmed / tentative / cancelled' },
-  { key: 'color',    label: 'Color',          required: false, hint: 'Hex color (#3b82f6)'          },
-  { key: 'id',       label: 'ID',             required: false, hint: 'Unique identifier'            },
+  { key: 'title',          label: 'Title',          required: true,  hint: 'Event name / summary'        },
+  { key: 'start',          label: 'Start',          required: true,  hint: 'Start date or date + time'   },
+  { key: 'end',            label: 'End',            required: false, hint: 'End date or date + time'     },
+  { key: 'allDay',         label: 'All-day',        required: false, hint: '"true" / "false" / "1" / "0"' },
+  { key: 'category',       label: 'Category',       required: false, hint: 'Meeting, Incident, PTO, …'   },
+  { key: 'resource',       label: 'Resource',       required: false, hint: 'Person, room, or team'        },
+  { key: 'status',         label: 'Status',         required: false, hint: 'confirmed / tentative / cancelled' },
+  { key: 'color',          label: 'Color',          required: false, hint: 'Hex color (#3b82f6)'          },
+  { key: 'id',             label: 'ID',             required: false, hint: 'Unique identifier'            },
+  // Billing fields → event.meta.billing
+  { key: 'billable',       label: 'Billable',       required: false, hint: '"true" / "false" / "1" / "0"' },
+  { key: 'customer',       label: 'Customer',       required: false, hint: 'Customer name or account ID'  },
+  { key: 'rate',           label: 'Rate',           required: false, hint: 'Numeric rate (per hour/job)'  },
+  { key: 'quantity',       label: 'Quantity',       required: false, hint: 'Hours, units, or jobs'        },
+  { key: 'invoiceStatus',  label: 'Invoice status', required: false, hint: 'unbilled / invoiced / paid / void' },
+  // Maintenance fields → event.meta.maintenance + event.meta.meter
+  { key: 'maintenanceRule', label: 'Maint. rule',   required: false, hint: 'Rule ID (e.g. "oil-change-10k")' },
+  { key: 'lifecycle',       label: 'Lifecycle',     required: false, hint: 'due / scheduled / in-progress / complete / skipped' },
+  { key: 'meterValue',      label: 'Meter reading', required: false, hint: 'Numeric meter value at service' },
+  { key: 'meterType',       label: 'Meter type',    required: false, hint: 'miles / hours / cycles / kilometers' },
 ];
 
 // ── Date formats ──────────────────────────────────────────────────────────────
@@ -97,10 +108,21 @@ const FIELD_HINTS: Record<string, string[]> = {
   end:      ['end', 'finish', 'to', 'enddate', 'endtime', 'until', 'thru', 'through'],
   allDay:   ['allday', 'allday', 'wholeday', 'fullday'],
   category: ['category', 'type', 'kind', 'tag', 'label', 'group', 'class'],
-  resource: ['resource', 'person', 'owner', 'assignee', 'employee', 'user', 'room', 'location'],
+  resource: ['resource', 'person', 'owner', 'assignee', 'employee', 'user', 'room', 'location', 'truck', 'asset', 'aircraft', 'tail', 'unit', 'vehicle'],
   status:   ['status', 'state', 'confirmed', 'tentative'],
   color:    ['color', 'colour'],
   id:       ['id', 'uid', 'identifier', 'key', 'ref'],
+  // Billing
+  billable:       ['billable', 'bill', 'chargeable'],
+  customer:       ['customer', 'client', 'account', 'company', 'payer'],
+  rate:           ['rate', 'price', 'cost', 'hourlyrate', 'rateperhour'],
+  quantity:       ['quantity', 'qty', 'hours', 'units', 'count'],
+  invoiceStatus:  ['invoicestatus', 'invoice', 'invoiced', 'paid', 'billingstatus'],
+  // Maintenance
+  maintenanceRule: ['maintenancerule', 'rule', 'service', 'servicetype', 'maintenance'],
+  lifecycle:       ['lifecycle', 'workstatus', 'progress', 'phase'],
+  meterValue:      ['meter', 'mileage', 'odometer', 'hobbs', 'tach', 'engine', 'cycles'],
+  meterType:       ['metertype', 'meterunit', 'unit', 'meterkind'],
 };
 
 /**
@@ -110,12 +132,21 @@ const FIELD_HINTS: Record<string, string[]> = {
 export function suggestMapping(headers: string[]): Record<string, string> {
   const mapping: Record<string, string> = {};
   const used = new Set<string>();
+  // Short hints (e.g. "to", "id", "tag") must match exactly — otherwise
+  // they'd grab unrelated headers via substring overlap (e.g. "Customer"
+  // contains "to").
+  const PARTIAL_MIN = 4;
 
   for (const [field, hints] of Object.entries(FIELD_HINTS)) {
     for (const header of headers) {
       if (used.has(header)) continue;
       const norm = header.toLowerCase().replace(/[\s_\-\.]/g, '');
-      if (hints.some(h => norm === h || norm.includes(h) || h.includes(norm))) {
+      const match = hints.some(h =>
+        norm === h ||
+        (h.length    >= PARTIAL_MIN && norm.includes(h)) ||
+        (norm.length >= PARTIAL_MIN && h.includes(norm)),
+      );
+      if (match) {
         mapping[field] = header;
         used.add(header);
         break;
@@ -146,6 +177,7 @@ type EventShape = {
   status?: string;
   color?: string;
   id: string;
+  meta?: Record<string, unknown>;
 };
 
 export function mapToEvents(
@@ -178,6 +210,8 @@ export function mapToEvents(
         ? ['true', '1', 'yes', 'y'].includes(allDayRaw.toLowerCase())
         : (!endRaw && !startRaw.includes(':') && !startRaw.includes('T'));
 
+      const meta = _buildMeta(row, mapping);
+
       const event = {
         title: title.trim(),
         start,
@@ -188,6 +222,7 @@ export function mapToEvents(
         ...(_field(row, mapping['status'])   && { status:    _field(row, mapping['status']) }),
         ...(_field(row, mapping['color'])    && { color:     _field(row, mapping['color']) }),
         id: _field(row, mapping['id']) || `csv-${Date.now()}-${autoId++}`,
+        ...(meta && { meta }),
       };
 
       events.push(event);
@@ -202,6 +237,79 @@ export function mapToEvents(
 
 function _field(row: CsvRow, header: string | undefined): string {
   return header ? (row[header] ?? '') : '';
+}
+
+// ── Meta assembly (billing + maintenance) ────────────────────────────────────
+
+const TRUTHY = new Set(['true', '1', 'yes', 'y', 't']);
+const FALSY  = new Set(['false', '0', 'no', 'n', 'f']);
+
+function _parseBool(raw: string): boolean | null {
+  const v = raw.trim().toLowerCase();
+  if (TRUTHY.has(v)) return true;
+  if (FALSY.has(v))  return false;
+  return null;
+}
+
+function _parseNum(raw: string, fieldLabel: string): number | null {
+  const v = raw.trim();
+  if (!v) return null;
+  // Tolerate currency symbols, thousand separators.
+  const cleaned = v.replace(/[$,\s]/g, '');
+  if (!cleaned) {
+    // Original cell had content (e.g. "$" or ",") but stripping left nothing.
+    // Treat as a non-numeric value rather than silently returning 0.
+    throw new Error(`Cannot parse ${fieldLabel}: "${raw}"`);
+  }
+  const n = Number(cleaned);
+  if (!Number.isFinite(n)) {
+    throw new Error(`Cannot parse ${fieldLabel}: "${raw}"`);
+  }
+  return n;
+}
+
+/**
+ * Build the optional `meta` object holding billing + maintenance + meter data.
+ * Returns `undefined` when no relevant columns are mapped or all values are blank,
+ * so events without these fields don't carry a meta stub.
+ */
+function _buildMeta(
+  row: CsvRow,
+  mapping: Record<string, string>,
+): Record<string, unknown> | undefined {
+  const billing: Record<string, unknown> = {};
+  const billableRaw = _field(row, mapping['billable']);
+  if (billableRaw) {
+    const b = _parseBool(billableRaw);
+    if (b !== null) billing['billable'] = b;
+  }
+  const customer = _field(row, mapping['customer']);
+  if (customer) billing['customer'] = customer;
+  const rate = _parseNum(_field(row, mapping['rate']), 'rate');
+  if (rate !== null) billing['rate'] = rate;
+  const quantity = _parseNum(_field(row, mapping['quantity']), 'quantity');
+  if (quantity !== null) billing['quantity'] = quantity;
+  const invoiceStatus = _field(row, mapping['invoiceStatus']).toLowerCase();
+  if (invoiceStatus) billing['invoiceStatus'] = invoiceStatus;
+
+  const maintenance: Record<string, unknown> = {};
+  const ruleId = _field(row, mapping['maintenanceRule']);
+  if (ruleId) maintenance['ruleId'] = ruleId;
+  const lifecycle = _field(row, mapping['lifecycle']).toLowerCase();
+  if (lifecycle) maintenance['lifecycle'] = lifecycle;
+  const meterAtService = _parseNum(_field(row, mapping['meterValue']), 'meter reading');
+  if (meterAtService !== null) maintenance['meterAtService'] = meterAtService;
+
+  const meter: Record<string, unknown> = {};
+  if (meterAtService !== null) meter['value'] = meterAtService;
+  const meterType = _field(row, mapping['meterType']).toLowerCase();
+  if (meterType) meter['type'] = meterType;
+
+  const out: Record<string, unknown> = {};
+  if (Object.keys(billing).length)     out['billing']     = billing;
+  if (Object.keys(maintenance).length) out['maintenance'] = maintenance;
+  if (Object.keys(meter).length)       out['meter']       = meter;
+  return Object.keys(out).length ? out : undefined;
 }
 
 // ── Date parsing ──────────────────────────────────────────────────────────────

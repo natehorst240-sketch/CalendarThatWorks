@@ -8,37 +8,47 @@ import { Keyboard, X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './KeyboardHelpOverlay.module.css';
 
-const SHORTCUTS = [
-  {
-    group: 'Switch view',
-    items: [
-      { keys: ['1'], label: 'Month' },
-      { keys: ['2'], label: 'Week' },
-      { keys: ['3'], label: 'Day' },
-      { keys: ['4'], label: 'Agenda' },
-      { keys: ['5'], label: 'Schedule' },
-      { keys: ['6'], label: 'Assets' },
-    ],
-  },
-  {
-    group: 'Navigate',
-    items: [
-      { keys: ['j', '→'], label: 'Next period' },
-      { keys: ['k', '←'], label: 'Previous period' },
-      { keys: ['t'], label: 'Jump to today' },
-    ],
-  },
-  {
-    group: 'Help',
-    items: [
-      { keys: ['?'], label: 'Open this help dialog' },
-      { keys: ['Esc'], label: 'Close any open dialog' },
-    ],
-  },
-];
+type ShortcutsProps = {
+  assetsLabel?: string;
+};
 
-export default function KeyboardHelpOverlay({ onClose }: any) {
+function buildShortcuts({ assetsLabel = 'Asset' }: ShortcutsProps) {
+  return [
+    {
+      group: 'Switch view',
+      items: [
+        { keys: ['1'], label: 'Month' },
+        { keys: ['2'], label: 'Week' },
+        { keys: ['3'], label: 'Day' },
+        { keys: ['4'], label: 'Agenda' },
+        { keys: ['5'], label: 'Schedule' },
+        { keys: ['6'], label: `${assetsLabel}s` },
+      ],
+    },
+    {
+      group: 'Navigate',
+      items: [
+        { keys: ['j', '→'], label: 'Next period' },
+        { keys: ['k', '←'], label: 'Previous period' },
+        { keys: ['t'], label: 'Jump to today' },
+      ],
+    },
+    {
+      group: 'Help',
+      items: [
+        { keys: ['?'], label: 'Open this help dialog' },
+        { keys: ['Esc'], label: 'Close any open dialog' },
+      ],
+    },
+  ];
+}
+
+export default function KeyboardHelpOverlay({
+  onClose,
+  assetsLabel,
+}: { onClose: () => void; assetsLabel?: string }) {
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
+  const shortcuts = buildShortcuts(assetsLabel ? { assetsLabel } : {});
 
   return (
     <div
@@ -63,7 +73,7 @@ export default function KeyboardHelpOverlay({ onClose }: any) {
         </div>
 
         <div className={styles['body']}>
-          {SHORTCUTS.map(group => (
+          {shortcuts.map(group => (
             <section key={group.group} className={styles['group']}>
               <h3 className={styles['groupTitle']}>{group.group}</h3>
               <ul className={styles['list']}>

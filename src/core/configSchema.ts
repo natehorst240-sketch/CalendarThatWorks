@@ -60,6 +60,10 @@ export const DEFAULT_CONFIG: Record<string, any> = {
     // UI label for locations — 'Base' or 'Region'. Affects the Base/Region
     // tab label and any other location-facing copy.
     locationLabel: 'Base',
+    // UI label for the Assets tab — owners can rename to 'Aircraft', 'Vehicles',
+    // 'Equipment', 'Fleet', etc. Plural is generated as `${label}s`. Affects the
+    // Assets view tab, AssetsView toolbar, and asset-related copy.
+    assetsLabel: 'Asset',
   },
 
   // Hover card field visibility

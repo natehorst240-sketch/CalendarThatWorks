@@ -114,10 +114,14 @@ test.describe('WorksCalendar happy paths', () => {
     // Dialog auto-opens on successful auth (SHA-256 check is async, give it time).
     await expect(page.getByRole('dialog', { name: /Calendar settings/i })).toBeVisible({ timeout: 10000 });
 
-    // The Setup tab should be active by default, click the Corporate Dark
-    // theme (after issue #268 the theme list is family × mode; corporate-dark
-    // resolves to the historical 'ocean' CSS selector via resolveCssTheme).
-    await page.getByRole('button', { name: /Corporate Dark/i }).click();
+    // The Setup tab should be active by default. After issue #268 + the
+    // family-card refactor, themes are rendered as family cards (e.g.
+    // "Corporate") with separate Light / Dark mode toggle buttons. The mode
+    // buttons carry the full theme label as their `title` attribute, which
+    // is the stable accessible hook for "Corporate Dark" specifically.
+    // corporate-dark resolves to the historical 'ocean' CSS selector via
+    // resolveCssTheme — verified below.
+    await page.getByTitle('Corporate Dark', { exact: true }).click();
 
     // Close the settings panel
     await page.getByLabel('Close settings').click();

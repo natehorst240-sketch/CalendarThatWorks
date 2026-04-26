@@ -84,3 +84,19 @@ What it shows:
 - filter demo path
 - saved views demo path
 - docs/examples handoff links for first-time visitors
+
+---
+
+## Maintenance & Invoicing Integration
+
+Use this example:
+- `11-MaintenanceAndInvoicing.jsx`
+
+What it shows:
+- per-asset maintenance rules (intervals + warning windows)
+- asset-row badges driven by `computeDueStatus`
+- EventForm Maintenance section with auto-projection on `complete`
+- one-click CSV export (`downloadInvoicesCSV`, `downloadMaintenanceLogCSV`)
+- pure transforms (`toInvoiceLineItems`) for custom backends
+
+See also: [docs/MaintenanceAndInvoicing.md](../docs/MaintenanceAndInvoicing.md).

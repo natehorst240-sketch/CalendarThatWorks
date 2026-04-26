@@ -21,6 +21,7 @@ import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking';
 import { GroupingExample }         from './09-Grouping';
 import { DragAndDropExample }      from './10-DragAndDrop';
 import { MapExample }              from './11-Map';
+import { MaintenanceAndInvoicingExample } from './11-MaintenanceAndInvoicing';
 import { BasicUsageExample }       from './basic-usage';
 import { SetupWizardExample }      from './setup-wizard';
 import { AdvancedFiltersExample }  from './advanced-filters';
@@ -148,6 +149,11 @@ const EXAMPLES = [
     tag:   'Optional plugin',
     desc:  'Geographic plot of events with meta.coords. Renders an install hint until maplibre-gl + react-map-gl are installed.',
     component: MapExample,
+    id:    'maintenance-invoicing',
+    label: 'Maintenance & Invoicing',
+    tag:   'Asset health · CSV export',
+    desc:  'Asset-row badges show due/overdue maintenance; completing service in the form auto-stamps next-due. One-click CSV export for invoices and maintenance log.',
+    component: MaintenanceAndInvoicingExample,
   },
 ];
 
@@ -238,6 +244,7 @@ function SourceHint({ id }) {
     'grouping':             '09-Grouping.jsx',
     'drag-and-drop':        '10-DragAndDrop.jsx',
     'map':                  '11-Map.jsx',
+    'maintenance-invoicing': '11-MaintenanceAndInvoicing.jsx',
     'basic-usage-modern':   'basic-usage.jsx',
     'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',

@@ -46,6 +46,10 @@ export type ViewsPanelProps = {
   onDelete: (id: string) => void;
   /** Toggle strip visibility. */
   onToggleVisibility: (id: string) => void;
+  /** Owner-customizable label for "Base" — affects the view-type tooltip. */
+  locationLabel?: string;
+  /** Owner-customizable label for "Asset" — affects the view-type tooltip. */
+  assetsLabel?: string;
 };
 
 export default function ViewsPanel({
@@ -58,6 +62,8 @@ export default function ViewsPanel({
   onUpdate,
   onDelete,
   onToggleVisibility,
+  locationLabel = 'Base',
+  assetsLabel = 'Asset',
 }: ViewsPanelProps) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -154,6 +160,13 @@ export default function ViewsPanel({
             const isActive = v.id === activeId;
             const viewInfo = v.view ? VIEW_ICON_MAP[v.view] : null;
             const ViewIcon = viewInfo?.Icon;
+            const viewTooltip = viewInfo
+              ? v.view === 'base'
+                ? locationLabel
+                : v.view === 'assets'
+                  ? `${assetsLabel}s`
+                  : viewInfo.label
+              : '';
 
             return (
               <div
@@ -193,7 +206,7 @@ export default function ViewsPanel({
 
                 {/* View type icon */}
                 {ViewIcon && (
-                  <span className={styles['viewIcon']} title={viewInfo.label}>
+                  <span className={styles['viewIcon']} title={viewTooltip}>
                     <ViewIcon size={14} />
                   </span>
                 )}

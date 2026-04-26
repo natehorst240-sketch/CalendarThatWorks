@@ -19,6 +19,7 @@ This index is the canonical docs entrypoint for the package.
 - [Resource pools](./ResourcePools.md)
 - [Location provider](./LocationProvider.md)
 - [Map view (optional plugin)](./MapView.md)
+- [Maintenance & invoicing integration](./MaintenanceAndInvoicing.md)
 
 ## Provider setup guides
 

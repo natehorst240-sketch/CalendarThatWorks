@@ -7,6 +7,35 @@ export * from './api/v1/index';
 
 export type { WorksCalendarEvent, NormalizedEvent, EventStatus, EventVisualPriority } from './types/events';
 export { isVisualPriority } from './types/events';
+export type { BillableMeta, InvoiceLineItem, InvoiceStatus } from './types/billing';
+export type {
+  AssetHealth,
+  AssetHealthStatus,
+  MaintenanceMeta,
+  MaintenanceRule,
+  MaintenanceInterval,
+  MaintenanceLifecycle,
+  MeterReading,
+  MeterType,
+} from './types/maintenance';
+export {
+  computeDueStatus,
+  projectNextDue,
+  completeMaintenance,
+} from './core/maintenance';
+export type {
+  DueStatus,
+  DueResult,
+  CurrentState,
+  LastService,
+  NextDueProjection,
+} from './core/maintenance';
+export { MaintenanceBadge }       from './ui/MaintenanceBadge';
+export type { MaintenanceBadgeProps } from './ui/MaintenanceBadge';
+export { AssetMaintenanceBadges } from './ui/AssetMaintenanceBadges';
+export type { AssetMaintenanceBadgesProps } from './ui/AssetMaintenanceBadges';
+export { MaintenanceSection }     from './ui/EventFormSections/MaintenanceSection';
+export type { MaintenanceSectionProps } from './ui/EventFormSections/MaintenanceSection';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,
@@ -28,6 +57,24 @@ export { normalizeEvent, normalizeEvents } from './core/eventModel';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';
 export { exportToExcel }                  from './export/exportToExcelLazy';
+export {
+  toInvoiceLineItems,
+  invoiceLineItemsToCSV,
+  downloadInvoicesCSV,
+} from './export/invoiceExport';
+export type {
+  InvoiceLineItemsOptions,
+  InvoiceQuantitySource,
+} from './export/invoiceExport';
+export {
+  toMaintenanceLog,
+  maintenanceLogToCSV,
+  downloadMaintenanceLogCSV,
+} from './export/maintenanceExport';
+export type {
+  MaintenanceLogEntry,
+  MaintenanceLogOptions,
+} from './export/maintenanceExport';
 export { useCalendar }                    from './hooks/useCalendar';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents';

@@ -347,7 +347,7 @@ function Step2({ categories, resources, createdViews, onSaveView }: Step2Props) 
   return (
     <div className={styles['step']}>
       <div className={styles['stepHeader']}>
-        <h3 className={styles['stepTitle']}>Create Smart Views</h3>
+        <h3 className={styles['stepTitle']}>Create Saved Views</h3>
         <p className={styles['stepDesc']}>
           Build filter presets with AND / OR logic — e.g. "On-Call OR Incident for Alice".
           You can skip this and add views later from the saved-views bar.
@@ -421,7 +421,7 @@ function Step3({ calendarName, selectedTheme, teamMembers, createdViews }: Step3
           </div>
         </div>
         <div className={styles['summaryCard']}>
-          <span className={styles['summaryCardLabel']}>Smart Views</span>
+          <span className={styles['summaryCardLabel']}>Saved Views</span>
           <div className={styles['summaryCardValue']}>
             {createdViews.length === 0 ? 'None created' : `${createdViews.length} created`}
           </div>

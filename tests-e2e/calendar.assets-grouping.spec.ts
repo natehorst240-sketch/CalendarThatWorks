@@ -63,6 +63,11 @@ test.describe('WorksCalendar Assets view', () => {
     await page.reload();
     await expect(page.getByTestId('works-calendar')).toBeVisible();
 
+    // The compact ProfileBar scopes saved-view chips to the current view (plus
+    // globally-pinned ones), so a chip with view='assets' only appears once
+    // the user is on the Assets tab. Switch first, then look for the chip.
+    await page.getByRole('button', { name: /^Assets$/ }).click();
+
     // ProfileBar chip for our seeded view should be visible. The chip's
     // accessible name is just the view.name — the view-type icon next to
     // it carries an aria-label but isn't part of the chip's button name.

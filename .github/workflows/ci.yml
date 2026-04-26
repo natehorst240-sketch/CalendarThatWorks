@@ -51,7 +51,6 @@ jobs:
 
   browser-e2e:
     name: Browser E2E Tests
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -74,11 +73,4 @@ jobs:
           VITE_BASE: /
 
       - name: Run E2E tests
-        run: |
-          if [ "$SKIP_E2E" = "true" ]; then
-            echo "Skipping E2E tests during strict-null migration"
-          else
-            npm run test:browser
-          fi
-        env:
-          SKIP_E2E: true
+        run: npm run test:browser

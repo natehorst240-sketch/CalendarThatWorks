@@ -167,6 +167,129 @@
   margin: 0 0 4px;
 }
 
+/* ── Sidebar search ── */
+.sidebarSearchWrap {
+  padding: 8px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.sidebarSearch {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--wc-border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--wc-bg);
+  color: var(--wc-text);
+}
+
+.sidebarSearch:focus {
+  outline: 2px solid var(--wc-accent, #0066cc);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.searchResults {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.searchEmpty {
+  padding: 16px 12px;
+  font-size: 13px;
+  color: var(--wc-text-muted);
+  text-align: center;
+}
+
+.searchResult {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  font-family: inherit;
+}
+
+.searchResult:hover {
+  background: var(--wc-surface-2, var(--wc-surface));
+}
+
+.searchResultLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text);
+}
+
+.searchResultTab {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
+
+/* ── Pinned Overview tab ── */
+.overviewTab {
+  border-bottom: 1px solid var(--wc-border);
+  font-weight: 600;
+}
+
+/* ── Overview tab body ── */
+.overviewGroup {
+  margin-bottom: 20px;
+}
+
+.overviewHeading {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--wc-text-muted);
+  margin-bottom: 8px;
+}
+
+.overviewCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.overviewCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--wc-border);
+  border-radius: 6px;
+  background: var(--wc-bg);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.overviewCard:hover {
+  border-color: var(--wc-accent, #0066cc);
+  background: var(--wc-surface-2, var(--wc-surface));
+}
+
+.overviewCardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wc-text);
+}
+
+.overviewCardDesc {
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+
 /* Toggle switch */
 .toggle {
   display: flex;

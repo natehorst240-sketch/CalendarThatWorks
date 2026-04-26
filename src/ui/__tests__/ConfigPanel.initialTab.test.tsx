@@ -50,7 +50,7 @@ describe('ConfigPanel — initialTab', () => {
 
   it('switches tabs when initialTab changes on a re-render', () => {
     const { rerender } = mount({ initialTab: 'categories' });
-    expect(screen.getByRole('tab', { name: 'Categories' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Event Colors' })).toHaveAttribute('aria-selected', 'true');
     rerender(
       <ConfigPanel
         config={DEFAULT_CONFIG}

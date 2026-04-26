@@ -77,6 +77,13 @@ export type FilterGroupSidebarProps = {
   onDeleteView: (id: string) => void;
   /** Toggle view's strip visibility. */
   onToggleViewVisibility: (id: string) => void;
+
+  /** Owner-customizable label for "Base" — forwarded to ViewsPanel for the
+   *  view-type tooltip. */
+  locationLabel?: string;
+  /** Owner-customizable label for "Asset" — forwarded to ViewsPanel for the
+   *  view-type tooltip. */
+  assetsLabel?: string;
 };
 
 export default function FilterGroupSidebar({
@@ -105,6 +112,8 @@ export default function FilterGroupSidebar({
   onUpdateView,
   onDeleteView,
   onToggleViewVisibility,
+  locationLabel,
+  assetsLabel,
 }: FilterGroupSidebarProps) {
   // Default to the View tab so the perspective picker is the owner's
   // first stop. Focus/Saved open via explicit tab clicks.
@@ -277,6 +286,8 @@ export default function FilterGroupSidebar({
                 onUpdate={onUpdateView}
                 onDelete={onDeleteView}
                 onToggleVisibility={onToggleViewVisibility}
+                {...(locationLabel ? { locationLabel } : {})}
+                {...(assetsLabel ? { assetsLabel } : {})}
               />
             </div>
           )}

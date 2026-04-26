@@ -51,6 +51,7 @@ export default function ProfileBar({
   viewOrder = DEFAULT_VIEW_ORDER,
   enabledViews,
   locationLabel = 'Base',
+  assetsLabel = 'Asset',
   hasActiveFilters = false,
   compact = false,
   tailSlot,
@@ -158,7 +159,11 @@ export default function ProfileBar({
             const meta = key === GLOBAL_GROUP_KEY
               ? { Icon: Bookmark, label: 'All views' }
               : (VIEW_ICON_MAP[key] ?? { Icon: Bookmark, label: key });
-            const headerLabel = key === 'base' ? `${locationLabel} view` : meta.label;
+            const headerLabel = key === 'base'
+              ? `${locationLabel} view`
+              : key === 'assets'
+                ? `${assetsLabel}s view`
+                : meta.label;
             const groupEnabled = key === GLOBAL_GROUP_KEY || isViewEnabled(key);
             const isCurrent = key === currentView;
             return (
