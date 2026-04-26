@@ -273,6 +273,7 @@ export type WorksCalendarProps = {
   onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
   onApprovalAction?: (event: WorksCalendarEvent, action: string) => void | Promise<void>;
   renderAssetLocation?: (locationData: AssetLocationData, asset: { id: string }) => ReactNode;
+  renderAssetBadges?: (asset: { id: string }) => ReactNode;
   renderConflictBody?: (args: UnknownRecord) => ReactNode;
 
   /**
@@ -526,6 +527,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
+    renderAssetBadges,
     renderConflictBody,
 
     // ── Resource pools (#212) ──
@@ -2426,6 +2428,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   onCollapsedGroupsChange={setActiveAssetsCollapsed}
                   locationProvider={effectiveLocationProvider}
                   renderAssetLocation={renderAssetLocation}
+                  renderAssetBadges={renderAssetBadges}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
                   approvalsConfig={ownerCfg.config?.['approvals']}

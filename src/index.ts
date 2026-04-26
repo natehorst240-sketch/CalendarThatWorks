@@ -30,6 +30,10 @@ export type {
   LastService,
   NextDueProjection,
 } from './core/maintenance';
+export { MaintenanceBadge }       from './ui/MaintenanceBadge';
+export type { MaintenanceBadgeProps } from './ui/MaintenanceBadge';
+export { AssetMaintenanceBadges } from './ui/AssetMaintenanceBadges';
+export type { AssetMaintenanceBadgesProps } from './ui/AssetMaintenanceBadges';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,
