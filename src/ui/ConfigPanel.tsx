@@ -47,6 +47,7 @@ const MANAGER_TITLES = [
 ];
 
 const TABS = [
+  { id: 'overview',    label: 'Overview' },
   { id: 'setup',       label: 'Setup' },
   { id: 'hoverCard',   label: 'Event Details' },
   { id: 'eventFields', label: 'Event Fields' },
@@ -65,19 +66,76 @@ const TABS = [
   { id: 'access',      label: 'Access' },
 ];
 
-// Tabs are presented in a vertical sidebar grouped into 4 accordion
-// sections. The grouping is purely an IA wrapper — tab ids are preserved so
-// deep-links (initialTab="assets") and tests targeting role="tab" still work.
+// Tabs are presented in a vertical sidebar grouped into accordion sections.
+// Sections are organized by user intent ("what do I want to change?") rather
+// than implementation. Tab ids are preserved so deep-links (initialTab="assets")
+// and tests targeting role="tab" still work.
 const SECTIONS = [
-  { id: 'appearance', label: 'Appearance', tabs: ['setup', 'theme', 'display', 'hoverCard'] },
-  { id: 'data',       label: 'Data',       tabs: ['eventFields', 'categories', 'assets', 'team', 'feeds'] },
-  { id: 'workflows',  label: 'Workflows',  tabs: ['templates', 'smartViews', 'approvals', 'approvalFlows', 'conflicts', 'requestForm'] },
-  { id: 'access',     label: 'Access',     tabs: ['access'] },
+  { id: 'appearance',   label: 'Appearance',     tabs: ['setup', 'theme', 'categories'] },
+  { id: 'layout',       label: 'Layout & Labels', tabs: ['display'] },
+  { id: 'eventDisplay', label: 'Event Display',  tabs: ['hoverCard', 'eventFields'] },
+  { id: 'data',         label: 'Data',           tabs: ['assets', 'team', 'feeds', 'templates'] },
+  { id: 'savedViews',   label: 'Saved Views',    tabs: ['smartViews'] },
+  { id: 'workflows',    label: 'Workflows',      tabs: ['approvals', 'approvalFlows', 'conflicts', 'requestForm'] },
+  { id: 'access',       label: 'Access',         tabs: ['access'] },
 ];
 
 function sectionContaining(tabId: ConfigPanelTabId | string) {
   return SECTIONS.find(s => s.tabs.includes(tabId))?.id ?? SECTIONS[0]!.id;
 }
+
+// Settings search index. Maps user-facing field/feature names to the tab
+// they live on. Synonyms (multiple entries with the same `tabId`) are
+// intentional — search by intent, not by current tab name.
+const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> = [
+  // Appearance
+  { label: 'Theme',                         tabId: 'theme',      keywords: 'dark light palette colors background' },
+  { label: 'Custom theme',                  tabId: 'theme',      keywords: 'css variables override' },
+  { label: 'Calendar name',                 tabId: 'setup',      keywords: 'title' },
+  { label: 'Event colors',                  tabId: 'categories', keywords: 'category color pill' },
+  { label: 'Per-category color',            tabId: 'categories', keywords: 'color picker' },
+  { label: 'Default category',              tabId: 'categories' },
+  { label: 'Pill style',                    tabId: 'categories', keywords: 'fill border' },
+
+  // Layout & Labels
+  { label: 'Default view',                  tabId: 'display',    keywords: 'starting initial' },
+  { label: 'Visible view tabs',             tabId: 'display',    keywords: 'enabled hide month week day agenda schedule' },
+  { label: 'Week start day',                tabId: 'display',    keywords: 'sunday monday' },
+  { label: 'Day view start hour',           tabId: 'display',    keywords: 'business hours range' },
+  { label: 'Day view end hour',             tabId: 'display',    keywords: 'business hours range' },
+  { label: 'Show week numbers',             tabId: 'display' },
+  { label: 'Enlarge month row on hover',    tabId: 'display' },
+  { label: 'Filter group labels',           tabId: 'display',    keywords: 'rename categories people sources more' },
+  { label: 'Location label (Base / Region)', tabId: 'team',      keywords: 'rename base station region' },
+
+  // Event Display
+  { label: 'Hover card fields',             tabId: 'hoverCard',  keywords: 'show hide time category resource notes' },
+  { label: 'Custom event fields',           tabId: 'eventFields', keywords: 'per-category fields form' },
+
+  // Data
+  { label: 'Employees',                     tabId: 'team',       keywords: 'people staff team members' },
+  { label: 'Roles',                         tabId: 'team' },
+  { label: 'Bases / Locations',             tabId: 'team',       keywords: 'station region site' },
+  { label: 'Accountable managers',          tabId: 'team' },
+  { label: 'Assets / Aircraft',             tabId: 'assets',     keywords: 'fleet equipment vehicles' },
+  { label: 'External feeds (iCal / Google)', tabId: 'feeds',     keywords: 'sources subscribe ical' },
+  { label: 'Schedule templates',            tabId: 'templates',  keywords: 'shifts patterns recurring' },
+
+  // Saved Views
+  { label: 'Saved views',                   tabId: 'smartViews', keywords: 'presets filter chips' },
+  { label: 'View presets',                  tabId: 'smartViews', keywords: 'saved smart' },
+  { label: 'Filter presets',                tabId: 'smartViews' },
+
+  // Workflow
+  { label: 'Approval workflow',             tabId: 'approvals',  keywords: 'tiers stages' },
+  { label: 'Approval tiers',                tabId: 'approvals' },
+  { label: 'Approval flows',                tabId: 'approvalFlows', keywords: 'stages routing' },
+  { label: 'Conflict rules',                tabId: 'conflicts',  keywords: 'overlap mutex rest' },
+  { label: 'Request form fields',           tabId: 'requestForm' },
+
+  // Access
+  { label: 'Viewer password',               tabId: 'access',     keywords: 'read only password' },
+];
 
 const TAB_BY_ID = Object.fromEntries(TABS.map(t => [t.id, t]));
 
@@ -226,8 +284,24 @@ export default function ConfigPanel({
   // Open the section containing the active tab; allow others to be expanded
   // independently. Re-keys when `tab` changes so deep-links auto-expand.
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [sectionContaining(tab)]: true }));
+  const [searchQuery, setSearchQuery] = useState('');
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [] as Array<{ label: string; tabId: string; tabLabel: string }>;
+    return SEARCH_INDEX
+      .filter(entry => {
+        const hay = `${entry.label} ${entry.keywords ?? ''} ${TAB_BY_ID[entry.tabId]?.label ?? ''}`.toLowerCase();
+        return hay.includes(q);
+      })
+      .map(entry => ({
+        label: entry.label,
+        tabId: entry.tabId,
+        tabLabel: TAB_BY_ID[entry.tabId]?.label ?? entry.tabId,
+      }));
+  }, [searchQuery]);
 
   useEffect(() => {
     if (initialTab && TABS.some(t => t.id === initialTab)) {
@@ -253,6 +327,16 @@ export default function ConfigPanel({
     setOpenSections(prev => ({ ...prev, [sid]: !prev[sid] }));
   }
 
+  // Navigate to a tab from search results or the Overview cards. Clears the
+  // search so the sidebar returns to its normal section layout, expands the
+  // owning section, and switches the active tab.
+  function goTo(tabId: string) {
+    if (!TAB_BY_ID[tabId]) return;
+    setSearchQuery('');
+    setOpenSections(prev => ({ ...prev, [sectionContaining(tabId)]: true }));
+    setTab(tabId);
+  }
+
   const activeTabLabel = useMemo(() => TAB_BY_ID[tab]?.label ?? '', [tab]);
 
   return (
@@ -267,56 +351,100 @@ export default function ConfigPanel({
 
         <div className={styles['layout']}>
           <nav className={styles['sidebar']} aria-label="Calendar settings sections">
-            {SECTIONS.map(section => {
-              const isOpen = !!openSections[section.id];
-              const headerId = `cfg-section-${section.id}-header`;
-              const panelId  = `cfg-section-${section.id}-panel`;
-              return (
-                <div key={section.id} className={styles['sectionGroup']}>
+            <div className={styles['sidebarSearchWrap']}>
+              <input
+                type="search"
+                className={styles['sidebarSearch']}
+                placeholder="Search settings…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                aria-label="Search settings"
+              />
+            </div>
+
+            {searchQuery.trim() ? (
+              <div className={styles['searchResults']} role="tablist" aria-label="Search results">
+                {searchResults.length === 0 && (
+                  <div className={styles['searchEmpty']}>No matching settings</div>
+                )}
+                {searchResults.map((r, i) => (
                   <button
+                    key={`${r.tabId}-${i}`}
                     type="button"
-                    id={headerId}
-                    className={styles['sectionHeader']}
-                    onClick={() => toggleSection(section.id)}
-                    aria-expanded={isOpen}
-                    aria-controls={panelId}
+                    role="tab"
+                    aria-selected={tab === r.tabId}
+                    className={[styles['searchResult'], tab === r.tabId && styles['activeTab']].filter(Boolean).join(' ')}
+                    onClick={() => goTo(r.tabId)}
                   >
-                    <ChevronDown
-                      size={14}
-                      className={[styles['chevron'], isOpen && styles['chevronOpen']].filter(Boolean).join(' ')}
-                      aria-hidden="true"
-                    />
-                    <span className={styles['sectionLabel']}>{section.label}</span>
+                    <span className={styles['searchResultLabel']}>{r.label}</span>
+                    <span className={styles['searchResultTab']}>{r.tabLabel}</span>
                   </button>
-                  {isOpen && (
-                    <div
-                      id={panelId}
-                      role="tablist"
-                      aria-labelledby={headerId}
-                      className={styles['sectionTabs']}
-                    >
-                      {section.tabs.map(tabId => {
-                        const t = TAB_BY_ID[tabId];
-                        if (!t) return null;
-                        return (
-                          <button
-                            key={t.id}
-                            ref={(node) => { if (node) tabRefs.current[t.id] = node; }}
-                            className={[styles['tab'], tab === t.id && styles['activeTab']].filter(Boolean).join(' ')}
-                            onClick={() => setTab(t.id)}
-                            role="tab"
-                            aria-selected={tab === t.id}
-                          >{t.label}</button>
-                        );
-                      })}
+                ))}
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  ref={(node) => { if (node) tabRefs.current['overview'] = node; }}
+                  className={[styles['tab'], styles['overviewTab'], tab === 'overview' && styles['activeTab']].filter(Boolean).join(' ')}
+                  onClick={() => setTab('overview')}
+                  role="tab"
+                  aria-selected={tab === 'overview'}
+                >Overview</button>
+
+                {SECTIONS.map(section => {
+                  const isOpen = !!openSections[section.id];
+                  const headerId = `cfg-section-${section.id}-header`;
+                  const panelId  = `cfg-section-${section.id}-panel`;
+                  return (
+                    <div key={section.id} className={styles['sectionGroup']}>
+                      <button
+                        type="button"
+                        id={headerId}
+                        className={styles['sectionHeader']}
+                        onClick={() => toggleSection(section.id)}
+                        aria-expanded={isOpen}
+                        aria-controls={panelId}
+                      >
+                        <ChevronDown
+                          size={14}
+                          className={[styles['chevron'], isOpen && styles['chevronOpen']].filter(Boolean).join(' ')}
+                          aria-hidden="true"
+                        />
+                        <span className={styles['sectionLabel']}>{section.label}</span>
+                      </button>
+                      {isOpen && (
+                        <div
+                          id={panelId}
+                          role="tablist"
+                          aria-labelledby={headerId}
+                          className={styles['sectionTabs']}
+                        >
+                          {section.tabs.map(tabId => {
+                            const t = TAB_BY_ID[tabId];
+                            if (!t) return null;
+                            return (
+                              <button
+                                key={t.id}
+                                ref={(node) => { if (node) tabRefs.current[t.id] = node; }}
+                                className={[styles['tab'], tab === t.id && styles['activeTab']].filter(Boolean).join(' ')}
+                                onClick={() => setTab(t.id)}
+                                role="tab"
+                                aria-selected={tab === t.id}
+                              >{t.label}</button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </>
+            )}
           </nav>
 
           <div className={styles['body']} aria-label={activeTabLabel}>
+          {tab === 'overview'    && <OverviewTab goTo={goTo} />}
           {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
@@ -387,6 +515,99 @@ const FAMILY_DESCRIPTORS: Record<string, string> = {
   ops:        'Ops / control room',
   neon:       'Neon / high contrast',
 };
+
+/**
+ * OverviewTab — pinned first tab in the settings panel. Lists what the user
+ * can customize, grouped by user intent, so first-time users discover knobs
+ * without hunting through every section.
+ *
+ * Each card deep-jumps to its target tab via the `goTo` callback so this
+ * stays purely navigational — no settings are edited here.
+ */
+function OverviewTab({ goTo }: { goTo: (tabId: string) => void }) {
+  const groups: Array<{ heading: string; cards: Array<{ tabId: string; title: string; desc: string }> }> = [
+    {
+      heading: 'Appearance',
+      cards: [
+        { tabId: 'theme',      title: 'Theme',         desc: 'Light / dark and palette family.' },
+        { tabId: 'categories', title: 'Event Colors',  desc: 'Color and label per category.' },
+        { tabId: 'setup',      title: 'Calendar name', desc: 'Title shown in the header.' },
+      ],
+    },
+    {
+      heading: 'Layout & Labels',
+      cards: [
+        { tabId: 'display', title: 'Default view & visible tabs', desc: 'Which view loads first and which tabs are shown.' },
+        { tabId: 'display', title: 'Week start, day hours',       desc: 'Sunday/Monday and the visible day-view range.' },
+        { tabId: 'display', title: 'Filter labels',               desc: 'Rename "Categories", "People", "Sources", "More".' },
+      ],
+    },
+    {
+      heading: 'Event Display',
+      cards: [
+        { tabId: 'hoverCard',   title: 'Hover card fields', desc: 'Show or hide time, category, resource, notes.' },
+        { tabId: 'eventFields', title: 'Custom fields',     desc: 'Per-category fields shown on the event form.' },
+      ],
+    },
+    {
+      heading: 'Data',
+      cards: [
+        { tabId: 'team',      title: 'Employees, roles, bases', desc: 'People and the locations they belong to.' },
+        { tabId: 'assets',    title: 'Assets',                  desc: 'Aircraft, vehicles, or other tracked equipment.' },
+        { tabId: 'feeds',     title: 'External feeds',          desc: 'iCal/Google sources merged into the calendar.' },
+        { tabId: 'templates', title: 'Schedule templates',      desc: 'Reusable shift patterns.' },
+      ],
+    },
+    {
+      heading: 'Saved Views',
+      cards: [
+        { tabId: 'smartViews', title: 'View presets', desc: 'Save a set of filters and a view as a one-click preset.' },
+      ],
+    },
+    {
+      heading: 'Workflow',
+      cards: [
+        { tabId: 'approvals',   title: 'Approvals',         desc: 'Tiered approval workflow for events.' },
+        { tabId: 'conflicts',   title: 'Conflict rules',    desc: 'Resource-overlap, mutex, min-rest checks.' },
+        { tabId: 'requestForm', title: 'Request form',      desc: 'Schema-driven form fields shown to requesters.' },
+      ],
+    },
+    {
+      heading: 'Access',
+      cards: [
+        { tabId: 'access', title: 'Viewer password', desc: 'Password gate for read-only viewers.' },
+      ],
+    },
+  ];
+
+  return (
+    <div>
+      <h3 className={styles['sectionTitle']}>What you can customize</h3>
+      <p className={styles['sectionDesc']}>
+        A scannable map of every setting. Click any card to jump straight to it,
+        or use the search box in the sidebar to find a specific control.
+      </p>
+      {groups.map(group => (
+        <div key={group.heading} className={styles['overviewGroup']}>
+          <div className={styles['overviewHeading']}>{group.heading}</div>
+          <div className={styles['overviewCards']}>
+            {group.cards.map((card, i) => (
+              <button
+                key={`${group.heading}-${i}`}
+                type="button"
+                className={styles['overviewCard']}
+                onClick={() => goTo(card.tabId)}
+              >
+                <span className={styles['overviewCardTitle']}>{card.title}</span>
+                <span className={styles['overviewCardDesc']}>{card.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
   const selectedTheme = normalizeTheme(config['setup']?.preferredTheme ?? 'canvas-light');

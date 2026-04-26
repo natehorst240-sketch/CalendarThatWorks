@@ -93,8 +93,8 @@ describe('ConfigPanel — focus trap & accordion', () => {
   it('clicking a collapsed section header expands it and reveals its tabs', () => {
     mount();
     // Data section starts collapsed. Its tabs should not be in the DOM yet.
-    expect(screen.queryByRole('tab', { name: 'Event Colors' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Assets' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Data' }));
-    expect(screen.getByRole('tab', { name: 'Event Colors' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Assets' })).toBeInTheDocument();
   });
 });
