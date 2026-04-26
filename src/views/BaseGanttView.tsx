@@ -254,26 +254,32 @@ export default function BaseGanttView({
   }, [events, empIndex, assetIndex]);
 
   // Per-base "has any event in current span" — drives the hide-empty toggle
-  // and the count badge in the picker. Cheap because the maps above already
-  // bucket events; we only care about non-empty arrays.
+  // and the count badge in the picker. Events are clipped to [rangeStart,
+  // rangeEnd]; a base whose only events fall outside the visible window is
+  // treated as empty so the toggle actually hides it.
   const isBaseEmpty = useMemo(() => {
+    const overlapsRange = (e: BaseGanttEvent) => {
+      const s = startOfDay(e.start);
+      const en = startOfDay(e.end);
+      return s <= rangeEnd && en >= rangeStart;
+    };
     const m = new Map<string, boolean>();
     for (const b of bases) {
       const baseWide = baseWideEvents.get(b.id);
-      if (baseWide && baseWide.length > 0) { m.set(b.id, false); continue; }
+      if (baseWide && baseWide.some(overlapsRange)) { m.set(b.id, false); continue; }
       let any = false;
       for (const a of assetsByBase.get(b.id) ?? []) {
-        if ((eventsByResource.get(String(a.id))?.length ?? 0) > 0) { any = true; break; }
+        if ((eventsByResource.get(String(a.id)) ?? []).some(overlapsRange)) { any = true; break; }
       }
       if (!any) {
         for (const e of empsByBase.get(b.id) ?? []) {
-          if ((eventsByResource.get(String(e.id))?.length ?? 0) > 0) { any = true; break; }
+          if ((eventsByResource.get(String(e.id)) ?? []).some(overlapsRange)) { any = true; break; }
         }
       }
       m.set(b.id, !any);
     }
     return m;
-  }, [bases, baseWideEvents, assetsByBase, empsByBase, eventsByResource]);
+  }, [bases, baseWideEvents, assetsByBase, empsByBase, eventsByResource, rangeStart, rangeEnd]);
 
   // Final list of bases to render: selection filter → hide-empty filter.
   const visibleBases = useMemo(() => {
@@ -465,7 +471,12 @@ export default function BaseGanttView({
                       <button
                         type="button"
                         className={styles['pickerActionBtn']}
-                        onClick={() => onBaseSelectionChange?.(filtered.map(b => b.id))}
+                        onClick={() => {
+                          if (filtered.length === 0) return;
+                          onBaseSelectionChange?.(filtered.map(b => b.id));
+                        }}
+                        disabled={filtered.length === 0}
+                        title={filtered.length === 0 ? 'No matches to apply' : `Show only the ${filtered.length} matching ${locationLabel.toLowerCase()}s`}
                       >
                         Only these
                       </button>
