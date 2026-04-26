@@ -85,6 +85,9 @@ export type DispatchViewProps = {
   assets: Asset[];
   bases: Base[];
   locationLabel?: string;
+  /** UI label for assets — owners can rename to 'Aircraft', 'Vehicle', etc.
+   *  Plural is generated as `${label}s`. Defaults to 'Asset'. */
+  label?: string;
   /**
    * Click handler for blocker events surfaced via "View booking" / "View
    * work" actions. Receives the full event object (matching the contract
@@ -316,12 +319,15 @@ export default function DispatchView({
   assets,
   bases,
   locationLabel = 'Base',
+  label = 'Asset',
   onEventClick,
   initialAsOf,
   missions,
   evaluateForMission,
   onAsOfChange,
 }: DispatchViewProps) {
+  const labelLower = label.toLowerCase();
+  const labelPluralLower = `${labelLower}s`;
   const [asOf, setAsOf] = useState<Date>(() => initialAsOf ?? new Date());
   const [forMissionId, setForMissionId] = useState<string | null>(null);
 
@@ -428,15 +434,15 @@ export default function DispatchView({
       <div className={styles['scroll']}>
         {rows.length === 0 ? (
           <div className={styles['emptyState']}>
-            <p>No assets configured.</p>
-            <p className={styles['emptyHint']}>Add assets in Settings → Assets to populate this board.</p>
+            <p>No {labelPluralLower} configured.</p>
+            <p className={styles['emptyHint']}>Add {labelPluralLower} in Settings → Assets to populate this board.</p>
           </div>
         ) : (
-          <table className={styles['table']} role="grid" aria-label="Asset readiness">
+          <table className={styles['table']} role="grid" aria-label={`${label} readiness`}>
             <thead>
               <tr>
                 <th scope="col">{locationLabel}</th>
-                <th scope="col">Asset</th>
+                <th scope="col">{label}</th>
                 <th scope="col">Status</th>
                 <th scope="col">Crew</th>
                 <th scope="col">Equipment</th>
@@ -506,7 +512,7 @@ export default function DispatchView({
         <span>
           <MapPin size={11} aria-hidden="true" />
           {' '}{bases.length} {bases.length === 1 ? locationLabel.toLowerCase() : `${locationLabel.toLowerCase()}s`}
-          {' · '}{assets.length} {assets.length === 1 ? 'asset' : 'assets'}
+          {' · '}{assets.length} {assets.length === 1 ? labelLower : labelPluralLower}
         </span>
         <span>{format(asOf, 'EEE MMM d, h:mm a')}</span>
       </div>

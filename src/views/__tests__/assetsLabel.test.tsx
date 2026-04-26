@@ -16,6 +16,7 @@ import React from 'react';
 
 import AssetsView from '../AssetsView';
 import BaseGanttView from '../BaseGanttView';
+import DispatchView from '../DispatchView';
 import { CalendarContext } from '../../core/CalendarContext';
 import { DEFAULT_CONFIG } from '../../core/configSchema';
 
@@ -120,5 +121,55 @@ describe('BaseGanttView — assetsLabel prop', () => {
       </CalendarContext.Provider>,
     );
     expect(screen.getByText(/No vehicles or people assigned/i)).toBeInTheDocument();
+  });
+});
+
+// ─── DispatchView ─────────────────────────────────────────────────────────────
+
+describe('DispatchView — label prop', () => {
+  function renderDispatch(props: Record<string, unknown> = {}) {
+    return render(
+      <DispatchView
+        events={[]}
+        employees={[]}
+        assets={[]}
+        bases={[]}
+        {...props}
+      />,
+    );
+  }
+
+  it('shows the default "No assets configured" empty state', () => {
+    renderDispatch();
+    expect(screen.getByText(/No assets configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add assets in Settings/i)).toBeInTheDocument();
+  });
+
+  it('renames the empty state when label="Vehicle"', () => {
+    renderDispatch({ label: 'Vehicle' });
+    expect(screen.getByText(/No vehicles configured/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add vehicles in Settings/i)).toBeInTheDocument();
+  });
+
+  it('renames the table header column and aria-label when label is set', () => {
+    renderDispatch({
+      label: 'Vehicle',
+      assets: [{ id: 'a1', label: 'Truck 1', meta: { base: 'b1' } }],
+      bases: [{ id: 'b1', name: 'Alpha' }],
+    });
+    expect(screen.getByRole('grid', { name: /Vehicle readiness/i })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Vehicle' })).toBeInTheDocument();
+  });
+
+  it('renames the footer count ("N vehicles") when label is set', () => {
+    renderDispatch({
+      label: 'Vehicle',
+      assets: [
+        { id: 'a1', label: 'Truck 1', meta: { base: 'b1' } },
+        { id: 'a2', label: 'Truck 2', meta: { base: 'b1' } },
+      ],
+      bases: [{ id: 'b1', name: 'Alpha' }],
+    });
+    expect(screen.getByText(/2 vehicles/i)).toBeInTheDocument();
   });
 });

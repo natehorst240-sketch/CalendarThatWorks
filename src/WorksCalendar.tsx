@@ -2449,6 +2449,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   assets={effectiveAssets ?? []}
                   bases={configuredBases}
                   locationLabel={locationLabel}
+                  label={assetsLabel}
                   onEventClick={handleEventClick}
                   missions={dispatchMissions}
                   evaluateForMission={dispatchEvaluator}
