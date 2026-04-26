@@ -74,6 +74,20 @@ export type SetupLandingProps = {
   initialName?: string;
   /** Initial theme (from config.setup.preferredTheme). */
   initialTheme?: string;
+  /**
+   * Initial asset types. When omitted, the wizard seeds a sensible default
+   * list. Pass `config.assetTypes` so re-running setup on an already-
+   * configured calendar shows the existing types (and the finish-write
+   * doesn't silently destroy them).
+   */
+  initialAssetTypes?: AssetTypeDef[];
+  /**
+   * Initial requirement templates, keyed by asset type id. Pass
+   * `config.requirementTemplates` so re-running setup preserves the
+   * owner's existing role/approval rules instead of overwriting them
+   * with empty defaults.
+   */
+  initialRequirementTemplates?: Record<string, RequirementTemplate>;
 };
 
 /* ────────────────────────────────────────────────────────────────────────── */
@@ -171,6 +185,8 @@ export default function SetupLanding({
   onSkip,
   initialName = 'My Calendar',
   initialTheme = 'corporate',
+  initialAssetTypes,
+  initialRequirementTemplates,
 }: SetupLandingProps) {
   // Step 0 is the welcome screen. Steps 1..TOTAL_STEPS are the form.
   const [step, setStep] = useState(0);
@@ -181,9 +197,22 @@ export default function SetupLanding({
   const [locationLabel, setLocationLabel] = useState<'Base' | 'Region'>('Base');
   const [team, setTeam] = useState(STARTER_TEAM);
   const [recipes, setRecipes] = useState<SetupRecipeId[]>(['everything']);
-  const [assetTypes, setAssetTypes] = useState<AssetTypeDef[]>(DEFAULT_ASSET_TYPES);
+  // Hydrate from existing config when re-running setup so the finish-write
+  // does not destroy previously-configured types or templates. An owner who
+  // already set up Aircraft + Pilot + approval should see those in the
+  // wizard, not the hardcoded defaults. Falsy / empty inputs fall back to
+  // the defaults so the first-run experience is unchanged.
+  const [assetTypes, setAssetTypes] = useState<AssetTypeDef[]>(() =>
+    Array.isArray(initialAssetTypes) && initialAssetTypes.length > 0
+      ? initialAssetTypes
+      : DEFAULT_ASSET_TYPES,
+  );
   const [assetSeeds, setAssetSeeds] = useState<AssetSeed[]>([]);
-  const [requirementTemplates, setRequirementTemplates] = useState<Record<string, RequirementTemplate>>({});
+  const [requirementTemplates, setRequirementTemplates] = useState<Record<string, RequirementTemplate>>(() =>
+    initialRequirementTemplates && typeof initialRequirementTemplates === 'object'
+      ? initialRequirementTemplates
+      : {},
+  );
 
   const next = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
   const back = () => setStep(s => Math.max(0, s - 1));
