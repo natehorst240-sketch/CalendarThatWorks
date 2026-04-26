@@ -18,6 +18,9 @@ npm run examples
 - `06-TeamCalendar.jsx` — multi-resource team scheduling
 - `07-MultiSource.jsx` — merged multi-source data views
 - `08-ShiftCoverageTracking.jsx` — PTO + coverage workflow
+- `09-Grouping.jsx` — single / nested groupBy + saved views
+- `10-DragAndDrop.jsx` — drag events across groups and rows
+- `11-MaintenanceAndInvoicing.jsx` — asset-health badges, in-form maintenance completion, CSV export for invoicing + maintenance log
 
 ## Focused examples
 
@@ -39,4 +42,5 @@ npm run examples
 - [Workflow map](./WORKFLOWS.md)
 - [Documentation index](../docs/README.md)
 - [Resource pools](../docs/ResourcePools.md)
+- [Maintenance & invoicing integration](../docs/MaintenanceAndInvoicing.md)
 - [Microsoft 365 adapter notes](./microsoft-365/README.md)

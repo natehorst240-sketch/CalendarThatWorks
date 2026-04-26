@@ -20,6 +20,7 @@ import { MultiSource }             from './07-MultiSource';
 import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking';
 import { GroupingExample }         from './09-Grouping';
 import { DragAndDropExample }      from './10-DragAndDrop';
+import { MaintenanceAndInvoicingExample } from './11-MaintenanceAndInvoicing';
 import { BasicUsageExample }       from './basic-usage';
 import { SetupWizardExample }      from './setup-wizard';
 import { AdvancedFiltersExample }  from './advanced-filters';
@@ -141,6 +142,13 @@ const EXAMPLES = [
     desc:  'Drag an event across groups (agenda) or rows (timeline) to reassign. Patches flow through engine validation.',
     component: DragAndDropExample,
   },
+  {
+    id:    'maintenance-invoicing',
+    label: 'Maintenance & Invoicing',
+    tag:   'Asset health · CSV export',
+    desc:  'Asset-row badges show due/overdue maintenance; completing service in the form auto-stamps next-due. One-click CSV export for invoices and maintenance log.',
+    component: MaintenanceAndInvoicingExample,
+  },
 ];
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -229,6 +237,7 @@ function SourceHint({ id }) {
     'shift-coverage':       '08-ShiftCoverageTracking.jsx',
     'grouping':             '09-Grouping.jsx',
     'drag-and-drop':        '10-DragAndDrop.jsx',
+    'maintenance-invoicing': '11-MaintenanceAndInvoicing.jsx',
     'basic-usage-modern':   'basic-usage.jsx',
     'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',
