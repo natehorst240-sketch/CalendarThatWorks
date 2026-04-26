@@ -2081,6 +2081,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onFinish={handleSetupFinish}
             initialName={ownerCfg.config?.['title']}
             initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
+            initialAssetTypes={ownerCfg.config?.['assetTypes']}
+            initialRequirementTemplates={ownerCfg.config?.['requirementTemplates']}
           />
         </div>
       </CalendarErrorBoundary>

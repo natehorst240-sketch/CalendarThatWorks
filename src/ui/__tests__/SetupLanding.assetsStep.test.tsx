@@ -116,6 +116,74 @@ describe('SetupLanding — Assets & Requirements step', () => {
     expect(Object.keys(result.requirementTemplates).every(k => k.length > 0)).toBe(true);
   });
 
+  it('hydrates types and templates from existing config so re-running setup is non-destructive', () => {
+    const onFinish = vi.fn<(r: SetupLandingResult) => void>();
+    const existingTypes = [
+      { id: 'aircraft', label: 'Aircraft' },
+      { id: 'drone',    label: 'Drone' },
+    ];
+    const existingTemplates = {
+      aircraft: {
+        roles: [{ id: 'pilot', label: 'Pilot' }, { id: 'medic', label: 'Medic' }],
+        requiresApproval: true,
+      },
+      drone: {
+        roles: [{ id: 'operator', label: 'Operator' }],
+        requiresApproval: false,
+      },
+    };
+
+    render(
+      <SetupLanding
+        onFinish={onFinish}
+        onSkip={vi.fn()}
+        initialAssetTypes={existingTypes}
+        initialRequirementTemplates={existingTemplates}
+      />,
+    );
+    advanceToAssetsStep();
+
+    // The hydrated types render as editable inputs — the wizard does not
+    // fall back to its hardcoded defaults when initial config is supplied.
+    expect(screen.getByDisplayValue('Aircraft')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Drone')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Vehicle')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Equipment')).not.toBeInTheDocument();
+
+    // Existing role pills appear inside the matching card. Querying scoped
+    // to each card, since "Pilot" / "Operator" also exist as suggestion
+    // chips on other cards.
+    const aircraftCard = (screen.getByDisplayValue('Aircraft') as HTMLInputElement)
+      .closest(`[class*="assetTypeCard"]`) as HTMLElement;
+    const droneCard = (screen.getByDisplayValue('Drone') as HTMLInputElement)
+      .closest(`[class*="assetTypeCard"]`) as HTMLElement;
+
+    // Selected role pills carry the rolePillSelected class; suggestion
+    // chips carry rolePillSuggest. Match the persisted-pill class so we
+    // don't accept the "+ Pilot" add-button as proof of hydration.
+    const aircraftSelectedPills = aircraftCard.querySelectorAll(`[class*="rolePillSelected"]`);
+    const droneSelectedPills    = droneCard.querySelectorAll(`[class*="rolePillSelected"]`);
+    expect(Array.from(aircraftSelectedPills).map(n => n.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('Pilot'), expect.stringContaining('Medic')]),
+    );
+    expect(Array.from(droneSelectedPills).map(n => n.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('Operator')]),
+    );
+
+    // The aircraft "Requires approval" checkbox is pre-checked from config.
+    const aircraftApproval = within(aircraftCard).getByRole('checkbox', {
+      name: /Requires approval before it’s confirmed/i,
+    }) as HTMLInputElement;
+    expect(aircraftApproval.checked).toBe(true);
+
+    // Finishing without touching anything must echo the hydrated state back,
+    // so handleSetupFinish persists exactly what was already in config.
+    fireEvent.click(screen.getByRole('button', { name: /I’m done/i }));
+    const result = onFinish.mock.calls[0]![0];
+    expect(result.assetTypes).toEqual(existingTypes);
+    expect(result.requirementTemplates).toEqual(existingTemplates);
+  });
+
   it('lets owners add a custom asset type from the input row', () => {
     const onFinish = vi.fn<(r: SetupLandingResult) => void>();
     render(<SetupLanding onFinish={onFinish} onSkip={vi.fn()} />);
