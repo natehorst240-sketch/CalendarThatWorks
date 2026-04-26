@@ -55,6 +55,24 @@ export { normalizeEvent, normalizeEvents } from './core/eventModel';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';
 export { exportToExcel }                  from './export/exportToExcelLazy';
+export {
+  toInvoiceLineItems,
+  invoiceLineItemsToCSV,
+  downloadInvoicesCSV,
+} from './export/invoiceExport';
+export type {
+  InvoiceLineItemsOptions,
+  InvoiceQuantitySource,
+} from './export/invoiceExport';
+export {
+  toMaintenanceLog,
+  maintenanceLogToCSV,
+  downloadMaintenanceLogCSV,
+} from './export/maintenanceExport';
+export type {
+  MaintenanceLogEntry,
+  MaintenanceLogOptions,
+} from './export/maintenanceExport';
 export { useCalendar }                    from './hooks/useCalendar';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents';
