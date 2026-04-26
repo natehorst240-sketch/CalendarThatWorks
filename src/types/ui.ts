@@ -98,6 +98,9 @@ export interface ConfigPanelProps {
   initialTab?: string | undefined;
   initialSmartViewEditId?: string | null | undefined;
   calendarId?: string | undefined;
+  /** Re-trigger the SetupLanding guide. Only wired when the host enables
+   *  showSetupLanding; undefined elsewhere so the button can self-hide. */
+  onReopenSetup?: (() => void) | undefined;
 }
 
 export type InputChangeHandler = (value: string) => void;

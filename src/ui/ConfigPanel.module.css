@@ -451,6 +451,50 @@
   gap: 10px;
 }
 
+/* Restart-setup row — surfaced at the bottom of the Setup tab so owners
+   can re-enter the guided flow (tabs, default view, team, smart-view
+   recipes) that the inline tab here doesn't otherwise cover. */
+.setupReopenRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+}
+
+.setupReopenText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+}
+.setupReopenText strong {
+  color: var(--wc-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.setupReopenBtn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--wc-radius-sm);
+  border: 1px solid var(--wc-accent);
+  background: var(--wc-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.setupReopenBtn:hover { opacity: 0.85; }
+
 .themeFamilyCard {
   display: flex;
   flex-direction: column;

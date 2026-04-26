@@ -219,6 +219,8 @@ export default function ConfigPanel({
   // Per-calendar scope for workflow persistence. Defaults to 'default'
   // so hosts that don't multiplex calendars still get stable storage.
   calendarId = 'default',
+  // Restart the guided setup; the SetupTab renders a button when set.
+  onReopenSetup,
 }: ConfigPanelProps) {
   const [tab, setTab] = useState<string>(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
@@ -317,7 +319,7 @@ export default function ConfigPanel({
           </nav>
 
           <div className={styles['body']} aria-label={activeTabLabel}>
-          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} />}
+          {tab === 'setup'       && <SetupTab config={config} onUpdate={onUpdate} onReopenSetup={onReopenSetup} />}
           {tab === 'hoverCard'   && <HoverCardTab   config={config} onUpdate={onUpdate} />}
           {tab === 'eventFields' && <EventFieldsTab config={config} categories={categories} onUpdate={onUpdate} />}
           {tab === 'categories'  && <CategoriesTab   config={config} onUpdate={onUpdate} />}
@@ -388,7 +390,11 @@ const FAMILY_DESCRIPTORS: Record<string, string> = {
   neon:       'Neon / high contrast',
 };
 
-function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
+function SetupTab({
+  config,
+  onUpdate,
+  onReopenSetup,
+}: ConfigPanelSectionProps & { onReopenSetup?: (() => void) | undefined }) {
   const selectedTheme = normalizeTheme(config['setup']?.preferredTheme ?? 'canvas-light');
   const selectedMeta  = THEME_META[selectedTheme];
   const calendarName  = config['title'] ?? 'My WorksCalendar';
@@ -479,6 +485,26 @@ function SetupTab({ config, onUpdate }: ConfigPanelSectionProps) {
           );
         })}
       </div>
+
+      {onReopenSetup && (
+        <div className={styles['setupReopenRow']}>
+          <div className={styles['setupReopenText']}>
+            <strong>Restart setup guide</strong>
+            <span>
+              Reopens the guided welcome flow with tabs, default view, team,
+              and smart-view recipes. Existing settings stay until you change
+              them in the guide.
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles['setupReopenBtn']}
+            onClick={onReopenSetup}
+          >
+            Restart setup
+          </button>
+        </div>
+      )}
     </div>
   );
 }

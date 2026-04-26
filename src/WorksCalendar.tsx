@@ -632,6 +632,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSetupDismissed(true);
   }, [ownerCfg.updateConfig]);
 
+  // Re-trigger the SetupLanding guide on demand. Setting completed=false
+  // alone is not enough because setupDismissed is a session flag set when
+  // the guide was last finished/skipped — both must be reset to put the
+  // user back on the landing page. Closing the config panel ensures the
+  // landing has the screen to itself.
+  const handleReopenSetup = useCallback(() => {
+    ownerCfg.updateConfig(prev => ({
+      ...prev,
+      setup: { ...(prev['setup'] ?? {}), completed: false },
+    }));
+    setSetupDismissed(false);
+    ownerCfg.closeConfig();
+  }, [ownerCfg.updateConfig, ownerCfg.closeConfig]);
+
   const handleSetupFinish = useCallback((result: SetupLandingResult) => {
     // 1) Persist title / theme / default view / team / setup.completed.
     ownerCfg.updateConfig(prev => ({
@@ -2503,6 +2517,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             initialSmartViewEditId={ownerCfg.smartViewEditId}
             onUpdate={ownerCfg.updateConfig}
             onClose={ownerCfg.closeConfig}
+            onReopenSetup={showSetupLanding ? handleReopenSetup : undefined}
             onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
             savedViews={savedViews.views}
             onUpdateView={savedViews.updateView}
