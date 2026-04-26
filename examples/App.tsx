@@ -20,6 +20,7 @@ import { MultiSource }             from './07-MultiSource';
 import { ShiftCoverageTracking }   from './08-ShiftCoverageTracking';
 import { GroupingExample }         from './09-Grouping';
 import { DragAndDropExample }      from './10-DragAndDrop';
+import { MapExample }              from './11-Map';
 import { BasicUsageExample }       from './basic-usage';
 import { SetupWizardExample }      from './setup-wizard';
 import { AdvancedFiltersExample }  from './advanced-filters';
@@ -141,6 +142,13 @@ const EXAMPLES = [
     desc:  'Drag an event across groups (agenda) or rows (timeline) to reassign. Patches flow through engine validation.',
     component: DragAndDropExample,
   },
+  {
+    id:    'map',
+    label: 'Map View',
+    tag:   'Optional plugin',
+    desc:  'Geographic plot of events with meta.coords. Renders an install hint until maplibre-gl + react-map-gl are installed.',
+    component: MapExample,
+  },
 ];
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -229,6 +237,7 @@ function SourceHint({ id }) {
     'shift-coverage':       '08-ShiftCoverageTracking.jsx',
     'grouping':             '09-Grouping.jsx',
     'drag-and-drop':        '10-DragAndDrop.jsx',
+    'map':                  '11-Map.jsx',
     'basic-usage-modern':   'basic-usage.jsx',
     'setup-wizard':         'setup-wizard.jsx',
     'advanced-filters-new': 'advanced-filters.jsx',
