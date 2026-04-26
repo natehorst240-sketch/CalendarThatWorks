@@ -107,6 +107,7 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
   { label: 'Enlarge month row on hover',    tabId: 'display' },
   { label: 'Filter group labels',           tabId: 'display',    keywords: 'rename categories people sources more' },
   { label: 'Location label (Base / Region)', tabId: 'team',      keywords: 'rename base station region' },
+  { label: 'Asset label (Aircraft / Vehicle / Equipment)', tabId: 'team', keywords: 'rename asset aircraft vehicle equipment fleet' },
 
   // Event Display
   { label: 'Hover card fields',             tabId: 'hoverCard',  keywords: 'show hide time category resource notes' },
@@ -218,6 +219,7 @@ type TeamConfigPatch = {
   roles?: string[];
   bases?: TeamBaseDraft[];
   locationLabel?: string;
+  assetsLabel?: string;
 };
 type ApprovalStageId = (typeof APPROVAL_STAGE_IDS)[number];
 type ApprovalActionId = (typeof APPROVAL_ACTIONS)[number];
@@ -552,8 +554,8 @@ function OverviewTab({ goTo }: { goTo: (tabId: string) => void }) {
     {
       heading: 'Data',
       cards: [
-        { tabId: 'team',      title: 'Employees, roles, bases', desc: 'People and the locations they belong to.' },
-        { tabId: 'assets',    title: 'Assets',                  desc: 'Aircraft, vehicles, or other tracked equipment.' },
+        { tabId: 'team',      title: 'Employees, roles, bases', desc: 'People and the locations they belong to. Rename "Base" or "Asset" here.' },
+        { tabId: 'assets',    title: 'Assets registry',         desc: 'Aircraft, vehicles, or other tracked equipment. Rename the label in Employees.' },
         { tabId: 'feeds',     title: 'External feeds',          desc: 'iCal/Google sources merged into the calendar.' },
         { tabId: 'templates', title: 'Schedule templates',      desc: 'Reusable shift patterns.' },
       ],
@@ -955,6 +957,22 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
           <option value="Base">Base</option>
           <option value="Region">Region</option>
         </select>
+      </div>
+
+      {/* ── Asset label ── */}
+      <div className={styles['fieldRow']} style={{ marginTop: 6 }}>
+        <label style={{ fontSize: 12, color: 'var(--wc-text-muted)', marginRight: 8 }}>Label assets as</label>
+        <input
+          className={styles['input']}
+          value={config['team']?.assetsLabel ?? 'Asset'}
+          onChange={e => updateTeam({ assetsLabel: e.target.value || 'Asset' })}
+          aria-label="Asset label"
+          placeholder="Asset"
+          style={{ maxWidth: 180 }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--wc-text-muted)', marginLeft: 8 }}>
+          e.g. Aircraft, Vehicle, Equipment. Plural is "{(config['team']?.assetsLabel ?? 'Asset')}s".
+        </span>
       </div>
       {bases.map((b) => (
         <div key={b.id} className={styles['fieldRow']}>
@@ -1900,7 +1918,7 @@ function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
         { id: 'agenda',   label: 'Agenda' },
         { id: 'schedule', label: 'Schedule (gantt)' },
         { id: 'base',     label: `${config['team']?.locationLabel ?? 'Base'} (location-first)` },
-        { id: 'assets',   label: 'Assets' },
+        { id: 'assets',   label: `${config['team']?.assetsLabel ?? 'Asset'}s` },
       ].map(v => (
         <label key={v.id} className={styles['toggle']}>
           <span>{v.label}</span>

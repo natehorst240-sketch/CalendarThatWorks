@@ -104,6 +104,9 @@ interface AssetsViewProps {
   onZoomChange?: ((zoom: AssetsZoomLevel) => void) | undefined;
   pools?: readonly ResourcePool[] | undefined;
   onPoolDateSelect?: ((start: Date, end: Date, poolId: string) => void) | undefined;
+  /** UI label for assets — owners can rename to 'Aircraft', 'Vehicle', etc.
+   *  Plural is generated as `${label}s`. Defaults to 'Asset'. */
+  label?: string;
 }
 
 type AssetRow = {
@@ -311,7 +314,11 @@ export default function AssetsView({
   // engine resolves the pool to a concrete resourceId at submit time.
   pools = [],
   onPoolDateSelect,
+  label = 'Asset',
 }: AssetsViewProps) {
+  const labelLower  = label.toLowerCase();
+  const labelPlural = `${label}s`;
+  const labelPluralLower = `${labelLower}s`;
   const ctx = useCalendarContext();
 
   const [auditEvent, setAuditEvent] = useState<AssetsViewEvent | null>(null);
@@ -893,7 +900,7 @@ export default function AssetsView({
   // ── Toolbar (declared above the empty-state branch so owners can still
   // reach the Edit-assets deep-link when the registry has no rows yet) ──
   const toolbarNode = showToolbar && (
-    <div className={styles['toolbar']} role="toolbar" aria-label="Assets view controls">
+    <div className={styles['toolbar']} role="toolbar" aria-label={`${labelPlural} view controls`}>
       <div className={styles['toolbarGroup']}>
         <label className={styles['toolbarLabel']} htmlFor="assets-group-by">Group by</label>
         <select
@@ -934,9 +941,9 @@ export default function AssetsView({
           type="button"
           className={styles['toolbarBtnPrimary']}
           onClick={onRequestAsset}
-          aria-label="Request asset"
+          aria-label={`Request ${labelLower}`}
         >
-          Request Asset
+          Request {label}
         </button>
       )}
       {onEditAssets && (
@@ -944,9 +951,9 @@ export default function AssetsView({
           type="button"
           className={styles['toolbarBtn']}
           onClick={onEditAssets}
-          aria-label="Edit assets"
+          aria-label={`Edit ${labelPluralLower}`}
         >
-          Edit assets
+          Edit {labelPluralLower}
         </button>
       )}
     </div>
@@ -961,7 +968,7 @@ export default function AssetsView({
           ? ctx['emptyState']
           : (
             <div className={styles['empty']}>
-              <p>No assets to display in {format(currentDate, 'MMMM yyyy')}.</p>
+              <p>No {labelPluralLower} to display in {format(currentDate, 'MMMM yyyy')}.</p>
             </div>
           )}
       </div>
@@ -981,7 +988,7 @@ export default function AssetsView({
         className={styles['inner']}
         style={{ width: NAME_W + totalDays * dayColW }}
         role="grid"
-        aria-label={`Assets timeline for ${format(currentDate, 'MMMM yyyy')}`}
+        aria-label={`${labelPlural} timeline for ${format(currentDate, 'MMMM yyyy')}`}
         aria-rowcount={flatRows.length + 1}
         aria-colcount={totalDays + 1}
         ref={gridRef}
@@ -992,7 +999,7 @@ export default function AssetsView({
             className={styles['cornerCell']}
             style={{ width: NAME_W, minWidth: NAME_W }}
             role="columnheader"
-            aria-label={`Assets — ${format(currentDate, 'MMMM yyyy')}`}
+            aria-label={`${labelPlural} — ${format(currentDate, 'MMMM yyyy')}`}
           >
             <span className={styles['cornerTitle']}>
               {format(currentDate, 'MMM yyyy')}

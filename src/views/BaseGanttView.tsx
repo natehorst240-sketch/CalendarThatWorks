@@ -124,6 +124,7 @@ export default function BaseGanttView({
   bases = [],
   regions = [],
   locationLabel = 'Base',
+  assetsLabel = 'Asset',
   selectedBaseIds = [],
   onBaseSelectionChange,
 }: {
@@ -135,6 +136,7 @@ export default function BaseGanttView({
   bases?: BaseDef[]
   regions?: RegionDef[]
   locationLabel?: string
+  assetsLabel?: string
   selectedBaseIds?: string[]
   onBaseSelectionChange?: (ids: string[]) => void
 }) {
@@ -524,7 +526,7 @@ export default function BaseGanttView({
           {/* Header row with day columns */}
           <div className={styles['headerRow']}>
             <div className={styles['corner']} style={{ width: NAME_W }}>
-              {locationLabel} · People · Assets
+              {locationLabel} · People · {assetsLabel}s
             </div>
             <div className={styles['days']} style={{ width: timelineW }}>
               {days.map((d, i) => {
@@ -588,7 +590,7 @@ export default function BaseGanttView({
                       {b.name}
                     </button>
                     <div className={styles['baseCounts']}>
-                      {baseAssets.length} assets · {baseEmps.length} people
+                      {baseAssets.length} {assetsLabel.toLowerCase()}s · {baseEmps.length} people
                     </div>
                     {managers.length > 0 && (
                       <ul className={styles['managerList']}>
@@ -637,7 +639,7 @@ export default function BaseGanttView({
                   return (
                     <div key={`asset-${a.id}`} className={styles['assetRow']} style={{ minHeight: rowH }}>
                       <div className={styles['rowName']} style={{ width: NAME_W }}>
-                        <span className={styles['rowKind']}>Asset</span>
+                        <span className={styles['rowKind']}>{assetsLabel}</span>
                         <span className={styles['rowTitle']}>{a.label ?? a.id}</span>
                         {a.meta?.sublabel && <span className={styles['rowSub']}>{a.meta.sublabel}</span>}
                       </div>
@@ -713,7 +715,7 @@ export default function BaseGanttView({
                   <div className={styles['emptyRow']}>
                     <div className={styles['rowName']} style={{ width: NAME_W }}>
                       <span className={styles['rowKind']}>—</span>
-                      <span className={styles['rowSub']}>No assets or people assigned.</span>
+                      <span className={styles['rowSub']}>No {assetsLabel.toLowerCase()}s or people assigned.</span>
                     </div>
                     <div className={styles['timelineCell']} style={{ width: timelineW, height: 32 }} />
                   </div>
