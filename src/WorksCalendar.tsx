@@ -958,8 +958,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   );
 
   // ── Base/Region view config ───────────────────────────────────────────────
-  const configuredBases = ownerCfg.config?.['team']?.bases ?? [];
-  const locationLabel   = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
+  const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
+  const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
+  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
@@ -2374,6 +2375,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   employees={configuredEmployees}
                   assets={effectiveAssets ?? []}
                   bases={configuredBases}
+                  regions={configuredRegions}
                   locationLabel={locationLabel}
                   selectedBaseIds={selectedBaseIds}
                   onBaseSelectionChange={setSelectedBaseIds}

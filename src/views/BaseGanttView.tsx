@@ -37,7 +37,8 @@ const SPAN_OPTIONS = [
   { id: 90 as const, label: '90 days' },
 ];
 
-type BaseDef = { id: string; name: string };
+type BaseDef = { id: string; name: string; regionId?: string | null };
+type RegionDef = { id: string; name: string };
 type ManagerAssignment = { title?: string; phone?: string };
 type EmployeeDef = {
   id: string;
@@ -121,6 +122,7 @@ export default function BaseGanttView({
   employees = [],
   assets = [],
   bases = [],
+  regions = [],
   locationLabel = 'Base',
   selectedBaseIds = [],
   onBaseSelectionChange,
@@ -131,13 +133,35 @@ export default function BaseGanttView({
   employees?: EmployeeDef[]
   assets?: AssetDef[]
   bases?: BaseDef[]
+  regions?: RegionDef[]
   locationLabel?: string
   selectedBaseIds?: string[]
   onBaseSelectionChange?: (ids: string[]) => void
 }) {
   const ctx = useCalendarContext();
   const [spanDays, setSpanDays] = useState<14 | 90>(14);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(() => new Set());
+  const [hideEmpty, setHideEmpty] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+
+  // Close picker on outside click / escape.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!pickerRef.current) return;
+      if (!pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPickerOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [pickerOpen]);
 
   const rangeStart = useMemo(() => startOfDay(currentDate), [currentDate]);
   const rangeEnd   = useMemo(() => addDays(rangeStart, spanDays - 1), [rangeStart, spanDays]);
@@ -161,7 +185,9 @@ export default function BaseGanttView({
     wrap.scrollLeft = targetLeft;
   }, [rangeStart, spanDays]);
 
-  const visibleBases = useMemo(() => {
+  // Bases passing the user's selection filter (no search, no hide-empty).
+  // Also used to drive the picker's "selected" state.
+  const selectedBases = useMemo(() => {
     if (!selectedBaseIds || selectedBaseIds.length === 0) return bases;
     const set = new Set(selectedBaseIds);
     return bases.filter(b => set.has(b.id));
@@ -226,6 +252,80 @@ export default function BaseGanttView({
     }
     return m;
   }, [events, empIndex, assetIndex]);
+
+  // Per-base "has any event in current span" — drives the hide-empty toggle
+  // and the count badge in the picker. Cheap because the maps above already
+  // bucket events; we only care about non-empty arrays.
+  const isBaseEmpty = useMemo(() => {
+    const m = new Map<string, boolean>();
+    for (const b of bases) {
+      const baseWide = baseWideEvents.get(b.id);
+      if (baseWide && baseWide.length > 0) { m.set(b.id, false); continue; }
+      let any = false;
+      for (const a of assetsByBase.get(b.id) ?? []) {
+        if ((eventsByResource.get(String(a.id))?.length ?? 0) > 0) { any = true; break; }
+      }
+      if (!any) {
+        for (const e of empsByBase.get(b.id) ?? []) {
+          if ((eventsByResource.get(String(e.id))?.length ?? 0) > 0) { any = true; break; }
+        }
+      }
+      m.set(b.id, !any);
+    }
+    return m;
+  }, [bases, baseWideEvents, assetsByBase, empsByBase, eventsByResource]);
+
+  // Final list of bases to render: selection filter → hide-empty filter.
+  const visibleBases = useMemo(() => {
+    if (!hideEmpty) return selectedBases;
+    return selectedBases.filter(b => !isBaseEmpty.get(b.id));
+  }, [selectedBases, hideEmpty, isBaseEmpty]);
+
+  // Group rendered bases by region. Bases with no regionId (or whose region
+  // is not configured) fall into a synthetic 'Unassigned' bucket. When no
+  // regions are configured at all, we still render a single flat group with
+  // no region header (the consumer hasn't opted in to the hierarchy).
+  const regionsById = useMemo(() => {
+    const m = new Map<string, RegionDef>();
+    regions.forEach(r => m.set(r.id, r));
+    return m;
+  }, [regions]);
+
+  const groupedBases = useMemo(() => {
+    if (regions.length === 0) {
+      return [{ region: null as RegionDef | null, bases: visibleBases }];
+    }
+    const buckets = new Map<string, BaseDef[]>();
+    const unassigned: BaseDef[] = [];
+    for (const b of visibleBases) {
+      const rid = b.regionId && regionsById.has(b.regionId) ? b.regionId : null;
+      if (rid == null) { unassigned.push(b); continue; }
+      if (!buckets.has(rid)) buckets.set(rid, []);
+      buckets.get(rid)!.push(b);
+    }
+    const out: { region: RegionDef | null; bases: BaseDef[] }[] = [];
+    for (const r of regions) {
+      const list = buckets.get(r.id);
+      if (list && list.length > 0) out.push({ region: r, bases: list });
+    }
+    if (unassigned.length > 0) {
+      out.push({ region: { id: '__unassigned__', name: 'Unassigned' }, bases: unassigned });
+    }
+    return out;
+  }, [regions, regionsById, visibleBases]);
+
+  const toggleRegion = (id: string) => {
+    setCollapsedRegions(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const focusBase = (id: string) => {
+    if (!onBaseSelectionChange) return;
+    onBaseSelectionChange([id]);
+  };
 
   const toggleBase = (id: string) => {
     if (!onBaseSelectionChange) return;
@@ -295,32 +395,123 @@ export default function BaseGanttView({
 
         <div className={styles['toolbarGroup']}>
           <span className={styles['toolbarLabel']}>{locationLabel}s</span>
-          <div className={styles['picker']} role="group" aria-label={`Select ${locationLabel.toLowerCase()}s`}>
-            {bases.map(b => {
-              const active = selectedBaseIds.length === 0 || selectedBaseIds.includes(b.id);
+          <div ref={pickerRef} className={styles['pickerWrap']}>
+            {(() => {
+              const total = bases.length;
+              const sel = selectedBaseIds.length;
+              const summary = sel === 0
+                ? `All ${locationLabel.toLowerCase()}s (${total})`
+                : sel === 1
+                  ? (bases.find(b => b.id === selectedBaseIds[0])?.name ?? `1 ${locationLabel.toLowerCase()}`)
+                  : `${sel} of ${total} ${locationLabel.toLowerCase()}s`;
               return (
                 <button
-                  key={b.id}
                   type="button"
-                  className={[styles['pickerChip'], active && styles['pickerChipActive']].filter(Boolean).join(' ')}
-                  aria-pressed={active}
-                  onClick={() => toggleBase(b.id)}
+                  className={styles['pickerTrigger']}
+                  aria-haspopup="listbox"
+                  aria-expanded={pickerOpen}
+                  onClick={() => setPickerOpen(o => !o)}
                 >
-                  {b.name}
+                  <span className={styles['pickerTriggerLabel']}>{summary}</span>
+                  <span className={styles['pickerCaret']} aria-hidden>▾</span>
                 </button>
               );
-            })}
-            {selectedBaseIds.length > 0 && (
-              <button
-                type="button"
-                className={styles['pickerClear']}
-                onClick={() => onBaseSelectionChange?.([])}
-              >
-                Clear
-              </button>
-            )}
+            })()}
+            {pickerOpen && (() => {
+              const q = pickerQuery.trim().toLowerCase();
+              const matches = (b: BaseDef) => !q || b.name.toLowerCase().includes(q);
+              const filtered = bases.filter(matches);
+              // Group by region for the picker (independent of hide-empty / selection).
+              const buckets = new Map<string, BaseDef[]>();
+              const unassigned: BaseDef[] = [];
+              for (const b of filtered) {
+                const rid = b.regionId && regionsById.has(b.regionId) ? b.regionId : null;
+                if (rid == null) { unassigned.push(b); continue; }
+                if (!buckets.has(rid)) buckets.set(rid, []);
+                buckets.get(rid)!.push(b);
+              }
+              const pickerGroups: { region: RegionDef | null; bases: BaseDef[] }[] = [];
+              if (regions.length === 0) {
+                pickerGroups.push({ region: null, bases: filtered });
+              } else {
+                for (const r of regions) {
+                  const list = buckets.get(r.id);
+                  if (list && list.length > 0) pickerGroups.push({ region: r, bases: list });
+                }
+                if (unassigned.length > 0) {
+                  pickerGroups.push({ region: { id: '__unassigned__', name: 'Unassigned' }, bases: unassigned });
+                }
+              }
+              return (
+                <div className={styles['pickerPopover']} role="listbox" aria-label={`${locationLabel}s`}>
+                  <div className={styles['pickerHeader']}>
+                    <input
+                      autoFocus
+                      type="search"
+                      className={styles['pickerSearch']}
+                      placeholder={`Search ${locationLabel.toLowerCase()}s…`}
+                      value={pickerQuery}
+                      onChange={e => setPickerQuery(e.target.value)}
+                    />
+                    <div className={styles['pickerActions']}>
+                      <button
+                        type="button"
+                        className={styles['pickerActionBtn']}
+                        onClick={() => onBaseSelectionChange?.([])}
+                        disabled={selectedBaseIds.length === 0}
+                      >
+                        Show all
+                      </button>
+                      <button
+                        type="button"
+                        className={styles['pickerActionBtn']}
+                        onClick={() => onBaseSelectionChange?.(filtered.map(b => b.id))}
+                      >
+                        Only these
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles['pickerList']}>
+                    {filtered.length === 0 && (
+                      <div className={styles['pickerEmpty']}>No matches</div>
+                    )}
+                    {pickerGroups.map(g => (
+                      <div key={g.region?.id ?? '__none__'} className={styles['pickerGroup']}>
+                        {g.region && (
+                          <div className={styles['pickerGroupLabel']}>{g.region.name}</div>
+                        )}
+                        {g.bases.map(b => {
+                          const checked = selectedBaseIds.length === 0 || selectedBaseIds.includes(b.id);
+                          const empty = isBaseEmpty.get(b.id) === true;
+                          return (
+                            <label key={b.id} className={styles['pickerOption']}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleBase(b.id)}
+                              />
+                              <span className={styles['pickerOptionName']}>{b.name}</span>
+                              {empty && <span className={styles['pickerOptionEmpty']}>empty</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
+
+        <label className={styles['toolbarToggle']}>
+          <input
+            type="checkbox"
+            checked={hideEmpty}
+            onChange={e => setHideEmpty(e.target.checked)}
+          />
+          <span>Hide empty</span>
+        </label>
 
         <div className={styles['toolbarSpacer']} />
         <div className={styles['rangeLabel']}>
@@ -352,8 +543,25 @@ export default function BaseGanttView({
             </div>
           </div>
 
-          {/* Base groups */}
-          {visibleBases.map(b => {
+          {/* Base groups, grouped by region when configured. */}
+          {groupedBases.map(group => {
+            const region = group.region;
+            const collapsed = region ? collapsedRegions.has(region.id) : false;
+            return (
+              <div key={region?.id ?? '__flat__'} className={styles['regionBlock']}>
+                {region && (
+                  <button
+                    type="button"
+                    className={styles['regionHeader']}
+                    onClick={() => toggleRegion(region.id)}
+                    aria-expanded={!collapsed}
+                  >
+                    <span className={styles['regionCaret']} aria-hidden>{collapsed ? '▸' : '▾'}</span>
+                    <span className={styles['regionName']}>{region.name}</span>
+                    <span className={styles['regionCount']}>{group.bases.length} {locationLabel.toLowerCase()}{group.bases.length === 1 ? '' : 's'}</span>
+                  </button>
+                )}
+                {!collapsed && group.bases.map(b => {
             const baseEmps   = empsByBase.get(b.id) ?? [];
             const baseAssets = assetsByBase.get(b.id) ?? [];
             const baseWide   = baseWideEvents.get(b.id) ?? [];
@@ -371,7 +579,14 @@ export default function BaseGanttView({
                 {/* Base header row */}
                 <div className={styles['baseHeaderRow']} style={{ minHeight: Math.max(baseRowH, 72) }}>
                   <div className={styles['baseHeaderName']} style={{ width: NAME_W }}>
-                    <div className={styles['baseTitle']}>{b.name}</div>
+                    <button
+                      type="button"
+                      className={styles['baseTitle']}
+                      title={`Focus ${b.name}  ·  Shift-click to toggle in selection`}
+                      onClick={(e) => { if (e.shiftKey) toggleBase(b.id); else focusBase(b.id); }}
+                    >
+                      {b.name}
+                    </button>
                     <div className={styles['baseCounts']}>
                       {baseAssets.length} assets · {baseEmps.length} people
                     </div>
@@ -503,6 +718,9 @@ export default function BaseGanttView({
                     <div className={styles['timelineCell']} style={{ width: timelineW, height: 32 }} />
                   </div>
                 )}
+              </div>
+            );
+                })}
               </div>
             );
           })}
