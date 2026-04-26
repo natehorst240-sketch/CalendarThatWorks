@@ -189,6 +189,7 @@ Views are the buttons across the top (Month, Week, etc.). Turn on only what you 
 | `schedule` | Team shifts / coverage (PTO → uncovered → filled) |
 | `timeline` | Rows of resources across time (Gantt-like) |
 | `assets` | Fleet / room / equipment rows (see Step 7) |
+| `map` | Geographic plot of events with coordinates — opt-in plugin, see [MapView](./MapView.md) |
 
 ### Drag & drop is already on
 

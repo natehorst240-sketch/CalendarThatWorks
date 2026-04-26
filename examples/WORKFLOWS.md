@@ -59,6 +59,21 @@ What it shows:
 
 ---
 
+## Geographic / Map view (optional plugin)
+
+Use this example:
+- `11-Map.jsx`
+
+What it shows:
+- standalone `MapView` import alongside the calendar shell
+- `meta.coords = { lat, lon }` data convention (matches `LocationData`)
+- swappable basemap via `mapStyle` (MapLibre demo, OpenFreeMap)
+- graceful install hint when `maplibre-gl` + `react-map-gl` aren't installed
+
+See [docs/MapView.md](../docs/MapView.md) for the full plugin guide.
+
+---
+
 ## Demo entry flow
 
 Use this example:

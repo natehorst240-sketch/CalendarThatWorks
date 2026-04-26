@@ -217,6 +217,12 @@ export type WorksCalendarProps = {
   blockedWindows?: UnknownRecord[];
   theme?: string;
   colorRules?: UnknownRecord[];
+  /**
+   * Forwarded to the optional Map view (`initialView="map"`) as its
+   * MapLibre style URL. Ignored when the map view isn't active or when the
+   * `react-map-gl` / `maplibre-gl` peers aren't installed.
+   */
+  mapStyle?: string;
   businessHours?: UnknownRecord;
   renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
   renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
@@ -546,6 +552,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     logoSrc,
     logoAlt,
     backgroundImage,
+
+    // ── Map view (optional plugin) ──
+    mapStyle,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -2474,7 +2483,11 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 />
               )}
               {cal.view === 'map' && (
-                <MapView events={visibleEvents as any} onEventClick={handleEventClick} />
+                <MapView
+                  events={visibleEvents as any}
+                  onEventClick={handleEventClick}
+                  {...(mapStyle ? { mapStyle } : {})}
+                />
               )}
             </>
           )}
