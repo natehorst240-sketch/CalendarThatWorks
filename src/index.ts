@@ -18,6 +18,18 @@ export type {
   MeterReading,
   MeterType,
 } from './types/maintenance';
+export {
+  computeDueStatus,
+  projectNextDue,
+  completeMaintenance,
+} from './core/maintenance';
+export type {
+  DueStatus,
+  DueResult,
+  CurrentState,
+  LastService,
+  NextDueProjection,
+} from './core/maintenance';
 export type {
   ConfigPanelProps,
   ConfigPanelTabId,
