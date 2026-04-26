@@ -634,29 +634,46 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   const handleSetupFinish = useCallback((result: SetupLandingResult) => {
     // 1) Persist title / theme / default view / team / setup.completed.
-    ownerCfg.updateConfig(prev => ({
-      ...prev,
-      title: result.calendarName,
-      setup: {
-        ...(prev['setup'] ?? {}),
-        completed: true,
-        preferredTheme: result.theme,
-      },
-      display: {
-        ...(prev['display'] ?? {}),
-        defaultView: result.defaultView,
-        enabledViews: result.enabledViews,
-      },
-      team: {
-        ...(prev['team'] ?? {}),
-        locationLabel: result.locationLabel,
-        members: [
-          ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
-            .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
-          ...result.teamMembers,
-        ],
-      },
-    }));
+    ownerCfg.updateConfig(prev => {
+      // Merge wizard-seeded assets without clobbering existing entries (so
+      // re-opening the wizard never blows away assets configured later).
+      const existingAssets = (Array.isArray(prev['assets']) ? prev['assets'] : []) as Array<{ id: string }>;
+      const existingIds = new Set(existingAssets.map(a => a.id));
+      const seededAssets = result.assetSeeds
+        .filter(seed => !existingIds.has(seed.id))
+        .map(seed => ({
+          id: seed.id,
+          label: seed.label,
+          meta: { assetTypeId: seed.assetTypeId },
+        }));
+
+      return {
+        ...prev,
+        title: result.calendarName,
+        setup: {
+          ...(prev['setup'] ?? {}),
+          completed: true,
+          preferredTheme: result.theme,
+        },
+        display: {
+          ...(prev['display'] ?? {}),
+          defaultView: result.defaultView,
+          enabledViews: result.enabledViews,
+        },
+        team: {
+          ...(prev['team'] ?? {}),
+          locationLabel: result.locationLabel,
+          members: [
+            ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
+              .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
+            ...result.teamMembers,
+          ],
+        },
+        assetTypes: result.assetTypes,
+        assets: [...existingAssets, ...seededAssets],
+        requirementTemplates: result.requirementTemplates,
+      };
+    });
 
     // 2) Save each chosen recipe as a Smart View so it shows up in the
     //    views bar. Recipes map to real filter + groupBy state; the owner
@@ -2420,6 +2437,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             categories={resolvedAssetRequestCategories}
             initialStart={cal.currentDate}
             initialAssetId={undefined}
+            requirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, { roles: { id: string; label: string }[]; requiresApproval: boolean }> | undefined}
             onSubmit={(payload: LooseValue) => {
               handleEventSave(payload);
               setAssetRequestOpen(false);

@@ -11,13 +11,16 @@
  */
 import { useMemo, useState } from 'react';
 import type { FormEvent, ChangeEvent, MouseEvent } from 'react';
-import { X } from 'lucide-react';
+import { X, ShieldCheck } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { toDatetimeLocal, fromDatetimeLocal } from '../hooks/useEventDraftState';
 import styles from './EventForm.module.css';
 
 type AssetEntry = { id: string; label: string; group?: string | undefined; meta?: Record<string, unknown> | undefined };
 type CategoryEntry = { id: string; label?: string | undefined; color?: string | undefined };
+
+type RoleEntry = { id: string; label: string };
+type RequirementTemplate = { roles: RoleEntry[]; requiresApproval: boolean };
 
 type AssetRequestPayload = {
   title: string;
@@ -34,6 +37,13 @@ type AssetRequestFormProps = {
   categories: CategoryEntry[];
   initialStart?: Date | undefined;
   initialAssetId?: string | undefined;
+  /**
+   * Per-asset-type requirement templates. The form looks up the selected
+   * asset's `meta.assetTypeId` and renders a slot input per role plus an
+   * approval-required banner when requested. Optional — when absent the
+   * form behaves exactly like the pre-template version.
+   */
+  requirementTemplates?: Record<string, RequirementTemplate> | undefined;
   onSubmit: (payload: AssetRequestPayload) => void;
   onClose: () => void;
 };
@@ -43,6 +53,7 @@ export default function AssetRequestForm({
   categories,
   initialStart,
   initialAssetId,
+  requirementTemplates,
   onSubmit,
   onClose,
 }: AssetRequestFormProps) {
@@ -57,12 +68,29 @@ export default function AssetRequestForm({
   const [startStr, setStartStr] = useState(toDatetimeLocal(start));
   const [endStr,   setEndStr]   = useState(toDatetimeLocal(defaultEnd));
   const [notes,    setNotes]    = useState('');
+  const [requirements, setRequirements] = useState<Record<string, string>>({});
   const [errors,   setErrors]   = useState<Record<string, string>>({});
 
   const assetOptions = useMemo(
     () => assets.map((a) => ({ value: a.id, label: a.label || a.id })),
     [assets],
   );
+
+  const selectedAsset = useMemo(
+    () => assets.find(a => a.id === assetId),
+    [assets, assetId],
+  );
+
+  // The active template is the one keyed by the selected asset's typeId.
+  // Anonymous types (assets without `meta.assetTypeId`) get no slots.
+  const activeTemplate: RequirementTemplate | null = useMemo(() => {
+    if (!requirementTemplates) return null;
+    const typeId = typeof selectedAsset?.meta?.['assetTypeId'] === 'string'
+      ? (selectedAsset.meta['assetTypeId'] as string)
+      : null;
+    if (!typeId) return null;
+    return requirementTemplates[typeId] ?? null;
+  }, [requirementTemplates, selectedAsset]);
 
   function validate() {
     const e: Record<string, string> = {};
@@ -76,6 +104,13 @@ export default function AssetRequestForm({
       const en = fromDatetimeLocal(endStr);
       if (s && en && en <= s) e['end'] = 'End must be after start';
     }
+    if (activeTemplate) {
+      for (const role of activeTemplate.roles) {
+        if (!requirements[role.id]?.trim()) {
+          e[`req:${role.id}`] = `${role.label} is required`;
+        }
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -86,6 +121,18 @@ export default function AssetRequestForm({
     const s = fromDatetimeLocal(startStr);
     const en = fromDatetimeLocal(endStr);
     if (!s || !en) return;
+
+    // Trim and only emit role keys actually defined by the active template;
+    // dropping stale entries keeps the persisted payload clean if the user
+    // switched assets after typing.
+    const cleanRequirements: Record<string, string> = {};
+    if (activeTemplate) {
+      for (const role of activeTemplate.roles) {
+        const value = requirements[role.id]?.trim();
+        if (value) cleanRequirements[role.id] = value;
+      }
+    }
+
     onSubmit({
       title:    title.trim(),
       start:    s,
@@ -95,6 +142,7 @@ export default function AssetRequestForm({
       resource: assetId,
       meta: {
         ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(Object.keys(cleanRequirements).length > 0 ? { requirements: cleanRequirements } : {}),
         approvalStage: { stage: 'requested', updatedAt: new Date().toISOString() },
       },
     });
@@ -180,6 +228,55 @@ export default function AssetRequestForm({
               {errors['end'] && <span className={styles['error']}>{errors['end']}</span>}
             </div>
           </div>
+
+          {activeTemplate && activeTemplate.roles.length > 0 && (
+            <fieldset className={styles['field']} style={{ border: 0, padding: 0, margin: 0 }}>
+              <legend className={styles['label']} style={{ padding: 0 }}>
+                Required for this {selectedAsset?.meta?.['assetTypeId'] ? 'type' : 'asset'}
+              </legend>
+              {activeTemplate.roles.map(role => {
+                const errKey = `req:${role.id}`;
+                const inputId = `ar-req-${role.id}`;
+                return (
+                  <div key={role.id} className={styles['field']} style={{ marginTop: 8 }}>
+                    <label className={styles['label']} htmlFor={inputId}>
+                      {role.label} <span className={styles['req']}>*</span>
+                    </label>
+                    <input
+                      id={inputId}
+                      className={[styles['input'], errors[errKey] && styles['inputError']].filter(Boolean).join(' ')}
+                      value={requirements[role.id] ?? ''}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setRequirements(prev => ({ ...prev, [role.id]: e.target.value }))
+                      }
+                      placeholder={`Who is the ${role.label.toLowerCase()}?`}
+                    />
+                    {errors[errKey] && <span className={styles['error']}>{errors[errKey]}</span>}
+                  </div>
+                );
+              })}
+            </fieldset>
+          )}
+
+          {activeTemplate?.requiresApproval && (
+            <div
+              role="status"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 10px',
+                fontSize: 12,
+                color: 'var(--wc-text-muted, #475569)',
+                background: 'color-mix(in srgb, var(--wc-accent, #3b82f6) 8%, transparent)',
+                border: '1px dashed color-mix(in srgb, var(--wc-accent, #3b82f6) 35%, transparent)',
+                borderRadius: 8,
+              }}
+            >
+              <ShieldCheck size={14} aria-hidden="true" />
+              <span>This request needs approval before it’s confirmed.</span>
+            </div>
+          )}
 
           <div className={styles['field']}>
             <label className={styles['label']} htmlFor="ar-notes">Notes</label>
