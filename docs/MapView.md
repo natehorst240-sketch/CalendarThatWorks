@@ -120,16 +120,19 @@ Pick one of these for live deployments:
 | **OpenFreeMap** | Free, community-funded, no API key. |
 | **Self-hosted OSM** | Full control; you operate the tile server. |
 
-Pass the chosen style URL via the `mapStyle` prop:
+Pass the chosen style URL via the `mapStyle` prop. `WorksCalendar` accepts
+it as a top-level prop and forwards it to the active map view:
 
 ```jsx
 <WorksCalendar
   events={events}
   initialView="map"
-  // WorksCalendar forwards an unknown prop to the MapView when active
   mapStyle="https://tiles.openfreemap.org/styles/liberty"
 />;
 ```
+
+The same prop is accepted by the standalone `MapView` shown above. When
+omitted, both fall back to the MapLibre demo style.
 
 ## Bundle impact
 
