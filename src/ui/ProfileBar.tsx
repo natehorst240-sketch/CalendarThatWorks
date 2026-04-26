@@ -13,7 +13,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Plus, Bookmark, BookmarkCheck,
-  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, MapPin, Radio,
+  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, MapPin, Radio, Map as MapIcon,
 } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import ViewsDropdown from './ViewsDropdown';
@@ -35,10 +35,11 @@ const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
   base:     { Icon: MapPin,        label: 'Base view' },
   assets:   { Icon: Boxes,         label: 'Assets view' },
   dispatch: { Icon: Radio,         label: 'Dispatch view' },
+  map:      { Icon: MapIcon,       label: 'Map view' },
 };
 
 const GLOBAL_GROUP_KEY = '__global__';
-const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets','dispatch'];
+const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets','dispatch','map'];
 const ALWAYS_ON_VIEWS = new Set(['month', 'week']);
 
 export default function ProfileBar({

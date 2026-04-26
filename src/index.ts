@@ -22,6 +22,8 @@ export type {
 
 export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as TimelineView }        from './views/TimelineView';
+export { default as MapView }             from './views/MapView';
+export type { MapViewProps }              from './views/MapView';
 export { normalizeEvent, normalizeEvents } from './core/eventModel';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';

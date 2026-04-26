@@ -36,7 +36,11 @@ export default defineConfig({
       fileName: (format) => `works-calendar.${format}.js`,
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'xlsx', '@supabase/supabase-js'],
+      external: [
+        'react', 'react-dom', 'xlsx', '@supabase/supabase-js',
+        'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css',
+        'react-map-gl', 'react-map-gl/maplibre',
+      ],
       output: {
         globals: {
           react: 'React',
