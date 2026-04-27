@@ -206,7 +206,13 @@ export default function BaseGanttView({
     return out;
   }, [rangeStart, spanDays]);
 
-  // Keep today roughly in view when the range or span changes.
+  // Keep today roughly in view when the range, span, or per-day pixel
+  // width changes. pxPerDay is included because the dynamic stretch math
+  // (filling the container when totalDays * MIN_DAY_PX comes up short)
+  // shifts the today column horizontally without changing rangeStart or
+  // spanDays — without this dep, the initial ResizeObserver measurement
+  // (and subsequent viewport resizes) leaves scrollLeft anchored to the
+  // pre-stretch geometry and today drifts off-center.
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -218,7 +224,7 @@ export default function BaseGanttView({
     const visibleW = Math.max(wrap.clientWidth - NAME_W, 0);
     const targetLeft = Math.max((todayIdx + 0.5) * pxPerDay - visibleW / 2, 0);
     wrap.scrollLeft = targetLeft;
-  }, [rangeStart, spanDays]);
+  }, [rangeStart, spanDays, pxPerDay]);
 
   // Bases passing the user's selection filter (no search, no hide-empty).
   // Also used to drive the picker's "selected" state.
