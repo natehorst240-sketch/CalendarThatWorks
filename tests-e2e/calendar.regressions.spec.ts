@@ -94,7 +94,12 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    await page.getByRole('button', { name: /Edit Pen Fixture/i }).first().click();
+    // Wait for the fixture to hydrate before clicking — the bare click was
+    // racing the fixture's initial render in CI. The recurring-event test
+    // below has the same fix (added inline to keep the diff narrow).
+    const pen = page.getByRole('button', { name: /Edit Pen Fixture/i }).first();
+    await expect(pen).toBeVisible({ timeout: 10000 });
+    await pen.click();
 
     const dialog = page.getByRole('dialog', { name: /Event details: Edit Pen Fixture/i });
     await expect(dialog).toBeVisible();
@@ -110,7 +115,9 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/regression-bugs.html');
 
-    await page.getByRole('button', { name: /Repeating Pencil Test/i }).first().click();
+    const pencil = page.getByRole('button', { name: /Repeating Pencil Test/i }).first();
+    await expect(pencil).toBeVisible({ timeout: 10000 });
+    await pencil.click();
 
     const dialog = page.getByRole('dialog', { name: /Event details: Repeating Pencil Test/i });
     await expect(dialog).toBeVisible();
