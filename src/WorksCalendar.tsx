@@ -45,6 +45,7 @@ import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
+import { AppShell }           from './ui/AppShell';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -2158,6 +2159,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       <CalendarContext.Provider value={ctxValue}>
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
+        <AppShell
+          header={<>
         {/* ── Toolbar ── */}
         {renderToolbar ? (
           <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
@@ -2353,37 +2356,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           activePills:   buildActiveFilterPills(cal.filters, filterBarSchema),
           items:         scopedEvents,
         })}
-
-        {/* ── View area (with sidebar overlay) ── */}
-        <FilterGroupSidebar
-          open={sidebarOpen}
-          initialTab={sidebarInitialTab}
-          onClose={() => setSidebarOpen(false)}
-          // Groups tab
-          groupLevels={sidebarGroupLevels}
-          onGroupLevelsChange={handleSidebarGroupLevelsChange}
-          sort={activeSort ?? []}
-          onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
-          showAllGroups={activeShowAllGroups}
-          onShowAllGroupsChange={setActiveShowAllGroups}
-          // Filters tab
-          schema={filterBarSchema}
-          items={scopedEvents}
-          onFiltersChange={handleSidebarFiltersChange}
-          // Views tab
-          views={savedViews.views}
-          activeViewId={savedViewActiveId}
-          isViewDirty={savedViewDirty}
-          onApplyView={handleApplyView}
-          onSaveView={handleSidebarSaveView}
-          onResaveView={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
-          onUpdateView={savedViews.updateView}
-          onDeleteView={handleDeleteView}
-          onToggleViewVisibility={savedViews.toggleStripVisibility}
-          locationLabel={locationLabel}
-          assetsLabel={assetsLabel}
-        />
-
+          </>}
+          main={<>
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
@@ -2492,6 +2466,38 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             </>
           )}
         </div>
+          </>}
+        />
+
+        {/* ── Filter / Groups / Views overlay drawer ── */}
+        <FilterGroupSidebar
+          open={sidebarOpen}
+          initialTab={sidebarInitialTab}
+          onClose={() => setSidebarOpen(false)}
+          // Groups tab
+          groupLevels={sidebarGroupLevels}
+          onGroupLevelsChange={handleSidebarGroupLevelsChange}
+          sort={activeSort ?? []}
+          onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
+          showAllGroups={activeShowAllGroups}
+          onShowAllGroupsChange={setActiveShowAllGroups}
+          // Filters tab
+          schema={filterBarSchema}
+          items={scopedEvents}
+          onFiltersChange={handleSidebarFiltersChange}
+          // Views tab
+          views={savedViews.views}
+          activeViewId={savedViewActiveId}
+          isViewDirty={savedViewDirty}
+          onApplyView={handleApplyView}
+          onSaveView={handleSidebarSaveView}
+          onResaveView={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+          onUpdateView={savedViews.updateView}
+          onDeleteView={handleDeleteView}
+          onToggleViewVisibility={savedViews.toggleStripVisibility}
+          locationLabel={locationLabel}
+          assetsLabel={assetsLabel}
+        />
 
         {/* ── Hover card ── */}
         {selectedEvent && (

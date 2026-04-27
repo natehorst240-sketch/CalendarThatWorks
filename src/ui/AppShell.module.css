@@ -1,0 +1,43 @@
+/*
+ * AppShell — three-column shell scaffold.
+ *
+ * PR 1 foundation only. Header sits above a body row; left rail and right
+ * panel are slot-optional and render nothing (zero width) when their props
+ * are undefined. With only header + main the visual layout collapses to the
+ * same vertical stack the calendar used pre-AppShell — no surrounding
+ * styling changes for this PR.
+ */
+
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerBand {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.leftRail {
+  flex-shrink: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rightPanel {
+  flex-shrink: 0;
+}
