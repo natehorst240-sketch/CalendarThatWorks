@@ -10,7 +10,7 @@ import {
   format, startOfMonth, endOfMonth, startOfDay,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Download, Plus, Sparkles, Upload } from 'lucide-react';
+import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Layers, Map as MapIcon, Plus, Settings, Sparkles, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar';
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
@@ -2174,7 +2174,54 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
         <AppShell
-          leftRail={<LeftRail items={VIEWS} activeId={cal.view} onSelect={cal.setView} />}
+          leftRail={
+            <LeftRail
+              actions={[
+                {
+                  id: 'saved-views',
+                  label: 'Saved views',
+                  hint: 'Manage your view library',
+                  icon: <Bookmark size={18} aria-hidden="true" />,
+                  onClick: () => { setSidebarInitialTab('saved'); setSidebarOpen(true); },
+                },
+                {
+                  id: 'focus',
+                  label: 'Focus filters',
+                  hint: 'Narrow the calendar by category, source, or person',
+                  icon: <Filter size={18} aria-hidden="true" />,
+                  onClick: () => { setSidebarInitialTab('focus'); setSidebarOpen(true); },
+                },
+                {
+                  id: 'groups',
+                  label: 'Group + sort',
+                  hint: 'Change how rows are grouped and sorted',
+                  icon: <Layers size={18} aria-hidden="true" />,
+                  onClick: () => { setSidebarInitialTab('view'); setSidebarOpen(true); },
+                },
+                // Only surface Map when it's actually one of the enabled views.
+                // WorksCalendar's view-validation effect snaps cal.view back
+                // to a fallback when the target isn't in VIEWS, so an
+                // unconditional Map shortcut would render a button that
+                // appears to do nothing — the navigation gets reverted on
+                // the next render. Skip the button if map isn't enabled.
+                ...(VIEWS.some(v => v.id === 'map') ? [{
+                  id: 'map',
+                  label: 'Map view',
+                  hint: 'Geographic plot of events with coordinates',
+                  icon: <MapIcon size={18} aria-hidden="true" />,
+                  active: cal.view === 'map',
+                  onClick: () => cal.setView('map'),
+                }] : []),
+                ...(ownerCfg.isOwner ? [{
+                  id: 'settings',
+                  label: 'Settings',
+                  hint: 'Calendar configuration',
+                  icon: <Settings size={18} aria-hidden="true" />,
+                  onClick: () => ownerCfg.setConfigOpen(true),
+                }] : []),
+              ]}
+            />
+          }
           rightPanel={
             <RightPanel>
               <RightPanelSection title="Region map">
