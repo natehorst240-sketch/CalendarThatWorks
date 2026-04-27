@@ -1,0 +1,42 @@
+/*
+ * DayWindowPills — segmented day-window selector for the sub-toolbar.
+ * Token-driven; the active pill picks up var(--wc-surface-2) so the
+ * contrast follows the active theme.
+ */
+
+.root {
+  display: inline-flex;
+  background: var(--wc-bg);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  padding: 2px;
+  gap: 0;
+}
+
+.pill {
+  border: none;
+  background: transparent;
+  color: var(--wc-text-muted);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: calc(var(--wc-radius-sm) - 2px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.pill:hover {
+  color: var(--wc-text);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -1px;
+}
+
+.pill.active {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+  font-weight: 600;
+}

@@ -48,6 +48,7 @@ import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
 import { SubToolbar }         from './ui/SubToolbar';
+import { DayWindowPills }     from './ui/DayWindowPills';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -2371,6 +2372,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   </button>
                 )}
               </>}
+              centerSlot={<DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />}
               rightSlot={<>
                 {hasImport && (
                   <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
