@@ -12,7 +12,10 @@
   gap: 8px;
   padding: calc(8px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
   border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
-  background: var(--wc-bg);
+  /* Inside the calendarCard (which uses --wc-surface), so we match here for
+   * visual continuity. The SubToolbar shouldn't look like a separate strip
+   * against the surrounding card body. */
+  background: var(--wc-surface);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
