@@ -2475,6 +2475,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   approvalsConfig={ownerCfg.config?.['approvals']}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                   label={assetsLabel}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'dispatch' && (
