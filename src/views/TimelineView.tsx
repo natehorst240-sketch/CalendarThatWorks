@@ -80,6 +80,13 @@ interface TimelineViewProps {
   sort?: unknown;
   roles?: string[] | undefined;
   bases?: TimelineBase[] | undefined;
+  /**
+   * When set (and > 0), the timeline shows exactly `dayWindow` days starting
+   * from `currentDate` instead of the full calendar month around it. Bound to
+   * the 7/14/30/90 pills in the AppShell sub-toolbar. `null` / `undefined` /
+   * `0` all mean "no window — fall back to the calendar-month default".
+   */
+  dayWindow?: number | null | undefined;
 }
 
 type TimelineContextValue = {
@@ -177,6 +184,7 @@ export default function TimelineView({
   sort,
   roles = [],
   bases = [],
+  dayWindow,
 }: TimelineViewProps) {
   const ctx = useCalendarContext() as TimelineContextValue | null;
 
@@ -214,13 +222,25 @@ export default function TimelineView({
 
   // ── Base filter ───────────────────────────────────────────────────────────
   const [baseFilter, setBaseFilter]     = useState('');
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd   = endOfMonth(currentDate);
+
+  // Range: when `dayWindow` is provided, render exactly that many days
+  // starting from currentDate. Otherwise fall back to the full calendar
+  // month (legacy default the rest of the row math is calibrated against).
+  // Variable names kept as monthStart/monthEnd so downstream lane / pill /
+  // grid math doesn't churn — they're a date range either way.
+  const useDayWindow = typeof dayWindow === 'number' && dayWindow > 0;
+  const monthStart = useDayWindow ? startOfDay(currentDate) : startOfMonth(currentDate);
+  const monthEnd   = useDayWindow ? startOfDay(addDays(currentDate, dayWindow! - 1)) : endOfMonth(currentDate);
   const days       = useMemo(
     () => eachDayOfInterval({ start: monthStart, end: monthEnd }),
-    [monthStart.toISOString()],
+    [monthStart.toISOString(), monthEnd.toISOString()],
   );
   const totalDays = days.length;
+  // Header label — full calendar-month name when no dayWindow is set, else
+  // a "Apr 1 – Apr 7, 2026" range string covering the visible window.
+  const rangeLabel = useDayWindow
+    ? `${format(monthStart, 'MMM d')} – ${format(monthEnd, 'MMM d, yyyy')}`
+    : format(currentDate, 'MMMM yyyy');
 
   // ── Keyboard grid navigation ───────────────────────────────────────────────
   const [focusedCell, setFocusedCell] = useState({ rowIdx: 0, dayIdx: 0 });
@@ -597,7 +617,7 @@ export default function TimelineView({
     if (ctx?.emptyState) return <>{ctx.emptyState}</>;
     return (
       <div className={styles['empty']}>
-        <p>No {useEmployees ? 'employees' : 'events'} to display in {format(currentDate, 'MMMM yyyy')}.</p>
+        <p>No {useEmployees ? 'employees' : 'events'} to display in {rangeLabel}.</p>
       </div>
     );
   }
@@ -614,7 +634,7 @@ export default function TimelineView({
         className={styles['inner']}
         style={{ width: NAME_W + totalDays * DAY_W }}
         role="grid"
-        aria-label={`Timeline for ${format(currentDate, 'MMMM yyyy')}`}
+        aria-label={`Timeline for ${rangeLabel}`}
         aria-rowcount={flatRows.length + 1}
         aria-colcount={totalDays + 1}
         ref={gridRef}
@@ -626,9 +646,9 @@ export default function TimelineView({
             className={styles['cornerCell']}
             style={{ width: NAME_W, minWidth: NAME_W, position: 'relative' }}
             role="columnheader"
-            aria-label={format(currentDate, 'MMMM yyyy')}
+            aria-label={rangeLabel}
           >
-            {format(currentDate, 'MMMM yyyy')}
+            {rangeLabel}
             {onEmployeeAdd && (
               <button
                 className={styles['addPersonBtn']}

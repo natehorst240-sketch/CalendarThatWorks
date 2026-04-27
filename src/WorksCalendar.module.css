@@ -490,6 +490,29 @@
   flex-direction: column;
 }
 
+/* Main pane: padded shell holding the bordered calendar card. */
+.mainPane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: calc(12px * var(--wc-density, 1));
+}
+
+/* Calendar card: bordered, rounded, shadowed surface that wraps the
+ * sub-toolbar and the view grid. Tokens-only so per-theme overrides
+ * (radius, shadow, border) apply automatically. */
+.calendarCard {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--wc-surface);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  overflow: hidden;
+}
+
 .emptyStateWrap {
   flex: 1;
   display: flex;

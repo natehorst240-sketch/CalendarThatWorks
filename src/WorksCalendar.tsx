@@ -45,6 +45,13 @@ import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
+import { AppShell }           from './ui/AppShell';
+import { AppHeader }          from './ui/AppHeader';
+import { LeftRail }           from './ui/LeftRail';
+import { SubToolbar }         from './ui/SubToolbar';
+import { DayWindowPills }     from './ui/DayWindowPills';
+import { RightPanel, RightPanelSection, RegionMapWidget, CrewOnShiftList } from './ui/RightPanel';
+import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -1083,6 +1090,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       : filteredEvents),
     [filteredEvents, activeSort],
   );
+
+  // Set of employee ids whose shift / on-call event covers "right now".
+  // Drives the AppShell RightPanel's CrewOnShiftList narrowing — only people
+  // currently scheduled to work appear there, not the entire roster.
+  // Recomputed when visibleEvents change; intentionally not refreshed on a
+  // wall-clock interval (a shift transition is rare enough that requiring
+  // a re-render to pick it up is acceptable; see useShiftOverlap.ts).
+  const onShiftIds = useMemo(() => shiftEmployeeIdsAt(visibleEvents), [visibleEvents]);
 
   // ── Mutation pipeline (engine-authoritative) ─────────────────────────────
   // Stable ref so applyEngineOp closure never goes stale.
@@ -2158,113 +2173,107 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
       <CalendarContext.Provider value={ctxValue}>
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
+        <AppShell
+          leftRail={<LeftRail items={VIEWS} activeId={cal.view} onSelect={cal.setView} />}
+          rightPanel={
+            <RightPanel>
+              <RightPanelSection title="Region map">
+                <RegionMapWidget events={visibleEvents} />
+              </RightPanelSection>
+              <RightPanelSection title="Crew on shift">
+                <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
+              </RightPanelSection>
+            </RightPanel>
+          }
+          header={<>
         {/* ── Toolbar ── */}
         {renderToolbar ? (
           <div className={styles['customToolbar']}>{renderToolbar(api)}</div>
         ) : (
-          <div className={styles['toolbar']} role="toolbar" aria-label="Calendar navigation">
-            <div className={styles['navGroup']}>
-              {logoSrc && (
-                <img
-                  src={logoSrc}
-                  alt={logoAlt ?? ''}
-                  className={styles['logo']}
-                  aria-hidden={!logoAlt ? 'true' : undefined}
-                />
-              )}
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(-1)}
-                aria-label="Previous"
-                title={`Previous ${cal.view}`}
-              >
-                <ChevronLeft size={18} aria-hidden="true" />
-              </button>
-              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
-              <button
-                className={styles['navBtn']}
-                onClick={() => cal.navigate(1)}
-                aria-label="Next"
-                title={`Next ${cal.view}`}
-              >
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-              <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
-              <span className={styles['calendarTitle']}>{calendarTitle}</span>
-              {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
-            </div>
-
-            <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
-              {VIEWS.map(v => (
+          <AppHeader
+            leftSlot={
+              <div className={styles['navGroup']}>
+                {logoSrc && (
+                  <img
+                    src={logoSrc}
+                    alt={logoAlt ?? ''}
+                    className={styles['logo']}
+                    aria-hidden={!logoAlt ? 'true' : undefined}
+                  />
+                )}
                 <button
-                  key={v.id}
-                  className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
-                  onClick={() => cal.setView(v.id)}
-                  aria-pressed={cal.view === v.id}
-                  title={v.hint}
+                  className={styles['navBtn']}
+                  onClick={() => cal.navigate(-1)}
+                  aria-label="Previous"
+                  title={`Previous ${cal.view}`}
                 >
-                  {v.label}
+                  <ChevronLeft size={18} aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-
-            <div className={styles['actions']}>
-              <SidebarToggleButton
-                isOpen={sidebarOpen}
-                onClick={() => setSidebarOpen(v => !v)}
-                filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
-                groupCount={sidebarGroupLevels.length}
-              />
-              {devMode && <span className={styles['devBadge']}>Dev</span>}
-              {(ownerCfg.isOwner || devMode) && (
+                <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
                 <button
-                  className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
-                  onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
-                  aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
-                  title={editMode ? 'Exit edit mode' : 'Customize events'}
+                  className={styles['navBtn']}
+                  onClick={() => cal.navigate(1)}
+                  aria-label="Next"
+                  title={`Next ${cal.view}`}
                 >
-                  <Sparkles size={15} aria-hidden="true" />
-                  {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
+                  <ChevronRight size={18} aria-hidden="true" />
                 </button>
-              )}
-              {hasAddButton && cal.view !== 'schedule' && (
-                <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
-                </button>
-              )}
-              {hasAddButton && hasScheduleTemplates && (
-                <button
-                  className={styles['addBtn']}
-                  onClick={() => {
-                    setScheduleOpen(true);
-                    trackScheduleTemplateAnalytics('schedule_dialog_opened', {
-                      templateCount: visibleScheduleTemplates.length,
-                    });
-                  }}
-                  aria-label="Add schedule from template"
-                >
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
-                </button>
-              )}
-              {hasImport && (
-                <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
-                  <Upload size={15} aria-hidden="true" />
-                </button>
-              )}
-              <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
-                <Download size={15} aria-hidden="true" />
-              </button>
-              {ownerPassword && (
-                <OwnerLock
-                  isOwner={ownerCfg.isOwner}
-                  authError={ownerCfg.authError}
-                  isAuthLoading={ownerCfg.isAuthLoading}
-                  onAuthenticate={ownerCfg.authenticate}
-                  onOpen={() => ownerCfg.setConfigOpen(true)}
-                />
-              )}
-            </div>
-          </div>
+                <span className={styles['dateLabel']} aria-live="polite" aria-atomic="true">{getDateLabel()}</span>
+                <span className={styles['calendarTitle']}>{calendarTitle}</span>
+                {fetchLoading && <span className={styles['loadingDot']} title="Loading…" aria-label="Loading events" role="status" />}
+              </div>
+            }
+            centerSlot={
+              <div className={styles['viewGroup']} role="group" aria-label="Calendar view">
+                {VIEWS.map(v => (
+                  <button
+                    key={v.id}
+                    className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
+                    onClick={() => cal.setView(v.id)}
+                    aria-pressed={cal.view === v.id}
+                    title={v.hint}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            }
+            rightSlot={
+              <div className={styles['actions']}>
+                {devMode && <span className={styles['devBadge']}>Dev</span>}
+                {(ownerCfg.isOwner || devMode) && (
+                  <button
+                    className={[styles['wandBtn'], editMode && styles['wandBtnActive']].filter(Boolean).join(' ')}
+                    onClick={() => { setEditMode(v => !v); setInlineEditTarget(null); }}
+                    aria-label={editMode ? 'Exit edit mode' : 'Enter edit mode — click events to customize them'}
+                    title={editMode ? 'Exit edit mode' : 'Customize events'}
+                  >
+                    <Sparkles size={15} aria-hidden="true" />
+                    {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
+                  </button>
+                )}
+                {ownerPassword && (
+                  <OwnerLock
+                    isOwner={ownerCfg.isOwner}
+                    authError={ownerCfg.authError}
+                    isAuthLoading={ownerCfg.isAuthLoading}
+                    onAuthenticate={ownerCfg.authenticate}
+                    onOpen={() => ownerCfg.setConfigOpen(true)}
+                  />
+                )}
+              </div>
+            }
+            menuItems={[
+              ...(ownerCfg.isOwner ? [
+                { label: 'Settings',          sub: 'Calendar config, integrations', onClick: () => ownerCfg.setConfigOpen(true) },
+                { label: 'Themes',            sub: 'Switch palette / appearance',   onClick: () => ownerCfg.openConfigToTab('theme') },
+                { label: 'Advanced settings', sub: 'Smart views, fields, approvals', onClick: () => ownerCfg.openConfigToTab('smartViews') },
+              ] : []),
+              { label: 'Saved views',         sub: 'Manage your view library',      onClick: () => { setSidebarInitialTab('saved'); setSidebarOpen(true); } },
+              { label: 'Keyboard shortcuts',  sub: 'Quick reference',               onClick: () => setHelpOpen(true) },
+              { label: 'Help & feedback',                                          onClick: () => window.open('https://github.com/WorksCalendar/CalendarThatWorks/issues', '_blank', 'noopener') },
+            ]}
+          />
         )}
 
         {/* ── Profile / Saved-views Bar ── */}
@@ -2353,37 +2362,50 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           activePills:   buildActiveFilterPills(cal.filters, filterBarSchema),
           items:         scopedEvents,
         })}
-
-        {/* ── View area (with sidebar overlay) ── */}
-        <FilterGroupSidebar
-          open={sidebarOpen}
-          initialTab={sidebarInitialTab}
-          onClose={() => setSidebarOpen(false)}
-          // Groups tab
-          groupLevels={sidebarGroupLevels}
-          onGroupLevelsChange={handleSidebarGroupLevelsChange}
-          sort={activeSort ?? []}
-          onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
-          showAllGroups={activeShowAllGroups}
-          onShowAllGroupsChange={setActiveShowAllGroups}
-          // Filters tab
-          schema={filterBarSchema}
-          items={scopedEvents}
-          onFiltersChange={handleSidebarFiltersChange}
-          // Views tab
-          views={savedViews.views}
-          activeViewId={savedViewActiveId}
-          isViewDirty={savedViewDirty}
-          onApplyView={handleApplyView}
-          onSaveView={handleSidebarSaveView}
-          onResaveView={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
-          onUpdateView={savedViews.updateView}
-          onDeleteView={handleDeleteView}
-          onToggleViewVisibility={savedViews.toggleStripVisibility}
-          locationLabel={locationLabel}
-          assetsLabel={assetsLabel}
-        />
-
+          </>}
+          main={
+        <div className={styles['mainPane']}>
+          <div className={styles['calendarCard']}>
+            <SubToolbar
+              leftSlot={<>
+                <SidebarToggleButton
+                  isOpen={sidebarOpen}
+                  onClick={() => setSidebarOpen(v => !v)}
+                  filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
+                  groupCount={sidebarGroupLevels.length}
+                />
+                {hasAddButton && cal.view !== 'schedule' && (
+                  <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
+                  </button>
+                )}
+                {hasAddButton && hasScheduleTemplates && (
+                  <button
+                    className={styles['addBtn']}
+                    onClick={() => {
+                      setScheduleOpen(true);
+                      trackScheduleTemplateAnalytics('schedule_dialog_opened', {
+                        templateCount: visibleScheduleTemplates.length,
+                      });
+                    }}
+                    aria-label="Add schedule from template"
+                  >
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
+                  </button>
+                )}
+              </>}
+              centerSlot={<DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />}
+              rightSlot={<>
+                {hasImport && (
+                  <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                    <Upload size={15} aria-hidden="true" />
+                  </button>
+                )}
+                <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
+                  <Download size={15} aria-hidden="true" />
+                </button>
+              </>}
+            />
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
@@ -2417,6 +2439,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   sort={activeSort}
                   roles={ownerCfg.config?.['team']?.roles ?? []}
                   bases={ownerCfg.config?.['team']?.bases ?? []}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'base' && (
@@ -2432,6 +2455,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   assetsLabel={assetsLabel}
                   selectedBaseIds={selectedBaseIds}
                   onBaseSelectionChange={setSelectedBaseIds}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'assets'   && (
@@ -2460,6 +2484,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   approvalsConfig={ownerCfg.config?.['approvals']}
                   onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
                   label={assetsLabel}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'dispatch' && (
@@ -2492,6 +2517,40 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             </>
           )}
         </div>
+          </div>
+        </div>
+          }
+        />
+
+        {/* ── Filter / Groups / Views overlay drawer ── */}
+        <FilterGroupSidebar
+          open={sidebarOpen}
+          initialTab={sidebarInitialTab}
+          onClose={() => setSidebarOpen(false)}
+          // Groups tab
+          groupLevels={sidebarGroupLevels}
+          onGroupLevelsChange={handleSidebarGroupLevelsChange}
+          sort={activeSort ?? []}
+          onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
+          showAllGroups={activeShowAllGroups}
+          onShowAllGroupsChange={setActiveShowAllGroups}
+          // Filters tab
+          schema={filterBarSchema}
+          items={scopedEvents}
+          onFiltersChange={handleSidebarFiltersChange}
+          // Views tab
+          views={savedViews.views}
+          activeViewId={savedViewActiveId}
+          isViewDirty={savedViewDirty}
+          onApplyView={handleApplyView}
+          onSaveView={handleSidebarSaveView}
+          onResaveView={(id) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+          onUpdateView={savedViews.updateView}
+          onDeleteView={handleDeleteView}
+          onToggleViewVisibility={savedViews.toggleStripVisibility}
+          locationLabel={locationLabel}
+          assetsLabel={assetsLabel}
+        />
 
         {/* ── Hover card ── */}
         {selectedEvent && (

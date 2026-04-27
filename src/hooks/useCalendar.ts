@@ -19,6 +19,20 @@ type CalendarState = {
   setView: (value: CalendarView) => void;
   currentDate: Date;
   setCurrentDate: (value: Date) => void;
+  /**
+   * User-controlled day-span window (in days) for the timeline-style views.
+   * Bound to the 7/14/30/90 pills in the sub-toolbar.
+   *
+   * `null` is the implicit "auto" / "view default" — timeline views fall
+   * back to their intrinsic range (e.g. TimelineView shows the calendar
+   * month around currentDate). When set to a positive number, observing
+   * views render exactly that many days starting from currentDate.
+   *
+   * Views that have a fixed intrinsic span (month, week, day) ignore this
+   * value entirely.
+   */
+  dayWindow: number | null;
+  setDayWindow: (value: number | null) => void;
   events: any[];
   visibleEvents: any[];
   categories: string[];
@@ -42,10 +56,12 @@ export function useCalendar(
   rawEvents: any[],
   initialView: CalendarView = 'month',
   filterSchema: any[] = DEFAULT_FILTER_SCHEMA,
+  initialDayWindow: number | null = null,
 ): CalendarState {
   const [view,        setView]        = useState(initialView);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filters,     setFilters]     = useState(() => createInitialFilters(filterSchema));
+  const [dayWindow,   setDayWindow]   = useState<number | null>(initialDayWindow);
 
   const events = useMemo(() => normalizeEvents(rawEvents), [rawEvents]);
 
@@ -139,6 +155,7 @@ export function useCalendar(
   return {
     view, setView,
     currentDate, setCurrentDate,
+    dayWindow, setDayWindow,
     events, visibleEvents,
     categories, resources,
     filters,

@@ -10,6 +10,18 @@ function dateKey(offsetDays = 0) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Same env-noise filter as calendar.demo.spec.ts — sandboxed runners surface
+// cert errors / network failures that aren't part of the calendar's contract.
+const ENV_NOISE_PATTERNS = [
+  /net::ERR_CERT_AUTHORITY_INVALID/i,
+  /net::ERR_CERT_DATE_INVALID/i,
+  /Failed to load resource.*the server responded with a status of (4|5)\d{2}/i,
+];
+
+function ignoreEnvNoise(line) {
+  return !ENV_NOISE_PATTERNS.some((re) => re.test(line));
+}
+
 test.describe('WorksCalendar targeted regressions', () => {
   test('dragging a month pill does not crash the page', async ({ page }) => {
     const pageErrors = [];
@@ -40,8 +52,8 @@ test.describe('WorksCalendar targeted regressions', () => {
     await page.mouse.up();
 
     await expect(page.getByTestId('works-calendar')).toBeVisible();
-    expect(pageErrors).toEqual([]);
-    expect(consoleErrors).toEqual([]);
+    expect(pageErrors.filter(ignoreEnvNoise)).toEqual([]);
+    expect(consoleErrors.filter(ignoreEnvNoise)).toEqual([]);
   });
 
   test('hover card shows the full cross-day range for a timed multi-day event', async ({ page }) => {

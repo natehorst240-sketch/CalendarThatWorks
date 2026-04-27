@@ -108,6 +108,13 @@ interface AssetsViewProps {
   /** UI label for assets — owners can rename to 'Aircraft', 'Vehicle', etc.
    *  Plural is generated as `${label}s`. Defaults to 'Asset'. */
   label?: string;
+  /**
+   * When set (and > 0), the timeline shows exactly `dayWindow` days starting
+   * from `currentDate` instead of the full calendar month around it. Bound
+   * to the 7/14/30/90 pills in the AppShell sub-toolbar. null / undefined /
+   * 0 fall back to the calendar-month default.
+   */
+  dayWindow?: number | null | undefined;
 }
 
 type AssetRow = {
@@ -317,6 +324,7 @@ export default function AssetsView({
   pools = [],
   onPoolDateSelect,
   label = 'Asset',
+  dayWindow,
 }: AssetsViewProps) {
   const labelLower  = label.toLowerCase();
   const labelPlural = `${label}s`;
@@ -378,13 +386,22 @@ export default function AssetsView({
   const activeZoom = 'day';
   const pxPerDay   = DAY_PX_PER_DAY;
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd   = endOfMonth(currentDate);
+  // Range: when `dayWindow` is provided, render exactly that many days
+  // starting from currentDate. Otherwise fall back to the full calendar
+  // month (legacy default — the rest of the lane / pill / cell math is
+  // calibrated against it). monthStart/monthEnd kept as variable names
+  // since they represent a date range either way.
+  const useDayWindow = typeof dayWindow === 'number' && dayWindow > 0;
+  const monthStart = useDayWindow ? startOfDay(currentDate) : startOfMonth(currentDate);
+  const monthEnd   = useDayWindow ? startOfDay(addDays(currentDate, dayWindow! - 1)) : endOfMonth(currentDate);
   const days       = useMemo(
     () => eachDayOfInterval({ start: monthStart, end: monthEnd }),
-    [monthStart.toISOString()],
+    [monthStart.toISOString(), monthEnd.toISOString()],
   );
   const totalDays = days.length;
+  const rangeLabel = useDayWindow
+    ? `${format(monthStart, 'MMM d')} – ${format(monthEnd, 'MMM d, yyyy')}`
+    : format(currentDate, 'MMMM yyyy');
 
   const categoryColorMap = useMemo(
     () => buildCategoryColorMap(categoriesConfig),
@@ -970,7 +987,7 @@ export default function AssetsView({
           ? ctx['emptyState']
           : (
             <div className={styles['empty']}>
-              <p>No {labelPluralLower} to display in {format(currentDate, 'MMMM yyyy')}.</p>
+              <p>No {labelPluralLower} to display in {rangeLabel}.</p>
             </div>
           )}
       </div>
@@ -990,7 +1007,7 @@ export default function AssetsView({
         className={styles['inner']}
         style={{ width: NAME_W + totalDays * dayColW }}
         role="grid"
-        aria-label={`${labelPlural} timeline for ${format(currentDate, 'MMMM yyyy')}`}
+        aria-label={`${labelPlural} timeline for ${rangeLabel}`}
         aria-rowcount={flatRows.length + 1}
         aria-colcount={totalDays + 1}
         ref={gridRef}
@@ -1001,7 +1018,7 @@ export default function AssetsView({
             className={styles['cornerCell']}
             style={{ width: NAME_W, minWidth: NAME_W }}
             role="columnheader"
-            aria-label={`${labelPlural} — ${format(currentDate, 'MMMM yyyy')}`}
+            aria-label={`${labelPlural} — ${rangeLabel}`}
           >
             <span className={styles['cornerTitle']}>
               {format(currentDate, 'MMM yyyy')}

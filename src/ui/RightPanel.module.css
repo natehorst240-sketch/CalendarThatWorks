@@ -1,0 +1,110 @@
+/*
+ * RightPanel — docked aside in <AppShell>'s rightPanel slot. Token-driven so
+ * all 12 themes restyle automatically. Hidden on narrow viewports — at the
+ * mock's 240px width plus the 56px LeftRail, anything below ~900px starts
+ * to crowd the calendar grid.
+ */
+
+.root {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--wc-surface);
+  border-left: var(--wc-border-width, 1px) solid var(--wc-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 900px) {
+  .root {
+    display: none;
+  }
+}
+
+/* ── Section ──────────────────────────────────────────────────────────── */
+
+.section + .section {
+  border-top: var(--wc-border-width, 1px) solid var(--wc-border);
+}
+
+.sectionHeader {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+  padding: 14px 16px 6px;
+}
+
+.sectionBody {
+  padding: 0 12px 12px;
+}
+
+/* ── Region map ───────────────────────────────────────────────────────── */
+
+.mapSvg {
+  width: 100%;
+  height: 140px;
+  background: var(--wc-surface-2);
+  border-radius: var(--wc-radius-sm);
+  display: block;
+}
+
+.mapDot {
+  fill: var(--wc-accent);
+}
+
+.mapEmpty {
+  background: var(--wc-surface-2);
+  border-radius: var(--wc-radius-sm);
+  padding: 16px 12px;
+  font-size: 11px;
+  color: var(--wc-text-faint);
+  text-align: center;
+}
+
+/* ── Crew list ────────────────────────────────────────────────────────── */
+
+.crewList {
+  margin: 0;
+  padding: 4px 0 0;
+  list-style: none;
+}
+
+.crewItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 12px;
+  color: var(--wc-text);
+}
+
+.crewAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.crewName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crewEmpty {
+  background: var(--wc-surface-2);
+  border-radius: var(--wc-radius-sm);
+  padding: 16px 12px;
+  font-size: 11px;
+  color: var(--wc-text-faint);
+  text-align: center;
+}

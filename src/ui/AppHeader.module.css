@@ -1,0 +1,122 @@
+/*
+ * AppHeader — three-zone top bar with optional hamburger dropdown.
+ * Token-driven; the bar inherits its surface from the active theme so the
+ * existing 12 themes restyle automatically.
+ */
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 calc(12px * var(--wc-density, 1));
+  height: calc(56px * var(--wc-density, 1));
+  border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
+  background: var(--wc-surface);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* ── Hamburger ────────────────────────────────────────────────────────── */
+
+.menuWrap {
+  position: relative;
+  display: flex;
+}
+
+.menuBtn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--wc-text-muted);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuBtn:hover,
+.menuBtn:focus-visible {
+  background: var(--wc-surface-2);
+  color: var(--wc-text);
+}
+
+.menuBtn:focus-visible {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: 2px;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  background: var(--wc-surface);
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  padding: 4px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dropdownItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--wc-text);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.dropdownItem:hover,
+.dropdownItem:focus-visible {
+  background: var(--wc-surface-2);
+}
+
+.dropdownItem:focus-visible {
+  outline: 2px solid var(--wc-accent);
+  outline-offset: -2px;
+}
+
+.dropdownLabel {
+  font-size: 13px;
+  color: var(--wc-text);
+}
+
+.dropdownSub {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
