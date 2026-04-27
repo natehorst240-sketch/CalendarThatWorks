@@ -73,7 +73,7 @@ const DEMO_BASES = bases.map(b => ({ id: b.id, name: b.name }));
 //   2. Default view returns to Month. The seed previously hard-coded
 //      `defaultView: 'base'`; only the carried-over 'base' choice is reset
 //      so any user-picked view is respected.
-const DEMO_SEED_VERSION = 5;
+const DEMO_SEED_VERSION = 6;
 const SEED_VER_KEY      = `wc-demo-seed-v-${DEMO_CALENDAR_ID}`;
 const storedCfg         = localStorage.getItem(`wc-config-${DEMO_CALENDAR_ID}`);
 const storedSeedVer     = Number(localStorage.getItem(SEED_VER_KEY) ?? 0);
@@ -82,7 +82,7 @@ if (!storedCfg) {
   saveConfig(DEMO_CALENDAR_ID, {
     ...DEFAULT_CONFIG,
     title: 'Air EMS Operations',
-    setup: { completed: true, preferredTheme: 'ops-dark' },
+    setup: { completed: true, preferredTheme: 'industrial-light' },
     team: { ...DEFAULT_CONFIG.team, bases: DEMO_BASES },
     approvals: { ...DEFAULT_CONFIG.approvals, enabled: true },
   });
@@ -91,10 +91,15 @@ if (!storedCfg) {
   const existing = loadConfig(DEMO_CALENDAR_ID);
   const carriedDefaultView = existing.display?.defaultView;
   const nextDefaultView = carriedDefaultView === 'base' ? 'month' : carriedDefaultView;
+  // Theme migration: pre-v6 demos defaulted to 'ops-dark'. The new default
+  // is 'industrial-light' (warmer, friendlier first impression). Replace the
+  // old default in place; preserve any other theme the user actively chose.
+  const carriedTheme = existing.setup?.preferredTheme;
+  const nextTheme = carriedTheme && carriedTheme !== 'ops-dark' ? carriedTheme : 'industrial-light';
   saveConfig(DEMO_CALENDAR_ID, {
     ...existing,
     title:     existing.title ?? 'Air EMS Operations',
-    setup:     { ...existing.setup, preferredTheme: existing.setup?.preferredTheme ?? 'ops-dark' },
+    setup:     { ...existing.setup, preferredTheme: nextTheme },
     display:   { ...existing.display, defaultView: nextDefaultView ?? 'month' },
     team:      { ...existing.team, bases: DEMO_BASES },
     approvals: { ...existing.approvals, enabled: true },
@@ -103,7 +108,7 @@ if (!storedCfg) {
 }
 
 const _seedConfig  = loadConfig(DEMO_CALENDAR_ID);
-const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'ops-dark';
+const INITIAL_THEME = _seedConfig.setup?.preferredTheme ?? 'industrial-light';
 
 /* ─── Employees ────────────────────────────────────────────────── */
 // Pilots + medical crew + mechanics rendered as the people roster. Each
