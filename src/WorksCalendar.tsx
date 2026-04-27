@@ -2198,14 +2198,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   icon: <Layers size={18} aria-hidden="true" />,
                   onClick: () => { setSidebarInitialTab('view'); setSidebarOpen(true); },
                 },
-                {
+                // Only surface Map when it's actually one of the enabled views.
+                // WorksCalendar's view-validation effect snaps cal.view back
+                // to a fallback when the target isn't in VIEWS, so an
+                // unconditional Map shortcut would render a button that
+                // appears to do nothing — the navigation gets reverted on
+                // the next render. Skip the button if map isn't enabled.
+                ...(VIEWS.some(v => v.id === 'map') ? [{
                   id: 'map',
                   label: 'Map view',
                   hint: 'Geographic plot of events with coordinates',
                   icon: <MapIcon size={18} aria-hidden="true" />,
                   active: cal.view === 'map',
                   onClick: () => cal.setView('map'),
-                },
+                }] : []),
                 ...(ownerCfg.isOwner ? [{
                   id: 'settings',
                   label: 'Settings',
