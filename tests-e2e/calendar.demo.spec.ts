@@ -9,17 +9,26 @@ const viewports = [
 
 /**
  * Errors caused by the runner environment, not the calendar code under test.
+ *
  * The chromium sandbox in some CI runners refuses external HTTPS requests
- * (tile servers, font CDNs, the demo PWA's own service-worker fetches) and
- * surfaces them as console.error("net::ERR_CERT_AUTHORITY_INVALID …") or as
- * the related "Failed to load resource" line. Filtering them keeps the
- * "loads without crashing" + "drag does not crash" assertions tight on the
- * code paths the suite actually owns.
+ * (tile servers, font CDNs) and surfaces them as
+ *   console.error("net::ERR_CERT_AUTHORITY_INVALID …")
+ * Those are unambiguously environmental — sandboxed chromium cannot validate
+ * arbitrary upstream certificates, full stop.
+ *
+ * What we explicitly DON'T filter is a blanket
+ *   /Failed to load resource.*4xx|5xx/
+ * because that would also swallow real same-origin failures (a broken local
+ * asset, a 500 from the demo's own data path, a 404 on a missing icon) —
+ * exactly the kind of regression the "loads without crashing" assertion is
+ * supposed to catch. If a specific external host's 4xx/5xx ends up being
+ * deterministic CI noise in the future, add a targeted host-scoped pattern
+ * here (e.g. /fonts\.gstatic\.com.*status of \d+/) rather than going broad.
  */
 const ENV_NOISE_PATTERNS: RegExp[] = [
   /net::ERR_CERT_AUTHORITY_INVALID/i,
   /net::ERR_CERT_DATE_INVALID/i,
-  /Failed to load resource.*the server responded with a status of (4|5)\d{2}/i,
+  /net::ERR_CERT_COMMON_NAME_INVALID/i,
 ];
 
 function ignoreEnvNoise(line: string): boolean {

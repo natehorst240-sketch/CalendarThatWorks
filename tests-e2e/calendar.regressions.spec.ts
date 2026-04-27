@@ -11,11 +11,14 @@ function dateKey(offsetDays = 0) {
 }
 
 // Same env-noise filter as calendar.demo.spec.ts — sandboxed runners surface
-// cert errors / network failures that aren't part of the calendar's contract.
+// chromium cert errors that aren't part of the calendar's contract. We do
+// NOT filter blanket 4xx/5xx here, since those can fire for real same-origin
+// regressions (a broken local asset, a 500 from the demo's own data path);
+// see the long comment in calendar.demo.spec.ts for the rationale.
 const ENV_NOISE_PATTERNS = [
   /net::ERR_CERT_AUTHORITY_INVALID/i,
   /net::ERR_CERT_DATE_INVALID/i,
-  /Failed to load resource.*the server responded with a status of (4|5)\d{2}/i,
+  /net::ERR_CERT_COMMON_NAME_INVALID/i,
 ];
 
 function ignoreEnvNoise(line) {
