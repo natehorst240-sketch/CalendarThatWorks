@@ -46,6 +46,7 @@ import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
+import { SubToolbar }         from './ui/SubToolbar';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -2212,12 +2213,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             </div>
 
             <div className={styles['actions']}>
-              <SidebarToggleButton
-                isOpen={sidebarOpen}
-                onClick={() => setSidebarOpen(v => !v)}
-                filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
-                groupCount={sidebarGroupLevels.length}
-              />
               {devMode && <span className={styles['devBadge']}>Dev</span>}
               {(ownerCfg.isOwner || devMode) && (
                 <button
@@ -2230,33 +2225,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
                 </button>
               )}
-              {hasAddButton && cal.view !== 'schedule' && (
-                <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
-                </button>
-              )}
-              {hasAddButton && hasScheduleTemplates && (
-                <button
-                  className={styles['addBtn']}
-                  onClick={() => {
-                    setScheduleOpen(true);
-                    trackScheduleTemplateAnalytics('schedule_dialog_opened', {
-                      templateCount: visibleScheduleTemplates.length,
-                    });
-                  }}
-                  aria-label="Add schedule from template"
-                >
-                  <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
-                </button>
-              )}
-              {hasImport && (
-                <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
-                  <Upload size={15} aria-hidden="true" />
-                </button>
-              )}
-              <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
-                <Download size={15} aria-hidden="true" />
-              </button>
               {ownerPassword && (
                 <OwnerLock
                   isOwner={ownerCfg.isOwner}
@@ -2357,7 +2325,48 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           items:         scopedEvents,
         })}
           </>}
-          main={<>
+          main={
+        <div className={styles['mainPane']}>
+          <div className={styles['calendarCard']}>
+            <SubToolbar
+              leftSlot={<>
+                <SidebarToggleButton
+                  isOpen={sidebarOpen}
+                  onClick={() => setSidebarOpen(v => !v)}
+                  filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
+                  groupCount={sidebarGroupLevels.length}
+                />
+                {hasAddButton && cal.view !== 'schedule' && (
+                  <button className={styles['addBtn']} onClick={() => setFormEvent({})} aria-label="Add new event">
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Event</span>
+                  </button>
+                )}
+                {hasAddButton && hasScheduleTemplates && (
+                  <button
+                    className={styles['addBtn']}
+                    onClick={() => {
+                      setScheduleOpen(true);
+                      trackScheduleTemplateAnalytics('schedule_dialog_opened', {
+                        templateCount: visibleScheduleTemplates.length,
+                      });
+                    }}
+                    aria-label="Add schedule from template"
+                  >
+                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
+                  </button>
+                )}
+              </>}
+              rightSlot={<>
+                {hasImport && (
+                  <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
+                    <Upload size={15} aria-hidden="true" />
+                  </button>
+                )}
+                <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
+                  <Download size={15} aria-hidden="true" />
+                </button>
+              </>}
+            />
         {/* ── View area ── */}
         <div
           ref={swipeAreaRef}
@@ -2466,7 +2475,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             </>
           )}
         </div>
-          </>}
+          </div>
+        </div>
+          }
         />
 
         {/* ── Filter / Groups / Views overlay drawer ── */}

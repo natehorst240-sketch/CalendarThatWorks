@@ -1,0 +1,39 @@
+/*
+ * SubToolbar — three-zone bar inside the calendar card.
+ *
+ * Tokens-only styling so the bar inherits whatever theme is active. The
+ * 8px gap between zones matches the existing main-toolbar spacing in
+ * WorksCalendar.module.css.
+ */
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: calc(8px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
+  border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
+  background: var(--wc-bg);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
