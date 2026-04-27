@@ -2446,6 +2446,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   assetsLabel={assetsLabel}
                   selectedBaseIds={selectedBaseIds}
                   onBaseSelectionChange={setSelectedBaseIds}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'assets'   && (

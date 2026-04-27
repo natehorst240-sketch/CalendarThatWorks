@@ -127,6 +127,7 @@ export default function BaseGanttView({
   assetsLabel = 'Asset',
   selectedBaseIds = [],
   onBaseSelectionChange,
+  dayWindow,
 }: {
   currentDate: Date
   events: BaseGanttEvent[]
@@ -139,9 +140,19 @@ export default function BaseGanttView({
   assetsLabel?: string
   selectedBaseIds?: string[]
   onBaseSelectionChange?: (ids: string[]) => void
+  /**
+   * External day-window override (in days) bound to the AppShell sub-toolbar
+   * pills. When set to a positive number, takes precedence over the
+   * internal 14/90 span toggle (which is hidden in that case to avoid
+   * presenting two competing controls). null / undefined / 0 fall back to
+   * the internal toggle.
+   */
+  dayWindow?: number | null | undefined
 }) {
   const ctx = useCalendarContext();
-  const [spanDays, setSpanDays] = useState<14 | 90>(14);
+  const [internalSpan, setInternalSpan] = useState<14 | 90>(14);
+  const externalDayWindow = typeof dayWindow === 'number' && dayWindow > 0 ? dayWindow : null;
+  const spanDays = externalDayWindow ?? internalSpan;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState('');
   const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(() => new Set());
@@ -384,22 +395,27 @@ export default function BaseGanttView({
   return (
     <div className={styles['root']}>
       <div className={styles['toolbar']}>
-        <div className={styles['toolbarGroup']}>
-          <span className={styles['toolbarLabel']}>Span</span>
-          <div className={styles['spanToggle']} role="group" aria-label="Timeline span">
-            {SPAN_OPTIONS.map(opt => (
-              <button
-                key={opt.id}
-                type="button"
-                className={[styles['spanBtn'], spanDays === opt.id && styles['spanBtnActive']].filter(Boolean).join(' ')}
-                onClick={() => setSpanDays(opt.id)}
-                aria-pressed={spanDays === opt.id}
-              >
-                {opt.label}
-              </button>
-            ))}
+        {/* Hide the internal 14/90 span toggle when an external dayWindow
+         * is driving the grid — otherwise users see two competing controls
+         * (the SubToolbar pills + this toggle) for the same setting. */}
+        {!externalDayWindow && (
+          <div className={styles['toolbarGroup']}>
+            <span className={styles['toolbarLabel']}>Span</span>
+            <div className={styles['spanToggle']} role="group" aria-label="Timeline span">
+              {SPAN_OPTIONS.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={[styles['spanBtn'], spanDays === opt.id && styles['spanBtnActive']].filter(Boolean).join(' ')}
+                  onClick={() => setInternalSpan(opt.id)}
+                  aria-pressed={spanDays === opt.id}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className={styles['toolbarGroup']}>
           <span className={styles['toolbarLabel']}>{locationLabel}s</span>
