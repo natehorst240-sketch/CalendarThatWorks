@@ -8,8 +8,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 calc(12px * var(--wc-density, 1));
-  height: calc(56px * var(--wc-density, 1));
+  padding: calc(8px * var(--wc-density, 1)) calc(12px * var(--wc-density, 1));
+  /* Min-height + flex-wrap so the three zones don't overlap on narrow
+   * viewports (320 / 375 / 390px). Without flex-wrap the left zone
+   * (logo + Prev/Today/Next + dateLabel + calendarTitle) and the right
+   * zone (devBadge / wand / OwnerLock) push the centered view-tab pills
+   * off-screen and stacked layers intercepted clicks on the buttons
+   * underneath. The legacy .toolbar wrapped here too. */
+  min-height: calc(56px * var(--wc-density, 1));
+  flex-wrap: wrap;
   border-bottom: var(--wc-border-width, 1px) solid var(--wc-border);
   background: var(--wc-surface);
   flex-shrink: 0;
@@ -20,12 +27,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .center {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   justify-content: center;
   min-width: 0;
@@ -35,8 +43,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   margin-left: auto;
+  flex-wrap: wrap;
 }
 
 /* ── Hamburger ────────────────────────────────────────────────────────── */
