@@ -49,7 +49,9 @@ const OVERSCAN_ROWS = 3;
 
 // Zoom level → pixels per day. Sprint 2 keeps the visible range = current
 // month; later sprints may expand the range at coarser zooms.
-const DAY_PX_PER_DAY = 80;
+const MIN_DAY_PX = 80;  // floor for per-day column width; actual pxPerDay
+                        // stretches to fill the container when totalDays *
+                        // MIN_DAY_PX leaves the right side empty.
 
 const APPROVAL_STAGES = new Set([
   'requested', 'approved', 'finalized', 'pending_higher', 'denied',
@@ -384,7 +386,6 @@ export default function AssetsView({
   }, [announce]);
 
   const activeZoom = 'day';
-  const pxPerDay   = DAY_PX_PER_DAY;
 
   // Range: when `dayWindow` is provided, render exactly that many days
   // starting from currentDate. Otherwise fall back to the full calendar
@@ -437,6 +438,16 @@ export default function AssetsView({
       ro?.disconnect();
     };
   }, []);
+
+  // Day-cell width: floor at MIN_DAY_PX; stretch to fill the container width
+  // (scrollState.width) when totalDays * MIN_DAY_PX would otherwise leave the
+  // right side of the card empty. Depends on the same scrollState the
+  // virtualizer reads, so resize and dayWindow changes both flow through.
+  const pxPerDay = useMemo(() => {
+    if (scrollState.width <= 0 || totalDays <= 0) return MIN_DAY_PX;
+    const available = scrollState.width - NAME_W;
+    return Math.max(MIN_DAY_PX, available / totalDays);
+  }, [scrollState.width, totalDays]);
 
   // Keep the current day in view for the gantt timeline by centering the
   // selected date whenever the month/day scale changes. Depend on a stable

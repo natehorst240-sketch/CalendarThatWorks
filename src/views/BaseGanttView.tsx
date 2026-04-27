@@ -30,7 +30,9 @@ const NAME_W   = 240;
 const LANE_H   = 24;
 const LANE_GAP = 3;
 const ROW_PAD  = 6;
-const DAY_PX   = 64;
+const MIN_DAY_PX = 64;  // floor width for a day column; actual width
+                        // stretches via pxPerDay when the container can fit
+                        // more than spanDays * MIN_DAY_PX
 
 const SPAN_OPTIONS = [
   { id: 14 as const, label: '14 days' },
@@ -160,6 +162,26 @@ export default function BaseGanttView({
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const pickerRef = useRef<HTMLDivElement | null>(null);
 
+  // Day-cell width: floor at MIN_DAY_PX; stretch to fill the container width
+  // when spanDays * MIN_DAY_PX would leave the right side of the card empty
+  // (e.g. dayWindow=7 on a wide viewport).
+  const [containerW, setContainerW] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry) setContainerW(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const pxPerDay = useMemo(() => {
+    if (containerW <= 0 || spanDays <= 0) return MIN_DAY_PX;
+    const available = containerW - NAME_W;
+    return Math.max(MIN_DAY_PX, available / spanDays);
+  }, [containerW, spanDays]);
+
   // Close picker on outside click / escape.
   useEffect(() => {
     if (!pickerOpen) return;
@@ -184,7 +206,13 @@ export default function BaseGanttView({
     return out;
   }, [rangeStart, spanDays]);
 
-  // Keep today roughly in view when the range or span changes.
+  // Keep today roughly in view when the range, span, or per-day pixel
+  // width changes. pxPerDay is included because the dynamic stretch math
+  // (filling the container when totalDays * MIN_DAY_PX comes up short)
+  // shifts the today column horizontally without changing rangeStart or
+  // spanDays — without this dep, the initial ResizeObserver measurement
+  // (and subsequent viewport resizes) leaves scrollLeft anchored to the
+  // pre-stretch geometry and today drifts off-center.
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
@@ -194,9 +222,9 @@ export default function BaseGanttView({
       return;
     }
     const visibleW = Math.max(wrap.clientWidth - NAME_W, 0);
-    const targetLeft = Math.max((todayIdx + 0.5) * DAY_PX - visibleW / 2, 0);
+    const targetLeft = Math.max((todayIdx + 0.5) * pxPerDay - visibleW / 2, 0);
     wrap.scrollLeft = targetLeft;
-  }, [rangeStart, spanDays]);
+  }, [rangeStart, spanDays, pxPerDay]);
 
   // Bases passing the user's selection filter (no search, no hide-empty).
   // Also used to drive the picker's "selected" state.
@@ -363,13 +391,13 @@ export default function BaseGanttView({
     );
   }
 
-  const timelineW = spanDays * DAY_PX;
+  const timelineW = spanDays * pxPerDay;
 
   const renderBars = (evs: BaseGanttEvent[], rowH: number) => {
     const { events: laned } = assignLanes(evs, rangeStart, rangeEnd);
     return laned.map((ev, idx) => {
-      const left   = ev._dayStart * DAY_PX;
-      const width  = Math.max((ev._dayEnd - ev._dayStart + 1) * DAY_PX - 4, 8);
+      const left   = ev._dayStart * pxPerDay;
+      const width  = Math.max((ev._dayEnd - ev._dayStart + 1) * pxPerDay - 4, 8);
       const top    = ROW_PAD + ev._lane * (LANE_H + LANE_GAP);
       const bg     = resolveColor(ev as never, ctx['colorRules']) || ev.color || 'var(--wc-accent)';
       return (
@@ -563,7 +591,7 @@ export default function BaseGanttView({
                   isWeekend(d) && styles['dayWeekend'],
                 ].filter(Boolean).join(' ');
                 return (
-                  <div key={i} className={cls} style={{ left: i * DAY_PX, width: DAY_PX }}>
+                  <div key={i} className={cls} style={{ left: i * pxPerDay, width: pxPerDay }}>
                     <span className={styles['dayDow']}>{format(d, 'EEE')}</span>
                     <span className={styles['dayNum']}>{format(d, 'd')}</span>
                   </div>
@@ -652,7 +680,7 @@ export default function BaseGanttView({
                           isToday(d) && styles['gridColToday'],
                           isWeekend(d) && styles['gridColWeekend'],
                         ].filter(Boolean).join(' ')}
-                        style={{ left: i * DAY_PX, width: DAY_PX }}
+                        style={{ left: i * pxPerDay, width: pxPerDay }}
                       />
                     ))}
                     {renderBars(baseWide, baseRowH)}
@@ -679,7 +707,7 @@ export default function BaseGanttView({
                               isToday(d) && styles['gridColToday'],
                               isWeekend(d) && styles['gridColWeekend'],
                             ].filter(Boolean).join(' ')}
-                            style={{ left: i * DAY_PX, width: DAY_PX }}
+                            style={{ left: i * pxPerDay, width: pxPerDay }}
                           />
                         ))}
                         {renderBars(rowEvs, rowH)}
@@ -729,7 +757,7 @@ export default function BaseGanttView({
                               isToday(d) && styles['gridColToday'],
                               isWeekend(d) && styles['gridColWeekend'],
                             ].filter(Boolean).join(' ')}
-                            style={{ left: i * DAY_PX, width: DAY_PX }}
+                            style={{ left: i * pxPerDay, width: pxPerDay }}
                           />
                         ))}
                         {renderBars(rowEvs, rowH)}

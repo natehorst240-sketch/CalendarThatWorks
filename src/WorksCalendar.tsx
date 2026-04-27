@@ -2394,7 +2394,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   </button>
                 )}
               </>}
-              centerSlot={<DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />}
+              centerSlot={
+                /* Day-window pills only have meaning on the Gantt-style
+                 * timeline views — the other views (Month / Week / Day /
+                 * Agenda) have intrinsic spans and ignore cal.dayWindow.
+                 * Hiding the pills there avoids the "pressing this button
+                 * does nothing" UX trap. */
+                (cal.view === 'schedule' || cal.view === 'base' || cal.view === 'assets')
+                  ? <DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />
+                  : null
+              }
               rightSlot={<>
                 {hasImport && (
                   <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">

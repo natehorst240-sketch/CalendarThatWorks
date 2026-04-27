@@ -43,7 +43,9 @@ import type { CalendarViewEvent } from '../types/ui';
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
 const NAME_W   = 188;  // px — left column (wider to fit avatar + role)
-const DAY_W    = 52;   // px — each day column
+const MIN_DAY_W = 52;  // px — minimum day-column width; actual per-day width
+                       //      stretches via pxPerDay when the container can fit
+                       //      more than totalDays * MIN_DAY_W
 const LANE_H   = 26;   // px — each event lane
 const LANE_GAP = 3;    // px — gap between lanes
 const ROW_PAD  = 8;    // px — top/bottom padding per row
@@ -247,6 +249,27 @@ export default function TimelineView({
   const lastKeyNavCell = useRef(false);
   const gridRef = useRef<HTMLDivElement | null>(null); // ref on .inner (for querySelector)
   const wrapRef = useRef<HTMLDivElement | null>(null); // ref on .wrap (scroll container)
+
+  // ── Day-cell width: floor at MIN_DAY_W, but stretch to fill the available
+  //    container width when the natural totalDays * MIN_DAY_W comes up short
+  //    (e.g. dayWindow=7 on a 1280px viewport). Without this the grid would
+  //    render only ~330px wide and leave the rest of the card empty. ──
+  const [containerW, setContainerW] = useState(0);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry) setContainerW(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const pxPerDay = useMemo(() => {
+    if (containerW <= 0 || totalDays <= 0) return MIN_DAY_W;
+    const available = containerW - NAME_W;
+    return Math.max(MIN_DAY_W, available / totalDays);
+  }, [containerW, totalDays]);
 
   // ── DnD: drag an event from one row to another to reassign it. ────────────
   // The drag source is the <button> around an event; the drop target is the
@@ -632,7 +655,7 @@ export default function TimelineView({
     <div className={styles['wrap']} ref={wrapRef}>
       <div
         className={styles['inner']}
-        style={{ width: NAME_W + totalDays * DAY_W }}
+        style={{ width: NAME_W + totalDays * pxPerDay }}
         role="grid"
         aria-label={`Timeline for ${rangeLabel}`}
         aria-rowcount={flatRows.length + 1}
@@ -715,7 +738,7 @@ export default function TimelineView({
                   isToday(day)   && styles['todayHead'],
                   isWeekend(day) && styles['weekendHead'],
                 ].filter(Boolean).join(' ')}
-                style={{ width: DAY_W, minWidth: DAY_W }}
+                style={{ width: pxPerDay, minWidth: pxPerDay }}
               >
                 <span className={styles['dayNum']} aria-hidden="true">{format(day, 'd')}</span>
                 <span className={styles['dayAbbr']} aria-hidden="true">{format(day, 'EEE')}</span>
@@ -776,7 +799,7 @@ export default function TimelineView({
                   aria-level={depth + 1}
                   data-depth={depth}
                 >
-                  <div className={styles['groupHeaderCell']} style={{ width: NAME_W + totalDays * DAY_W }}>
+                  <div className={styles['groupHeaderCell']} style={{ width: NAME_W + totalDays * pxPerDay }}>
                     <button
                       className={styles['groupToggleBtn']}
                       style={{ paddingLeft: 8 + indent }}
@@ -932,7 +955,7 @@ export default function TimelineView({
                 {/* Event zone — contains day background bands + keyboard cells + event bars */}
                 <div
                   className={styles['eventZone']}
-                  style={{ width: totalDays * DAY_W, height: rowH, position: 'relative' }}
+                  style={{ width: totalDays * pxPerDay, height: rowH, position: 'relative' }}
                   role="presentation"
                 >
                   {/* Day column backgrounds (pointer-events: none in CSS) */}
@@ -944,7 +967,7 @@ export default function TimelineView({
                         isToday(day)   && styles['todayCol'],
                         isWeekend(day) && styles['weekendCol'],
                       ].filter(Boolean).join(' ')}
-                      style={{ left: di * DAY_W, width: DAY_W, height: rowH }}
+                      style={{ left: di * pxPerDay, width: pxPerDay, height: rowH }}
                     />
                   ))}
 
@@ -963,7 +986,7 @@ export default function TimelineView({
                         aria-rowindex={rowIdx + 2}
                         aria-colindex={di + 2}
                         className={styles['kbCell']}
-                        style={{ left: di * DAY_W, width: DAY_W, top: 0, height: rowH }}
+                        style={{ left: di * pxPerDay, width: pxPerDay, top: 0, height: rowH }}
                         onKeyDown={e => handleCellKeyDown(e, rowIdx, di, rowEvents, resourceId)}
                         onClick={() => {
                           setFocusedCell({ rowIdx, dayIdx: di });
@@ -982,8 +1005,8 @@ export default function TimelineView({
                       ? (color ?? resolveColor(ev as any, ctx?.colorRules))
                       : resolveColor(ev as any, ctx?.colorRules);
 
-                    const left    = ev['_dayStart'] * DAY_W + 2;
-                    const width   = Math.max(DAY_W - 4, (ev['_dayEnd'] - ev['_dayStart'] + 1) * DAY_W - 4);
+                    const left    = ev['_dayStart'] * pxPerDay + 2;
+                    const width   = Math.max(pxPerDay - 4, (ev['_dayEnd'] - ev['_dayStart'] + 1) * pxPerDay - 4);
                     const top     = ROW_PAD + ev['_lane'] * (LANE_H + LANE_GAP);
                     const onClick = () => onEventClick?.(ev);
 
@@ -1113,8 +1136,8 @@ export default function TimelineView({
                       // day range as the PTO/unavailable event pill it mirrors.
                       const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
                       const pillDayEnd   = differenceInCalendarDays(min([startOfDay(reqEnd), monthEnd]), monthStart);
-                      const left  = pillDayStart * DAY_W + 2;
-                      const width = Math.max(DAY_W - 4, (pillDayEnd - pillDayStart + 1) * DAY_W - 4);
+                      const left  = pillDayStart * pxPerDay + 2;
+                      const width = Math.max(pxPerDay - 4, (pillDayEnd - pillDayStart + 1) * pxPerDay - 4);
                       const top   = baseH + 3;
                       const isCovered = !!ev.meta?.['coveredBy'];
                       const coveredByEmp = isCovered
@@ -1161,8 +1184,8 @@ export default function TimelineView({
 
                   {/* ── Covering-for pills (for the employee covering someone else) ── */}
                   {coveringPills.map(({ ev: covEv, origEmpName, _dayStart, _dayEnd }: { ev: LooseEvent; origEmpName: string; _dayStart: number; _dayEnd: number }) => {
-                    const left  = _dayStart * DAY_W + 2;
-                    const width = Math.max(DAY_W - 4, (_dayEnd - _dayStart + 1) * DAY_W - 4);
+                    const left  = _dayStart * pxPerDay + 2;
+                    const width = Math.max(pxPerDay - 4, (_dayEnd - _dayStart + 1) * pxPerDay - 4);
                     const top   = baseH + 3 + (hasStatusPills ? COVERAGE_BAND : 0);
                     return (
                       <div
