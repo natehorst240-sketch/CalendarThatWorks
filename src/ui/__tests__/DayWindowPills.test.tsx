@@ -28,6 +28,13 @@ describe('DayWindowPills', () => {
     expect(screen.getByRole('button', { name: '90 day' })).toHaveAttribute('aria-pressed', 'false');
   });
 
+  it('leaves every pill unpressed when value is null (auto / view default)', () => {
+    render(<DayWindowPills value={null} onChange={() => {}} />);
+    for (const n of [7, 14, 30, 90]) {
+      expect(screen.getByRole('button', { name: `${n} day` })).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
   it('invokes onChange with the picked window', () => {
     const onChange = vi.fn();
     render(<DayWindowPills value={30} onChange={onChange} />);

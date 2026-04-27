@@ -23,18 +23,16 @@ type CalendarState = {
    * User-controlled day-span window (in days) for the timeline-style views.
    * Bound to the 7/14/30/90 pills in the sub-toolbar.
    *
-   * TODO(shell-rework reflow): no view currently observes this value, so
-   * picking a pill only shifts the active swatch. Wiring up the views is
-   * a separate per-view refactor — TimelineView, BaseGanttView, and
-   * AssetsView all hardcode month-spanning math around `currentDate` and
-   * need their own props + range derivation to honour an arbitrary
-   * dayWindow. Tracked as a followup to the shell-rework PR series.
+   * `null` is the implicit "auto" / "view default" — timeline views fall
+   * back to their intrinsic range (e.g. TimelineView shows the calendar
+   * month around currentDate). When set to a positive number, observing
+   * views render exactly that many days starting from currentDate.
    *
-   * Views that have an intrinsic span (month, week, day) are expected to
-   * keep ignoring this value.
+   * Views that have a fixed intrinsic span (month, week, day) ignore this
+   * value entirely.
    */
-  dayWindow: number;
-  setDayWindow: (value: number) => void;
+  dayWindow: number | null;
+  setDayWindow: (value: number | null) => void;
   events: any[];
   visibleEvents: any[];
   categories: string[];
@@ -58,12 +56,12 @@ export function useCalendar(
   rawEvents: any[],
   initialView: CalendarView = 'month',
   filterSchema: any[] = DEFAULT_FILTER_SCHEMA,
-  initialDayWindow: number = 30,
+  initialDayWindow: number | null = null,
 ): CalendarState {
   const [view,        setView]        = useState(initialView);
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [filters,     setFilters]     = useState(() => createInitialFilters(filterSchema));
-  const [dayWindow,   setDayWindow]   = useState(initialDayWindow);
+  const [dayWindow,   setDayWindow]   = useState<number | null>(initialDayWindow);
 
   const events = useMemo(() => normalizeEvents(rawEvents), [rawEvents]);
 

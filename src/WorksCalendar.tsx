@@ -2430,6 +2430,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   sort={activeSort}
                   roles={ownerCfg.config?.['team']?.roles ?? []}
                   bases={ownerCfg.config?.['team']?.bases ?? []}
+                  dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'base' && (

@@ -3,8 +3,11 @@ import cls from './DayWindowPills.module.css';
 const DEFAULT_OPTIONS = [7, 14, 30, 90] as const;
 
 export type DayWindowPillsProps = {
-  /** Currently selected day window (in days). */
-  value: number;
+  /**
+   * Currently selected day window (in days), or `null` for the "auto" /
+   * view-default state where no pill is highlighted.
+   */
+  value: number | null;
   /** Called when the user picks a different window. */
   onChange: (next: number) => void;
   /**
