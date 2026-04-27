@@ -50,6 +50,7 @@ import { AppHeader }          from './ui/AppHeader';
 import { LeftRail }           from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
+import { RightPanel, RightPanelSection, RegionMapWidget, CrewOnShiftList } from './ui/RightPanel';
 import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
@@ -2165,6 +2166,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
         <AppShell
           leftRail={<LeftRail items={VIEWS} activeId={cal.view} onSelect={cal.setView} />}
+          rightPanel={
+            <RightPanel>
+              <RightPanelSection title="Region map">
+                <RegionMapWidget events={visibleEvents} />
+              </RightPanelSection>
+              <RightPanelSection title="Crew on shift">
+                <CrewOnShiftList employees={configuredEmployees} />
+              </RightPanelSection>
+            </RightPanel>
+          }
           header={<>
         {/* ── Toolbar ── */}
         {renderToolbar ? (
