@@ -39,6 +39,13 @@
   background-position: center;
   color: var(--wc-text);
   border-radius: var(--wc-radius);
+  /* Containing block for absolutely-positioned descendants — the
+   * FilterGroupSidebar drawer slides off-screen via translateX(100%) when
+   * closed, which without an anchored ancestor extended the viewport's
+   * scroll width and revealed the drawer if you scrolled right. With
+   * position: relative + overflow: hidden the slid-out drawer is clipped
+   * inside .root and the page no longer grows horizontally. */
+  position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
