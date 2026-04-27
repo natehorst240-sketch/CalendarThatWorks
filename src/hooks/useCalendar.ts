@@ -21,8 +21,17 @@ type CalendarState = {
   setCurrentDate: (value: Date) => void;
   /**
    * User-controlled day-span window (in days) for the timeline-style views.
-   * Bound to the 7/14/30/90 pills in the sub-toolbar. Views that don't have
-   * a configurable day span (e.g. month, week) ignore this value.
+   * Bound to the 7/14/30/90 pills in the sub-toolbar.
+   *
+   * TODO(shell-rework reflow): no view currently observes this value, so
+   * picking a pill only shifts the active swatch. Wiring up the views is
+   * a separate per-view refactor — TimelineView, BaseGanttView, and
+   * AssetsView all hardcode month-spanning math around `currentDate` and
+   * need their own props + range derivation to honour an arbitrary
+   * dayWindow. Tracked as a followup to the shell-rework PR series.
+   *
+   * Views that have an intrinsic span (month, week, day) are expected to
+   * keep ignoring this value.
    */
   dayWindow: number;
   setDayWindow: (value: number) => void;

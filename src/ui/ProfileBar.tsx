@@ -13,30 +13,18 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Plus, Bookmark, BookmarkCheck,
-  CalendarDays, Calendar, Columns3, List, CalendarRange, Boxes, MapPin, Radio, Map as MapIcon,
 } from 'lucide-react';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import ViewsDropdown from './ViewsDropdown';
 import CustomizeQuickViewsPanel from './CustomizeQuickViewsPanel';
 import ClearFiltersButton from './ClearFiltersButton';
+import { VIEW_ICON_MAP } from './viewIcons';
 import styles from './ProfileBar.module.css';
 
 const PROFILE_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
-
-const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
-  month:    { Icon: CalendarDays,  label: 'Month view' },
-  week:     { Icon: Columns3,      label: 'Week view' },
-  day:      { Icon: Calendar,      label: 'Day view' },
-  agenda:   { Icon: List,          label: 'Agenda view' },
-  schedule: { Icon: CalendarRange, label: 'Schedule view' },
-  base:     { Icon: MapPin,        label: 'Base view' },
-  assets:   { Icon: Boxes,         label: 'Assets view' },
-  dispatch: { Icon: Radio,         label: 'Dispatch view' },
-  map:      { Icon: MapIcon,       label: 'Map view' },
-};
 
 const GLOBAL_GROUP_KEY = '__global__';
 const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets','dispatch','map'];

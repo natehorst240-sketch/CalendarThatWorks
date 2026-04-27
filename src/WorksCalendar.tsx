@@ -47,6 +47,7 @@ import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
+import { LeftRail }           from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
 import FilterBar              from './ui/FilterBar';
@@ -2163,6 +2164,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
 
         <AppShell
+          leftRail={<LeftRail items={VIEWS} activeId={cal.view} onSelect={cal.setView} />}
           header={<>
         {/* ── Toolbar ── */}
         {renderToolbar ? (
