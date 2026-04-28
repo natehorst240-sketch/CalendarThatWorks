@@ -401,6 +401,82 @@ to whichever array drives ordering: `pool.memberIds` for `manual` /
 the candidate set (resource removed, no longer matches the filter)
 don't break rotation — the modulo math wraps as before.
 
+## UI components
+
+`works-calendar` ships two opt-in UI components for surfacing and
+editing pools. Hosts mount them wherever their config UI lives —
+they take pools in / out via props and don't depend on any
+particular layout.
+
+### `PoolCard`
+
+Read-only summary card. Renders the pool name, a type chip (Manual /
+Query / Hybrid), a plain-English clause list ("refrigerated · within
+50 mi of event"), and an optional live "Matches N · M excluded"
+counter when a `resources` registry is provided.
+
+```tsx
+import { PoolCard } from 'works-calendar';
+
+<PoolCard
+  pool={pool}
+  resources={resources}                      // optional: drives live counts
+  onEdit={() => setEditing(pool)}            // optional: shows Edit button
+  onToggleDisabled={() => toggle(pool.id)}   // optional: Disable / Enable
+/>
+```
+
+### `PoolBuilder`
+
+Guided create / edit modal. Walks the user through type → name →
+rules → strategy with progressive disclosure:
+
+- **Manual pools** — checkbox list of resources to include.
+- **Query / hybrid pools** — capability chips (auto-derived from each
+  resource's `meta.capabilities` boolean keys, or supplied as a
+  curated `capabilityCatalog` prop) plus an optional radius clause
+  ("within N miles of the event").
+- **Strategy picker** — `first-available` / `least-loaded` /
+  `round-robin` / `closest`. The builder blocks Save with an inline
+  warning when `closest` is picked without a radius clause, so the
+  new strategy never ships without a reference point.
+
+A live "Matches N · M excluded" preview tracks the draft as the user
+types, using `evaluateQuery` against the live registry.
+
+```tsx
+import { PoolBuilder } from 'works-calendar';
+
+<PoolBuilder
+  pool={editing}                             // null to create a new one
+  resources={resources}
+  capabilityCatalog={[                       // optional curation
+    { id: 'refrigerated', label: 'Refrigerated' },
+    { id: 'heavy_haul',   label: 'Heavy Haul' },
+  ]}
+  onSave={(next) => persist(next)}
+  onCancel={() => setEditing(null)}
+/>
+```
+
+The builder produces a concrete `ResourcePool`; persistence is the
+host's problem (typically wired through `onPoolsChange`).
+
+### `summarizePool` / `summarizeQuery`
+
+Pure helpers that turn a pool or query into a `PoolSummary`
+object — `{ typeLabel, strategyLabel, clauseLabels, headline }`.
+Useful when you want the same plain-English text in non-React
+surfaces (audit log entries, plain text emails, command-palette
+hints) without re-rendering a component.
+
+```ts
+import { summarizePool } from 'works-calendar';
+
+const { headline, clauseLabels } = summarizePool(pool);
+// → "Query pool · refrigerated · within 50 mi of event"
+```
+
 ## Sequence counter on onPoolsChange
 
 `onPoolsChange(pools, meta)` receives a monotonic `meta.sequence`

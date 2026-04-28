@@ -185,6 +185,13 @@ export {
   createMetaPathLocationAdapter,
 } from './core/pools/locationAdapters';
 export type { ResourceLocation, ResourceLocationAdapter } from './core/pools/locationAdapters';
+// ── Resource pools v2 — UI components (#386) ──────────────────────────────
+export { default as PoolCard }    from './ui/pools/PoolCard';
+export type { PoolCardProps }      from './ui/pools/PoolCard';
+export { default as PoolBuilder } from './ui/pools/PoolBuilder';
+export type { PoolBuilderProps, CapabilityOption } from './ui/pools/PoolBuilder';
+export { summarizePool, summarizeQuery } from './ui/pools/poolSummary';
+export type { PoolSummary } from './ui/pools/poolSummary';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
