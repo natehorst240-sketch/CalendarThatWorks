@@ -85,6 +85,9 @@ export interface ConfigPanelProps {
   onDeleteView?: ((id: string) => void) | undefined;
   sources?: SourceDraft[] | undefined;
   feedErrors?: unknown[] | undefined;
+  /** True while iCal feeds are fetching; surfaced in SourcePanel as a
+   *  small "Syncing…" affordance next to the iCal Feeds heading. */
+  isFetchingFeeds?: boolean | undefined;
   onAddSource?: ((...args: any[]) => void) | undefined;
   onRemoveSource?: ((...args: any[]) => void) | undefined;
   onToggleSource?: ((...args: any[]) => void) | undefined;

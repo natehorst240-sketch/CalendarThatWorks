@@ -272,7 +272,7 @@ export default function ConfigPanel({
   onUpdateView: onUpdateViewRaw,
   onDeleteView: onDeleteViewRaw,
   // Source store props (optional — omitted when owner has no source store)
-  sources, feedErrors,
+  sources, feedErrors, isFetchingFeeds,
   onAddSource: onAddSourceRaw,
   onRemoveSource: onRemoveSourceRaw,
   onToggleSource: onToggleSourceRaw,
@@ -496,6 +496,7 @@ export default function ConfigPanel({
             <SourcePanel
               sources={sources ?? []}
               feedErrors={feedErrors ?? []}
+              isFetchingFeeds={!!isFetchingFeeds}
               onAdd={(source) => onAddSource?.(source)}
               onRemove={(id) => onRemoveSource?.(id)}
               onToggle={(id) => onToggleSource?.(id)}

@@ -1,3 +1,15 @@
+/* Transient toast — used by handleImport to confirm a CSV import landed.
+   Floats top-center, doesn't take layout, ignores pointer events so it
+   never blocks clicks on whatever's underneath. */
+.transientToast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  pointer-events: none;
+}
+
 .root {
   /* Structural defaults — overridden per family via data-wc-theme-family */
   --wc-spacing-row-height:    40px;

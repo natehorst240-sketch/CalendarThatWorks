@@ -32,6 +32,8 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
 }): {
   events: SourceEvent[];
   feedErrors: Array<{ feed: { url: string; label?: string | undefined; refreshInterval?: number | undefined }; err: unknown }>;
+  /** True while iCal feeds are fetching (initial load or scheduled refresh). */
+  isFetchingFeeds: boolean;
 } {
   // Merge prop-level feeds + store-managed ICS feeds for the polling hook.
   // We use a stable JSON key so that referentially-new but semantically-identical
@@ -48,7 +50,7 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
     [allIcsFeedsKey],
   );
 
-  const { feedEvents, feedErrors } = useFeedEvents(allIcsFeeds);
+  const { feedEvents, feedErrors, isFetching: isFetchingFeeds } = useFeedEvents(allIcsFeeds);
 
   // Tag ICS events with source metadata
   const taggedFeedEvents = useMemo(
@@ -80,5 +82,5 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
     [taggedFeedEvents, csvEvents],
   );
 
-  return { events, feedErrors };
+  return { events, feedErrors, isFetchingFeeds };
 }

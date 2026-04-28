@@ -508,11 +508,14 @@ function SectionHeading({
   label,
   count,
   errors = 0,
+  syncing = false,
 }: {
   icon: typeof Link;
   label: string;
   count?: number | undefined;
   errors?: number | undefined;
+  /** When true, render a "Syncing…" affordance after the count. */
+  syncing?: boolean | undefined;
 }) {
   return (
     <div style={{
@@ -526,6 +529,15 @@ function SectionHeading({
       {count != null && (
         <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
           ({count})
+        </span>
+      )}
+      {syncing && (
+        <span
+          role="status"
+          aria-live="polite"
+          style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--wc-accent)' }}
+        >
+          · Syncing…
         </span>
       )}
       {errors > 0 && (
@@ -542,13 +554,15 @@ function SectionHeading({
 type SourcePanelProps = {
   sources?: Array<Record<string, any>> | undefined;
   feedErrors?: unknown[] | undefined;
+  /** True while iCal feeds are fetching (initial load or scheduled refresh). */
+  isFetchingFeeds?: boolean | undefined;
   onAdd: (source: Partial<CalendarSource>) => void;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
   onUpdate: (id: string, patch: Partial<CalendarSource>) => void;
 };
 
-export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onToggle, onUpdate }: SourcePanelProps) {
+export default function SourcePanel({ sources, feedErrors, isFetchingFeeds, onAdd, onRemove, onToggle, onUpdate }: SourcePanelProps) {
   const normalizedSources = (sources ?? []) as CalendarSource[];
   const icsSources = normalizedSources.filter((s: CalendarSource) => s.type === 'ics');
   const csvSources = normalizedSources.filter((s: CalendarSource) => s.type === 'csv');
@@ -590,6 +604,7 @@ export default function SourcePanel({ sources, feedErrors, onAdd, onRemove, onTo
           label="iCal Feeds"
           count={icsSources.length || undefined}
           errors={icsErrors}
+          syncing={!!isFetchingFeeds && icsSources.length > 0}
         />
 
         {icsSources.length === 0 ? (

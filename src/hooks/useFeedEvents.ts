@@ -23,19 +23,24 @@ type FeedError = { feed: ICalFeedInput; err: unknown };
 export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
   feedEvents: FeedEvent[];
   feedErrors: FeedError[];
+  /** True while a fetch (initial or polled) is in flight for any feed. */
+  isFetching: boolean;
 } {
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([]);
   const [feedErrors, setFeedErrors] = useState<FeedError[]>([]);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
     if (!icalFeeds?.length) {
       setFeedEvents([]);
+      setIsFetching(false);
       return;
     }
 
     let cancelled = false;
 
     async function fetchAll() {
+      if (!cancelled) setIsFetching(true);
       const results: FeedEvent[] = [];
       const errors: FeedError[] = [];
 
@@ -54,6 +59,7 @@ export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
       if (!cancelled) {
         setFeedEvents(results);
         setFeedErrors(errors);
+        setIsFetching(false);
       }
     }
 
@@ -71,5 +77,5 @@ export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
     };
   }, [icalFeeds]);
 
-  return { feedEvents, feedErrors };
+  return { feedEvents, feedErrors, isFetching };
 }
