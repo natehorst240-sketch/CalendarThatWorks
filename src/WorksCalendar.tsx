@@ -2729,6 +2729,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onAddCategory={perms.canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
             onCheckConflicts={checkEventConflicts}
+            approvalCategories={Array.isArray(assetRequestCategories) ? assetRequestCategories : []}
+            pools={rawPools ?? []}
           />
         )}
 
