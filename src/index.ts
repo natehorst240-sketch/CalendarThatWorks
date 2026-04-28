@@ -207,6 +207,11 @@ export type {
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
   ConfigSeedEvent, ConfigSettings,
 } from './core/config/calendarConfig';
+// ── Requirements engine — runtime consumer for the templates (#386) ──────
+export { evaluateRequirements } from './core/requirements/evaluateRequirements';
+export type {
+  EvaluateRequirementsInput, RequirementsEvaluation, RequirementShortfall,
+} from './core/requirements/evaluateRequirements';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
