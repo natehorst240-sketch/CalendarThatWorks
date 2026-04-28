@@ -98,3 +98,21 @@ export const LIFECYCLE_TRANSITIONS: Readonly<Record<EventLifecycleStatus, readon
   scheduled: ['completed', 'approved'],
   completed: [],
 }
+
+/**
+ * Return true when moving `from → to` is a permitted transition.
+ *
+ * Use this anywhere a status change is written — event form saves,
+ * approval actions, bulk-update flows — so `draft → completed` can
+ * never happen by accident.
+ *
+ *   canTransition('draft', 'pending')    // true
+ *   canTransition('draft', 'completed')  // false
+ *   canTransition('completed', 'draft')  // false
+ */
+export function canTransition(
+  from: EventLifecycleStatus,
+  to: EventLifecycleStatus,
+): boolean {
+  return (LIFECYCLE_TRANSITIONS[from] as readonly string[]).includes(to)
+}

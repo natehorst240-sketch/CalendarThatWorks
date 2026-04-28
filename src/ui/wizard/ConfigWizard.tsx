@@ -32,9 +32,10 @@ import {
 import type { ProfileId } from '../../core/config/profilePresets'
 import { validateConfig } from '../../core/config/validateConfig'
 import { serializeConfig } from '../../core/config/serializeConfig'
-import type {
-  CalendarConfig, ConfigResource, ConfigResourceType, ConfigRole,
-  ConfigSettings,
+import {
+  defaultCalendarConfig,
+  type CalendarConfig, type ConfigResource, type ConfigResourceType, type ConfigRole,
+  type ConfigSettings,
 } from '../../core/config/calendarConfig'
 import type { ResourcePool } from '../../core/pools/resourcePoolSchema'
 import type { EngineResource } from '../../core/engine/schema/resourceSchema'
@@ -79,7 +80,7 @@ export default function ConfigWizard({
   // in-progress edits.
   const [childModalOpen, setChildModalOpen] = useState(false)
   const trapRef = useFocusTrap<HTMLDivElement>(childModalOpen ? null : onCancel)
-  const [config, setConfig] = useState<CalendarConfig>(initialConfig ?? {})
+  const [config, setConfig] = useState<CalendarConfig>(initialConfig ?? defaultCalendarConfig())
   const [step, setStep] = useState<number>(0)
 
   const update = useCallback((updater: (c: CalendarConfig) => CalendarConfig) => {

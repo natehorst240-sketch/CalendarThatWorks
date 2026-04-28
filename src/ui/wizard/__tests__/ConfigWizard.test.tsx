@@ -11,6 +11,26 @@ import ConfigWizard from '../ConfigWizard'
 import type { CalendarConfig } from '../../../core/config/calendarConfig'
 import { applyProfilePreset } from '../../../core/config/profilePresets'
 
+describe('ConfigWizard — default config (#465)', () => {
+  it('uses defaultCalendarConfig() when no initialConfig is passed (Finish enabled on clean state)', () => {
+    // With `initialConfig ?? {}` the wizard started with a bare object;
+    // sections like `roles` and `resources` were undefined until touched.
+    // With `defaultCalendarConfig()` every section is present and empty,
+    // so validateConfig sees no dangling references and Finish stays enabled.
+    const onComplete = vi.fn()
+    render(<ConfigWizard onComplete={onComplete} onCancel={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    const finish = screen.getByRole('button', { name: 'Finish' })
+    expect(finish).toBeEnabled()
+    fireEvent.click(finish)
+    // The completed config should have all sections present (not undefined).
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources).toBeDefined()
+    expect(saved.roles).toBeDefined()
+    expect(saved.pools).toBeDefined()
+  })
+})
+
 describe('ConfigWizard — shell', () => {
   it('renders all five steps in the breadcrumbs', () => {
     render(<ConfigWizard onComplete={vi.fn()} onCancel={vi.fn()} />)
