@@ -384,7 +384,7 @@ export default function PoolBuilder(props: PoolBuilderProps): JSX.Element {
             <AdvancedRulesEditor
               clauses={draft.preserved}
               pathSuggestions={pathSuggestions}
-              resources={resourceList}
+              resources={resourceList.length > 0 ? resourceList : undefined}
               onChange={(next) => setDraft(d => ({ ...d, preserved: next }))}
             />
           </details>
