@@ -207,6 +207,99 @@ if (dropped > 0) console.warn(`Dropped ${dropped} pool(s) on load`);
 `storageError` is `true` when the storage layer itself failed (private
 mode Safari, JSON parse error, non-array payload).
 
+## v2: query and hybrid pools
+
+A pool can describe **what kind of resource it needs** instead of (or
+in addition to) listing concrete `memberIds`. The resolver evaluates
+the query against the live `EngineResource` registry at submit time.
+
+```ts
+const reefer80k: ResourcePool = {
+  id:        'nearby-reefers',
+  name:      'Nearby Reefers',
+  type:      'query',          // 'manual' (default) | 'query' | 'hybrid'
+  memberIds: [],               // ignored for type: 'query'
+  query: {
+    op: 'and',
+    clauses: [
+      { op: 'eq',  path: 'type',                       value: 'vehicle' },
+      { op: 'eq',  path: 'capabilities.refrigerated',  value: true },
+      { op: 'gte', path: 'capabilities.capacity_lbs',  value: 80000 },
+    ],
+  },
+  strategy: 'first-available',
+};
+```
+
+| Type     | Candidate set                                            |
+|----------|----------------------------------------------------------|
+| `manual` | `pool.memberIds` (v1 behavior; default when `type` omitted) |
+| `query`  | resources matching `pool.query`                          |
+| `hybrid` | intersection of `pool.memberIds` and `pool.query`        |
+
+### Query DSL
+
+`ResourceQuery` is a small structural DSL — no string parsing, no
+expression language. Hosts compose plain objects; the evaluator walks
+them. See `src/core/pools/poolQuerySchema.ts` for the full type.
+
+| Op       | Shape                                                  |
+|----------|--------------------------------------------------------|
+| `eq`     | `{ op: 'eq', path, value }` — strict equality          |
+| `neq`    | `{ op: 'neq', path, value }` — strict inequality       |
+| `in`     | `{ op: 'in', path, values: [...] }`                    |
+| `gt`/`gte`/`lt`/`lte` | `{ op, path, value }` — numeric only      |
+| `exists` | `{ op: 'exists', path }`                               |
+| `and`/`or` | `{ op, clauses: [...] }` — empty `and` is true, empty `or` is false |
+| `not`    | `{ op: 'not', clause }`                                |
+
+`path` accepts top-level `EngineResource` keys (`id`, `name`,
+`tenantId`, `capacity`, `color`, `timezone`) and `meta.<dot.path>` for
+arbitrary host attributes. The leading `meta.` is optional —
+`capabilities.refrigerated` reads `resource.meta.capabilities.refrigerated`.
+
+Comparators on a missing path return false; only `exists` surfaces
+presence directly.
+
+### Readiness explainability
+
+Every `query`/`hybrid` resolve — success or failure — returns a
+`queryExcluded` trail listing each filtered-out resource and the first
+clause that failed:
+
+```ts
+const result = resolvePool({ pool, proposed, events, rules, resources });
+if (!result.ok) {
+  for (const x of result.queryExcluded ?? []) {
+    console.log(`${x.id}: ${x.reason}`);   // e.g. "truck-202: gte(capabilities.capacity_lbs)"
+  }
+}
+```
+
+The same data drives the issue's "1 too far · 1 capacity too low ·
+2 available" UX without re-running the query.
+
+### Admin-time check
+
+`evaluateQuery(query, resources)` is exported separately so hosts can
+preview matches before saving a pool — useful for the "live preview"
+panel in a pool builder UI.
+
+```ts
+import { evaluateQuery } from 'works-calendar';
+
+const { matched, excluded } = evaluateQuery(query, resources);
+console.log(`Matches ${matched.length} resources, excludes ${excluded.length}`);
+```
+
+### Round-robin and dynamic candidate sets
+
+`round-robin` works for `query` and `hybrid` pools. The cursor anchors
+to whichever array drives ordering: `pool.memberIds` for `manual` /
+`hybrid`, the live query result for `query`. Members that drop out of
+the candidate set (resource removed, no longer matches the filter)
+don't break rotation — the modulo math wraps as before.
+
 ## Sequence counter on onPoolsChange
 
 `onPoolsChange(pools, meta)` receives a monotonic `meta.sequence`

@@ -23,6 +23,7 @@ import type { ConflictEvent, ConflictRule } from '../conflictEngine'
 import { evaluateConflicts } from '../conflictEngine'
 import type { EngineResource } from '../engine/schema/resourceSchema'
 import type { ResourcePool } from './resourcePoolSchema'
+import { evaluateQuery, type QueryExclusion } from './evaluateQuery'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -98,11 +99,22 @@ export interface ResolvePoolSuccess {
    * for surfacing "tried X, Y, then Z" in the conflict drawer.
    */
   readonly evaluated: readonly string[]
+  /**
+   * For `query` and `hybrid` pools: the explainability trail from the
+   * query evaluator — which resources were filtered out and why.
+   * Always populated for `query`/`hybrid`; `undefined` for `manual`.
+   */
+  readonly queryExcluded?: readonly QueryExclusion[]
 }
 
 export type ResolvePoolResult =
   | ResolvePoolSuccess
-  | { readonly ok: false; readonly error: ResolvePoolError }
+  | {
+      readonly ok: false
+      readonly error: ResolvePoolError
+      /** Mirror of the success-side trail — present for `query`/`hybrid`. */
+      readonly queryExcluded?: readonly QueryExclusion[]
+    }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -170,28 +182,86 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
     // the ghost-assignment risk it's supposed to prevent.
     throw new Error('resolvePool: strictMembers requires a `resources` registry')
   }
-  if (pool.disabled) {
-    return { ok: false, error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id, evaluated: [] } }
+
+  // ── v2: query / hybrid pool types ──────────────────────────────────────
+  // `manual` (default) keeps v1 behavior — `memberIds` is the candidate
+  // set. `query` ignores `memberIds` and runs `pool.query` against the
+  // live registry. `hybrid` intersects the two: only ids in `memberIds`
+  // *and* matching `query` survive. The evaluator's `excluded` trail
+  // is surfaced on every result so hosts can render readiness
+  // explanations ("1 too far · 1 capacity too low").
+  const poolType = pool.type ?? 'manual'
+  if ((poolType === 'query' || poolType === 'hybrid') && !pool.query) {
+    throw new Error(`resolvePool: pool "${pool.id}" has type "${poolType}" but no query`)
   }
-  if (pool.memberIds.length === 0) {
-    return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] } }
+  if ((poolType === 'query' || poolType === 'hybrid') && !input.resources) {
+    throw new Error(`resolvePool: pool "${pool.id}" has type "${poolType}" but no \`resources\` registry to evaluate against`)
+  }
+
+  let queryExcluded: readonly QueryExclusion[] | undefined
+  let baseMembers: readonly string[]
+  if (poolType === 'query') {
+    const result = evaluateQuery(pool.query!, input.resources!)
+    queryExcluded = result.excluded
+    baseMembers = result.matched
+  } else if (poolType === 'hybrid') {
+    const result = evaluateQuery(pool.query!, input.resources!)
+    const allowed = new Set(result.matched)
+    queryExcluded = result.excluded
+    baseMembers = pool.memberIds.filter(id => allowed.has(id))
+  } else {
+    baseMembers = pool.memberIds
+  }
+
+  if (pool.disabled) {
+    return {
+      ok: false,
+      error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id, evaluated: [] },
+      ...(queryExcluded ? { queryExcluded } : {}),
+    }
+  }
+  // For `manual` pools, the input was the source of truth. For `query`
+  // pools, an empty match set is "no member matched the constraints"
+  // — semantically `POOL_EMPTY` from the resolver's perspective.
+  if (baseMembers.length === 0) {
+    return {
+      ok: false,
+      error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] },
+      ...(queryExcluded ? { queryExcluded } : {}),
+    }
   }
 
   // Optional integrity filter: drop ids that aren't in the resource
   // registry before any scoring runs. Without this, the resolver was
   // happy to commit a typo'd or removed id as the winning resource,
-  // which docs claimed wasn't possible.
+  // which docs claimed wasn't possible. Query-derived ids already
+  // came from the registry, so the filter is a no-op there — but
+  // hybrid pools may carry stale `memberIds`.
   const validMembers = input.strictMembers && input.resources
-    ? pool.memberIds.filter(id => input.resources!.has(id))
-    : pool.memberIds
+    ? baseMembers.filter(id => input.resources!.has(id))
+    : baseMembers
   if (validMembers.length === 0) {
-    return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] } }
+    return {
+      ok: false,
+      error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] },
+      ...(queryExcluded ? { queryExcluded } : {}),
+    }
   }
 
   const winStart    = toTime(input.proposed.start)
   const winEnd      = toTime(input.proposed.end)
   const lookaheadMs = input.lookaheadMs ?? 0
   const evaluated: string[] = []
+
+  // Round-robin needs a stable rotation anchor. For `manual` and
+  // `hybrid` pools, the host-controlled `pool.memberIds` is the
+  // source of truth; the cursor points into it. For `query` pools
+  // there is no host-curated list, so we anchor to the live query
+  // result (`baseMembers`) — order mirrors the resource registry's
+  // iteration order, which is stable.
+  const cursorAnchor: readonly string[] = poolType === 'query'
+    ? baseMembers
+    : pool.memberIds
 
   // Build the candidate order per strategy.
   let candidates: readonly string[]
@@ -210,13 +280,14 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
       break
     }
     case 'round-robin': {
-      // Cursor is anchored to the original `pool.memberIds` ordering so
-      // it stays stable across renders even if `strictMembers` removes
-      // some entries on a given evaluation.
-      const startAt = ((pool.rrCursor ?? -1) + 1) % pool.memberIds.length
+      // Cursor anchors as described above. The query/strict-member
+      // filter is applied as a final pass so disqualified ids drop
+      // from the rotation without disturbing the anchor's index.
+      const anchor = cursorAnchor.length > 0 ? cursorAnchor : validMembers
+      const startAt = ((pool.rrCursor ?? -1) + 1) % anchor.length
       const ordered = [
-        ...pool.memberIds.slice(startAt),
-        ...pool.memberIds.slice(0, startAt),
+        ...anchor.slice(startAt),
+        ...anchor.slice(0, startAt),
       ]
       const allowed = new Set(validMembers)
       candidates = ordered.filter(id => allowed.has(id))
@@ -233,15 +304,16 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
       resourceId: candidate,
       strategy: pool.strategy,
       evaluated,
+      ...(queryExcluded ? { queryExcluded } : {}),
     }
     if (pool.strategy === 'round-robin') {
-      const nextCursor = pool.memberIds.indexOf(candidate)
-      // Invariant: every candidate originates from `pool.memberIds`, so
+      const nextCursor = cursorAnchor.indexOf(candidate)
+      // Invariant: every candidate originates from `cursorAnchor`, so
       // indexOf cannot return -1 on the current code path. Assert anyway
       // so a future refactor that projects candidates through a
       // transform fails loudly instead of persisting `rrCursor: -1`.
       if (nextCursor < 0) {
-        throw new Error(`resolvePool: round-robin candidate "${candidate}" is not in pool "${pool.id}" memberIds`)
+        throw new Error(`resolvePool: round-robin candidate "${candidate}" is not in pool "${pool.id}" cursor anchor`)
       }
       return { ...result, rrCursor: nextCursor }
     }
@@ -256,5 +328,6 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
       poolId: pool.id,
       evaluated,
     },
+    ...(queryExcluded ? { queryExcluded } : {}),
   }
 }

@@ -124,3 +124,40 @@ describe('loadPoolsDetailed', () => {
     expect(loadPoolsDetailed(CAL)).toEqual({ pools: [], dropped: 0, storageError: false });
   });
 });
+
+describe('poolStore — v2 type/query (#386)', () => {
+  it('round-trips type and query for query pools', () => {
+    const pools: ResourcePool[] = [{
+      id: 'reefer', name: 'Nearby Reefers',
+      type: 'query',
+      memberIds: [],
+      query: {
+        op: 'and',
+        clauses: [
+          { op: 'eq',  path: 'type',                      value:  'vehicle' },
+          { op: 'eq',  path: 'capabilities.refrigerated', value:  true },
+          { op: 'gte', path: 'capabilities.capacity_lbs', value:  80000 },
+        ],
+      },
+      strategy: 'first-available',
+    }];
+    savePools(CAL, pools);
+    const loaded = loadPools(CAL);
+    expect(loaded).toEqual(pools);
+  });
+
+  it('drops entries with an unknown pool type', () => {
+    localStorage.setItem(poolStorageKey(CAL), JSON.stringify([
+      { id: 'good', name: 'OK', memberIds: ['x'], strategy: 'round-robin' },
+      { id: 'bad',  name: 'BAD', memberIds: ['x'], strategy: 'round-robin', type: 'graphql' },
+    ]));
+    expect(loadPools(CAL).map(p => p.id)).toEqual(['good']);
+  });
+
+  it('drops entries with a non-object query', () => {
+    localStorage.setItem(poolStorageKey(CAL), JSON.stringify([
+      { id: 'bad', name: 'BAD', memberIds: [], strategy: 'first-available', type: 'query', query: 'not-an-object' },
+    ]));
+    expect(loadPools(CAL)).toEqual([]);
+  });
+});

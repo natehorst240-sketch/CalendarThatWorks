@@ -171,7 +171,11 @@ export { loadPools, loadPoolsDetailed, savePools, clearPools, poolStorageKey } f
 export type { LoadPoolsResult } from './core/pools/poolStore';
 export { validatePools } from './core/pools/validatePools';
 export type { PoolIntegrityIssue, PoolIntegrityReport } from './core/pools/validatePools';
-export type { ResourcePool } from './core/pools/resourcePoolSchema';
+export type { ResourcePool, PoolStrategy, PoolType } from './core/pools/resourcePoolSchema';
+// ── Resource pools v2 — query DSL (#386) ───────────────────────────────────
+export { evaluateQuery } from './core/pools/evaluateQuery';
+export type { QueryEvaluation, QueryExclusion } from './core/pools/evaluateQuery';
+export type { ResourceQuery, ResourceQueryValue } from './core/pools/poolQuerySchema';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';

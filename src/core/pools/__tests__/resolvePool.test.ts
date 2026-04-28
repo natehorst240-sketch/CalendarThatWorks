@@ -365,3 +365,135 @@ describe('resolvePool — strictMembers filters unknown ids', () => {
     }
   })
 })
+
+describe('resolvePool — v2 query pools (#386)', () => {
+  // Build a registry where capabilities + capacity vary per resource
+  // so query filters have something meaningful to chew on.
+  type R = import('../../engine/schema/resourceSchema').EngineResource
+  const reefer80 = { id: 't1', name: 'T1', meta: { type: 'vehicle', capabilities: { refrigerated: true,  capacity_lbs: 80000 } } } as unknown as R
+  const reefer60 = { id: 't2', name: 'T2', meta: { type: 'vehicle', capabilities: { refrigerated: true,  capacity_lbs: 60000 } } } as unknown as R
+  const dry80    = { id: 't3', name: 'T3', meta: { type: 'vehicle', capabilities: { refrigerated: false, capacity_lbs: 80000 } } } as unknown as R
+  const driver   = { id: 'd1', name: 'D1', meta: { type: 'person',  capabilities: { cdl: true } } } as unknown as R
+  const registry = new Map<string, R>([reefer80, reefer60, dry80, driver].map(r => [r.id, r]))
+
+  const reefer80kQuery = {
+    op: 'and' as const,
+    clauses: [
+      { op: 'eq'  as const, path: 'type',                      value:  'vehicle' },
+      { op: 'eq'  as const, path: 'capabilities.refrigerated', value:  true },
+      { op: 'gte' as const, path: 'capabilities.capacity_lbs', value:  80000 },
+    ],
+  }
+
+  it('query pools resolve against the live registry, not memberIds', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'NearbyReefers', type: 'query',
+      memberIds: [],          // intentionally empty: query is the source
+      query: reefer80kQuery,
+      strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [], resources: registry })
+    expect(result.ok && result.resourceId).toBe('t1')
+    if (result.ok) {
+      expect(result.evaluated).toEqual(['t1'])
+      expect(result.queryExcluded?.map(x => x.id).sort()).toEqual(['d1', 't2', 't3'])
+    }
+  })
+
+  it('hybrid pools intersect memberIds with the query result', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'OurReefers', type: 'hybrid',
+      memberIds: ['t2', 't3'],         // both in the curated list, neither match query
+      query: reefer80kQuery,
+      strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [], resources: registry })
+    // t1 matches the query but isn't in memberIds → excluded.
+    // t2 is in memberIds but capacity is too low → excluded.
+    // t3 is in memberIds but isn't refrigerated → excluded.
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('POOL_EMPTY')
+      // Query exclusion trail still surfaces so the host can render
+      // "matched 1 resource but it isn't in your fleet" UX.
+      expect(result.queryExcluded).toBeDefined()
+    }
+  })
+
+  it('hybrid pools succeed when the intersection is non-empty', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'PrimaryReefers', type: 'hybrid',
+      memberIds: ['t1', 't2'],         // t1 matches query, t2 doesn't
+      query: reefer80kQuery,
+      strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [], resources: registry })
+    expect(result.ok && result.resourceId).toBe('t1')
+  })
+
+  it('query pools support round-robin with cursor anchored to the matched array', () => {
+    // All three vehicles match a relaxed query; round-robin should
+    // rotate through them in registry order regardless of memberIds.
+    const allVehicles = { op: 'eq' as const, path: 'type', value: 'vehicle' }
+    const pool: ResourcePool = {
+      id: 'p', name: 'AnyTruck', type: 'query', memberIds: [],
+      query: allVehicles, strategy: 'round-robin',
+    }
+    const r1 = resolvePool({ pool, proposed, events: [], rules: [], resources: registry })
+    expect(r1.ok && r1.resourceId).toBe('t1')
+    if (r1.ok) expect(r1.rrCursor).toBe(0)
+
+    const next = resolvePool({
+      pool: { ...pool, rrCursor: 0 },
+      proposed, events: [], rules: [], resources: registry,
+    })
+    expect(next.ok && next.resourceId).toBe('t2')
+  })
+
+  it('query pools without a registry are a programmer error', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'NoRegistry', type: 'query', memberIds: [],
+      query: reefer80kQuery, strategy: 'first-available',
+    }
+    expect(() => resolvePool({ pool, proposed, events: [], rules: [] }))
+      .toThrow(/`resources` registry/)
+  })
+
+  it('query/hybrid pools without a query are a programmer error', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'TypedNoQuery', type: 'query', memberIds: [],
+      strategy: 'first-available',
+    }
+    expect(() => resolvePool({ pool, proposed, events: [], rules: [], resources: registry }))
+      .toThrow(/no query/)
+  })
+
+  it('an empty query result yields POOL_EMPTY plus the explanation trail', () => {
+    const impossible = { op: 'eq' as const, path: 'type', value: 'helicopter' }
+    const pool: ResourcePool = {
+      id: 'p', name: 'NoneMatch', type: 'query', memberIds: [],
+      query: impossible, strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [], resources: registry })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('POOL_EMPTY')
+      // The trail names every registry resource that failed, with
+      // the failed clause path — that's the readiness explainability.
+      expect(result.queryExcluded?.length).toBe(registry.size)
+    }
+  })
+
+  it('manual pools are unaffected by the v2 plumbing (no queryExcluded surfaced)', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Legacy', memberIds: ['t1', 't2'],
+      strategy: 'first-available',
+    }
+    const result = resolvePool({ pool, proposed, events: [], rules: [] })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.resourceId).toBe('t1')
+      expect(result.queryExcluded).toBeUndefined()
+    }
+  })
+})

@@ -14,7 +14,8 @@
  * (private-mode Safari, etc.).
  */
 
-import type { ResourcePool, PoolStrategy } from './resourcePoolSchema';
+import type { ResourcePool, PoolStrategy, PoolType } from './resourcePoolSchema';
+import type { ResourceQuery } from './poolQuerySchema';
 
 // ─── Storage key ─────────────────────────────────────────────────────────────
 
@@ -108,6 +109,7 @@ export function clearPools(calendarId: string): void {
 // ─── Internals ───────────────────────────────────────────────────────────────
 
 const STRATEGIES: readonly PoolStrategy[] = ['first-available', 'least-loaded', 'round-robin'];
+const POOL_TYPES: readonly PoolType[] = ['manual', 'query', 'hybrid'];
 
 function coerce(item: unknown): ResourcePool | null {
   if (!item || typeof item !== 'object') return null;
@@ -115,11 +117,31 @@ function coerce(item: unknown): ResourcePool | null {
   if (typeof r['id'] !== 'string' || typeof r['name'] !== 'string') return null;
   if (!Array.isArray(r['memberIds']) || !r['memberIds'].every(m => typeof m === 'string')) return null;
   if (typeof r['strategy'] !== 'string' || !STRATEGIES.includes(r['strategy'] as PoolStrategy)) return null;
+  // v2 pool-type discriminant: optional, defaults to 'manual'. An
+  // unrecognized type drops the entry so a bad deploy doesn't try
+  // to evaluate a non-existent pool kind.
+  let poolType: PoolType | undefined;
+  if (r['type'] !== undefined) {
+    if (typeof r['type'] !== 'string' || !POOL_TYPES.includes(r['type'] as PoolType)) return null;
+    poolType = r['type'] as PoolType;
+  }
+  // v2 query: validated at submit time by `evaluateQuery`. Storage
+  // layer accepts any object — too narrow a check here would pin
+  // the schema to whatever the DSL looks like today and force a
+  // store-coercer change every time the DSL grows. A non-object
+  // `query` is rejected outright.
+  let query: ResourceQuery | undefined;
+  if (r['query'] !== undefined) {
+    if (!r['query'] || typeof r['query'] !== 'object') return null;
+    query = r['query'] as ResourceQuery;
+  }
   const out: ResourcePool = {
     id:        r['id'],
     name:      r['name'],
     memberIds: r['memberIds'] as string[],
     strategy:  r['strategy'] as PoolStrategy,
+    ...(poolType ? { type: poolType } : {}),
+    ...(query    ? { query } : {}),
     ...(typeof r['rrCursor'] === 'number'  ? { rrCursor: r['rrCursor'] } : {}),
     ...(typeof r['disabled'] === 'boolean' ? { disabled: r['disabled'] } : {}),
   };
