@@ -79,6 +79,39 @@ match a `roles[].id`?) is **not** checked — those references
 typically come from external sources and the engine's own runtime
 validators handle them when they fire.
 
+## Validating cross-section integrity
+
+`parseConfig` checks each section's *shape* but deliberately does
+not cross-check references between them. `validateConfig(config)`
+is the opt-in pass that walks the references and surfaces issues:
+
+| Check                                  | Issue kind                  |
+|----------------------------------------|------------------------------|
+| `resource.type` ∈ `resourceTypes[].id` | `unknown-resource-type`     |
+| `pool.memberIds[*]` ∈ `resources[].id` | `unknown-pool-member`       |
+| `requirement.role` ∈ `roles[].id`      | `unknown-requirement-role`  |
+| `requirement.pool` ∈ `pools[].id`      | `unknown-requirement-pool`  |
+| `event.resourceId` ∈ `resources[].id`  | `unknown-event-resource`    |
+| `event.resourcePoolId` ∈ `pools[].id`  | `unknown-event-pool`        |
+| Duplicate ids in any catalog section   | `duplicate-id`              |
+
+```ts
+import { validateConfig } from 'works-calendar';
+
+const { ok, issues } = validateConfig(config);
+if (!ok) {
+  for (const issue of issues) {
+    console.warn(`${issue.path}: ${issue.kind}`);
+  }
+}
+```
+
+Each issue carries enough context to render
+*"requirements[0].requires[1].pool: pool 'aircraft' not found"*
+without stitching strings together. Useful for the wizard's review
+step, CLI tools loading config files, and any consumer that wants
+to fail fast on internal inconsistencies.
+
 ## Writing a config
 
 ```ts

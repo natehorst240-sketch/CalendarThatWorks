@@ -207,6 +207,10 @@ export type {
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
   ConfigSeedEvent, ConfigSettings,
 } from './core/config/calendarConfig';
+export { validateConfig } from './core/config/validateConfig';
+export type {
+  ValidateConfigResult, ConfigIssue, ConfigIssueSeverity,
+} from './core/config/validateConfig';
 // ── Requirements engine — runtime consumer for the templates (#386) ──────
 export { evaluateRequirements } from './core/requirements/evaluateRequirements';
 export type {
