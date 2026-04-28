@@ -1,8 +1,10 @@
-import { useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
+import { useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { createId } from '../core/createId';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './AvailabilityForm.module.css';
 
 // ─── Kind metadata ────────────────────────────────────────────────────────────
@@ -85,8 +87,6 @@ function fromInput(str: string, allDay: boolean): Date | null {
  *   onClose    () => void
  */
 export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
-
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
@@ -108,6 +108,17 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [end,    setEnd]    = useState(toDateInput(endDefault, initialAllDay));
   const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Dirty guard. Intentional Cancel stays bare; the X / overlay / Esc paths
+  // route through `requestClose`.
+  const initialSnapshot = useMemo(
+    () => JSON.stringify({ allDay: initialAllDay, title: initialTitle, start: toDateInput(startDefault, initialAllDay), end: toDateInput(endDefault, initialAllDay), notes: initialEvent?.meta?.notes ?? '' }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+  );
+  const dirty = initialSnapshot !== JSON.stringify({ allDay, title, start, end, notes });
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose });
+  const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -156,7 +167,16 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const kindLabel = meta.label;
 
   return (
-    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
+    <>
+      {pendingClose && (
+        <ConfirmDialog
+          message="Discard your changes?"
+          confirmLabel="Discard"
+          onConfirm={confirmDiscard}
+          onCancel={cancelDiscard}
+        />
+      )}
+    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && requestClose()}>
       <div
         ref={trapRef}
         className={styles['modal']}
@@ -170,7 +190,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
             <h2 className={styles['title']}>{heading}</h2>
             <span className={styles['empName']}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
-          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close">
+          <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -301,5 +321,6 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
         </form>
       </div>
     </div>
+    </>
   );
 }

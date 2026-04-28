@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { format, parseISO, isValid, addDays, addHours } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { createId } from '../core/createId';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './ScheduleEditorForm.module.css';
 import type { WorksCalendarEvent } from '../types/events';
 
@@ -133,8 +135,6 @@ export default function ScheduleEditorForm({
   onSave,
   onClose,
 }: ScheduleEditorFormProps) {
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
-
   const [mode, setMode] = useState<'onetime' | 'recurring' | 'template'>('onetime');
 
   const defaultStart = initialStart ?? new Date();
@@ -148,6 +148,25 @@ export default function ScheduleEditorForm({
   const [customRrule, setCustomRrule] = useState('');
   const [templateId, setTemplateId] = useState(defaultTemplate.id);
   const [errors, setErrors] = useState<ScheduleEditorErrors>({});
+
+  // Dirty guard. Cancel button stays bare (intentional discard); X / overlay
+  // / Esc route through `requestClose`.
+  const initialSnapshot = useMemo(
+    () => JSON.stringify({
+      mode: 'onetime',
+      start: toInput(defaultStart, false),
+      end: toInput(defaultEnd, false),
+      title: 'On-Call Shift',
+      rrulePreset: 'weekdays',
+      customRrule: '',
+      templateId: defaultTemplate.id,
+    }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+  );
+  const dirty = initialSnapshot !== JSON.stringify({ mode, start, end, title, rrulePreset, customRrule, templateId });
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose });
+  const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
 
   const selectedTemplate = SHIFT_TEMPLATES.find((template) => template.id === templateId) ?? defaultTemplate;
 
@@ -240,7 +259,16 @@ export default function ScheduleEditorForm({
   }
 
   return (
-    <div className={styles['overlay']} onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <>
+      {pendingClose && (
+        <ConfirmDialog
+          message="Discard your changes?"
+          confirmLabel="Discard"
+          onConfirm={confirmDiscard}
+          onCancel={cancelDiscard}
+        />
+      )}
+    <div className={styles['overlay']} onClick={(e) => e.target === e.currentTarget && requestClose()}>
       <div
         ref={trapRef}
         className={styles['modal']}
@@ -253,7 +281,7 @@ export default function ScheduleEditorForm({
             <h2 className={styles['title']}>Create Shift Schedule</h2>
             <span className={styles['empName']}>{emp.name}{emp.role ? ` · ${emp.role}` : ''}</span>
           </div>
-          <button type="button" className={styles['closeBtn']} onClick={onClose} aria-label="Close">
+          <button type="button" className={styles['closeBtn']} onClick={requestClose} aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -400,5 +428,6 @@ export default function ScheduleEditorForm({
         </form>
       </div>
     </div>
+    </>
   );
 }

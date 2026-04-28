@@ -13,7 +13,9 @@ import { useMemo, useState } from 'react';
 import type { FormEvent, ChangeEvent, MouseEvent } from 'react';
 import { X, ShieldCheck } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { toDatetimeLocal, fromDatetimeLocal } from '../hooks/useEventDraftState';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './EventForm.module.css';
 
 type AssetEntry = { id: string; label: string; group?: string | undefined; meta?: Record<string, unknown> | undefined };
@@ -57,8 +59,6 @@ export default function AssetRequestForm({
   onSubmit,
   onClose,
 }: AssetRequestFormProps) {
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
-
   const start = initialStart instanceof Date ? initialStart : new Date();
   const defaultEnd = new Date(start.getTime() + 60 * 60 * 1000);
 
@@ -70,6 +70,25 @@ export default function AssetRequestForm({
   const [notes,    setNotes]    = useState('');
   const [requirements, setRequirements] = useState<Record<string, string>>({});
   const [errors,   setErrors]   = useState<Record<string, string>>({});
+
+  // Dirty guard. Cancel button stays bare; X / overlay / Esc route through
+  // `requestClose`.
+  const initialSnapshot = useMemo(
+    () => JSON.stringify({
+      assetId: initialAssetId ?? assets[0]?.id ?? '',
+      category: categories[0]?.id ?? '',
+      title: '',
+      startStr: toDatetimeLocal(start),
+      endStr: toDatetimeLocal(defaultEnd),
+      notes: '',
+      requirements: {},
+    }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+  );
+  const dirty = initialSnapshot !== JSON.stringify({ assetId, category, title, startStr, endStr, notes, requirements });
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose });
+  const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
 
   const assetOptions = useMemo(
     () => assets.map((a) => ({ value: a.id, label: a.label || a.id })),
@@ -149,7 +168,16 @@ export default function AssetRequestForm({
   }
 
   return (
-    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose()}>
+    <>
+      {pendingClose && (
+        <ConfirmDialog
+          message="Discard your changes?"
+          confirmLabel="Discard"
+          onConfirm={confirmDiscard}
+          onCancel={cancelDiscard}
+        />
+      )}
+    <div className={styles['overlay']} onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && requestClose()}>
       <div
         className={styles['modal']}
         ref={trapRef}
@@ -159,7 +187,7 @@ export default function AssetRequestForm({
       >
         <div className={styles['header']}>
           <h2 className={styles['title']}>Request Asset</h2>
-          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close"><X size={18} /></button>
+          <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close"><X size={18} /></button>
         </div>
         <form className={styles['form']} onSubmit={handleSubmit} noValidate>
           <div className={styles['field']}>
@@ -299,5 +327,6 @@ export default function AssetRequestForm({
         </form>
       </div>
     </div>
+    </>
   );
 }

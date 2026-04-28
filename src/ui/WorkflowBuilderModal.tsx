@@ -29,6 +29,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { X, RotateCcw, Save } from 'lucide-react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useDirtyGuard } from '../hooks/useDirtyGuard'
+import ConfirmDialog from './ConfirmDialog'
 import {
   hasBlockingErrors,
   validateWorkflow,
@@ -76,10 +78,18 @@ export function WorkflowBuilderModal(
   const [undoSnap, setUndoSnap] = useState<UndoSnapshot | null>(null)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
 
+  // Dirty guard. Compare the draft to the initial input via a stable
+  // mount-time snapshot — workflows are tree-shaped but JSON-serializable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
+  const initialSnapshot = useMemo(() => JSON.stringify({ workflow: initialWorkflow, layout: initialLayout }), [])
+  const dirty = initialSnapshot !== JSON.stringify({ workflow: draftWorkflow, layout: draftLayout })
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose })
+
   // Trap's Escape wiring: cancel any open transient UI (edge-guard
-  // picker) before falling back to onClose. The trap binds on
-  // `document` at the capture phase, so without this layering it would
-  // outrun the picker's own window-level Escape handler.
+  // picker) before falling back to the dirty-guarded close path. The
+  // trap binds on `document` at the capture phase, so without this
+  // layering it would outrun the picker's own window-level Escape handler.
   const pendingEdgeRef = useRef(pendingEdge)
   pendingEdgeRef.current = pendingEdge
   const handleEscape = useCallback(() => {
@@ -87,8 +97,8 @@ export function WorkflowBuilderModal(
       setPendingEdge(null)
       return
     }
-    onClose()
-  }, [onClose])
+    requestClose()
+  }, [requestClose])
   const trapRef = useFocusTrap<HTMLDivElement>(handleEscape)
 
   // Validator runs on every draft change — cheap for Phase-2-sized graphs.
@@ -255,9 +265,18 @@ export function WorkflowBuilderModal(
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
+    <>
+    {pendingClose && (
+      <ConfirmDialog
+        message="Discard your workflow changes?"
+        confirmLabel="Discard"
+        onConfirm={confirmDiscard}
+        onCancel={cancelDiscard}
+      />
+    )}
     <div
       className={styles['overlay']}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      onClick={e => { if (e.target === e.currentTarget) requestClose() }}
       data-testid="workflow-builder-overlay"
     >
       <div
@@ -297,7 +316,7 @@ export function WorkflowBuilderModal(
             <button
               type="button"
               className={styles['close']}
-              onClick={onClose}
+              onClick={requestClose}
               aria-label="Close workflow builder"
             >
               <X size={16} aria-hidden="true" />
@@ -395,6 +414,7 @@ export function WorkflowBuilderModal(
         </div>
       </div>
     </div>
+    </>
   )
 }
 

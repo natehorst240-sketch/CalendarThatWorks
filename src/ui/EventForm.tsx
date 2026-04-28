@@ -3,10 +3,11 @@
  * Layout and orchestration only; business logic lives in useEventDraftState
  * and the extracted section components.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState';
 import { BUILT_IN_EVENT_TEMPLATES } from '../core/engine/recurrence/templates.ts';
 import { RecurrenceSection } from './EventFormSections/RecurrenceSection';
@@ -24,9 +25,18 @@ export default function EventForm({
   maintenanceRules,
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  // Dirty guard: snapshot the draft on mount, compare on every render.
+  // Close paths (X, overlay click, Esc) route through `requestClose`; the
+  // explicit Cancel button stays bare since clicking it is itself an
+  // intentional discard.
+  const initialSnapshot = useMemo(() => JSON.stringify(draft.values), []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+  const dirty = initialSnapshot !== JSON.stringify(draft.values);
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose });
+  const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -100,11 +110,19 @@ export default function EventForm({
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}
-      <div className={styles['overlay']} onClick={e => e.target === e.currentTarget && onClose()}>
+      {pendingClose && (
+        <ConfirmDialog
+          message="Discard your changes?"
+          confirmLabel="Discard"
+          onConfirm={confirmDiscard}
+          onCancel={cancelDiscard}
+        />
+      )}
+      <div className={styles['overlay']} onClick={e => e.target === e.currentTarget && requestClose()}>
         <div className={styles['modal']} ref={trapRef} role="dialog" aria-modal="true" aria-label={isNew ? 'Add event' : 'Edit event'}>
           <div className={styles['header']}>
             <h2 className={styles['title']}>{isNew ? 'Add Event' : 'Edit Event'}</h2>
-            <button className={styles['closeBtn']} onClick={onClose} aria-label="Close"><X size={18} /></button>
+            <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close"><X size={18} /></button>
           </div>
           <form className={styles['form']} onSubmit={handleSubmit} noValidate>
             <div className={styles['field']}>

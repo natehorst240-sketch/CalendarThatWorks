@@ -16,12 +16,14 @@
  *   resources     string[]          — available resource/person values
  *   onSaveView    (name, filters, opts) => void  — wired to useSavedViews.saveView
  */
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ChangeEvent, MouseEvent } from 'react';
 import { X, ChevronRight, Check, Sparkles, Camera } from 'lucide-react';
 import { THEMES, THEME_META, normalizeTheme } from '../styles/themes';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
+import ConfirmDialog from './ConfirmDialog';
 import styles from './SetupWizardModal.module.css';
 
 const TOTAL_STEPS = 4;
@@ -66,7 +68,27 @@ export default function SetupWizardModal({
   const [selectedTheme,  setSelectedTheme]  = useState('corporate');
   const [createdViews,   setCreatedViews]   = useState<CreatedView[]>([]); // { name, conditions }[]
   const [teamMembers,    setTeamMembers]    = useState<TeamMember[]>(DEFAULT_TEAM_MEMBERS);
-  const trapRef = useFocusTrap<HTMLDivElement>(onClose);
+
+  // Dirty guard. The wizard commits everything on Finish, so closing
+  // mid-flow used to silently nuke up to 4 steps of input. Track any
+  // movement off the defaults and route X/overlay/Esc through a discard
+  // confirmation. The optional onClose prop is wrapped to a stable
+  // no-op fallback so the hook contract stays simple.
+  const closeHandler = useCallback(() => { onClose?.(); }, [onClose]);
+  const initialSnapshot = useMemo(
+    () => JSON.stringify({
+      step: 1,
+      calendarName: 'My WorksCalendar',
+      selectedTheme: 'corporate',
+      createdViews: [],
+      teamMembers: DEFAULT_TEAM_MEMBERS,
+    }),
+    [],
+  );
+  const dirty = initialSnapshot !== JSON.stringify({ step, calendarName, selectedTheme, createdViews, teamMembers });
+  const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
+    useDirtyGuard({ dirty, onClose: closeHandler });
+  const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
 
   if (!isOpen) return null;
 
@@ -107,9 +129,18 @@ export default function SetupWizardModal({
   const goNext = () => setStep(s => Math.min(TOTAL_STEPS, s + 1));
 
   return (
+    <>
+      {pendingClose && (
+        <ConfirmDialog
+          message="Discard your setup progress?"
+          confirmLabel="Discard"
+          onConfirm={confirmDiscard}
+          onCancel={cancelDiscard}
+        />
+      )}
     <div
       className={styles['overlay']}
-      onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && onClose?.()}
+      onClick={(e: MouseEvent<HTMLDivElement>) => e.target === e.currentTarget && requestClose()}
     >
       <div
         ref={trapRef}
@@ -126,7 +157,7 @@ export default function SetupWizardModal({
           </div>
           <div className={styles['headerRight']}>
             <span className={styles['stepPill']}>Step {step} of {TOTAL_STEPS}</span>
-            <button className={styles['closeBtn']} onClick={onClose} aria-label="Close setup wizard">
+            <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close setup wizard">
               <X size={17} />
             </button>
           </div>
@@ -199,6 +230,7 @@ export default function SetupWizardModal({
         </div>
       </div>
     </div>
+    </>
   );
 }
 
