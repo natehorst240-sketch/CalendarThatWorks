@@ -211,6 +211,10 @@ export { validateConfig } from './core/config/validateConfig';
 export type {
   ValidateConfigResult, ConfigIssue, ConfigIssueSeverity,
 } from './core/config/validateConfig';
+export {
+  PROFILE_PRESETS, listProfilePresets, applyProfilePreset,
+} from './core/config/profilePresets';
+export type { ProfileId, ProfilePreset } from './core/config/profilePresets';
 // ── Requirements engine — runtime consumer for the templates (#386) ──────
 export { evaluateRequirements } from './core/requirements/evaluateRequirements';
 export type {

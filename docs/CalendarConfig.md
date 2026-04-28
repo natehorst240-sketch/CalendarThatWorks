@@ -146,6 +146,42 @@ returns `{ config, errors: [], dropped: 0 }` for any valid
 | `events`         | `{ id, title, start, end, eventType?, resourceId?, resourcePoolId?, meta? }[]` | Seed events for demos / config-driven setup. ISO 8601 strings on the wire; the runtime parses them when loading. |
 | `settings`       | `{ conflictMode?, timezone? }`              | `conflictMode` is whitelisted to `block` / `soft` / `off`. Not yet enforced at runtime. |
 
+## Industry profile presets
+
+Four presets ship as starting points for the wizard's first step:
+
+| Profile     | Labels                | Catalogs                                                    |
+|-------------|-----------------------|--------------------------------------------------------------|
+| `trucking`  | Truck / Load / Depot   | `vehicle`, `trailer`, `person` — `driver`, `dispatcher`      |
+| `aviation`  | Aircraft / Flight / Airport | `aircraft`, `pilot` — `pilot-in-command`, `second-in-command`, `dispatcher` |
+| `scheduling`| Room / Booking / Building   | `room`, `equipment`, `person` — `organizer`, `attendee`     |
+| `custom`    | (none)                | (none)                                                       |
+
+```ts
+import { applyProfilePreset, listProfilePresets } from 'works-calendar';
+
+// Wizard first-step picker:
+const presets = listProfilePresets();   // ProfilePreset[]
+
+// User picks "trucking" then starts editing:
+let config = applyProfilePreset('trucking');
+
+// User adds a custom role later. Switching profiles preserves
+// their additions; the new preset's entries are appended for any
+// id not already in the catalog.
+config = applyProfilePreset('aviation', config);
+```
+
+Merge rules:
+
+- **`profile`** — preset always wins (switching profiles updates the field).
+- **`labels`** — per-key. Base wins where set; preset fills gaps.
+- **`resourceTypes` / `roles`** — base entries kept in order; preset entries appended for any id not already present.
+- **`settings`** — per-key, base wins.
+- **`resources`, `pools`, `requirements`, `events`** — never touched by presets. Those stay the user's job.
+
+`applyProfilePreset` is pure — it never mutates the input.
+
 ## Wizard
 
 The `CalendarConfig` shape is the wizard's output target. The
