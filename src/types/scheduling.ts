@@ -77,7 +77,8 @@ export function isScheduledEvent(v: unknown): v is ScheduledEvent {
     isEventLifecycleStatus(e['status']) &&
     e['start'] instanceof Date &&
     e['end'] instanceof Date &&
-    Array.isArray(e['resources'])
+    Array.isArray(e['resources']) &&
+    (e['resources'] as unknown[]).every(r => typeof r === 'string')
   )
 }
 

@@ -50,13 +50,16 @@ function isStringArray(v: unknown): v is string[] {
 
 function isAssignmentArray(v: unknown): v is Assignment[] {
   if (!Array.isArray(v)) return false
-  return v.every(x =>
-    x !== null &&
-    typeof x === 'object' &&
-    typeof (x as Record<string, unknown>)['id'] === 'string' &&
-    typeof (x as Record<string, unknown>)['eventId'] === 'string' &&
-    typeof (x as Record<string, unknown>)['resourceId'] === 'string',
-  )
+  return v.every(x => {
+    if (x === null || typeof x !== 'object') return false
+    const a = x as Record<string, unknown>
+    return (
+      typeof a['id'] === 'string' &&
+      typeof a['eventId'] === 'string' &&
+      typeof a['resourceId'] === 'string' &&
+      typeof a['units'] === 'number'
+    )
+  })
 }
 
 // ─── Public API ────────────────────────────────────────────────────────────
@@ -150,16 +153,18 @@ export function calendarEventToScheduledEvent(e: WorksCalendarEvent): ScheduledE
   const start = toDate(e.start)
   const end   = e.end ? toDate(e.end) : new Date(start.getTime() + 60 * 60 * 1000)
 
+  // exactOptionalPropertyTypes: only spread optional fields when they
+  // have a real value, never explicitly assign `undefined` to them.
   return {
-    id:           e.id ?? '',
+    id: e.id ?? '',
     status,
     start,
     end,
     resources,
-    eventType:    e.category,
-    title:        e.title || undefined,
-    requirements,
-    ...(Object.keys(cleanMeta).length > 0 ? { meta: cleanMeta } : {}),
+    ...(e.category !== undefined   ? { eventType: e.category }       : {}),
+    ...(e.title                    ? { title: e.title }               : {}),
+    ...(requirements !== undefined ? { requirements }                 : {}),
+    ...(Object.keys(cleanMeta).length > 0 ? { meta: cleanMeta }      : {}),
   }
 }
 

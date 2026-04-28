@@ -125,7 +125,7 @@ describe('calendarEventToScheduledEvent', () => {
   })
 
   it('produces no requirements when none were set', () => {
-    const noReqs: ScheduledEvent = { ...BASE, requirements: undefined }
+    const { requirements: _drop, ...noReqs } = BASE
     const rt = calendarEventToScheduledEvent(scheduledEventToCalendarEvent(noReqs))
     expect(rt.requirements).toBeUndefined()
   })
