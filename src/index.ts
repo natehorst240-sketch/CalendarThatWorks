@@ -223,6 +223,8 @@ export { evaluateRequirements } from './core/requirements/evaluateRequirements';
 export type {
   EvaluateRequirementsInput, RequirementsEvaluation, RequirementShortfall,
 } from './core/requirements/evaluateRequirements';
+export { gateEventRequirements } from './core/requirements/gateEventRequirements';
+export type { GateEventRequirementsInput } from './core/requirements/gateEventRequirements';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
 export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
