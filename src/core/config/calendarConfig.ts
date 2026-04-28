@@ -92,9 +92,18 @@ export interface ConfigRequirement {
   readonly requires: readonly ConfigRequirementSlot[]
 }
 
+/**
+ * `hard` (default): unmet → `satisfied: false`, blocks submit
+ * gating when wired. `soft`: unmet → still in `missing[]` with the
+ * severity tag, but `satisfied` ignores it. Lets a template say
+ * "this load *prefers* a co-driver" without rejecting the booking
+ * when no co-driver is available.
+ */
+export type ConfigRequirementSeverity = 'hard' | 'soft'
+
 export type ConfigRequirementSlot =
-  | { readonly role: string; readonly count: number }
-  | { readonly pool: string; readonly count: number }
+  | { readonly role: string; readonly count: number; readonly severity?: ConfigRequirementSeverity }
+  | { readonly pool: string; readonly count: number; readonly severity?: ConfigRequirementSeverity }
 
 export interface ConfigSeedEvent {
   readonly id: string

@@ -133,16 +133,33 @@ documented behavior; tests pin it.
 - Slots are independent — a single assignment satisfies any slot
   whose criteria it meets, including multiple at once.
 
+## Severity: hard vs soft
+
+Each slot can be marked `severity: 'soft'` to declare a *preference*
+rather than a hard requirement. When a soft slot goes unmet, the
+shortfall still surfaces in `missing[]` (so hosts can render
+"this load doesn't have a co-driver" as a warning), but
+`satisfied` stays `true` if every *hard* slot is filled.
+
+```ts
+{
+  "eventType": "load",
+  "requires": [
+    { "role": "driver",     "count": 1, "severity": "hard" },  // blocks
+    { "role": "note-taker", "count": 1, "severity": "soft" },  // warns only
+  ]
+}
+```
+
+`severity` defaults to `'hard'` when omitted, preserving the v1
+contract for existing templates. Engine integration (auto-reject
+gating) reads this to decide whether to block.
+
 ## Out of scope (future slices)
 
-- **Engine integration** — auto-rejecting submits with unmet
+- **Engine integration** — auto-rejecting submits with unmet hard
   requirements at the operation level. This evaluator is currently
   a standalone read; hosts decide whether to gate.
-- **Per-assignment `roleId`** — assignments declaring "this resource
-  is acting as role X *on this event*" rather than relying on the
-  resource's static role list.
-- **Soft requirements** — slots that warn but don't block (the v1
-  contract treats every unmet slot as a hard shortfall).
 - **`validateConfig`** — cross-section integrity checks
   (`requirement.role` ∈ `roles[]`, `requirement.pool` ∈ `pools[]`)
   still need to land separately.

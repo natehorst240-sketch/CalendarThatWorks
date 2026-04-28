@@ -205,6 +205,7 @@ export { serializeConfig } from './core/config/serializeConfig';
 export type {
   CalendarConfig, ConfigLabels, ConfigResourceType, ConfigRole,
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
+  ConfigRequirementSeverity,
   ConfigSeedEvent, ConfigSettings,
 } from './core/config/calendarConfig';
 export { validateConfig } from './core/config/validateConfig';

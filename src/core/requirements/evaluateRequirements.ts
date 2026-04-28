@@ -29,7 +29,9 @@ import type { EngineResource } from '../engine/schema/resourceSchema'
 import type { Assignment } from '../engine/schema/assignmentSchema'
 import type { ResourcePool } from '../pools/resourcePoolSchema'
 import type { LatLon } from '../pools/geo'
-import type { ConfigRequirement, ConfigRequirementSlot } from '../config/calendarConfig'
+import type {
+  ConfigRequirement, ConfigRequirementSlot, ConfigRequirementSeverity,
+} from '../config/calendarConfig'
 import { evaluateQuery } from '../pools/evaluateQuery'
 
 export interface EvaluateRequirementsInput {
@@ -59,6 +61,14 @@ export type RequirementShortfall =
       readonly required: number
       readonly assigned: number
       readonly missing: number
+      /**
+       * Mirrors `ConfigRequirementSlot.severity` — defaults to
+       * `'hard'` when the slot didn't specify one. Only `hard`
+       * shortfalls flip `RequirementsEvaluation.satisfied` to false;
+       * `soft` shortfalls stay in `missing[]` for hosts to render
+       * as warnings.
+       */
+      readonly severity: ConfigRequirementSeverity
     }
   | {
       readonly kind: 'pool'
@@ -66,6 +76,7 @@ export type RequirementShortfall =
       readonly required: number
       readonly assigned: number
       readonly missing: number
+      readonly severity: ConfigRequirementSeverity
       /**
        * `true` when the slot pointed at a pool id that isn't in the
        * `pools` map. The shortfall surfaces with `assigned: 0` so
@@ -128,7 +139,13 @@ export function evaluateRequirements(
     if (shortfall) missing.push(shortfall)
   }
 
-  return { satisfied: missing.length === 0, missing, noTemplate: false }
+  // `satisfied` reflects only HARD shortfalls. Soft shortfalls
+  // surface in `missing[]` with their severity tag so hosts can
+  // render warnings, but they don't fail the evaluation. The empty
+  // hard set short-circuits to `true` even when soft shortfalls
+  // exist — that's exactly what soft means.
+  const satisfied = !missing.some(s => s.severity === 'hard')
+  return { satisfied, missing, noTemplate: false }
 }
 
 // ─── Internals ──────────────────────────────────────────────────────────────
@@ -142,6 +159,7 @@ interface SlotContext {
 }
 
 function checkSlot(slot: ConfigRequirementSlot, ctx: SlotContext): RequirementShortfall | null {
+  const severity: ConfigRequirementSeverity = slot.severity ?? 'hard'
   if ('role' in slot) {
     const assigned = countRoleAssignments(slot.role, ctx)
     if (assigned >= slot.count) return null
@@ -149,6 +167,7 @@ function checkSlot(slot: ConfigRequirementSlot, ctx: SlotContext): RequirementSh
       kind: 'role', role: slot.role,
       required: slot.count, assigned,
       missing: slot.count - assigned,
+      severity,
     }
   }
   // pool slot
@@ -157,7 +176,7 @@ function checkSlot(slot: ConfigRequirementSlot, ctx: SlotContext): RequirementSh
     return {
       kind: 'pool', pool: slot.pool,
       required: slot.count, assigned: 0,
-      missing: slot.count, poolUnknown: true,
+      missing: slot.count, severity, poolUnknown: true,
     }
   }
   const assigned = countPoolAssignments(members, ctx)
@@ -166,6 +185,7 @@ function checkSlot(slot: ConfigRequirementSlot, ctx: SlotContext): RequirementSh
     kind: 'pool', pool: slot.pool,
     required: slot.count, assigned,
     missing: slot.count - assigned,
+    severity,
   }
 }
 

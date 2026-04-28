@@ -208,6 +208,36 @@ describe('parseConfig — requirements', () => {
     expect(r.config.requirements![0]!.requires).toEqual([{ role: 'driver', count: 1 }])
     expect(r.errors.some(e => e.includes('requires[1]'))).toBe(true)
   })
+  it('round-trips slot severity (#450)', () => {
+    const r = parseConfig({
+      requirements: [{
+        eventType: 'load',
+        requires: [
+          { role: 'driver',     count: 1, severity: 'hard' },
+          { pool: 'note-taker', count: 1, severity: 'soft' },
+        ],
+      }],
+    })
+    expect(r.config.requirements).toEqual([{
+      eventType: 'load',
+      requires: [
+        { role: 'driver',     count: 1, severity: 'hard' },
+        { pool: 'note-taker', count: 1, severity: 'soft' },
+      ],
+    }])
+  })
+
+  it('ignores an unknown severity value while keeping the slot', () => {
+    const r = parseConfig({
+      requirements: [{
+        eventType: 'load',
+        requires: [{ role: 'driver', count: 1, severity: 'maybe' }],
+      }],
+    })
+    // Slot survives; severity is dropped (treated as default 'hard' by the engine).
+    expect(r.config.requirements?.[0]?.requires).toEqual([{ role: 'driver', count: 1 }])
+    expect(r.errors.some(e => e.includes('severity'))).toBe(true)
+  })
 })
 
 describe('parseConfig — events (seed)', () => {

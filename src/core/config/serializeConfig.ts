@@ -70,10 +70,14 @@ function serializePool(p: ResourcePool): Record<string, unknown> {
 function serializeRequirement(r: ConfigRequirement): Record<string, unknown> {
   return {
     eventType: r.eventType,
-    requires: r.requires.map((slot) =>
-      'role' in slot
+    requires: r.requires.map((slot) => {
+      const base = 'role' in slot
         ? { role: slot.role, count: slot.count }
-        : { pool: slot.pool, count: slot.count }),
+        : { pool: slot.pool, count: slot.count }
+      // Only emit severity when the slot specified one — preserves
+      // the "default hard, omit when implicit" round-trip contract.
+      return slot.severity ? { ...base, severity: slot.severity } : base
+    }),
   }
 }
 

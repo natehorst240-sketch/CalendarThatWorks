@@ -248,12 +248,27 @@ function parseRequirement(raw: unknown, path: string, errors: string[]): ConfigR
   let slotsDropped = 0
   raw['requires'].forEach((slot, i) => {
     if (isObject(slot) && typeof slot['count'] === 'number' && slot['count'] >= 0) {
+      // Severity is opt-in; an unknown value is logged + ignored,
+      // and the slot stays valid (treated as the default 'hard').
+      // We never reject the whole slot just for a typo'd severity.
+      let severity: 'hard' | 'soft' | undefined
+      if (slot['severity'] !== undefined) {
+        if (slot['severity'] === 'hard' || slot['severity'] === 'soft') {
+          severity = slot['severity']
+        } else {
+          errors.push(`${path}.requires[${i}].severity: invalid value "${String(slot['severity'])}", ignoring`)
+        }
+      }
       if (typeof slot['role'] === 'string') {
-        requires.push({ role: slot['role'], count: slot['count'] })
+        requires.push(severity
+          ? { role: slot['role'], count: slot['count'], severity }
+          : { role: slot['role'], count: slot['count'] })
         return
       }
       if (typeof slot['pool'] === 'string') {
-        requires.push({ pool: slot['pool'], count: slot['count'] })
+        requires.push(severity
+          ? { pool: slot['pool'], count: slot['count'], severity }
+          : { pool: slot['pool'], count: slot['count'] })
         return
       }
     }

@@ -65,7 +65,7 @@ describe('evaluateRequirements — role slots', () => {
     const assignments = mapBy([a('a1', 'e1', 'alice')])
     const out = evaluateRequirements({ event: event('e1', 'load'), requirements, resources, assignments })
     expect(out.satisfied).toBe(false)
-    expect(out.missing).toEqual([{ kind: 'role', role: 'driver', required: 2, assigned: 1, missing: 1 }])
+    expect(out.missing).toEqual([{ kind: 'role', role: 'driver', required: 2, assigned: 1, missing: 1, severity: 'hard' }])
   })
 
   it('ignores assignments to other events', () => {
@@ -234,7 +234,7 @@ describe('evaluateRequirements — pool slots', () => {
       assignments: mapBy([a('a1', 'e1', 't1')]),
     })
     expect(out.satisfied).toBe(false)
-    expect(out.missing).toEqual([{ kind: 'pool', pool: 'fleet', required: 2, assigned: 1, missing: 1 }])
+    expect(out.missing).toEqual([{ kind: 'pool', pool: 'fleet', required: 2, assigned: 1, missing: 1, severity: 'hard' }])
   })
 
   it('runs the query for query pools', () => {
@@ -357,6 +357,74 @@ describe('evaluateRequirements — pool slots', () => {
   })
 })
 
+describe('evaluateRequirements — soft requirements (#450)', () => {
+  const resources = mapBy([
+    r('alice', { roles: ['driver'] }),
+  ])
+
+  it('a slot defaults to severity:hard when omitted', () => {
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{ eventType: 'load', requires: [{ role: 'note-taker', count: 1 }] }],
+      resources,
+      assignments: new Map(),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing[0]?.severity).toBe('hard')
+  })
+
+  it('soft shortfalls surface in missing[] but do NOT flip satisfied', () => {
+    // Need a driver (hard, satisfied) + note-taker (soft, unmet).
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{
+        eventType: 'load',
+        requires: [
+          { role: 'driver',     count: 1, severity: 'hard' },
+          { role: 'note-taker', count: 1, severity: 'soft' },
+        ],
+      }],
+      resources,
+      assignments: mapBy([a('a1', 'e1', 'alice')]),
+    })
+    expect(out.satisfied).toBe(true)             // hard requirement met
+    expect(out.missing.length).toBe(1)           // soft shortfall surfaced
+    expect(out.missing[0]?.severity).toBe('soft')
+    expect(out.missing[0]).toMatchObject({ kind: 'role', role: 'note-taker', missing: 1 })
+  })
+
+  it('hard + soft both unmet → satisfied is false (hard drives the gate)', () => {
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{
+        eventType: 'load',
+        requires: [
+          { role: 'driver',     count: 1, severity: 'hard' },
+          { role: 'note-taker', count: 1, severity: 'soft' },
+        ],
+      }],
+      resources,
+      assignments: new Map(),
+    })
+    expect(out.satisfied).toBe(false)
+    expect(out.missing.map(m => m.severity)).toEqual(['hard', 'soft'])
+  })
+
+  it('only-soft requirements never block — satisfied:true even when fully unmet', () => {
+    const out = evaluateRequirements({
+      event: event('e1', 'load'),
+      requirements: [{
+        eventType: 'load',
+        requires: [{ role: 'note-taker', count: 2, severity: 'soft' }],
+      }],
+      resources,
+      assignments: new Map(),
+    })
+    expect(out.satisfied).toBe(true)
+    expect(out.missing[0]?.severity).toBe('soft')
+  })
+})
+
 describe('evaluateRequirements — mixed slots', () => {
   it('reports every shortfall in input order', () => {
     const resources = mapBy([
@@ -381,8 +449,8 @@ describe('evaluateRequirements — mixed slots', () => {
     })
     expect(out.satisfied).toBe(false)
     expect(out.missing).toEqual([
-      { kind: 'role', role: 'driver', required: 2, assigned: 1, missing: 1 },
-      { kind: 'pool', pool: 'fleet',  required: 2, assigned: 1, missing: 1 },
+      { kind: 'role', role: 'driver', required: 2, assigned: 1, missing: 1, severity: 'hard' },
+      { kind: 'pool', pool: 'fleet',  required: 2, assigned: 1, missing: 1, severity: 'hard' },
     ])
   })
 })
