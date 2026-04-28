@@ -11,7 +11,7 @@
  * engine can always recover the correct UTC instant for any given date.
  */
 
-import { wallClockToUtc, hoursInTimezone, partsInTimezone } from './timezone';
+import { wallClockToUtc, hoursInTimezone, partsInTimezone, utcOffsetMinutes } from './timezone';
 import { buildOccurrenceDateKey } from '../recurrence/recurrenceMath';
 
 // ─── Wall-clock anchor ────────────────────────────────────────────────────────
@@ -87,11 +87,23 @@ export function computeOccurrenceEnd(
   if (!tz) return new Date(start.getTime() + durationMs);
 
   const startParts = partsInTimezone(start, tz);
+  // Carry the start's offset as a fold-side hint so a fall-back
+  // ambiguous end stays on the same side of the transition as the
+  // start (Codex P1 on #258). Without this, an event whose start is
+  // the second instance of the repeated hour and whose end is still
+  // inside that hour gets re-anchored to the first instance — moving
+  // end *before* start.
+  const startOffsetMinutes = utcOffsetMinutes(start, tz);
+  // Sub-second precision lives outside `partsInTimezone` (integer
+  // seconds only) and outside `wallClockToUtc` (no ms argument), so
+  // we shuttle the millisecond residue through the wall-clock
+  // arithmetic by hand (Codex P2 on #258).
+  const startMsResidue = start.getTime() - Math.floor(start.getTime() / 1000) * 1000;
 
-  // Treat the wall-clock parts as if they were UTC and add `durationMs`
-  // there. This is "clock arithmetic" — the carry rules (60s = 1m,
-  // 60m = 1h, etc.) match what a wall clock does, and the result is
-  // independent of the source/target offsets.
+  // Treat the wall-clock parts as if they were UTC and add the
+  // residue + duration there. This is "clock arithmetic" — the
+  // carry rules (60s = 1m, 60m = 1h, etc.) match what a wall clock
+  // does, and the result is independent of the source/target offsets.
   const wallStartAsUtc = Date.UTC(
     startParts.year,
     startParts.month - 1,
@@ -100,11 +112,13 @@ export function computeOccurrenceEnd(
     startParts.minute,
     startParts.second,
   );
-  const wallEndAsUtc = new Date(wallStartAsUtc + durationMs);
+  const wallEndAsUtc = new Date(wallStartAsUtc + startMsResidue + durationMs);
+  const wallEndMsResidue = wallEndAsUtc.getTime() - Math.floor(wallEndAsUtc.getTime() / 1000) * 1000;
 
   // Read the post-add wall-clock parts back out of the throwaway UTC
-  // moment and re-anchor in the real timezone.
-  return wallClockToUtc(
+  // moment and re-anchor in the real timezone, preferring the start's
+  // DST offset when ambiguous.
+  const baseEnd = wallClockToUtc(
     wallEndAsUtc.getUTCFullYear(),
     wallEndAsUtc.getUTCMonth() + 1,
     wallEndAsUtc.getUTCDate(),
@@ -112,7 +126,9 @@ export function computeOccurrenceEnd(
     wallEndAsUtc.getUTCMinutes(),
     wallEndAsUtc.getUTCSeconds(),
     tz,
+    startOffsetMinutes,
   );
+  return new Date(baseEnd.getTime() + wallEndMsResidue);
 }
 
 // ─── Display helpers ──────────────────────────────────────────────────────────

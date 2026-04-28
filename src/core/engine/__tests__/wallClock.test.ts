@@ -123,3 +123,50 @@ describe('computeOccurrenceEnd — sub-hour and cross-day', () => {
     expect(parts.minute).toBe(30);
   });
 });
+
+describe('computeOccurrenceEnd — Codex P1: fall-back fold-side preservation', () => {
+  // 2026-11-01: 01:30 wall-clock occurs twice in NY:
+  //   first  (DST-active, EDT, offset -240) at 05:30 UTC
+  //   second (standard,    EST, offset -300) at 06:30 UTC
+  // An event whose start lands on the second instance and whose end
+  // stays inside the repeated hour MUST keep the end on the second
+  // (EST) instance — otherwise end ends up earlier than start.
+
+  const startSecondInstance = new Date('2026-11-01T06:30:00Z'); // 01:30 EST
+
+  it('keeps the end on the same fold side as the start', () => {
+    const end = computeOccurrenceEnd(startSecondInstance, 15 * 60_000, NY);
+    // Expected: 01:45 EST = 06:45 UTC, *not* 01:45 EDT = 05:45 UTC.
+    expect(end.toISOString()).toBe('2026-11-01T06:45:00.000Z');
+    expect(end.getTime()).toBeGreaterThan(startSecondInstance.getTime());
+  });
+
+  it('an EDT-side start keeps EDT-side end when both stay within the fold', () => {
+    const startFirstInstance = new Date('2026-11-01T05:30:00Z'); // 01:30 EDT
+    const end = computeOccurrenceEnd(startFirstInstance, 15 * 60_000, NY);
+    // 01:45 EDT = 05:45 UTC.
+    expect(end.toISOString()).toBe('2026-11-01T05:45:00.000Z');
+  });
+});
+
+describe('computeOccurrenceEnd — Codex P2: sub-second precision preservation', () => {
+  it('preserves milliseconds in start through tz-aware math', () => {
+    // tz=UTC, 0ms duration, 500ms in start. Result must be the same instant.
+    const start = new Date('2026-01-15T12:00:00.500Z');
+    const end = computeOccurrenceEnd(start, 0, 'UTC');
+    expect(end.toISOString()).toBe('2026-01-15T12:00:00.500Z');
+  });
+
+  it('preserves milliseconds in durationMs through tz-aware math', () => {
+    const start = new Date('2026-01-15T12:00:00.000Z');
+    const end = computeOccurrenceEnd(start, 250, 'UTC');
+    expect(end.toISOString()).toBe('2026-01-15T12:00:00.250Z');
+  });
+
+  it('preserves milliseconds across a DST tz', () => {
+    const start = new Date('2026-06-15T13:00:00.123Z'); // 09:00:00.123 EDT
+    const end = computeOccurrenceEnd(start, 60 * 60_000 + 7, NY);
+    // Wall-clock: 10:00:00.123 + 7ms = 10:00:00.130 EDT = 14:00:00.130 UTC.
+    expect(end.toISOString()).toBe('2026-06-15T14:00:00.130Z');
+  });
+});
