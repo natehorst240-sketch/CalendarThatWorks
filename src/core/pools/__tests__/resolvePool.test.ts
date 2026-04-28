@@ -335,6 +335,20 @@ describe('resolvePool — strictMembers filters unknown ids', () => {
     expect(result.ok && result.resourceId).toBe('ghost')
   })
 
+  it('throws when strictMembers is set without a resources registry', () => {
+    // Silent fallback to "all members ok" would defeat the whole
+    // point of strict mode — the resolver must surface the
+    // misconfiguration loudly so a missing arg can't reintroduce
+    // the ghost-assignment risk.
+    const pool: ResourcePool = {
+      id: 'p', name: 'NoRegistry', memberIds: ['r1'],
+      strategy: 'first-available',
+    }
+    expect(() => resolvePool({
+      pool, proposed, events: [], rules: [], strictMembers: true,
+    })).toThrow(/strictMembers/)
+  })
+
   it('rebases round-robin candidates so unknown ids are skipped without losing rotation', () => {
     const pool: ResourcePool = {
       id: 'p', name: 'Rotation', memberIds: ['r1', 'ghost', 'r3'],

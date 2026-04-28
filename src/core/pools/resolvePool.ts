@@ -60,6 +60,10 @@ export interface ResolvePoolInput {
    * `evaluated` reflects the post-filter list, so a typo'd id never
    * appears in audit trails. When the filter empties the candidate
    * list, the resolver returns `POOL_EMPTY`.
+   *
+   * Requires `resources` — `resolvePool` throws when `strictMembers`
+   * is true and no registry is provided, so the strict contract can't
+   * be silently disabled by a missing argument.
    */
   readonly strictMembers?: boolean
 }
@@ -160,6 +164,12 @@ function workloadFor(
 
 export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
   const { pool } = input
+  if (input.strictMembers && !input.resources) {
+    // Programmer error — silently falling back to "all members ok"
+    // would defeat the whole point of strict mode and reintroduce
+    // the ghost-assignment risk it's supposed to prevent.
+    throw new Error('resolvePool: strictMembers requires a `resources` registry')
+  }
   if (pool.disabled) {
     return { ok: false, error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id, evaluated: [] } }
   }

@@ -275,6 +275,54 @@ describe('applyMutation — pool resolve on submit', () => {
     expect(saved!.resourcePoolId).toBeNull();
   });
 
+  it('passes an update that echoes the existing pool id through unchanged', () => {
+    // Partial-update clients commonly PUT the whole record back,
+    // including the pool id the event already carries. That isn't a
+    // reassignment — only changing the pool id from its prior value
+    // is. Title-only edits on a pool-resolved event must not trip
+    // the reject path.
+    const engine = new CalendarEngine({
+      events: [makeEvent('e1', {
+        title: 'x', start: START, end: END, resourceId: 'd1', resourcePoolId: 'drivers',
+      })],
+      pools:  [pool({ id: 'drivers', memberIds: ['d1', 'd2'] })],
+    });
+
+    const result = engine.applyMutation({
+      type: 'update',
+      id:   'e1',
+      patch: { title: 'renamed', resourcePoolId: 'drivers' },
+      source: 'api',
+    });
+
+    expect(result.status).toBe('accepted');
+    expect(engine.state.events.get('e1')!.title).toBe('renamed');
+  });
+
+  it('rejects an update that swaps the pool id for a different one', () => {
+    // The unchanged-pool passthrough is by-id, not by-presence: a real
+    // reassignment from drivers→cleaners still gets POOL_REASSIGN_UNSUPPORTED.
+    const engine = new CalendarEngine({
+      events: [makeEvent('e1', {
+        title: 'x', start: START, end: END, resourceId: 'd1', resourcePoolId: 'drivers',
+      })],
+      pools:  [
+        pool({ id: 'drivers',  memberIds: ['d1'] }),
+        pool({ id: 'cleaners', memberIds: ['c1'] }),
+      ],
+    });
+
+    const result = engine.applyMutation({
+      type: 'update',
+      id:   'e1',
+      patch: { resourcePoolId: 'cleaners' },
+      source: 'api',
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.validation.violations[0]?.details?.['code']).toBe('POOL_REASSIGN_UNSUPPORTED');
+  });
+
   it('passes an update that pins a concrete resourceId alongside the pool through unchanged', () => {
     // Concrete-wins: when the patch sets both, the pool field is
     // informational and the resolver does not fire.

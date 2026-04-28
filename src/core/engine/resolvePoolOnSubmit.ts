@@ -74,11 +74,16 @@ export function resolvePoolForOp(
     // hides the failure from the host. Surface it explicitly when the
     // patch tries to *set* a pool without also pinning a concrete
     // resource. Patches that null the pool out, or don't mention it,
-    // pass through.
+    // pass through. Patches that echo the event's existing pool id
+    // unchanged (common for clients that PUT the whole record back)
+    // are also passthrough — no reassignment is being introduced.
     const patch = op.patch as Partial<{ resourcePoolId: string | null; resourceId: string | null }>;
     const setsPool = 'resourcePoolId' in op.patch && patch.resourcePoolId != null;
     const pinsConcrete = 'resourceId' in op.patch && patch.resourceId != null;
     if (setsPool && !pinsConcrete) {
+      const current = ctx.events.get(op.id);
+      const currentPoolId = current?.resourcePoolId ?? null;
+      if (currentPoolId === patch.resourcePoolId) return { kind: 'passthrough' };
       return { kind: 'rejected', result: rejectedFor(op, {
         rule:    'pool-unresolvable',
         severity:'hard',
