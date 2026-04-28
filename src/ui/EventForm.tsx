@@ -3,7 +3,7 @@
  * Layout and orchestration only; business logic lives in useEventDraftState
  * and the extracted section components.
  */
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -28,12 +28,16 @@ export default function EventForm({
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  // Dirty guard: snapshot the draft on mount, compare on every render.
-  // Close paths (X, overlay click, Esc) route through `requestClose`; the
-  // explicit Cancel button stays bare since clicking it is itself an
-  // intentional discard.
-  const initialSnapshot = useMemo(() => JSON.stringify(draft.values), []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
-  const dirty = initialSnapshot !== JSON.stringify(draft.values);
+  // Dirty guard: track first user interaction rather than snapshotting
+  // draft.values on mount. `useEventDraftState` runs a category-keyed
+  // effect that rewrites `values.meta` on first commit for events that
+  // already carry meta — a render-time snapshot would permanently
+  // disagree with the live draft and prompt to discard on every clean
+  // close. The form's `onChange` covers all input edits; the only
+  // button-driven state mutation (color clear) calls `markDirty()`
+  // explicitly. The Cancel button stays bare (intentional discard).
+  const [dirty, setDirty] = useState(false);
+  const markDirty = useCallback(() => setDirty(true), []);
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =
     useDirtyGuard({ dirty, onClose });
   const trapRef = useFocusTrap<HTMLDivElement>(requestClose);
@@ -124,7 +128,7 @@ export default function EventForm({
             <h2 className={styles['title']}>{isNew ? 'Add Event' : 'Edit Event'}</h2>
             <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close"><X size={18} /></button>
           </div>
-          <form className={styles['form']} onSubmit={handleSubmit} noValidate>
+          <form className={styles['form']} onSubmit={handleSubmit} onChange={markDirty} noValidate>
             <div className={styles['field']}>
               <label className={styles['label']} htmlFor="ef-template">Template</label>
               <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
@@ -180,7 +184,7 @@ export default function EventForm({
                 <input id="ef-color-text" className={styles['input']} value={d.values.color}
                   onChange={e => d.set('color', e.target.value)} placeholder="#3b82f6 or leave blank" />
                 {d.values.color && (
-                  <button type="button" className={styles['clearColor']} onClick={() => d.set('color', '')}>Clear</button>
+                  <button type="button" className={styles['clearColor']} onClick={() => { d.set('color', ''); markDirty(); }}>Clear</button>
                 )}
               </div>
             </div>

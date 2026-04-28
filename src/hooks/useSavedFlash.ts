@@ -47,8 +47,15 @@ export function useSavedFlash(durationMs: number = DEFAULT_DURATION_MS): UseSave
 }
 
 /**
- * withFlash — wrap a write callback so each invocation also fires `trigger`.
- * Preserves the original signature.
+ * withFlash — wrap a write callback so each successful invocation also fires
+ * `trigger`. Preserves the original signature.
+ *
+ * Promise-aware: when the wrapped callback returns a thenable (e.g. an
+ * async API call), the flash is deferred until the promise resolves
+ * successfully. Rejections stay quiet so failed writes don't show a
+ * green "Saved" pill. The caller's own `.then` / `.catch` on the
+ * returned promise is unaffected — we tap into the chain without
+ * swallowing the value.
  *
  * Use inside `useMemo` (see `useFlashWrapped` below) so the wrapper is
  * stable across renders and downstream `useCallback`s don't churn.
@@ -58,9 +65,23 @@ export function withFlash<F extends (...args: never[]) => unknown>(
   trigger: () => void,
 ): F {
   return ((...args: Parameters<F>): ReturnType<F> => {
-    const result = fn(...args) as ReturnType<F>;
-    trigger();
-    return result;
+    const result = fn(...args);
+    const isThenable =
+      result != null &&
+      typeof (result as { then?: unknown }).then === 'function';
+    if (isThenable) {
+      // Tap into the chain; the errback handles only the new chained
+      // promise (so we don't trigger an unhandled-rejection warning here)
+      // and does not swallow rejections from the original promise that
+      // the caller still receives.
+      (result as PromiseLike<unknown>).then(
+        () => trigger(),
+        () => undefined,
+      );
+    } else {
+      trigger();
+    }
+    return result as ReturnType<F>;
   }) as F;
 }
 
