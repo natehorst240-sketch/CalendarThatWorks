@@ -13,6 +13,10 @@
       "import": "./dist/works-calendar.es.js",
       "require": "./dist/works-calendar.umd.js"
     },
+    "./integrations/asset-tracker": {
+      "types": "./dist/integrations/asset-tracker.d.ts",
+      "import": "./dist/integrations/asset-tracker.es.js"
+    },
     "./styles": "./dist/style.css",
     "./styles/aviation": "./dist/themes/aviation.css",
     "./styles/soft": "./dist/themes/soft.css",
@@ -53,7 +57,7 @@
     "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
     "dev": "vite --config vite.demo.config.ts",
     "examples": "vite --config vite.examples.config.ts",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.integrations.config.ts",
     "build:demo": "vite build --config vite.demo.config.ts",
     "build:examples": "vite build --config vite.examples.config.ts",
     "preview": "vite preview --config vite.demo.config.ts",
