@@ -157,7 +157,27 @@ export function expandRecurrenceSafe(
     }
 
     diagnostics.push(diagnostic);
-    opts.onSeriesExpanded?.(diagnostic);
+    // Guard the telemetry hook so a misbehaving host callback can't
+    // poison the rest of the expansion (Codex P1 on #257). Failures
+    // surface to onError but never propagate up.
+    if (opts.onSeriesExpanded) {
+      try {
+        opts.onSeriesExpanded(diagnostic);
+      } catch (cause) {
+        opts.onError?.(
+          toStructuredError({
+            code: 'RECURRENCE_TELEMETRY_FAILED',
+            message: 'onSeriesExpanded callback threw; expansion continued.',
+            domain: 'recurrence',
+            severity: 'warning',
+            recoverable: true,
+            cause,
+            context: { eventId: ev.id },
+          }),
+          { eventId: ev.id, phase: 'expand' },
+        );
+      }
+    }
   }
 
   if (occurrences.length > maxTotal) {

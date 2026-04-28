@@ -196,6 +196,39 @@ describe('expandRecurrenceSafe — onSeriesExpanded callback (#257)', () => {
     expect(lastCall.eventId).toBe('bad');
     expect(lastCall.status).toBe('error');
   });
+
+  it('a throwing onSeriesExpanded callback does not break the rest of the batch (Codex P1)', () => {
+    const onError = vi.fn();
+    let calls = 0;
+    const onSeriesExpanded = (_d: SeriesDiagnostic) => {
+      calls++;
+      if (calls === 1) throw new Error('telemetry blew up');
+    };
+
+    const a = makeEvent('a', {
+      title: 'A', start: new Date('2026-03-01T10:00:00Z'), end: new Date('2026-03-01T11:00:00Z'),
+    });
+    const b = makeEvent('b', {
+      title: 'B', start: new Date('2026-03-01T12:00:00Z'), end: new Date('2026-03-01T13:00:00Z'),
+    });
+
+    const result = expandRecurrenceSafe(
+      [a, b],
+      new Date('2026-03-01T00:00:00Z'),
+      new Date('2026-03-02T00:00:00Z'),
+      { onSeriesExpanded, onError },
+    );
+
+    // Both series still expanded — the failing callback didn't poison the loop.
+    expect(result.occurrences.map(o => o.eventId)).toEqual(['a', 'b']);
+    expect(result.diagnostics.length).toBe(2);
+    // Callback failure surfaces to onError as a warning.
+    const telemetryError = onError.mock.calls.find(
+      (c: unknown[]) => (c[0] as { code?: string })?.code === 'RECURRENCE_TELEMETRY_FAILED',
+    );
+    expect(telemetryError).toBeDefined();
+    expect((telemetryError![1] as { eventId?: string })?.eventId).toBe('a');
+  });
 });
 
 describe('expandRecurrenceSafe — global cap', () => {
