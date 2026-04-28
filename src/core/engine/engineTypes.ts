@@ -78,6 +78,8 @@ export type {
   EventValidationCode,
   EventValidationIssue,
   EventValidationResult,
+  EventIssueAction,
+  EventIssueSeverity,
   ValidateEventOptions,
 } from './validation/validateEvent';
 
