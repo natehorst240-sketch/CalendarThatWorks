@@ -889,6 +889,12 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleApplyView = useCallback((savedView: LooseValue) => {
+    // Clicking an already-active view deselects it and restores default state.
+    if (savedView.id === savedViewActiveId) {
+      setSavedViewActiveId(null);
+      setSavedViewDirty(false);
+      return;
+    }
     skipDirtyRef.current = true;
     cal.replaceFilters(deserializeFilters(savedView.filters, schema));
     if (savedView.view) cal.setView(savedView.view);
@@ -906,7 +912,15 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     );
     setSavedViewActiveId(savedView.id);
     setSavedViewDirty(false);
-  }, [cal, schema]);
+  }, [cal, schema, savedViewActiveId]);
+
+  // Clearing filters from the UI also deselects the active saved view so
+  // the chip doesn't stay highlighted after the user has moved on.
+  const handleClearFilters = useCallback(() => {
+    cal.clearFilters();
+    setSavedViewActiveId(null);
+    setSavedViewDirty(false);
+  }, [cal]);
 
   const handleDeleteView = useCallback((id: LooseValue) => {
     savedViews.deleteView(id);
@@ -2488,7 +2502,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 onUpdate={savedViews.updateView}
                 onDelete={handleDeleteView}
                 onToggleVisibility={savedViews.toggleStripVisibility}
-                onClearFilters={cal.clearFilters}
+                onClearFilters={handleClearFilters}
                 onEditConditions={ownerCfg.isOwner ? (id: LooseValue) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
               />
             );
@@ -2564,7 +2578,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
               schema={schema}
               onChange={(key, value) => cal.setFilter(key, value)}
               onClear={(key) => cal.clearFilter(key)}
-              onClearAll={cal.clearFilters}
+              onClearAll={handleClearFilters}
             />
         {/* ── View area ── */}
         <div
