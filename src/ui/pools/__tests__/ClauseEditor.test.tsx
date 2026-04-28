@@ -278,3 +278,34 @@ describe('ClauseEditor — not', () => {
     })
   })
 })
+
+describe('ClauseEditor — depth rails (#453)', () => {
+  it('marks every composite child list with data-depth-rail="composite"', () => {
+    const { container } = render(<Harness initial={{
+      op: 'and',
+      clauses: [
+        { op: 'eq', path: 'a', value: 1 },
+        { op: 'or', clauses: [
+          { op: 'eq', path: 'b', value: 2 },
+        ] },
+      ],
+    }} />)
+    // Outer AND + inner OR each render their own rail.
+    expect(container.querySelectorAll('[data-depth-rail="composite"]').length).toBe(2)
+  })
+
+  it('marks the NOT body with data-depth-rail="not"', () => {
+    const { container } = render(<Harness initial={{
+      op: 'not',
+      clause: { op: 'eq', path: 'tenantId', value: 'banned' },
+    }} />)
+    expect(container.querySelector('[data-depth-rail="not"]')).not.toBeNull()
+  })
+
+  it('omits depth rails on plain leaf clauses', () => {
+    const { container } = render(<Harness initial={{
+      op: 'eq', path: 'a', value: 1,
+    }} />)
+    expect(container.querySelector('[data-depth-rail]')).toBeNull()
+  })
+})

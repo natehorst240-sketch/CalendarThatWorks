@@ -43,19 +43,48 @@
   padding: 6px 0 0;
 }
 
+/*
+ * Depth lines — a thin vertical "rail" runs down the gutter of each
+ * composite's child list, with a short horizontal stub branching out
+ * to every child row. The pattern mirrors a tree view so it's clear
+ * at a glance which sub-rules belong to which AND/OR group, even at
+ * deeper nesting levels where the background tint alone gets noisy.
+ */
 .childList {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 16px;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.childList::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 6px;
+  width: 1px;
+  background: var(--wc-border-strong, #cbd5e1);
 }
 
 .child {
   display: flex;
   gap: 6px;
   align-items: flex-start;
+  position: relative;
+}
+
+.child::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 18px;
+  width: 10px;
+  height: 1px;
+  background: var(--wc-border-strong, #cbd5e1);
 }
 
 .child > .clause {
@@ -64,6 +93,28 @@
 
 .notBody {
   flex: 1;
+  position: relative;
+  padding-left: 16px;
+}
+
+.notBody::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 50%;
+  width: 1px;
+  background: var(--wc-border-strong, #cbd5e1);
+}
+
+.notBody::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: var(--wc-border-strong, #cbd5e1);
 }
 
 .leafBody {

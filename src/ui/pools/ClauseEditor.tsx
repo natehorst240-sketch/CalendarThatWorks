@@ -10,10 +10,9 @@
  * The component owns no state of its own; the parent (typically
  * `AdvancedRulesEditor`) holds the tree.
  *
- * Out of scope deliberately: path autocomplete from live resources,
- * drag-drop reordering of composite children, depth-line nesting
- * visuals. Those land in follow-up slices once this primitive is
- * stable.
+ * Out of scope deliberately: drag-drop reordering of composite
+ * children. Path autocomplete and depth-line nesting visuals land
+ * via opt-in props (`pathSuggestions`) and CSS rails respectively.
  */
 import { useId, type ChangeEvent } from 'react'
 import type {
@@ -200,7 +199,7 @@ function CompositeBody({
           {clause.op === 'and' ? 'No sub-rules (matches everything)' : 'No sub-rules (matches nothing)'}
         </span>
       )}
-      <ul className={styles['childList']}>
+      <ul className={styles['childList']} data-depth-rail="composite">
         {clause.clauses.map((c, i) => (
           <li key={i} className={styles['child']}>
             <ClauseEditor
@@ -271,7 +270,7 @@ function NotBody({
   datalistId?: string | undefined
 }): JSX.Element {
   return (
-    <div className={styles['notBody']}>
+    <div className={styles['notBody']} data-depth-rail="not">
       <ClauseEditor
         clause={clause.clause}
         depth={depth + 1}
