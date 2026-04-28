@@ -41,22 +41,63 @@ export function savePools(
 /**
  * Read pools previously saved for `calendarId`. Returns an empty
  * array when storage is empty, disabled, or corrupt.
+ *
+ * Malformed entries (unknown strategy, bad shape) are silently dropped
+ * to keep the calendar booting after a bad deploy. Hosts that need
+ * visibility into drops should call `loadPoolsDetailed` instead.
  */
 export function loadPools(calendarId: string): ResourcePool[] {
+  return loadPoolsDetailed(calendarId).pools;
+}
+
+export interface LoadPoolsResult {
+  /** The valid pools recovered from storage. */
+  readonly pools: ResourcePool[];
+  /**
+   * Count of entries that parsed as objects but failed shape
+   * validation (e.g. unknown strategy, missing memberIds). A non-zero
+   * value usually points at a schema migration the host hasn't run.
+   */
+  readonly dropped: number;
+  /**
+   * True iff the stored value couldn't be parsed at all (storage
+   * disabled, JSON.parse threw, or the top-level value wasn't an
+   * array). When this is true, `pools` is `[]` and `dropped` is `0`.
+   */
+  readonly storageError: boolean;
+}
+
+/**
+ * Read pools and report any malformed entries. Same defensive
+ * behavior as `loadPools` — never throws — but lets the host log or
+ * surface "the cursor on pool `fleet-west` was dropped" instead of
+ * losing the round-robin position silently.
+ */
+export function loadPoolsDetailed(calendarId: string): LoadPoolsResult {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(poolStorageKey(calendarId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    const out: ResourcePool[] = [];
-    for (const item of parsed) {
-      const pool = coerce(item);
-      if (pool) out.push(pool);
-    }
-    return out;
+    raw = localStorage.getItem(poolStorageKey(calendarId));
   } catch {
-    return [];
+    return { pools: [], dropped: 0, storageError: true };
   }
+  if (raw == null) return { pools: [], dropped: 0, storageError: false };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { pools: [], dropped: 0, storageError: true };
+  }
+  if (!Array.isArray(parsed)) return { pools: [], dropped: 0, storageError: true };
+
+  const out: ResourcePool[] = [];
+  let dropped = 0;
+  for (const item of parsed) {
+    const pool = coerce(item);
+    if (pool) out.push(pool);
+    else dropped++;
+  }
+  return { pools: out, dropped, storageError: false };
 }
 
 /** Remove the stored pools entry (e.g. on "reset demo" actions). */

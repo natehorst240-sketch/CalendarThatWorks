@@ -77,4 +77,48 @@ describe('WorksCalendar — pool booking (end-to-end, #212)', () => {
     // Audit trail preserves which pool the booking was drawn from.
     expect(saved.meta?.resolvedFromPoolId).toBe('fleet-west');
   }, 30000);
+
+  it('passes a monotonic sequence counter to onPoolsChange on each emission (#386)', async () => {
+    // Round-robin advances the cursor on every save, so every commit
+    // produces an onPoolsChange emission. The sequence must increment
+    // on each one so async hosts can dedupe out-of-order persistence.
+    const rrPools = [
+      { id: 'fleet-west', name: 'West Fleet', memberIds: ['N121AB', 'N505CD'], strategy: 'round-robin' as const },
+    ];
+    const onPoolsChange = vi.fn();
+    const onEventSave = vi.fn();
+
+    render(
+      <WorksCalendar
+        devMode
+        initialView="assets"
+        assets={assets}
+        pools={rrPools}
+        events={[]}
+        onEventSave={onEventSave}
+        onPoolsChange={onPoolsChange}
+      />,
+    );
+
+    const poolHeader = await screen.findByRole('rowheader', { name: 'Pool: West Fleet' });
+    const poolRow = poolHeader.closest('[role=row]') as HTMLElement;
+    const firstCell = poolRow.querySelector('[role=gridcell]') as HTMLElement;
+    fireEvent.click(firstCell);
+
+    const titleInput = await screen.findByLabelText(/^Title/);
+    fireEvent.change(titleInput, { target: { value: 'Run 1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add Event' }));
+
+    await waitFor(() => expect(onEventSave).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onPoolsChange).toHaveBeenCalled());
+
+    // Every call carries (pools, { sequence }); sequences must be
+    // strictly increasing across the run.
+    const sequences = onPoolsChange.mock.calls.map(([, meta]) => meta?.sequence as number);
+    expect(sequences.length).toBeGreaterThan(0);
+    for (let i = 1; i < sequences.length; i++) {
+      expect(sequences[i]).toBeGreaterThan(sequences[i - 1]!);
+    }
+    expect(sequences[0]).toBe(1);
+  }, 30000);
 });

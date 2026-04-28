@@ -6,11 +6,14 @@
  * validation — so the rest of the pipeline (overlap, dependencies,
  * lifecycle emit) sees a plain single-resource booking.
  *
- * Scope in this revision: `create` ops only. `update` / `group-change`
- * can set `resourcePoolId` too, but those paths are deferred until the
- * primary booking flow lands — matching the issue's "booking against a
- * pool in the Assets view resolves to a concrete resource in the saved
- * event" acceptance criterion.
+ * Scope: `create` ops resolve through the pool. `update` and
+ * `group-change` ops that try to *introduce* a pool reassignment (a
+ * patch that sets `resourcePoolId` to a non-null value without an
+ * accompanying concrete `resourceId`) are rejected with a dedicated
+ * `POOL_REASSIGN_UNSUPPORTED` code — silently passing them through used
+ * to land an unresolved `resourcePoolId` on the saved event, which the
+ * downstream pipeline can't honor. Patches that don't touch the pool
+ * field, or that null it out, fall through unchanged.
  *
  * This module stays pure: no state mutation. The caller (engine) is
  * responsible for persisting any returned pool-cursor advance.
@@ -65,6 +68,32 @@ export function resolvePoolForOp(
   op: EngineOperation,
   ctx: PoolResolveContext,
 ): PoolResolveOutcome {
+  if (op.type === 'update' || op.type === 'group-change') {
+    // Patch reassignments to a pool aren't routed through the resolver
+    // yet — but silently dropping the pool id off the resulting event
+    // hides the failure from the host. Surface it explicitly when the
+    // patch tries to *set* a pool without also pinning a concrete
+    // resource. Patches that null the pool out, or don't mention it,
+    // pass through. Patches that echo the event's existing pool id
+    // unchanged (common for clients that PUT the whole record back)
+    // are also passthrough — no reassignment is being introduced.
+    const patch = op.patch as Partial<{ resourcePoolId: string | null; resourceId: string | null }>;
+    const setsPool = 'resourcePoolId' in op.patch && patch.resourcePoolId != null;
+    const pinsConcrete = 'resourceId' in op.patch && patch.resourceId != null;
+    if (setsPool && !pinsConcrete) {
+      const current = ctx.events.get(op.id);
+      const currentPoolId = current?.resourcePoolId ?? null;
+      if (currentPoolId === patch.resourcePoolId) return { kind: 'passthrough' };
+      return { kind: 'rejected', result: rejectedFor(op, {
+        rule:    'pool-unresolvable',
+        severity:'hard',
+        message: `Pool reassignment via ${op.type} is not supported. Submit a fresh create against the pool, or set a concrete resourceId in the patch.`,
+        details: { poolId: patch.resourcePoolId ?? null, code: 'POOL_REASSIGN_UNSUPPORTED' },
+      }) };
+    }
+    return { kind: 'passthrough' };
+  }
+
   if (op.type !== 'create') return { kind: 'passthrough' };
 
   const raw = op.event;

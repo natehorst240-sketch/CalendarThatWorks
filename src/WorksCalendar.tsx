@@ -312,8 +312,14 @@ export type WorksCalendarProps = {
    * Fires whenever the engine commits a pool state change (e.g. a
    * round-robin cursor advance). Hosts should persist the array so the
    * cursor survives page reloads. Omit to skip persistence entirely.
+   *
+   * `meta.sequence` is a monotonic counter scoped to this WorksCalendar
+   * instance — it increments by one on every emission. Hosts that
+   * persist asynchronously can compare the sequence on each callback
+   * to discard out-of-order writes (e.g. a slow `fetch` PUT that
+   * lands after a faster one) and avoid clobbering the latest cursor.
    */
-  onPoolsChange?: (pools: ResourcePool[]) => void;
+  onPoolsChange?: (pools: ResourcePool[], meta: { sequence: number }) => void;
 
   /** Optional logo image displayed at the left of the toolbar. */
   logoSrc?: string;
@@ -959,6 +965,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // only fire onPoolsChange on real pool mutations (e.g. round-robin cursor
   // advance), not on every state tick.
   const lastPoolsRef = useRef<ReadonlyMap<string, ResourcePool> | null>(null);
+  // Monotonic counter passed to onPoolsChange so async persistence can
+  // dedupe out-of-order writes (#386 item #14).
+  const poolsSequenceRef = useRef(0);
   if (engineRef.current === null) {
     engineRef.current = new CalendarEngine(
       rawPools && rawPools.length > 0 ? { pools: rawPools } : undefined,
@@ -1002,7 +1011,8 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     const current = engine.state.pools;
     if (current === lastPoolsRef.current) return;
     lastPoolsRef.current = current;
-    onPoolsChange(Array.from(current.values()));
+    poolsSequenceRef.current += 1;
+    onPoolsChange(Array.from(current.values()), { sequence: poolsSequenceRef.current });
   }, [engine, engineVer, onPoolsChange]);
 
   // Keep engine in sync with the merged+normalized event list from all sources.

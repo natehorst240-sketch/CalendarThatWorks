@@ -7,7 +7,7 @@
  * the engine can be rehydrated with.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { savePools, loadPools, clearPools, poolStorageKey } from '../poolStore';
+import { savePools, loadPools, loadPoolsDetailed, clearPools, poolStorageKey } from '../poolStore';
 import type { ResourcePool } from '../resourcePoolSchema';
 
 const CAL = 'test-cal';
@@ -84,5 +84,43 @@ describe('poolStore', () => {
     savePools('cal-b', [pool({ id: 'pb', memberIds: ['b'] })]);
     expect(loadPools('cal-a').map(p => p.id)).toEqual(['pa']);
     expect(loadPools('cal-b').map(p => p.id)).toEqual(['pb']);
+  });
+});
+
+describe('loadPoolsDetailed', () => {
+  it('reports zero drops on a clean load', () => {
+    savePools(CAL, [pool({ id: 'p', memberIds: ['m'], rrCursor: 0 })]);
+    const result = loadPoolsDetailed(CAL);
+    expect(result.dropped).toBe(0);
+    expect(result.storageError).toBe(false);
+    expect(result.pools).toHaveLength(1);
+  });
+
+  it('reports the count of malformed entries instead of dropping silently', () => {
+    localStorage.setItem(poolStorageKey(CAL), JSON.stringify([
+      { id: 'good',  name: 'GOOD', memberIds: ['x'], strategy: 'round-robin' },
+      { id: 'bad',   name: 'BAD',  memberIds: ['x'], strategy: 'random' },
+      { /* totally wrong shape */ },
+    ]));
+    const result = loadPoolsDetailed(CAL);
+    expect(result.pools.map(p => p.id)).toEqual(['good']);
+    expect(result.dropped).toBe(2);
+    expect(result.storageError).toBe(false);
+  });
+
+  it('flags storageError on malformed JSON', () => {
+    localStorage.setItem(poolStorageKey(CAL), '{not-json');
+    const result = loadPoolsDetailed(CAL);
+    expect(result).toEqual({ pools: [], dropped: 0, storageError: true });
+  });
+
+  it('flags storageError when the top-level value is not an array', () => {
+    localStorage.setItem(poolStorageKey(CAL), JSON.stringify({ not: 'an array' }));
+    const result = loadPoolsDetailed(CAL);
+    expect(result).toEqual({ pools: [], dropped: 0, storageError: true });
+  });
+
+  it('returns clean defaults when no entry is stored', () => {
+    expect(loadPoolsDetailed(CAL)).toEqual({ pools: [], dropped: 0, storageError: false });
   });
 });

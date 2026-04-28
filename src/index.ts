@@ -167,7 +167,10 @@ export { useBookingHold } from './hooks/useBookingHold';
 export type { UseBookingHoldOptions, UseBookingHoldState } from './hooks/useBookingHold';
 
 // ── Resource pools (#212) ───────────────────────────────────────────────────
-export { loadPools, savePools, clearPools, poolStorageKey } from './core/pools/poolStore';
+export { loadPools, loadPoolsDetailed, savePools, clearPools, poolStorageKey } from './core/pools/poolStore';
+export type { LoadPoolsResult } from './core/pools/poolStore';
+export { validatePools } from './core/pools/validatePools';
+export type { PoolIntegrityIssue, PoolIntegrityReport } from './core/pools/validatePools';
 export type { ResourcePool } from './core/pools/resourcePoolSchema';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────

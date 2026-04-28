@@ -40,6 +40,32 @@ export interface ResolvePoolInput {
   readonly rules: readonly ConflictRule[]
   readonly resources?: ReadonlyMap<string, EngineResource>
   readonly assignments?: ReadonlyMap<string, Assignment>
+  /**
+   * Strategy `least-loaded` only — extends the workload window past
+   * `proposed.end` by this many milliseconds when scoring candidates.
+   * The conflict check still uses the proposed window; `lookaheadMs`
+   * only widens the load tally so a member that is free *now* but
+   * already slammed an hour later can be deprioritized for fleet-style
+   * dispatch.
+   *
+   * Defaults to `0` — the original window-local behavior.
+   */
+  readonly lookaheadMs?: number
+  /**
+   * When true, member ids that aren't present in `resources` are
+   * filtered out of the candidate set before any scoring or conflict
+   * check. Off by default to match the historical behavior — see
+   * `validatePools` for the admin-time variant.
+   *
+   * `evaluated` reflects the post-filter list, so a typo'd id never
+   * appears in audit trails. When the filter empties the candidate
+   * list, the resolver returns `POOL_EMPTY`.
+   *
+   * Requires `resources` — `resolvePool` throws when `strictMembers`
+   * is true and no registry is provided, so the strict contract can't
+   * be silently disabled by a missing argument.
+   */
+  readonly strictMembers?: boolean
 }
 
 export type ResolvePoolErrorCode =
@@ -109,6 +135,7 @@ function workloadFor(
   windowEnd: number,
   events: readonly ConflictEvent[],
   assignments: ReadonlyMap<string, Assignment> | undefined,
+  lookaheadMs: number = 0,
 ): number {
   // Map from eventId → units contributed to this resource. When
   // assignments is provided we read explicit units; otherwise each
@@ -120,13 +147,14 @@ function workloadFor(
       eventUnits.set(a.eventId, (eventUnits.get(a.eventId) ?? 0) + a.units)
     }
   }
+  const tallyEnd = windowEnd + Math.max(0, lookaheadMs)
   let total = 0
   for (const ev of events) {
     const evResource = ev.resource ?? ''
     if (evResource !== resourceId) continue
     const es = toTime(ev.start)
     const ee = toTime(ev.end)
-    if (!overlaps(es, ee, windowStart, windowEnd)) continue
+    if (!overlaps(es, ee, windowStart, tallyEnd)) continue
     total += assignments ? (eventUnits.get(ev.id) ?? 100) : 100
   }
   return total
@@ -136,6 +164,12 @@ function workloadFor(
 
 export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
   const { pool } = input
+  if (input.strictMembers && !input.resources) {
+    // Programmer error — silently falling back to "all members ok"
+    // would defeat the whole point of strict mode and reintroduce
+    // the ghost-assignment risk it's supposed to prevent.
+    throw new Error('resolvePool: strictMembers requires a `resources` registry')
+  }
   if (pool.disabled) {
     return { ok: false, error: { code: 'POOL_DISABLED', message: `Pool "${pool.id}" is disabled.`, poolId: pool.id, evaluated: [] } }
   }
@@ -143,32 +177,49 @@ export function resolvePool(input: ResolvePoolInput): ResolvePoolResult {
     return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] } }
   }
 
-  const winStart = toTime(input.proposed.start)
-  const winEnd   = toTime(input.proposed.end)
+  // Optional integrity filter: drop ids that aren't in the resource
+  // registry before any scoring runs. Without this, the resolver was
+  // happy to commit a typo'd or removed id as the winning resource,
+  // which docs claimed wasn't possible.
+  const validMembers = input.strictMembers && input.resources
+    ? pool.memberIds.filter(id => input.resources!.has(id))
+    : pool.memberIds
+  if (validMembers.length === 0) {
+    return { ok: false, error: { code: 'POOL_EMPTY', message: `Pool "${pool.id}" has no members.`, poolId: pool.id, evaluated: [] } }
+  }
+
+  const winStart    = toTime(input.proposed.start)
+  const winEnd      = toTime(input.proposed.end)
+  const lookaheadMs = input.lookaheadMs ?? 0
   const evaluated: string[] = []
 
   // Build the candidate order per strategy.
   let candidates: readonly string[]
   switch (pool.strategy) {
     case 'first-available':
-      candidates = pool.memberIds
+      candidates = validMembers
       break
     case 'least-loaded': {
-      const loaded = pool.memberIds.map((id, i) => ({
+      const loaded = validMembers.map((id, i) => ({
         id,
         index: i,
-        load: workloadFor(id, winStart, winEnd, input.events, input.assignments),
+        load: workloadFor(id, winStart, winEnd, input.events, input.assignments, lookaheadMs),
       }))
       loaded.sort((a, b) => a.load - b.load || a.index - b.index)
       candidates = loaded.map(m => m.id)
       break
     }
     case 'round-robin': {
+      // Cursor is anchored to the original `pool.memberIds` ordering so
+      // it stays stable across renders even if `strictMembers` removes
+      // some entries on a given evaluation.
       const startAt = ((pool.rrCursor ?? -1) + 1) % pool.memberIds.length
-      candidates = [
+      const ordered = [
         ...pool.memberIds.slice(startAt),
         ...pool.memberIds.slice(0, startAt),
       ]
+      const allowed = new Set(validMembers)
+      candidates = ordered.filter(id => allowed.has(id))
       break
     }
   }

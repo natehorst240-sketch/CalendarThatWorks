@@ -256,3 +256,112 @@ describe('resolvePool — round-robin cursor normalization', () => {
     }
   })
 })
+
+describe('resolvePool — least-loaded lookaheadMs', () => {
+  // r1 is free in [9,11) but loaded at [11,13); r2 is free in [9,11)
+  // and free for the rest of the day. Without lookahead they tie and
+  // declared order picks r1; with a 2h lookahead the tie breaks for r2.
+  const pool: ResourcePool = {
+    id: 'p', name: 'Trucks', memberIds: ['r1', 'r2'], strategy: 'least-loaded',
+  }
+  const adjacentEvent: ConflictEvent = {
+    id: 'adj', resource: 'r1',
+    start: new Date(Date.UTC(2026, 3, 20, 11, 0)),
+    end:   new Date(Date.UTC(2026, 3, 20, 13, 0)),
+  }
+
+  it('ignores adjacent load by default (window-local)', () => {
+    const result = resolvePool({ pool, proposed, events: [adjacentEvent], rules: [] })
+    expect(result.ok && result.resourceId).toBe('r1')
+  })
+
+  it('counts adjacent load when lookaheadMs widens the tally', () => {
+    const result = resolvePool({
+      pool, proposed, events: [adjacentEvent], rules: [],
+      lookaheadMs: 2 * 60 * 60 * 1000,
+    })
+    expect(result.ok && result.resourceId).toBe('r2')
+  })
+})
+
+describe('resolvePool — strictMembers filters unknown ids', () => {
+  // Build a minimal EngineResource map. Keys are what the resolver
+  // checks; the value shape is irrelevant for the filter path.
+  const knownResources = new Map([
+    ['r1', { id: 'r1', label: 'R1' } as unknown as import('../../engine/schema/resourceSchema').EngineResource],
+    ['r3', { id: 'r3', label: 'R3' } as unknown as import('../../engine/schema/resourceSchema').EngineResource],
+  ])
+
+  it('drops typo\'d / removed ids before strategy runs', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Mixed', memberIds: ['ghost', 'r1', 'r3'],
+      strategy: 'first-available',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [],
+      resources: knownResources, strictMembers: true,
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.resourceId).toBe('r1')
+      expect(result.evaluated).toEqual(['r1']) // ghost never appears
+    }
+  })
+
+  it('returns POOL_EMPTY when every id is unknown under strictMembers', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'AllGhost', memberIds: ['gone', 'also-gone'],
+      strategy: 'first-available',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [],
+      resources: knownResources, strictMembers: true,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('POOL_EMPTY')
+  })
+
+  it('passes through unknown ids without strictMembers (default behavior)', () => {
+    // Documents the historical contract: unknown ids are *not*
+    // filtered by default; the resolver tries them and a
+    // first-available strategy will commit one as the winner.
+    const pool: ResourcePool = {
+      id: 'p', name: 'Mixed', memberIds: ['ghost', 'r1'],
+      strategy: 'first-available',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [], resources: knownResources,
+    })
+    expect(result.ok && result.resourceId).toBe('ghost')
+  })
+
+  it('throws when strictMembers is set without a resources registry', () => {
+    // Silent fallback to "all members ok" would defeat the whole
+    // point of strict mode — the resolver must surface the
+    // misconfiguration loudly so a missing arg can't reintroduce
+    // the ghost-assignment risk.
+    const pool: ResourcePool = {
+      id: 'p', name: 'NoRegistry', memberIds: ['r1'],
+      strategy: 'first-available',
+    }
+    expect(() => resolvePool({
+      pool, proposed, events: [], rules: [], strictMembers: true,
+    })).toThrow(/strictMembers/)
+  })
+
+  it('rebases round-robin candidates so unknown ids are skipped without losing rotation', () => {
+    const pool: ResourcePool = {
+      id: 'p', name: 'Rotation', memberIds: ['r1', 'ghost', 'r3'],
+      strategy: 'round-robin', rrCursor: 0,
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [],
+      resources: knownResources, strictMembers: true,
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.resourceId).toBe('r3')        // skip ghost, advance to r3
+      expect(result.rrCursor).toBe(2)              // cursor anchored to original list
+    }
+  })
+})

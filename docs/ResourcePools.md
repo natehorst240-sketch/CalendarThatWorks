@@ -25,8 +25,19 @@ export interface ResourcePool {
 }
 ```
 
-Members are referenced by registry id, not by label. Pools that list
-unknown ids still work — the resolver simply skips them.
+Members are referenced by registry id, not by label. By default the
+resolver does *not* cross-reference `memberIds` against the live
+resource registry — a typo'd or removed id will be tried like any
+other member, and a `first-available` pool can return that id as the
+winning resource. Two ways to opt into stricter behavior:
+
+- Pass `strictMembers: true` to `resolvePool` to filter unknown ids out
+  of the candidate set at submit time. They never appear in the
+  evaluated trail.
+- Run `validatePools(pools, resources)` at admin time to surface a
+  `PoolIntegrityReport` listing every `(poolId, memberId)` pair that
+  no longer maps to a known resource. Useful for "the cursor on
+  `fleet-west` keeps skipping a slot" debugging.
 
 ## Wiring
 
@@ -108,7 +119,7 @@ still find a free member if one exists.
 | Strategy          | Picks                                                    |
 |-------------------|----------------------------------------------------------|
 | `first-available` | First member, in declared order, with no hard conflict   |
-| `least-loaded`    | Member with the lowest `workloadForResource()` in window |
+| `least-loaded`    | Member with the lowest `workloadForResource()` in window (extend with `lookaheadMs` to tally past the proposed end) |
 | `round-robin`     | Next member after the stored cursor, skipping conflicts  |
 
 `round-robin` persists its cursor (`rrCursor`) on the pool itself. The
@@ -122,6 +133,14 @@ pool rejects with `POOL_DISABLED`; a pool with zero members rejects
 with `POOL_EMPTY`. Every rejection carries `details.evaluated`, the
 ordered list of members the resolver actually attempted (empty for
 `POOL_DISABLED` / `POOL_EMPTY`, populated for `NO_AVAILABLE_MEMBER`).
+
+Trying to *introduce* a pool reassignment via an `update` or
+`group-change` op (a patch that sets `resourcePoolId` to a non-null
+value without also pinning a concrete `resourceId`) rejects with
+`POOL_REASSIGN_UNSUPPORTED`. The resolver only runs on `create` ops
+today; submit a fresh create against the pool, or include a concrete
+`resourceId` in the patch. Patches that null `resourcePoolId` or that
+don't touch the field pass through unchanged.
 
 ## Sharing members across pools
 
@@ -170,3 +189,35 @@ clearPools('calendar-1');
 
 Keys are namespaced by calendar id, so multiple calendars on the same
 origin don't collide.
+
+### Surfacing dropped entries
+
+`loadPools` silently discards malformed entries (unknown strategy,
+shape drift) so a bad deploy doesn't brick the calendar. Hosts that
+need the count — e.g. to log "lost the cursor on N pools after the
+schema change" — call `loadPoolsDetailed` instead:
+
+```ts
+import { loadPoolsDetailed } from 'works-calendar';
+
+const { pools, dropped, storageError } = loadPoolsDetailed('calendar-1');
+if (dropped > 0) console.warn(`Dropped ${dropped} pool(s) on load`);
+```
+
+`storageError` is `true` when the storage layer itself failed (private
+mode Safari, JSON parse error, non-array payload).
+
+## Sequence counter on onPoolsChange
+
+`onPoolsChange(pools, meta)` receives a monotonic `meta.sequence`
+counter scoped to the WorksCalendar instance. Hosts persisting
+asynchronously can dedupe out-of-order writes:
+
+```tsx
+const lastSeq = useRef(0);
+const handlePoolsChange = (next, { sequence }) => {
+  if (sequence < lastSeq.current) return; // stale callback
+  lastSeq.current = sequence;
+  void persist(next);
+};
+```
