@@ -167,6 +167,21 @@ describe('getProfileSampleData (#451)', () => {
     expect(getProfileSampleData('trucking')!.resources.length).toBeGreaterThan(0)
   })
 
+  it('deep-clones the payload so mutating a nested object stays local', () => {
+    // Codex flagged that shallow [...arr] still aliased the static
+    // preset entries — editing `.name` would leak across sessions.
+    const first = getProfileSampleData('trucking')!
+    const original = first.resources[0]!.name
+    ;(first.resources[0] as { name: string }).name = 'mutated by caller'
+    // Capability bag is nested two levels deep; mutating it must
+    // also stay local to this caller's copy.
+    const caps = (first.resources[0] as { capabilities?: Record<string, unknown> }).capabilities
+    if (caps) caps['injected'] = true
+    const second = getProfileSampleData('trucking')!
+    expect(second.resources[0]!.name).toBe(original)
+    expect((second.resources[0] as { capabilities?: Record<string, unknown> }).capabilities?.['injected']).toBeUndefined()
+  })
+
   it('aviation + scheduling also ship sample data', () => {
     expect(getProfileSampleData('aviation')!.resources.length).toBeGreaterThan(0)
     expect(getProfileSampleData('scheduling')!.resources.length).toBeGreaterThan(0)

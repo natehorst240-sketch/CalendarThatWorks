@@ -268,7 +268,9 @@ export function applyProfilePreset(
 /**
  * Read-only accessor for a profile's sample payload. Returns
  * `null` when the profile has no sample data (e.g. `custom`).
- * Always hands back a fresh object so callers can mutate freely.
+ * Deep-clones the payload so callers can mutate freely without
+ * leaking into the module-level static preset (which is shared
+ * across every wizard session in the same JS realm).
  */
 export function getProfileSampleData(
   profileId: ProfileId,
@@ -276,8 +278,8 @@ export function getProfileSampleData(
   const sample = PROFILE_PRESETS[profileId]?.sample
   if (!sample) return null
   return {
-    resources: [...sample.resources],
-    pools: [...sample.pools],
+    resources: sample.resources.map(deepClone),
+    pools: sample.pools.map(deepClone),
   }
 }
 
@@ -331,4 +333,17 @@ function cleanUndefined(o: { [k: string]: unknown }): CalendarConfig {
     if (o[k] !== undefined) out[k] = o[k]
   }
   return out as CalendarConfig
+}
+
+/**
+ * Deep-clone a sample-payload entry. The presets are pure JSON-
+ * shaped data (no Dates, Maps, functions), so we prefer the
+ * structured-clone algorithm when available and fall back to a
+ * JSON round-trip — both produce a fully detached copy so callers
+ * can mutate without leaking into the module-level static preset.
+ */
+function deepClone<T>(value: T): T {
+  const sc = (globalThis as { structuredClone?: <U>(v: U) => U }).structuredClone
+  if (typeof sc === 'function') return sc(value)
+  return JSON.parse(JSON.stringify(value)) as T
 }
