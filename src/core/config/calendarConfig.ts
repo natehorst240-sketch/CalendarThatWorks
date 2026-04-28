@@ -131,3 +131,27 @@ export interface ConfigSettings {
   /** IANA timezone identifier (e.g. "America/Denver"). */
   readonly timezone?: string
 }
+
+/**
+ * Return a fully-populated CalendarConfig with every section present
+ * and defaulted to an empty/safe value.
+ *
+ * Callers that only need one section can still use optional chaining
+ * (`config.roles ?? []`), but code that depends on a consistent shape
+ * — e.g. serialization, validation, or #424's scheduling engine —
+ * should call this once at startup and pass the result through rather
+ * than re-defaulting at every callsite.
+ */
+export function defaultCalendarConfig(): Required<CalendarConfig> {
+  return {
+    profile: 'custom',
+    labels: {},
+    resourceTypes: [],
+    roles: [],
+    resources: [],
+    pools: [],
+    requirements: [],
+    events: [],
+    settings: {},
+  }
+}
