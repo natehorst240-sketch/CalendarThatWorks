@@ -22,7 +22,7 @@
  *     hosts wanting localization can fork the component until
  *     a translation layer ships.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, MouseEvent } from 'react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
@@ -43,7 +43,16 @@ import PoolBuilder from '../pools/PoolBuilder'
 import styles from './ConfigWizard.module.css'
 
 export interface ConfigWizardProps {
-  /** Optional starting config — pass to edit an existing setup. */
+  /**
+   * Optional starting config — pass to edit an existing setup.
+   *
+   * Read once at mount: changing this prop while the wizard is
+   * mounted does **not** reset the in-progress draft. Hosts that
+   * need to swap configs (e.g. switching tenants) should remount
+   * the wizard with a fresh React `key` so the draft state is
+   * dropped cleanly and the user's in-progress edits don't get
+   * silently merged into the new starting point.
+   */
   readonly initialConfig?: CalendarConfig
   /** Fired when the user clicks "Finish" on the Review step. */
   readonly onComplete: (config: CalendarConfig) => void
@@ -82,6 +91,12 @@ export default function ConfigWizard({
 
   const stepId: StepId = STEPS[step]!.id
   const isLast = step === STEPS.length - 1
+
+  // Wizard-wide validation — single source of truth shared by the
+  // Review step's pill and the Finish button's disabled state.
+  // validateConfig is pure, so re-running on every config change is
+  // cheap and guarantees the two read the same thing.
+  const validation = useMemo(() => validateConfig(config), [config])
 
   return (
     <div
@@ -131,7 +146,7 @@ export default function ConfigWizard({
           {stepId === 'catalogs'  && <CatalogsStep  config={config} setConfig={update} />}
           {stepId === 'resources' && <ResourcesStep config={config} setConfig={update} />}
           {stepId === 'pools'     && <PoolsStep     config={config} setConfig={update} onChildModalOpen={setChildModalOpen} />}
-          {stepId === 'review'    && <ReviewStep    config={config} setConfig={update} />}
+          {stepId === 'review'    && <ReviewStep    config={config} setConfig={update} validation={validation} />}
         </section>
 
         <footer className={styles['foot']}>
@@ -160,6 +175,11 @@ export default function ConfigWizard({
             <button
               type="button"
               className={styles['btnPrimary']}
+              disabled={!validation.ok}
+              title={validation.ok
+                ? undefined
+                : `Fix ${validation.issues.length} validation issue${validation.issues.length === 1 ? '' : 's'} before finishing.`}
+              aria-describedby={validation.ok ? undefined : 'wizard-validation-summary'}
               onClick={() => onComplete(config)}
             >
               Finish
@@ -298,22 +318,48 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
   // config only when both fields are finite numbers; clear it when
   // both are empty; leave it untouched in between so the user sees
   // their typed value mid-edit without poisoning distance pools.
-  const [coords, setCoords] = useState<Map<number, { lat: string; lon: string }>>(new Map())
+  //
+  // Drafts are keyed by a stable per-row id (#460): keying by array
+  // index meant deleting a row above another shifted indices and
+  // re-attached the deleted row's typed coordinate to its neighbour.
+  // The rowKeys array is kept in lock-step with `resources` —
+  // `addResource` / `removeAt` push/splice both at the same index;
+  // a length-mismatch effect catches up on external mutations
+  // (e.g. "Load sample data" or initialConfig editing).
+  const rowKeyCounter = useRef(0)
+  const makeRowKey = useCallback(() => `row-${rowKeyCounter.current++}`, [])
+  const [rowKeys, setRowKeys] = useState<readonly string[]>(
+    () => resources.map(() => `row-${rowKeyCounter.current++}`),
+  )
+  useEffect(() => {
+    if (rowKeys.length === resources.length) return
+    setRowKeys(prev => {
+      if (prev.length > resources.length) return prev.slice(0, resources.length)
+      const padded = [...prev]
+      while (padded.length < resources.length) padded.push(makeRowKey())
+      return padded
+    })
+  }, [resources.length, rowKeys.length, makeRowKey])
+
+  const [coords, setCoords] = useState<Map<string, { lat: string; lon: string }>>(new Map())
   const coordValue = (i: number, which: 'lat' | 'lon'): string => {
-    const draft = coords.get(i)
+    const key = rowKeys[i]
+    const draft = key ? coords.get(key) : undefined
     if (draft && draft[which] !== undefined) return draft[which]
     const r = resources[i]
     return r?.location ? String(r.location[which]) : ''
   }
   const setCoord = (i: number, which: 'lat' | 'lon', raw: string) => {
+    const key = rowKeys[i]
+    if (!key) return
     setCoords(prev => {
-      const existing = prev.get(i) ?? {
+      const existing = prev.get(key) ?? {
         lat: resources[i]?.location ? String(resources[i]!.location!.lat) : '',
         lon: resources[i]?.location ? String(resources[i]!.location!.lon) : '',
       }
       const next = { ...existing, [which]: raw }
       const out = new Map(prev)
-      out.set(i, next)
+      out.set(key, next)
       // Decide whether to commit the parsed pair to the config.
       const lat = next.lat === '' ? null : Number(next.lat)
       const lon = next.lon === '' ? null : Number(next.lon)
@@ -328,6 +374,23 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
       // it was. The local draft keeps the user's typed value visible.
       return out
     })
+  }
+  const removeAt = (i: number) => {
+    const droppedKey = rowKeys[i]
+    setResources(resources.filter((_, j) => j !== i))
+    setRowKeys(prev => prev.filter((_, j) => j !== i))
+    if (droppedKey) {
+      setCoords(prev => {
+        if (!prev.has(droppedKey)) return prev
+        const next = new Map(prev)
+        next.delete(droppedKey)
+        return next
+      })
+    }
+  }
+  const addResource = () => {
+    setResources([...resources, { id: '', name: '' }])
+    setRowKeys(prev => [...prev, makeRowKey()])
   }
   const profile = isProfileId(config.profile) ? config.profile : null
   const sample = profile ? getProfileSampleData(profile) : null
@@ -352,7 +415,7 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
       )}
       <ul className={styles['resourceList']}>
         {resources.map((r, i) => (
-          <li key={i} className={styles['resourceRow']}>
+          <li key={rowKeys[i] ?? `idx-${i}`} className={styles['resourceRow']}>
             <input
               type="text"
               className={styles['input']}
@@ -403,7 +466,7 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
               type="button"
               className={styles['removeBtn']}
               aria-label={`Remove resource ${i + 1}`}
-              onClick={() => setResources(resources.filter((_, j) => j !== i))}
+              onClick={() => removeAt(i)}
             >×</button>
             {(config.roles ?? []).length > 0 && (
               <RoleChips
@@ -419,7 +482,7 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
       <button
         type="button"
         className={styles['addBtn']}
-        onClick={() => setResources([...resources, { id: '', name: '' }])}
+        onClick={() => addResource()}
       >+ Add resource</button>
     </div>
   )
@@ -608,8 +671,11 @@ function asEngineResource(r: ConfigResource): EngineResource {
 
 // ─── Step 5 — review (settings + validation + JSON) ────────────────────────
 
-function ReviewStep({ config, setConfig }: StepProps): JSX.Element {
-  const validation = useMemo(() => validateConfig(config), [config])
+type ValidateConfigResult = ReturnType<typeof validateConfig>
+
+function ReviewStep({
+  config, setConfig, validation,
+}: StepProps & { readonly validation: ValidateConfigResult }): JSX.Element {
   const json = useMemo(
     () => JSON.stringify(serializeConfig(config), null, 2),
     [config],
@@ -657,14 +723,19 @@ function ReviewStep({ config, setConfig }: StepProps): JSX.Element {
         </legend>
         {validation.ok && <p className={styles['hint']}>No issues found. Ready to finish.</p>}
         {!validation.ok && (
-          <ul className={styles['issueList']}>
-            {validation.issues.map((issue, i) => (
-              <li key={i} className={styles['issueRow']}>
-                <code className={styles['issuePath']}>{issue.path}</code>
-                <span className={styles['issueKind']}>{issue.kind}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p id="wizard-validation-summary" className={styles['hint']}>
+              Fix these issues to enable Finish.
+            </p>
+            <ul className={styles['issueList']}>
+              {validation.issues.map((issue, i) => (
+                <li key={i} className={styles['issueRow']}>
+                  <code className={styles['issuePath']}>{issue.path}</code>
+                  <span className={styles['issueKind']}>{issue.kind}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </fieldset>
 
@@ -687,9 +758,10 @@ function ReviewStep({ config, setConfig }: StepProps): JSX.Element {
  * Trigger a browser download for a JSON string. Uses the
  * `Blob` + `URL.createObjectURL` + invisible `<a download>` dance
  * because that's the only cross-browser way to ship a file from a
- * pure-client wizard. The URL is revoked immediately after the
- * click — modern browsers queue the download synchronously, so
- * revoking on the next tick is safe and avoids leaking object URLs.
+ * pure-client wizard. The URL is revoked on the next tick rather
+ * than synchronously so older Safari and embedded WebViews — which
+ * sometimes process the click out-of-band — can still resolve the
+ * Blob before the URL goes away.
  *
  * No-op when run outside a browser (test environments without
  * `document` or `URL.createObjectURL`); the click would throw and
@@ -705,7 +777,7 @@ function downloadJson(content: string, filename: string): void {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(href)
+  setTimeout(() => URL.revokeObjectURL(href), 0)
 }
 
 function cleanSettings(s: ConfigSettings): ConfigSettings {

@@ -9,6 +9,7 @@ import React from 'react'
 
 import ConfigWizard from '../ConfigWizard'
 import type { CalendarConfig } from '../../../core/config/calendarConfig'
+import { applyProfilePreset } from '../../../core/config/profilePresets'
 
 describe('ConfigWizard — shell', () => {
   it('renders all five steps in the breadcrumbs', () => {
@@ -254,6 +255,96 @@ describe('ConfigWizard — Review step', () => {
   })
 })
 
+describe('ConfigWizard — Finish gating (#460)', () => {
+  it('disables Finish when validation fails', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{
+        // role-slot template references a role that's not in roles[].
+        requirements: [{ eventType: 'load', requires: [{ role: 'ghost', count: 1 }] }],
+      }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    const finish = screen.getByRole('button', { name: 'Finish' })
+    expect(finish).toBeDisabled()
+    fireEvent.click(finish)
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it('shows a hint linking the disabled Finish to the validation block', () => {
+    render(<ConfigWizard
+      initialConfig={{
+        requirements: [{ eventType: 'load', requires: [{ role: 'ghost', count: 1 }] }],
+      }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    expect(screen.getByText(/Fix these issues to enable Finish/)).toBeInTheDocument()
+  })
+
+  it('Finish stays enabled (and submits) when validation is clean', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ profile: 'custom' }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    const finish = screen.getByRole('button', { name: 'Finish' })
+    expect(finish).toBeEnabled()
+    fireEvent.click(finish)
+    expect(onComplete).toHaveBeenCalled()
+  })
+})
+
+describe('ConfigWizard — coordinate drafts keyed by row id (#460)', () => {
+  it('a partial-typed coord follows its row when a sibling above is deleted', () => {
+    // Index-keyed drafts (the pre-fix behavior) lost the typed
+    // value because deleting row 2 shifted row 3 to index 2 but
+    // the draft stayed pinned at index 3.
+    render(<ConfigWizard
+      initialConfig={{
+        resources: [
+          { id: 'a', name: 'A' },
+          { id: 'b', name: 'B' },
+          { id: 'c', name: 'C' },
+        ],
+      }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    // Type into the third row's lat (lon stays empty — the pair
+    // doesn't commit, so the draft only lives in the local map).
+    fireEvent.change(screen.getByLabelText('Resource 3 latitude'), { target: { value: '99' } })
+    // Delete the middle row.
+    fireEvent.click(screen.getByRole('button', { name: 'Remove resource 2' }))
+    // The c row is now Resource 2; its typed lat must still show.
+    expect(screen.getByLabelText('Resource 2 latitude')).toHaveValue(99)
+  })
+
+  it('a deleted row\'s partial draft does not leak onto a freshly-added row', () => {
+    render(<ConfigWizard
+      initialConfig={{
+        resources: [
+          { id: 'a', name: 'A' },
+          { id: 'b', name: 'B' },
+        ],
+      }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    // Half-type a coord on row 1, delete row 1, add a new row at
+    // the end. The new row at the same index must start empty
+    // rather than inheriting row 1's orphan draft.
+    fireEvent.change(screen.getByLabelText('Resource 1 latitude'), { target: { value: '88' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove resource 1' }))
+    fireEvent.click(screen.getByRole('button', { name: '+ Add resource' }))
+    // After the delete + add, two rows survive: original b at #1
+    // and a fresh blank at #2. The blank must show no typed lat.
+    expect(screen.getByLabelText('Resource 2 latitude')).toHaveValue(null)
+  })
+})
+
 describe('ConfigWizard — sample data button (#451)', () => {
   it('hides the button for the custom profile (no sample data)', () => {
     const { unmount } = render(<ConfigWizard
@@ -276,8 +367,11 @@ describe('ConfigWizard — sample data button (#451)', () => {
 
   it('clicking Load sample data populates resources + pools', () => {
     const onComplete = vi.fn()
+    // Apply the preset first so the sample data's `type` and role
+    // references resolve cleanly — Finish gating (#460) refuses
+    // configs that fail validateConfig.
     render(<ConfigWizard
-      initialConfig={{ profile: 'trucking' }}
+      initialConfig={applyProfilePreset('trucking', {})}
       onComplete={onComplete} onCancel={vi.fn()}
     />)
     fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
@@ -350,7 +444,7 @@ describe('ConfigWizard — JSON download (#451)', () => {
     expect(screen.getByRole('button', { name: 'Download config.json' })).toBeInTheDocument()
   })
 
-  it('clicking the button creates an object URL and triggers an anchor click', () => {
+  it('clicking the button creates an object URL and triggers an anchor click', async () => {
     const createSpy = vi.fn(() => 'blob:mock')
     const revokeSpy = vi.fn()
     const originalURL = global.URL
@@ -360,6 +454,7 @@ describe('ConfigWizard — JSON download (#451)', () => {
       revokeObjectURL: revokeSpy,
     }) as unknown as typeof URL
     Object.defineProperty(global, 'URL', { value: PatchedURL, writable: true, configurable: true })
+    vi.useFakeTimers()
     try {
       render(<ConfigWizard
         initialConfig={{ profile: 'aviation' }}
@@ -368,8 +463,13 @@ describe('ConfigWizard — JSON download (#451)', () => {
       fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
       fireEvent.click(screen.getByRole('button', { name: 'Download config.json' }))
       expect(createSpy).toHaveBeenCalled()
+      // #460: revoke is now deferred via setTimeout(_, 0) so older
+      // browsers can resolve the blob before the URL goes away.
+      expect(revokeSpy).not.toHaveBeenCalled()
+      vi.runAllTimers()
       expect(revokeSpy).toHaveBeenCalledWith('blob:mock')
     } finally {
+      vi.useRealTimers()
       Object.defineProperty(global, 'URL', { value: originalURL, writable: true, configurable: true })
     }
   })

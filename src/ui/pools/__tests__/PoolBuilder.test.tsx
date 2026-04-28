@@ -141,6 +141,42 @@ describe('PoolBuilder — query pool', () => {
   })
 })
 
+describe('PoolBuilder — hybrid preview count (#460)', () => {
+  it('counts excluded against the curated member list, not the entire registry', () => {
+    // Hybrid pool curating t1 + t3 with a "refrigerated" query.
+    // Only t1 passes the query (t3 is non-refrigerated).
+    // Old (wrong) count: resources.length(3) - matched(1) = 2
+    // New (correct) count: memberIds.length(2) - matched(1) = 1
+    const pool: ResourcePool = {
+      id: 'p', name: 'Curated reefers',
+      type: 'hybrid', memberIds: ['t1', 't3'],
+      query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={vi.fn()} onCancel={vi.fn()} />)
+    const preview = screen.getByLabelText('Live match preview')
+    expect(preview).toHaveTextContent('1 match')
+    expect(preview).toHaveTextContent('1 excluded')
+    expect(preview).not.toHaveTextContent('2 excluded')
+  })
+
+  it('shows zero excluded when every curated member passes the query', () => {
+    // Curated list is t1 + t2; both refrigerated; query passes both.
+    // Old count: resources.length(3) - 2 = 1 ("excluded" was misleading)
+    // New count: memberIds.length(2) - 2 = 0 (nothing curated got dropped)
+    const pool: ResourcePool = {
+      id: 'p', name: 'All-pass hybrid',
+      type: 'hybrid', memberIds: ['t1', 't2'],
+      query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={vi.fn()} onCancel={vi.fn()} />)
+    const preview = screen.getByLabelText('Live match preview')
+    expect(preview).toHaveTextContent('2 matches')
+    expect(preview).not.toHaveTextContent('excluded')
+  })
+})
+
 describe('PoolBuilder — editing existing pools', () => {
   it('seeds capability chips and radius from an existing query pool', () => {
     const pool: ResourcePool = {

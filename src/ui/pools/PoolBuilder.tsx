@@ -659,9 +659,13 @@ function previewStats(
   if (!pool.query) return { matched: 0, excluded: resources.length }
   const result = evaluateQuery(pool.query, resources)
   if (pool.type === 'hybrid') {
+    // Hybrid = intersection of curated `memberIds` and the query.
+    // The natural denominator is the curated list, not the entire
+    // registry — counting full-registry exclusions made a 2-member
+    // hybrid against a 50-resource fleet look like 48 misses.
     const allowed = new Set(result.matched)
     const matched = pool.memberIds.filter(id => allowed.has(id)).length
-    return { matched, excluded: resources.length - matched }
+    return { matched, excluded: pool.memberIds.length - matched }
   }
   return { matched: result.matched.length, excluded: result.excluded.length }
 }
