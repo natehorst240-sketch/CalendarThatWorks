@@ -16,19 +16,18 @@
  * `onComplete`.
  *
  * Out of scope deliberately:
- *   - Sample data generation. The user fills the registry.
  *   - Industry-specific capability lists. PoolBuilder auto-derives
  *     them from the live registry; the wizard doesn't curate.
- *   - Per-resource `meta.roles` editor. Hosts wire that via JSON
- *     for now; a follow-up can add a chip picker.
- *   - File-system download. The Review step exposes a JSON code
- *     block users can copy; no `<a download>` plumbing.
+ *   - Full i18n. User-facing strings stay English-only for v1;
+ *     hosts wanting localization can fork the component until
+ *     a translation layer ships.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, MouseEvent } from 'react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
-  applyProfilePreset, listProfilePresets, PROFILE_PRESETS,
+  applyProfilePreset, applyProfileSampleData, getProfileSampleData,
+  listProfilePresets, PROFILE_PRESETS,
 } from '../../core/config/profilePresets'
 import type { ProfileId } from '../../core/config/profilePresets'
 import { validateConfig } from '../../core/config/validateConfig'
@@ -330,6 +329,9 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
       return out
     })
   }
+  const profile = isProfileId(config.profile) ? config.profile : null
+  const sample = profile ? getProfileSampleData(profile) : null
+  const canLoadSample = profile !== null && sample !== null && sample.resources.length > 0
   return (
     <div className={styles['stepInner']}>
       <p className={styles['hint']}>
@@ -337,6 +339,14 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
         and locations later — they're optional, but the v2 query DSL
         reads them when present.
       </p>
+      {canLoadSample && (
+        <button
+          type="button"
+          className={styles['sampleBtn']}
+          onClick={() => profile && setConfig(c => applyProfileSampleData(profile, c))}
+          aria-label="Load sample data for this profile"
+        >Load sample data</button>
+      )}
       {resources.length === 0 && (
         <p className={styles['empty']}>No resources yet.</p>
       )}
@@ -395,6 +405,14 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
               aria-label={`Remove resource ${i + 1}`}
               onClick={() => setResources(resources.filter((_, j) => j !== i))}
             >×</button>
+            {(config.roles ?? []).length > 0 && (
+              <RoleChips
+                resourceIndex={i}
+                roles={config.roles ?? []}
+                selected={readResourceRoles(r)}
+                onToggle={(roleId) => updateAt(i, prev => toggleResourceRole(prev, roleId))}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -403,6 +421,63 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
         className={styles['addBtn']}
         onClick={() => setResources([...resources, { id: '', name: '' }])}
       >+ Add resource</button>
+    </div>
+  )
+}
+
+const PROFILE_IDS: readonly ProfileId[] = ['trucking', 'aviation', 'scheduling', 'custom']
+function isProfileId(v: unknown): v is ProfileId {
+  return typeof v === 'string' && (PROFILE_IDS as readonly string[]).includes(v)
+}
+
+function readResourceRoles(r: ConfigResource): readonly string[] {
+  const raw = (r.meta as Record<string, unknown> | undefined)?.['roles']
+  return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string') : []
+}
+
+function toggleResourceRole(r: ConfigResource, roleId: string): ConfigResource {
+  const current = readResourceRoles(r)
+  const next = current.includes(roleId)
+    ? current.filter(x => x !== roleId)
+    : [...current, roleId]
+  // Drop the meta.roles key entirely when empty so the saved config
+  // doesn't carry an empty array (cleaner JSON, lossless round-trip).
+  const meta = { ...(r.meta as Record<string, unknown> ?? {}) }
+  if (next.length > 0) {
+    meta['roles'] = next
+  } else {
+    delete meta['roles']
+  }
+  if (Object.keys(meta).length === 0) {
+    const { meta: _drop, ...rest } = r
+    return rest
+  }
+  return { ...r, meta }
+}
+
+function RoleChips({
+  resourceIndex, roles, selected, onToggle,
+}: {
+  resourceIndex: number
+  roles: readonly { id: string; label: string }[]
+  selected: readonly string[]
+  onToggle: (roleId: string) => void
+}): JSX.Element {
+  return (
+    <div className={styles['roleChips']} role="group" aria-label={`Resource ${resourceIndex + 1} roles`}>
+      {roles.map(role => {
+        const active = selected.includes(role.id)
+        return (
+          <button
+            key={role.id}
+            type="button"
+            className={styles['roleChip']}
+            data-active={active}
+            aria-pressed={active}
+            onClick={() => onToggle(role.id)}
+          >{role.label || role.id}</button>
+        )
+      })}
     </div>
   )
 }
@@ -595,10 +670,42 @@ function ReviewStep({ config, setConfig }: StepProps): JSX.Element {
 
       <fieldset className={styles['fieldset']}>
         <legend className={styles['legend']}>Generated config.json</legend>
+        <div className={styles['jsonActions']}>
+          <button
+            type="button"
+            className={styles['btnSecondary']}
+            onClick={() => downloadJson(json, 'config.json')}
+          >Download config.json</button>
+        </div>
         <pre className={styles['json']} data-testid="wizard-json">{json}</pre>
       </fieldset>
     </div>
   )
+}
+
+/**
+ * Trigger a browser download for a JSON string. Uses the
+ * `Blob` + `URL.createObjectURL` + invisible `<a download>` dance
+ * because that's the only cross-browser way to ship a file from a
+ * pure-client wizard. The URL is revoked immediately after the
+ * click — modern browsers queue the download synchronously, so
+ * revoking on the next tick is safe and avoids leaking object URLs.
+ *
+ * No-op when run outside a browser (test environments without
+ * `document` or `URL.createObjectURL`); the click would throw and
+ * we don't want it to.
+ */
+function downloadJson(content: string, filename: string): void {
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) return
+  const blob = new Blob([content], { type: 'application/json' })
+  const href = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = href
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(href)
 }
 
 function cleanSettings(s: ConfigSettings): ConfigSettings {

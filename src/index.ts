@@ -216,6 +216,7 @@ export {
   PROFILE_PRESETS, listProfilePresets, applyProfilePreset,
 } from './core/config/profilePresets';
 export type { ProfileId, ProfilePreset } from './core/config/profilePresets';
+export { getProfileSampleData, applyProfileSampleData } from './core/config/profilePresets';
 export { default as ConfigWizard } from './ui/wizard/ConfigWizard';
 export type { ConfigWizardProps, ConfigWizardStepId } from './ui/wizard/ConfigWizard';
 // ── Requirements engine — runtime consumer for the templates (#386) ──────

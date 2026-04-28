@@ -2,7 +2,10 @@
  * Profile preset tests (#386 wizard).
  */
 import { describe, it, expect } from 'vitest'
-import { PROFILE_PRESETS, applyProfilePreset, listProfilePresets } from '../profilePresets'
+import {
+  PROFILE_PRESETS, applyProfilePreset, listProfilePresets,
+  getProfileSampleData, applyProfileSampleData,
+} from '../profilePresets'
 import type { CalendarConfig } from '../calendarConfig'
 
 describe('PROFILE_PRESETS — shape', () => {
@@ -147,5 +150,61 @@ describe('applyProfilePreset — defensive', () => {
     const out = applyProfilePreset('custom')
     // `custom` ships only `profile`; no labels / catalogs should appear.
     expect(Object.keys(out)).toEqual(['profile'])
+  })
+})
+
+describe('getProfileSampleData (#451)', () => {
+  it('returns null for the custom preset (no sample data)', () => {
+    expect(getProfileSampleData('custom')).toBeNull()
+  })
+
+  it('returns a fresh copy for trucking with at least one resource and one pool', () => {
+    const sample = getProfileSampleData('trucking')!
+    expect(sample.resources.length).toBeGreaterThan(0)
+    expect(sample.pools.length).toBeGreaterThan(0)
+    // Mutating the returned arrays must not bleed into the next caller.
+    ;(sample.resources as unknown as unknown[]).pop()
+    expect(getProfileSampleData('trucking')!.resources.length).toBeGreaterThan(0)
+  })
+
+  it('aviation + scheduling also ship sample data', () => {
+    expect(getProfileSampleData('aviation')!.resources.length).toBeGreaterThan(0)
+    expect(getProfileSampleData('scheduling')!.resources.length).toBeGreaterThan(0)
+  })
+})
+
+describe('applyProfileSampleData (#451)', () => {
+  it('seeds resources + pools when the working config is empty', () => {
+    const out = applyProfileSampleData('trucking', {})
+    expect(out.resources?.length).toBeGreaterThan(0)
+    expect(out.pools?.length).toBeGreaterThan(0)
+  })
+
+  it('skips ids that already exist in the working config', () => {
+    const sample = getProfileSampleData('trucking')!
+    const firstId = sample.resources[0]!.id
+    const base: CalendarConfig = {
+      resources: [{ id: firstId, name: 'I was here first' }],
+    }
+    const out = applyProfileSampleData('trucking', base)
+    // The original entry survives; only the non-conflicting samples are appended.
+    expect(out.resources?.[0]).toEqual({ id: firstId, name: 'I was here first' })
+    expect(out.resources?.length).toBe(sample.resources.length)
+  })
+
+  it('no-ops cleanly for the custom preset', () => {
+    const base: CalendarConfig = { profile: 'custom' }
+    const out = applyProfileSampleData('custom', base)
+    expect(out).toEqual({ profile: 'custom' })
+  })
+
+  it('preserves user-set fields the sample doesn\'t touch', () => {
+    const base: CalendarConfig = {
+      profile: 'trucking',
+      labels: { resource: 'My Truck' },
+    }
+    const out = applyProfileSampleData('trucking', base)
+    expect(out.labels?.resource).toBe('My Truck')
+    expect(out.profile).toBe('trucking')
   })
 })

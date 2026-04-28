@@ -17,11 +17,18 @@
  *     boolean chips). The presets only seed the basics; the
  *     `PoolBuilder` already auto-derives capabilities from the
  *     live registry.
- *   - Sample resources / events. Presets seed metadata only;
- *     concrete resources stay the host's job.
  *   - i18n. Labels here are English-only for v1.
+ *
+ * Sample data: each preset may carry a `sample` payload (resources
+ * + pools) the wizard can pour into the working config so users
+ * can poke around a populated registry instead of starting blank.
+ * Opt-in: hosts call `getProfileSampleData(profileId)`; the wizard
+ * surfaces a "Load sample data" button on the Resources step.
  */
-import type { CalendarConfig } from './calendarConfig'
+import type {
+  CalendarConfig, ConfigResource,
+} from './calendarConfig'
+import type { ResourcePool } from '../pools/resourcePoolSchema'
 
 /** Stable id under which a preset is registered. */
 export type ProfileId = 'trucking' | 'aviation' | 'scheduling' | 'custom'
@@ -37,6 +44,16 @@ export interface ProfilePreset {
    * user's working config.
    */
   readonly config: Partial<CalendarConfig>
+  /**
+   * Optional starter data — concrete resources and pools the user
+   * can pour into their working config to play with a populated
+   * registry. Opt-in via `getProfileSampleData(id)`; the wizard
+   * exposes a "Load sample data" button rather than auto-applying.
+   */
+  readonly sample?: {
+    readonly resources: readonly ConfigResource[]
+    readonly pools: readonly ResourcePool[]
+  }
 }
 
 export const PROFILE_PRESETS: Readonly<Record<ProfileId, ProfilePreset>> = {
@@ -62,6 +79,29 @@ export const PROFILE_PRESETS: Readonly<Record<ProfileId, ProfilePreset>> = {
       ],
       settings: { conflictMode: 'block' },
     },
+    sample: {
+      resources: [
+        { id: 't1', name: 'Truck 1', type: 'vehicle',
+          capabilities: { refrigerated: true, capacity_lbs: 80000 },
+          location: { lat: 40.76, lon: -111.89 } },
+        { id: 't2', name: 'Truck 2', type: 'vehicle',
+          capabilities: { refrigerated: false, capacity_lbs: 60000 },
+          location: { lat: 40.76, lon: -111.89 } },
+        { id: 'd1', name: 'Alice',   type: 'person',
+          meta: { roles: ['driver'] } },
+        { id: 'd2', name: 'Bob',     type: 'person',
+          meta: { roles: ['driver', 'dispatcher'] } },
+      ],
+      pools: [
+        { id: 'fleet-reefer', name: 'Reefer fleet',
+          type: 'query', strategy: 'first-available',
+          memberIds: [],
+          query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true } },
+        { id: 'drivers', name: 'Drivers',
+          type: 'manual', strategy: 'least-loaded',
+          memberIds: ['d1', 'd2'] },
+      ],
+    },
   },
 
   aviation: {
@@ -86,6 +126,27 @@ export const PROFILE_PRESETS: Readonly<Record<ProfileId, ProfilePreset>> = {
       ],
       settings: { conflictMode: 'block' },
     },
+    sample: {
+      resources: [
+        { id: 'n123ab', name: 'King Air 350', type: 'aircraft',
+          capabilities: { seats: 9, range_nm: 1800, pressurized: true } },
+        { id: 'n456cd', name: 'Cessna 172',   type: 'aircraft',
+          capabilities: { seats: 4, range_nm: 700,  pressurized: false } },
+        { id: 'p1', name: 'Pat (Capt)', type: 'pilot',
+          meta: { roles: ['pilot-in-command'] } },
+        { id: 'p2', name: 'Sam (FO)',   type: 'pilot',
+          meta: { roles: ['second-in-command'] } },
+      ],
+      pools: [
+        { id: 'long-haul', name: 'Long-haul aircraft',
+          type: 'query', strategy: 'first-available',
+          memberIds: [],
+          query: { op: 'gte', path: 'meta.capabilities.range_nm', value: 1500 } },
+        { id: 'pilots', name: 'Pilots',
+          type: 'manual', strategy: 'least-loaded',
+          memberIds: ['p1', 'p2'] },
+      ],
+    },
   },
 
   scheduling: {
@@ -109,6 +170,22 @@ export const PROFILE_PRESETS: Readonly<Record<ProfileId, ProfilePreset>> = {
         { id: 'attendee',  label: 'Attendee' },
       ],
       settings: { conflictMode: 'block' },
+    },
+    sample: {
+      resources: [
+        { id: 'rm-101', name: 'Conference 101', type: 'room',
+          capabilities: { capacity: 12, has_av: true } },
+        { id: 'rm-201', name: 'Boardroom',      type: 'room',
+          capabilities: { capacity: 24, has_av: true } },
+        { id: 'proj-1', name: 'Projector cart', type: 'equipment',
+          capabilities: { has_av: true } },
+      ],
+      pools: [
+        { id: 'av-rooms', name: 'Rooms with A/V',
+          type: 'query', strategy: 'first-available',
+          memberIds: [],
+          query: { op: 'eq', path: 'meta.capabilities.has_av', value: true } },
+      ],
     },
   },
 
@@ -186,6 +263,47 @@ export function applyProfilePreset(
   // Sections we don't touch (resources, pools, requirements,
   // events) — the user owns them; presets only seed catalog data.
   return cleanUndefined(merged)
+}
+
+/**
+ * Read-only accessor for a profile's sample payload. Returns
+ * `null` when the profile has no sample data (e.g. `custom`).
+ * Always hands back a fresh object so callers can mutate freely.
+ */
+export function getProfileSampleData(
+  profileId: ProfileId,
+): { resources: readonly ConfigResource[]; pools: readonly ResourcePool[] } | null {
+  const sample = PROFILE_PRESETS[profileId]?.sample
+  if (!sample) return null
+  return {
+    resources: [...sample.resources],
+    pools: [...sample.pools],
+  }
+}
+
+/**
+ * Merge a profile's sample data into a working config. Pours in
+ * new resources and pools, skipping any whose `id` already exists
+ * (the user's edits always win). Pure: returns a new config.
+ */
+export function applyProfileSampleData(
+  profileId: ProfileId,
+  base: Readonly<CalendarConfig>,
+): CalendarConfig {
+  const sample = getProfileSampleData(profileId)
+  if (!sample) return { ...base }
+  const existingResIds = new Set((base.resources ?? []).map(r => r.id))
+  const newResources = sample.resources.filter(r => !existingResIds.has(r.id))
+  const existingPoolIds = new Set((base.pools ?? []).map(p => p.id))
+  const newPools = sample.pools.filter(p => !existingPoolIds.has(p.id))
+  const out: { -readonly [K in keyof CalendarConfig]: CalendarConfig[K] } = { ...base }
+  if (newResources.length > 0) {
+    out.resources = [...(base.resources ?? []), ...newResources]
+  }
+  if (newPools.length > 0) {
+    out.pools = [...(base.pools ?? []), ...newPools]
+  }
+  return out
 }
 
 // ─── Internals ──────────────────────────────────────────────────────────────

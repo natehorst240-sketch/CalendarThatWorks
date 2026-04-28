@@ -254,6 +254,127 @@ describe('ConfigWizard — Review step', () => {
   })
 })
 
+describe('ConfigWizard — sample data button (#451)', () => {
+  it('hides the button for the custom profile (no sample data)', () => {
+    const { unmount } = render(<ConfigWizard
+      initialConfig={{ profile: 'custom' }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    expect(screen.queryByRole('button', { name: /Load sample data/ })).toBeNull()
+    unmount()
+  })
+
+  it('shows the button when the chosen profile ships sample data', () => {
+    render(<ConfigWizard
+      initialConfig={{ profile: 'trucking' }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    expect(screen.getByRole('button', { name: /Load sample data/ })).toBeInTheDocument()
+  })
+
+  it('clicking Load sample data populates resources + pools', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ profile: 'trucking' }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Load sample data/ }))
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect((saved.resources?.length ?? 0)).toBeGreaterThan(0)
+    expect((saved.pools?.length ?? 0)).toBeGreaterThan(0)
+  })
+})
+
+describe('ConfigWizard — role chip picker (#451)', () => {
+  it('renders one chip per configured role beneath each resource', () => {
+    render(<ConfigWizard
+      initialConfig={{
+        roles: [{ id: 'driver', label: 'Driver' }, { id: 'dispatcher', label: 'Dispatcher' }],
+        resources: [{ id: 't1', name: 'Truck' }],
+      }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    const group = screen.getByRole('group', { name: 'Resource 1 roles' })
+    expect(within(group).getByRole('button', { name: 'Driver' })).toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: 'Dispatcher' })).toBeInTheDocument()
+  })
+
+  it('toggling a chip writes to meta.roles and persists through Finish', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{
+        roles: [{ id: 'driver', label: 'Driver' }],
+        resources: [{ id: 't1', name: 'Truck' }],
+      }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Driver' }))
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources?.[0]?.meta).toEqual({ roles: ['driver'] })
+  })
+
+  it('toggling off a previously-set role drops it (and clears meta when empty)', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{
+        roles: [{ id: 'driver', label: 'Driver' }],
+        resources: [{ id: 't1', name: 'Truck', meta: { roles: ['driver'] } }],
+      }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Driver' }))
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources?.[0]?.meta).toBeUndefined()
+  })
+})
+
+describe('ConfigWizard — JSON download (#451)', () => {
+  it('renders a Download config.json button on the Review step', () => {
+    render(<ConfigWizard
+      initialConfig={{ profile: 'custom' }}
+      onComplete={vi.fn()} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    expect(screen.getByRole('button', { name: 'Download config.json' })).toBeInTheDocument()
+  })
+
+  it('clicking the button creates an object URL and triggers an anchor click', () => {
+    const createSpy = vi.fn(() => 'blob:mock')
+    const revokeSpy = vi.fn()
+    const originalURL = global.URL
+    // happy-dom ships URL but not always createObjectURL — patch both.
+    const PatchedURL: typeof URL = Object.assign(function () {}, originalURL, {
+      createObjectURL: createSpy,
+      revokeObjectURL: revokeSpy,
+    }) as unknown as typeof URL
+    Object.defineProperty(global, 'URL', { value: PatchedURL, writable: true, configurable: true })
+    try {
+      render(<ConfigWizard
+        initialConfig={{ profile: 'aviation' }}
+        onComplete={vi.fn()} onCancel={vi.fn()}
+      />)
+      fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+      fireEvent.click(screen.getByRole('button', { name: 'Download config.json' }))
+      expect(createSpy).toHaveBeenCalled()
+      expect(revokeSpy).toHaveBeenCalledWith('blob:mock')
+    } finally {
+      Object.defineProperty(global, 'URL', { value: originalURL, writable: true, configurable: true })
+    }
+  })
+})
+
 describe('ConfigWizard — initialConfig editing', () => {
   it('round-trips a fully populated config without losing fields', () => {
     const initial: CalendarConfig = {
