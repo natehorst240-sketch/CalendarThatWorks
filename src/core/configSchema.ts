@@ -66,6 +66,18 @@ export const DEFAULT_CONFIG: Record<string, any> = {
     assetsLabel: 'Asset',
   },
 
+  // Event type catalog (#424). Each entry describes one category of schedulable
+  // event: id used as the discriminant in event.eventType; label shown in dropdowns;
+  // optional color override. Empty array is safe — all #424 code guards with ?? [].
+  // Shape: { id: string, label: string, color?: string }
+  eventTypes: [],
+
+  // Saved configuration profiles (#424). Owners create named snapshots of the
+  // current config so they can switch between operational modes (e.g. "Summer
+  // schedule", "Holiday mode") without re-entering settings from scratch.
+  // Shape: { id: string, label: string, description?: string }
+  profiles: [],
+
   // Hover card field visibility
   hoverCard: {
     showTime: true,

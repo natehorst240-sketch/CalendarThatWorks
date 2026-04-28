@@ -126,7 +126,8 @@ function computeStats(
   if (pool.type === 'hybrid') {
     const allowed = new Set(result.matched)
     const matched = pool.memberIds.filter(id => allowed.has(id)).length
-    return { matched, excluded: list.length - matched }
+    // excluded = curated members that didn't satisfy the query, not total registry size
+    return { matched, excluded: pool.memberIds.length - matched }
   }
   return { matched: result.matched.length, excluded: result.excluded.length }
 }

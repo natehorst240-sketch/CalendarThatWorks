@@ -114,4 +114,20 @@ describe('PoolCard — live stats', () => {
     const stats = screen.getByTestId('pool-card-stats')
     expect(stats).toHaveTextContent('1')
   })
+
+  it('hybrid excluded = memberIds not matching query, not total registry size (#465)', () => {
+    // Pool has 2 curated members; only 1 satisfies the query.
+    // excluded should be 1 (the unmatched member), not 2 (registry - matched).
+    render(<PoolCard
+      pool={{
+        id: 'p', name: 'OurReefers', type: 'hybrid',
+        memberIds: ['t2', 't3'],
+        query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+        strategy: 'first-available',
+      }}
+      resources={reefers}
+    />)
+    const stats = screen.getByTestId('pool-card-stats')
+    expect(stats).toHaveAttribute('aria-label', '1 matched, 1 excluded')
+  })
 })
