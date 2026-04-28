@@ -192,24 +192,41 @@ function parsePool(raw: unknown, path: string, errors: string[]): ResourcePool |
     errors.push(`${path}: invalid strategy "${String(raw['strategy'])}", dropping`)
     return null
   }
+  // Resolve type + query together so we can drop any pool whose
+  // declared type would crash the resolver at runtime. `query` /
+  // `hybrid` types REQUIRE pool.query; accepting one without it
+  // means the runtime engine throws the moment it tries to schedule
+  // against the pool — which contradicts the defensive parse
+  // contract (drop, don't crash).
+  let poolType: PoolType | undefined
+  if (raw['type'] !== undefined) {
+    if (typeof raw['type'] === 'string' && POOL_TYPES.includes(raw['type'] as PoolType)) {
+      poolType = raw['type'] as PoolType
+    } else {
+      errors.push(`${path}.type: invalid value "${String(raw['type'])}", ignoring`)
+    }
+  }
+  let query: NonNullable<ResourcePool['query']> | undefined
+  if (raw['query'] !== undefined) {
+    if (isObject(raw['query'])) {
+      query = raw['query'] as NonNullable<ResourcePool['query']>
+    } else {
+      errors.push(`${path}.query: expected object, ignoring`)
+    }
+  }
+  if ((poolType === 'query' || poolType === 'hybrid') && !query) {
+    errors.push(`${path}: type "${poolType}" requires a query, dropping`)
+    return null
+  }
   const out: { -readonly [K in keyof ResourcePool]: ResourcePool[K] } = {
     id: raw['id'],
     name: raw['name'],
     memberIds: raw['memberIds'] as string[],
     strategy: raw['strategy'] as PoolStrategy,
   }
-  if (raw['type'] !== undefined) {
-    if (typeof raw['type'] === 'string' && POOL_TYPES.includes(raw['type'] as PoolType)) {
-      out.type = raw['type'] as PoolType
-    } else {
-      errors.push(`${path}.type: invalid value "${String(raw['type'])}", ignoring`)
-    }
-  }
-  if (raw['query'] !== undefined) {
-    if (isObject(raw['query'])) out.query = raw['query'] as NonNullable<ResourcePool['query']>
-    else errors.push(`${path}.query: expected object, ignoring`)
-  }
-  if (typeof raw['rrCursor'] === 'number') out.rrCursor = raw['rrCursor']
+  if (poolType) out.type  = poolType
+  if (query)    out.query = query
+  if (typeof raw['rrCursor'] === 'number')  out.rrCursor = raw['rrCursor']
   if (typeof raw['disabled'] === 'boolean') out.disabled = raw['disabled']
   return out
 }

@@ -147,6 +147,24 @@ describe('parseConfig — pools', () => {
     })
     expect(r.errors.some(e => e.includes('type'))).toBe(true)
   })
+
+  it('drops query/hybrid pools that omit `query` (defensive contract)', () => {
+    // Accepting these would let resolvePool throw at runtime — which
+    // is exactly what the defensive parse contract is meant to prevent.
+    const r = parseConfig({
+      pools: [
+        { id: 'q',  name: 'Q',  memberIds: [],    strategy: 'first-available', type: 'query' },
+        { id: 'h',  name: 'H',  memberIds: ['x'], strategy: 'first-available', type: 'hybrid' },
+        { id: 'ok', name: 'OK', memberIds: [],    strategy: 'first-available',
+          type: 'query',
+          query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true } },
+      ],
+    })
+    expect(r.config.pools!.map(p => p.id)).toEqual(['ok'])
+    expect(r.dropped).toBe(2)
+    expect(r.errors.some(e => e.includes('type "query" requires a query'))).toBe(true)
+    expect(r.errors.some(e => e.includes('type "hybrid" requires a query'))).toBe(true)
+  })
 })
 
 describe('parseConfig — requirements', () => {
