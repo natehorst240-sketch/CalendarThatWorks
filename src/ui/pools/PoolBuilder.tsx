@@ -81,6 +81,15 @@ interface DraftState {
   capabilities: readonly string[]   // selected capability ids
   withinMiles: number | null         // null means "no radius clause"
   strategy: PoolStrategy
+  /**
+   * Clauses from the original `pool.query` that the simple form
+   * doesn't recognize (e.g. numeric `gte`, `or`, `not`, non-capability
+   * eq). Carried through edits and re-AND'd into the saved query so
+   * that hosts who configured advanced rules elsewhere don't lose
+   * them when a user opens the builder. Surfaced as an inline note
+   * in the UI so the user knows additional rules are in play.
+   */
+  preserved: readonly ResourceQuery[]
 }
 
 export default function PoolBuilder(props: PoolBuilderProps): JSX.Element {
@@ -108,10 +117,13 @@ export default function PoolBuilder(props: PoolBuilderProps): JSX.Element {
   )
 
   const closestRequiresRadius = draft.strategy === 'closest' && draft.withinMiles == null
+  const hasPreserved = draft.preserved.length > 0
   const canSave = draft.name.trim().length > 0
     && (draft.type === 'manual'
       ? draft.memberIds.length > 0
-      : draft.capabilities.length > 0 || draft.withinMiles != null)
+      : draft.capabilities.length > 0
+        || draft.withinMiles != null
+        || hasPreserved)
 
   return (
     <div
@@ -275,6 +287,19 @@ export default function PoolBuilder(props: PoolBuilderProps): JSX.Element {
           )}
         </section>
 
+        {hasPreserved && (draft.type === 'query' || draft.type === 'hybrid') && (
+          <section
+            className={styles['preserved']}
+            data-testid="pool-builder-preserved"
+            role="note"
+            aria-label="Additional rules preserved on save"
+          >
+            <strong>{draft.preserved.length}</strong>{' '}
+            additional {draft.preserved.length === 1 ? 'rule isn’t' : 'rules aren’t'} editable here
+            {' '}— they’ll be preserved on save.
+          </section>
+        )}
+
         <section className={styles['preview']} aria-label="Live match preview">
           <strong>{stats.matched}</strong> {stats.matched === 1 ? 'match' : 'matches'}
           {stats.excluded > 0 && (
@@ -314,16 +339,76 @@ function fromPool(pool: ResourcePool | null): DraftState {
       capabilities: [],
       withinMiles: null,
       strategy: 'first-available',
+      preserved: [],
     }
   }
+  const { capabilities, withinMiles, preserved } = partitionQuery(pool.query)
   return {
     name: pool.name,
     type: pool.type ?? 'manual',
     memberIds: pool.memberIds,
-    capabilities: extractCapabilityIds(pool.query),
-    withinMiles: extractWithinMiles(pool.query),
+    capabilities,
+    withinMiles,
     strategy: pool.strategy,
+    preserved,
   }
+}
+
+/**
+ * Split an existing pool query into the buckets the form can edit
+ * (capabilities, withinMiles) plus a list of *preserved* clauses
+ * the form can't model. Recognized clauses are pulled out; anything
+ * else — `gte`, `lte`, `or`, `not`, non-capability `eq`, a second
+ * `within`, etc. — is collected verbatim so it can be re-AND'd onto
+ * the user's edits at save time.
+ *
+ * Conservative: when the root op isn't `and`, the entire query goes
+ * into `preserved` rather than being inspected for inner clauses
+ * we'd later strip. The form starts with empty capabilities/radius,
+ * and the user's additions are AND'd onto the original tree.
+ */
+function partitionQuery(q: ResourceQuery | undefined): {
+  capabilities: readonly string[]
+  withinMiles: number | null
+  preserved: readonly ResourceQuery[]
+} {
+  if (!q) return { capabilities: [], withinMiles: null, preserved: [] }
+  const capabilities: string[] = []
+  let withinMiles: number | null = null
+  const preserved: ResourceQuery[] = []
+  const consume = (clause: ResourceQuery): boolean => {
+    if (
+      clause.op === 'eq'
+      && clause.value === true
+      && clause.path.startsWith('meta.capabilities.')
+    ) {
+      capabilities.push(clause.path.slice('meta.capabilities.'.length))
+      return true
+    }
+    // Recognize the exact `within` shape the form emits — same path,
+    // proposed-mode, miles. Anything else (km, literal-point, custom
+    // path) goes through preserved so we don't smuggle a different
+    // clause back into the saved query.
+    if (
+      clause.op === 'within'
+      && clause.path === 'meta.location'
+      && clause.from.kind === 'proposed'
+      && clause.miles != null
+      && withinMiles == null
+    ) {
+      withinMiles = clause.miles
+      return true
+    }
+    return false
+  }
+  if (q.op === 'and') {
+    for (const c of q.clauses) {
+      if (!consume(c)) preserved.push(c)
+    }
+  } else if (!consume(q)) {
+    preserved.push(q)
+  }
+  return { capabilities, withinMiles, preserved }
 }
 
 function buildPool(draft: DraftState, base: ResourcePool | null): ResourcePool {
@@ -339,7 +424,7 @@ function buildPool(draft: DraftState, base: ResourcePool | null): ResourcePool {
     ...(base?.rrCursor !== undefined ? { rrCursor: base.rrCursor } : {}),
   }
   if (draft.type === 'query' || draft.type === 'hybrid') {
-    const query = composeQuery(draft.capabilities, draft.withinMiles)
+    const query = composeQuery(draft.capabilities, draft.withinMiles, draft.preserved)
     if (query) (out as { query?: ResourceQuery }).query = query
   }
   return out
@@ -348,6 +433,7 @@ function buildPool(draft: DraftState, base: ResourcePool | null): ResourcePool {
 function composeQuery(
   capabilityIds: readonly string[],
   withinMiles: number | null,
+  preserved: readonly ResourceQuery[],
 ): ResourceQuery | null {
   const clauses: ResourceQuery[] = []
   for (const id of capabilityIds) {
@@ -361,39 +447,12 @@ function composeQuery(
       miles: withinMiles,
     })
   }
+  // Append preserved clauses verbatim so editing a pool that has
+  // advanced rules (gte, or, not, …) doesn't drop them on save.
+  clauses.push(...preserved)
   if (clauses.length === 0) return null
   if (clauses.length === 1) return clauses[0]!
   return { op: 'and', clauses }
-}
-
-function extractCapabilityIds(q: ResourceQuery | undefined): readonly string[] {
-  if (!q) return []
-  const ids: string[] = []
-  walkLeaves(q, (clause) => {
-    if (clause.op === 'eq' && clause.value === true && clause.path.startsWith('meta.capabilities.')) {
-      ids.push(clause.path.slice('meta.capabilities.'.length))
-    }
-  })
-  return ids
-}
-
-function extractWithinMiles(q: ResourceQuery | undefined): number | null {
-  if (!q) return null
-  let result: number | null = null
-  walkLeaves(q, (clause) => {
-    if (clause.op === 'within' && clause.miles != null) result = clause.miles
-  })
-  return result
-}
-
-function walkLeaves(q: ResourceQuery, fn: (leaf: ResourceQuery) => void): void {
-  if (q.op === 'and' || q.op === 'or') {
-    for (const c of q.clauses) walkLeaves(c, fn)
-  } else if (q.op === 'not') {
-    walkLeaves(q.clause, fn)
-  } else {
-    fn(q)
-  }
 }
 
 function deriveCapabilityCatalog(resources: readonly EngineResource[]): readonly CapabilityOption[] {

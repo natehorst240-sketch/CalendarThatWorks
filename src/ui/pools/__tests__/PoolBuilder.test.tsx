@@ -175,6 +175,147 @@ describe('PoolBuilder — editing existing pools', () => {
   })
 })
 
+describe('PoolBuilder — preserves advanced clauses through edits (#386 P1)', () => {
+  // The form only models capability-eq(true) and a proposed-mode
+  // miles `within`. Anything else (gte, or, not, non-capability eq,
+  // a literal-point within) must round-trip unchanged so a user
+  // editing the friendly fields doesn't silently drop the host's
+  // advanced rules.
+
+  it('preserves a gte clause AND-merged with the user\'s edits', () => {
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'Reefers', type: 'query', memberIds: [],
+      query: {
+        op: 'and',
+        clauses: [
+          { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
+          { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+        ],
+      },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
+
+    // The form acknowledges the preserved gte but lets the user
+    // edit the recognized refrigerated chip.
+    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/1 additional rule/)
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'and',
+      clauses: [
+        { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
+        { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+      ],
+    })
+  })
+
+  it('preserves an `or` root by AND-wrapping the user\'s additions', () => {
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'EitherWay', type: 'query', memberIds: [],
+      query: {
+        op: 'or',
+        clauses: [
+          { op: 'eq', path: 'type', value: 'vehicle' },
+          { op: 'eq', path: 'type', value: 'aircraft' },
+        ],
+      },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
+
+    // The whole `or` is preserved; capability chips start empty.
+    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/1 additional rule/)
+    expect(screen.getByRole('checkbox', { name: 'Refrigerated' })).toHaveAttribute('aria-checked', 'false')
+
+    // User adds a refrigerated chip.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Refrigerated' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'and',
+      clauses: [
+        { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+        // The original `or` is preserved verbatim alongside the new chip.
+        {
+          op: 'or',
+          clauses: [
+            { op: 'eq', path: 'type', value: 'vehicle' },
+            { op: 'eq', path: 'type', value: 'aircraft' },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('preserves a `not` clause and a literal-point `within` (which the form can\'t model)', () => {
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'Mixed', type: 'query', memberIds: [],
+      query: {
+        op: 'and',
+        clauses: [
+          { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+          { op: 'not', clause: { op: 'eq', path: 'tenantId', value: 'banned' } },
+          // Literal-point within is a different shape from the
+          // form's proposed-mode within — must be preserved.
+          { op: 'within', path: 'meta.location', from: { kind: 'point', lat: 40, lon: -111 }, miles: 100 },
+        ],
+      },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
+    expect(screen.getByTestId('pool-builder-preserved')).toHaveTextContent(/2 additional rules/)
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    // Recognized clause + both preserved clauses survive, in order.
+    expect(saved.query).toEqual({
+      op: 'and',
+      clauses: [
+        { op: 'eq',  path: 'meta.capabilities.refrigerated', value: true },
+        { op: 'not', clause: { op: 'eq', path: 'tenantId', value: 'banned' } },
+        { op: 'within', path: 'meta.location', from: { kind: 'point', lat: 40, lon: -111 }, miles: 100 },
+      ],
+    })
+  })
+
+  it('omits the preserved-clause notice when nothing was preserved', () => {
+    render(<PoolBuilder
+      pool={{
+        id: 'p', name: 'Simple', type: 'query', memberIds: [],
+        query: { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+        strategy: 'first-available',
+      }}
+      resources={fleet} onSave={vi.fn()} onCancel={vi.fn()}
+    />)
+    expect(screen.queryByTestId('pool-builder-preserved')).toBeNull()
+  })
+
+  it('lets the user save with only preserved rules (no UI clauses configured)', () => {
+    // A pool whose query is entirely advanced — the user opens it,
+    // doesn't change anything, and can still hit Save without being
+    // forced to add a recognized clause.
+    const onSave = vi.fn()
+    const pool: ResourcePool = {
+      id: 'p', name: 'AdvancedOnly', type: 'query', memberIds: [],
+      query: { op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000 },
+      strategy: 'first-available',
+    }
+    render(<PoolBuilder pool={pool} resources={fleet} onSave={onSave} onCancel={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    const saved = onSave.mock.calls[0]![0] as ResourcePool
+    expect(saved.query).toEqual({
+      op: 'gte', path: 'meta.capabilities.capacity_lbs', value: 80000,
+    })
+  })
+})
+
 describe('PoolBuilder — capability discovery', () => {
   it('uses the host-provided catalog when one is passed', () => {
     render(<PoolBuilder

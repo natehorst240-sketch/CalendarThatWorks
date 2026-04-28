@@ -191,6 +191,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+.preserved {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+}
+
+.preserved strong {
+  font-weight: 600;
+  color: #78350f;
+}
+
 .previewExcluded {
   color: var(--wc-text-muted, #6b7280);
 }
