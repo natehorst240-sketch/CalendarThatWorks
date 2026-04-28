@@ -24,7 +24,7 @@
  *   - File-system download. The Review step exposes a JSON code
  *     block users can copy; no `<a download>` plumbing.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, MouseEvent } from 'react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import {
@@ -64,7 +64,13 @@ type StepId = typeof STEPS[number]['id']
 export default function ConfigWizard({
   initialConfig, onComplete, onCancel,
 }: ConfigWizardProps): JSX.Element {
-  const trapRef = useFocusTrap<HTMLDivElement>(onCancel)
+  // Track when a step has a nested modal open (currently only the
+  // pools step's PoolBuilder). While the child modal is mounted we
+  // disable the wizard-level focus trap's Escape callback so a single
+  // Escape doesn't cascade through both shells and drop the user's
+  // in-progress edits.
+  const [childModalOpen, setChildModalOpen] = useState(false)
+  const trapRef = useFocusTrap<HTMLDivElement>(childModalOpen ? null : onCancel)
   const [config, setConfig] = useState<CalendarConfig>(initialConfig ?? {})
   const [step, setStep] = useState<number>(0)
 
@@ -125,7 +131,7 @@ export default function ConfigWizard({
           {stepId === 'profile'   && <ProfileStep   config={config} setConfig={update} />}
           {stepId === 'catalogs'  && <CatalogsStep  config={config} setConfig={update} />}
           {stepId === 'resources' && <ResourcesStep config={config} setConfig={update} />}
-          {stepId === 'pools'     && <PoolsStep     config={config} setConfig={update} />}
+          {stepId === 'pools'     && <PoolsStep     config={config} setConfig={update} onChildModalOpen={setChildModalOpen} />}
           {stepId === 'review'    && <ReviewStep    config={config} setConfig={update} />}
         </section>
 
@@ -286,6 +292,44 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
     setResources(resources.map((r, j) => j === i ? cleanResource(mut(r)) : r))
   }
   const types = config.resourceTypes ?? []
+
+  // Track in-progress lat/lon strings per row so a half-typed
+  // coordinate (lat first, lon still empty) doesn't fabricate a
+  // synthetic 0 for the missing side. Commit `location` to the
+  // config only when both fields are finite numbers; clear it when
+  // both are empty; leave it untouched in between so the user sees
+  // their typed value mid-edit without poisoning distance pools.
+  const [coords, setCoords] = useState<Map<number, { lat: string; lon: string }>>(new Map())
+  const coordValue = (i: number, which: 'lat' | 'lon'): string => {
+    const draft = coords.get(i)
+    if (draft && draft[which] !== undefined) return draft[which]
+    const r = resources[i]
+    return r?.location ? String(r.location[which]) : ''
+  }
+  const setCoord = (i: number, which: 'lat' | 'lon', raw: string) => {
+    setCoords(prev => {
+      const existing = prev.get(i) ?? {
+        lat: resources[i]?.location ? String(resources[i]!.location!.lat) : '',
+        lon: resources[i]?.location ? String(resources[i]!.location!.lon) : '',
+      }
+      const next = { ...existing, [which]: raw }
+      const out = new Map(prev)
+      out.set(i, next)
+      // Decide whether to commit the parsed pair to the config.
+      const lat = next.lat === '' ? null : Number(next.lat)
+      const lon = next.lon === '' ? null : Number(next.lon)
+      const bothFinite = lat !== null && lon !== null && Number.isFinite(lat) && Number.isFinite(lon)
+      const bothCleared = next.lat === '' && next.lon === ''
+      if (bothFinite) {
+        updateAt(i, prev => withOptional(prev, 'location', { lat: lat as number, lon: lon as number }))
+      } else if (bothCleared) {
+        updateAt(i, prev => withOptional(prev, 'location', undefined))
+      }
+      // Otherwise: partial entry — config.location is left exactly as
+      // it was. The local draft keeps the user's typed value visible.
+      return out
+    })
+  }
   return (
     <div className={styles['stepInner']}>
       <p className={styles['hint']}>
@@ -331,25 +375,19 @@ function ResourcesStep({ config, setConfig }: StepProps): JSX.Element {
               type="number"
               step="any"
               className={styles['inputNarrow']}
-              value={r.location?.lat ?? ''}
+              value={coordValue(i, 'lat')}
               placeholder="lat"
               aria-label={`Resource ${i + 1} latitude`}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => updateAt(i, prev =>
-                withOptional(prev, 'location', e.target.value === ''
-                  ? undefined
-                  : { lat: Number(e.target.value), lon: prev.location?.lon ?? 0 }))}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setCoord(i, 'lat', e.target.value)}
             />
             <input
               type="number"
               step="any"
               className={styles['inputNarrow']}
-              value={r.location?.lon ?? ''}
+              value={coordValue(i, 'lon')}
               placeholder="lon"
               aria-label={`Resource ${i + 1} longitude`}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => updateAt(i, prev =>
-                withOptional(prev, 'location', e.target.value === ''
-                  ? undefined
-                  : { lat: prev.location?.lat ?? 0, lon: Number(e.target.value) }))}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setCoord(i, 'lon', e.target.value)}
             />
             <button
               type="button"
@@ -401,9 +439,18 @@ function cleanResource(r: ConfigResource): ConfigResource {
 
 // ─── Step 4 — pools (list + PoolBuilder modal) ─────────────────────────────
 
-function PoolsStep({ config, setConfig }: StepProps): JSX.Element {
+function PoolsStep({
+  config, setConfig, onChildModalOpen,
+}: StepProps & { readonly onChildModalOpen?: (open: boolean) => void }): JSX.Element {
   const pools = config.pools ?? []
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  // Mirror the modal's open/closed state up to the wizard root so the
+  // outer focus trap's Escape callback can step aside while the
+  // inner PoolBuilder is mounted.
+  useEffect(() => {
+    onChildModalOpen?.(editingIndex !== null)
+    return () => onChildModalOpen?.(false)
+  }, [editingIndex, onChildModalOpen])
   // Adapt ConfigResource[] → ReadonlyMap<id, EngineResource> for PoolBuilder.
   const resourceMap = useMemo(() => {
     const m = new Map<string, EngineResource>()

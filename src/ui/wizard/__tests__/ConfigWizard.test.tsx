@@ -103,6 +103,53 @@ describe('ConfigWizard — Resources step', () => {
     }])
   })
 
+  it('does not commit a half-typed coordinate (#386 P2)', () => {
+    // Typing only the latitude must not fabricate a longitude:0 in
+    // the saved config — that would drop the resource off the
+    // coast of Africa for distance-pool math.
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ resources: [{ id: 't1', name: 'Truck' }] }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.change(screen.getByLabelText('Resource 1 latitude'), { target: { value: '40.76' } })
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources![0]!.location).toBeUndefined()
+  })
+
+  it('commits the coordinate only when both lat and lon are typed (#386 P2)', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ resources: [{ id: 't1', name: 'Truck' }] }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.change(screen.getByLabelText('Resource 1 latitude'),  { target: { value: '40.76' } })
+    fireEvent.change(screen.getByLabelText('Resource 1 longitude'), { target: { value: '-111.89' } })
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources![0]!.location).toEqual({ lat: 40.76, lon: -111.89 })
+  })
+
+  it('clears the coordinate when both fields are emptied', () => {
+    const onComplete = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ resources: [{ id: 't1', name: 'Truck', location: { lat: 40, lon: -111 } }] }}
+      onComplete={onComplete} onCancel={vi.fn()}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /3.+Resources/ }))
+    fireEvent.change(screen.getByLabelText('Resource 1 latitude'),  { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Resource 1 longitude'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /5.+Review/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const saved = onComplete.mock.calls[0]![0] as CalendarConfig
+    expect(saved.resources![0]!.location).toBeUndefined()
+  })
+
   it('removes a resource when × is clicked', () => {
     const onComplete = vi.fn()
     render(<ConfigWizard
@@ -141,6 +188,24 @@ describe('ConfigWizard — Pools step', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     const saved = onComplete.mock.calls[0]![0] as CalendarConfig
     expect(saved.pools?.map(p => p.id)).toEqual(['fleet-east'])
+  })
+
+  it('Escape inside the PoolBuilder modal does not cancel the wizard (#386 P1)', () => {
+    // Both shells use a focus trap that listens for Escape. Without
+    // gating, a single Escape inside PoolBuilder fires both
+    // `onCancel` callbacks and drops the wizard's draft. The wizard
+    // disables its outer trap while the inner modal is mounted.
+    const onCancel = vi.fn()
+    render(<ConfigWizard
+      initialConfig={{ resources: [{ id: 't1', name: 'T1' }] }}
+      onComplete={vi.fn()} onCancel={onCancel}
+    />)
+    fireEvent.click(screen.getByRole('button', { name: /4.+Pools/ }))
+    fireEvent.click(screen.getByRole('button', { name: '+ Add pool' }))
+    // PoolBuilder mounts a `dialog` named "Create pool".
+    const builder = screen.getByRole('dialog', { name: 'Create pool' })
+    fireEvent.keyDown(builder, { key: 'Escape' })
+    expect(onCancel).not.toHaveBeenCalled()
   })
 })
 
