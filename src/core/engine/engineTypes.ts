@@ -104,7 +104,11 @@ export type {
 export { safeMutate } from './operations/safeMutate';
 
 // ── Recurrence guards ────────────────────────────────────────────────────────
-export type { ExpandRecurrenceSafeOptions } from './recurrence/expandRecurrenceSafe';
+export type {
+  ExpandRecurrenceSafeOptions,
+  ExpandRecurrenceSafeResult,
+  SeriesDiagnostic,
+} from './recurrence/expandRecurrenceSafe';
 export { expandRecurrenceSafe } from './recurrence/expandRecurrenceSafe';
 
 // ── Time utilities ─────────────────────────────────────────────────────────────
