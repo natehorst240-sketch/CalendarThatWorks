@@ -12,6 +12,7 @@ import { hoursInTimezone } from '../core/engine/time/timezone';
 import { layoutOverlaps, layoutSpans } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import ApprovalDot from '../ui/ApprovalDot';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
 
@@ -363,6 +364,7 @@ export default function WeekView({
         {inner ?? (
           <>
             <span className={styles['evTitle']} style={{ fontWeight: display.bold ? '700' : undefined }}>
+              <ApprovalDot event={ev as any} />
               {ev.title}
             </span>
             {isUltraCompact ? null : (

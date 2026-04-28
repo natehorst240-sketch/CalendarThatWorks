@@ -1,0 +1,27 @@
+/* ApprovalDot — small status dot. Sits inline at the leading edge of an
+   event pill so users can see at a glance which events are pending or
+   denied. The colours are semantic, not theme-specific. */
+
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: var(--wc-text-faint);
+}
+
+.stage_requested      { background: var(--wc-warning, #f59e0b); }
+.stage_approved       { background: var(--wc-success, #10b981); }
+.stage_finalized {
+  background: var(--wc-success, #10b981);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+.stage_pending_higher {
+  background: var(--wc-warning, #f59e0b);
+  border-style: dashed;
+}
+.stage_denied         { background: var(--wc-danger, #ef4444); }

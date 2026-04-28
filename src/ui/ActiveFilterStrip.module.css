@@ -1,0 +1,86 @@
+/* ActiveFilterStrip — compact one-line summary of applied filters.
+   Hidden entirely when no filters are active (component returns null). */
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  font-size: 12px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 9px;
+  background: var(--wc-pill-bg-active, color-mix(in srgb, var(--wc-accent) 18%, var(--wc-surface)));
+  border: 1px solid var(--wc-pill-border-active, var(--wc-accent));
+  color: var(--wc-pill-text-active, var(--wc-accent));
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.pillField {
+  opacity: 0.75;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.pillValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  opacity: 0.7;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.remove:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.clearAll {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wc-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.clearAll:hover {
+  color: var(--wc-text);
+}

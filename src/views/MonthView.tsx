@@ -9,6 +9,7 @@ import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
 import type { NormalizedEvent } from '../types/events';
+import ApprovalDot from '../ui/ApprovalDot';
 import styles from './MonthView.module.css';
 
 const SPAN_H   = 22;
@@ -367,6 +368,7 @@ export default function MonthView({
         onMouseLeave={handlePillMouseLeave}
         aria-label={ariaLabel}
       >
+        <ApprovalDot event={ev} />
         {ev.title}
       </button>
     );

@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 import type { Day } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import ApprovalDot from '../ui/ApprovalDot';
 import styles from './ScheduleView.module.css';
 
 const WEEKS = 6;
@@ -116,6 +117,7 @@ export default function ScheduleView({ currentDate, events, onEventClick, weekSt
                           onClick={() => onEventClick?.(ev)}
                           title={ev.title}
                         >
+                          <ApprovalDot event={ev as any} />
                           {ev.title}
                         </button>
                       );

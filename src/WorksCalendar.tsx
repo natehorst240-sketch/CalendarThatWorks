@@ -66,6 +66,7 @@ import KeyboardHelpOverlay   from './ui/KeyboardHelpOverlay';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import ConfigPanel            from './ui/ConfigPanel';
 import SavedFlash             from './ui/SavedFlash';
+import ActiveFilterStrip      from './ui/ActiveFilterStrip';
 import EventForm              from './ui/EventForm';
 import AssetRequestForm       from './ui/AssetRequestForm';
 import ImportZone             from './ui/ImportZone';
@@ -2489,6 +2490,13 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   <Download size={15} aria-hidden="true" />
                 </button>
               </>}
+            />
+            <ActiveFilterStrip
+              filters={cal.filters as Record<string, unknown>}
+              schema={schema}
+              onChange={(key, value) => cal.setFilter(key, value)}
+              onClear={(key) => cal.clearFilter(key)}
+              onClearAll={cal.clearFilters}
             />
         {/* ── View area ── */}
         <div
