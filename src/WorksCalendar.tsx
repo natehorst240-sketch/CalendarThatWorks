@@ -443,7 +443,21 @@ function viewRange(view: LooseValue, date: LooseValue, weekStartDay: 0 | 1 | 2 |
       // materialize the 90-day window so toggling in-view doesn't require
       // a re-fetch and occurrences at the end of the span aren't missing.
       return { start: startOfDay(date), end: addDays(startOfDay(date), 90) };
-    default: // month, agenda, schedule (timeline), assets
+    case 'month': {
+      // MonthView renders a calendar grid that spills into the previous
+      // month's tail and the next month's head (startOfWeek(monthStart)
+      // → endOfWeek(monthEnd)). The fetched range needs to match the grid,
+      // not just the calendar month — otherwise events that fall on
+      // visible spillover days (e.g. May 1-2 in an April grid) are
+      // dropped before reaching the view and silently disappear.
+      const monthStart = startOfMonth(date);
+      const monthEnd   = endOfMonth(date);
+      return {
+        start: startOfWeek(monthStart, { weekStartsOn: weekStartDay }),
+        end:   endOfWeek(monthEnd,     { weekStartsOn: weekStartDay }),
+      };
+    }
+    default: // agenda, schedule (timeline), assets
       return { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
