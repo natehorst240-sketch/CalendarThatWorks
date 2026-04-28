@@ -127,6 +127,22 @@ export default function EventForm({
       }
     }
 
+    // Decide first whether the *current* draft category still routes
+    // through approval — restore + auto-tag both depend on it.
+    const draftCategory = draft.values.category || null;
+    const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
+
+    // Whether the original event's category was an approval-tracked
+    // one. Combined with `categoryNeedsApproval`, this distinguishes
+    // "user actively moved this event out of approval" from "this event
+    // simply doesn't live in an approval-tracked category right now"
+    // (which is the default for every consumer that doesn't pass
+    // `approvalCategories`).
+    const originalCategory = (event?.category as string | null | undefined) ?? null;
+    const originalCategoryNeedsApproval =
+      !!originalCategory && approvalCategorySet.has(String(originalCategory));
+    const isApprovalDowngrade = originalCategoryNeedsApproval && !categoryNeedsApproval;
+
     // Preserve the original approvalStage across `useEventDraftState`'s
     // mount-time category-clear effect. That effect rebuilds
     // `draft.values.meta` from scratch on every category change (and on
@@ -135,8 +151,15 @@ export default function EventForm({
     // the draft. Reading off `event.meta.approvalStage` (the prop, not
     // the draft) restores the original lifecycle so the save doesn't
     // regress workflow state.
+    //
+    // The restore is skipped *only* when the user actively moved out of
+    // an approval-tracked category (`isApprovalDowngrade`); in that
+    // case dropping the stage is the right call. Crucially, we do NOT
+    // gate on `categoryNeedsApproval` alone — consumers that don't pass
+    // `approvalCategories` (default []) would always evaluate that to
+    // false, silently destroying lifecycle history on every edit.
     const originalStage = (event?.meta?.approvalStage as Record<string, unknown> | null | undefined) ?? null;
-    if (originalStage && !meta?.['approvalStage']) {
+    if (originalStage && !isApprovalDowngrade && !meta?.['approvalStage']) {
       meta = { ...(meta ?? {}), approvalStage: originalStage };
     }
 
@@ -145,8 +168,6 @@ export default function EventForm({
     // yet (post-restoration). Never overwrites a stage that already
     // moved past requested — editing an approved event must not rewind
     // the lifecycle to requested.
-    const draftCategory = draft.values.category || null;
-    const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
     const existingStage = (meta?.['approvalStage'] as { stage?: string } | undefined)?.stage;
     if (categoryNeedsApproval && !existingStage) {
       meta = {

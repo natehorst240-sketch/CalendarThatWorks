@@ -1,8 +1,12 @@
 name: CI
 
+# Pull request runs cover every feature branch with an open PR. Push
+# is scoped to main so we still get a post-merge regression guard plus
+# a deploy-artifact build, without doubling CI minutes on every push
+# that's already going to fire pull_request right after.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: ["**"]
 
