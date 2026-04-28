@@ -23,11 +23,13 @@ import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import type { CategoryDef, CategoriesConfig } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useSavedFlash, useFlashWrapped, withFlash } from '../hooks/useSavedFlash';
 import { serializeFilters } from '../hooks/useSavedViews';
 import { THEME_FAMILIES, THEME_META, normalizeTheme } from '../styles/themes';
 import SourcePanel from './SourcePanel';
 import ThemeCustomizer from './ThemeCustomizer';
 import AdvancedFilterBuilder from './AdvancedFilterBuilder';
+import SavedFlash from './SavedFlash';
 import { getAssetStatus } from './assetStatus';
 import styles from './ConfigPanel.module.css';
 
@@ -262,14 +264,27 @@ type ConflictsPatch = {
 };
 
 export default function ConfigPanel({
-  config, categories, resources, schema, items, onUpdate, onClose, onSaveView,
-  savedViews, onUpdateView, onDeleteView,
+  config, categories, resources, schema, items,
+  onUpdate: onUpdateRaw,
+  onClose,
+  onSaveView: onSaveViewRaw,
+  savedViews,
+  onUpdateView: onUpdateViewRaw,
+  onDeleteView: onDeleteViewRaw,
   // Source store props (optional — omitted when owner has no source store)
-  sources, feedErrors, onAddSource, onRemoveSource, onToggleSource, onUpdateSource,
-  scheduleTemplates, onCreateScheduleTemplate, onDeleteScheduleTemplate, scheduleTemplateError,
+  sources, feedErrors,
+  onAddSource: onAddSourceRaw,
+  onRemoveSource: onRemoveSourceRaw,
+  onToggleSource: onToggleSourceRaw,
+  onUpdateSource: onUpdateSourceRaw,
+  scheduleTemplates,
+  onCreateScheduleTemplate: onCreateScheduleTemplateRaw,
+  onDeleteScheduleTemplate: onDeleteScheduleTemplateRaw,
+  scheduleTemplateError,
   // Team-tab hooks: when provided, TeamTab emits add/delete upstream so the
   // parent's employees prop can stay in sync with config-side edits.
-  onEmployeeAdd, onEmployeeDelete,
+  onEmployeeAdd: onEmployeeAddRaw,
+  onEmployeeDelete: onEmployeeDeleteRaw,
   // Deep-link: open ConfigPanel focused on a specific tab. Re-applied when
   // the prop changes so consecutive deep-links (e.g. two clicks of "Edit
   // assets" with a different target each time) land on the right tab.
@@ -282,6 +297,24 @@ export default function ConfigPanel({
   // Restart the guided setup; the SetupTab renders a button when set.
   onReopenSetup,
 }: ConfigPanelProps) {
+  // Saved-flash plumbing: every host write committed through this panel
+  // pulses the header pill so users see their change land. Wrappers stay
+  // referentially stable per raw-callback identity so the downstream
+  // useCallback graph doesn't churn on every render.
+  const { flash, trigger } = useSavedFlash();
+  const onUpdate           = useMemo(() => withFlash(onUpdateRaw, trigger), [onUpdateRaw, trigger]);
+  const onSaveView                 = useFlashWrapped(onSaveViewRaw,                 trigger);
+  const onUpdateView               = useFlashWrapped(onUpdateViewRaw,               trigger);
+  const onDeleteView               = useFlashWrapped(onDeleteViewRaw,               trigger);
+  const onAddSource                = useFlashWrapped(onAddSourceRaw,                trigger);
+  const onRemoveSource             = useFlashWrapped(onRemoveSourceRaw,             trigger);
+  const onToggleSource             = useFlashWrapped(onToggleSourceRaw,             trigger);
+  const onUpdateSource             = useFlashWrapped(onUpdateSourceRaw,             trigger);
+  const onCreateScheduleTemplate   = useFlashWrapped(onCreateScheduleTemplateRaw,   trigger);
+  const onDeleteScheduleTemplate   = useFlashWrapped(onDeleteScheduleTemplateRaw,   trigger);
+  const onEmployeeAdd              = useFlashWrapped(onEmployeeAddRaw,              trigger);
+  const onEmployeeDelete           = useFlashWrapped(onEmployeeDeleteRaw,           trigger);
+
   const [tab, setTab] = useState<string>(() =>
     initialTab && TABS.some(t => t.id === initialTab) ? initialTab : 'setup',
   );
@@ -348,9 +381,12 @@ export default function ConfigPanel({
       <div ref={trapRef} className={styles['panel']} role="dialog" aria-modal="true" aria-label="Calendar settings">
         <div className={styles['panelHead']}>
           <h2 className={styles['panelTitle']}>Calendar Settings</h2>
-          <button className={styles['closeBtn']} onClick={onClose} aria-label="Close settings">
-            <X size={18} />
-          </button>
+          <div className={styles['panelHeadRight']}>
+            <SavedFlash visible={flash} />
+            <button className={styles['closeBtn']} onClick={onClose} aria-label="Close settings">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className={styles['layout']}>

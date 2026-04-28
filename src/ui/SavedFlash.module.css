@@ -1,0 +1,23 @@
+.flash {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--wc-success, #10b981);
+  border-radius: 100px;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+}

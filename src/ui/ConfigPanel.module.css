@@ -49,6 +49,12 @@
   margin: 0;
 }
 
+.panelHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .closeBtn {
   display: flex;
   align-items: center;
