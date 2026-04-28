@@ -228,6 +228,41 @@ describe('ClauseEditor — path autocomplete (#386 polish)', () => {
     const { container } = render(<Harness initial={{ op: 'eq', path: '', value: '' }} />)
     expect(container.querySelector('datalist')).toBeNull()
   })
+
+  it('routes nested path inputs through the root datalist (#386 P2)', () => {
+    // Path autocomplete previously broke for nested rules: each
+    // ClauseEditor generated its own datalistId via useId() but
+    // the <datalist> only rendered at depth 0, so nested path
+    // inputs referenced a non-existent element. Verify every
+    // path input across the tree resolves to the SAME datalist
+    // id — which means the root one — and that exactly one
+    // datalist is in the DOM.
+    function NestedHarness() {
+      const [c, setC] = useState<ResourceQuery>({
+        op: 'and',
+        clauses: [
+          { op: 'eq', path: 'meta.capabilities.refrigerated', value: true },
+          { op: 'not', clause: { op: 'eq', path: 'tenantId', value: 'banned' } },
+        ],
+      })
+      return (
+        <ClauseEditor
+          clause={c}
+          onChange={setC}
+          pathSuggestions={['meta.capabilities.refrigerated', 'meta.location']}
+        />
+      )
+    }
+    const { container } = render(<NestedHarness />)
+    const datalists = container.querySelectorAll('datalist')
+    expect(datalists.length).toBe(1)
+    const rootId = datalists[0]!.id
+    const pathInputs = screen.getAllByLabelText('Field path')
+    expect(pathInputs.length).toBe(2)        // composite + not-inner
+    for (const input of pathInputs) {
+      expect(input).toHaveAttribute('list', rootId)
+    }
+  })
 })
 
 describe('ClauseEditor — not', () => {

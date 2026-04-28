@@ -40,6 +40,13 @@ export interface ClauseEditorProps {
    * the editor still accepts any string, so custom paths still work.
    */
   readonly pathSuggestions?: readonly string[] | undefined
+  /**
+   * Internal — the root editor passes its datalist id to every
+   * nested clause so every path input references the same
+   * `<datalist>` (which only the root renders). Hosts shouldn't
+   * pass this; recursive children do.
+   */
+  readonly datalistId?: string | undefined
 }
 
 const ALL_OPS: readonly { value: ResourceQuery['op']; label: string; group: 'logic' | 'compare' | 'set' | 'geo' }[] = [
@@ -59,17 +66,22 @@ const ALL_OPS: readonly { value: ResourceQuery['op']; label: string; group: 'log
 
 export default function ClauseEditor({
   clause, onChange, hideOpPicker, depth = 0, pathSuggestions,
+  datalistId: parentDatalistId,
 }: ClauseEditorProps): JSX.Element {
   // Hard cap to keep nesting from spiralling. The user can lift it by
   // editing JSON externally; the editor just refuses to add more.
   const atDepthCap = depth >= 5
-  // Stable per-instance id so multiple editors on the page don't
-  // collide their datalist references. Strip colons from useId's
-  // output (`:r1:`) — they're valid in HTML id attributes but
-  // happy-dom (and some legacy DOM consumers) reject them when
-  // querying via `input.list`. The result stays unique because
-  // the remaining characters still come from useId's counter.
-  const datalistId = `clause-paths-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  // Reuse the parent's datalist id when this editor is nested so
+  // every path input across the recursive tree resolves to the
+  // single `<datalist>` rendered at the root. The root generates
+  // a fresh id from useId so multiple editor instances on the
+  // same page don't collide. Strip colons from useId's output
+  // (`:r1:`) — they're valid in HTML id attributes but happy-dom
+  // (and some legacy DOM consumers) reject them when querying via
+  // `input.list`.
+  const ownDatalistId = `clause-paths-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  const datalistId = parentDatalistId ?? ownDatalistId
+  const isRoot = !parentDatalistId
 
   return (
     <div className={styles['clause']} data-depth={depth} data-op={clause.op}>
@@ -113,7 +125,7 @@ export default function ClauseEditor({
       )}
 
       {clause.op === 'not' && (
-        <NotBody clause={clause} onChange={onChange} depth={depth} pathSuggestions={pathSuggestions} />
+        <NotBody clause={clause} onChange={onChange} depth={depth} pathSuggestions={pathSuggestions} datalistId={datalistId} />
       )}
 
       {(clause.op === 'eq' || clause.op === 'neq') && (
@@ -139,7 +151,7 @@ export default function ClauseEditor({
       {/* The datalist lives on the outer container so every leaf
           body in this editor instance shares a single suggestion
           list. Rendered only once per editor instance. */}
-      {pathSuggestions && pathSuggestions.length > 0 && depth === 0 && (
+      {pathSuggestions && pathSuggestions.length > 0 && isRoot && (
         <datalist id={datalistId}>
           {pathSuggestions.map(p => <option key={p} value={p} />)}
         </datalist>
@@ -185,6 +197,7 @@ function CompositeBody({
               clause={c}
               depth={depth + 1}
               pathSuggestions={pathSuggestions}
+              datalistId={datalistId}
               onChange={(next) => onChange({
                 ...clause,
                 clauses: clause.clauses.map((existing, j) => j === i ? next : existing),
@@ -237,12 +250,13 @@ function CompositeBody({
 }
 
 function NotBody({
-  clause, onChange, depth, pathSuggestions,
+  clause, onChange, depth, pathSuggestions, datalistId,
 }: {
   clause: Extract<ResourceQuery, { op: 'not' }>
   onChange: (next: ResourceQuery) => void
   depth: number
   pathSuggestions?: readonly string[] | undefined
+  datalistId?: string | undefined
 }): JSX.Element {
   return (
     <div className={styles['notBody']}>
@@ -250,6 +264,7 @@ function NotBody({
         clause={clause.clause}
         depth={depth + 1}
         pathSuggestions={pathSuggestions}
+        datalistId={datalistId}
         onChange={(inner) => onChange({ ...clause, clause: inner })}
       />
     </div>
