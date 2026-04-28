@@ -258,6 +258,26 @@
   color: var(--wc-text-faint);
 }
 
+/* Inline notice — read-only context badges (pool seeded / approval required).
+   Mirrors the muted, dashed-accent treatment AssetRequestForm uses for its
+   approval banner so the two forms read as siblings. */
+.inlineNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--wc-text-muted, #475569);
+  background: color-mix(in srgb, var(--wc-accent, #3b82f6) 8%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--wc-accent, #3b82f6) 35%, transparent);
+  border-radius: 8px;
+}
+
+.inlineNotice strong {
+  color: var(--wc-text);
+  font-weight: 600;
+}
+
 /* Actions */
 .actions {
   display: flex;

@@ -3,9 +3,9 @@
  * Layout and orchestration only; business logic lives in useEventDraftState
  * and the extracted section components.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { X } from 'lucide-react';
+import { ShieldCheck, Users, X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { useEventDraftState, fromDatetimeLocal } from '../hooks/useEventDraftState';
@@ -34,12 +34,48 @@ export default function EventForm({
    * rules; consumers that don't pass it get the previous unchecked path.
    */
   onCheckConflicts,
+  /**
+   * Categories whose events route through the approval state machine.
+   * When the draft's category matches, the form (a) shows an inline
+   * banner so users know the save will land in `requested` rather than
+   * a confirmed booking, and (b) auto-tags `meta.approvalStage` on
+   * submit so the lifecycle starts correctly. Mirrors the tagging
+   * AssetRequestForm already does — this closes the silent bypass when
+   * an asset-request category is created via the generic Add Event
+   * button instead of the Request Asset action.
+   */
+  approvalCategories = [],
+  /**
+   * Resource pools the host has configured. Used only for a read-only
+   * indicator on pool-seeded drafts ("Booking against the West Fleet
+   * pool — system picks a member"); the form itself does not let users
+   * edit the pool selection. Closes #386 item #11.
+   */
+  pools = [],
 }: any) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
   const draft   = useEventDraftState(event, categories, config);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [conflictResult, setConflictResult] = useState<ConflictEvaluationResult | null>(null);
   const [pendingPayload,  setPendingPayload]  = useState<any>(null);
+
+  // Approval categories the draft should route through. Recomputed each
+  // render because the user can change the category in-form and the
+  // banner / auto-tag must follow.
+  const approvalCategorySet = useMemo<Set<string>>(
+    () => new Set((approvalCategories ?? []).map((c: unknown) => String(c))),
+    [approvalCategories],
+  );
+  const requiresApproval = !!draft.values.category && approvalCategorySet.has(String(draft.values.category));
+
+  // Pool indicator. Only fires for drafts that arrived already bound to
+  // a pool (today: WorksCalendar seeds pool-row clicks with
+  // `resourcePoolId`). The form does not let users pick a pool here.
+  const seededPoolId: string | null = (event?.resourcePoolId as string | undefined) ?? null;
+  const seededPool = useMemo(
+    () => (seededPoolId ? (pools as Array<{ id: string; name?: string }>).find(p => p.id === seededPoolId) ?? null : null),
+    [seededPoolId, pools],
+  );
 
   // Dirty guard: track first user interaction rather than snapshotting
   // draft.values on mount. `useEventDraftState` runs a category-keyed
@@ -91,13 +127,28 @@ export default function EventForm({
       }
     }
 
+    // Auto-tag approvalStage when the chosen category routes through the
+    // approval state machine. Only seed a *new* stage — never overwrite
+    // an existing approvalStage that's already moved past 'requested'
+    // (approved / finalized / denied) since editing the event shouldn't
+    // rewind the lifecycle.
+    const draftCategory = draft.values.category || null;
+    const categoryNeedsApproval = !!draftCategory && approvalCategorySet.has(String(draftCategory));
+    const existingStage = (meta?.['approvalStage'] as { stage?: string } | undefined)?.stage;
+    if (categoryNeedsApproval && !existingStage) {
+      meta = {
+        ...(meta ?? {}),
+        approvalStage: { stage: 'requested', updatedAt: new Date().toISOString() },
+      };
+    }
+
     const payload = {
       ...(event || {}),
       title:    draft.values.title.trim(),
       start,
       end,
       allDay:   draft.values.allDay,
-      category: draft.values.category || null,
+      category: draftCategory,
       resource,
       color:    draft.values.color || undefined,
       meta,
@@ -176,6 +227,14 @@ export default function EventForm({
             <button className={styles['closeBtn']} onClick={requestClose} aria-label="Close"><X size={18} /></button>
           </div>
           <form className={styles['form']} onSubmit={handleSubmit} onChange={markDirty} noValidate>
+            {seededPool && (
+              <div className={styles['inlineNotice']} role="status" data-variant="info">
+                <Users size={14} aria-hidden="true" />
+                <span>
+                  Booking against the <strong>{seededPool.name ?? seededPool.id}</strong> pool — the system picks an available member when you save.
+                </span>
+              </div>
+            )}
             <div className={styles['field']}>
               <label className={styles['label']} htmlFor="ef-template">Template</label>
               <select id="ef-template" className={styles['select']} value={d.templateId} onChange={e => d.applyTemplate(e.target.value)}>
@@ -249,6 +308,12 @@ export default function EventForm({
             })()}
             <CustomFieldsSection category={d.values.category} customFields={d.customFields}
               metaValues={d.values.meta} errors={d.errors} onMetaChange={d.setMeta} />
+            {requiresApproval && (
+              <div className={styles['inlineNotice']} role="status" data-variant="approval">
+                <ShieldCheck size={14} aria-hidden="true" />
+                <span>This category routes through approval — your save lands as <strong>requested</strong> until approved.</span>
+              </div>
+            )}
             <div className={styles['actions']}>
               {!isNew && onDelete && (
                 <button type="button" className={styles['btnDelete']} onClick={() => setConfirmDeleteOpen(true)}>Delete</button>
