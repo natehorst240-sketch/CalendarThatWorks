@@ -1,3 +1,13 @@
+/*
+ * ProfileBar — saved-view header strip.
+ *
+ * .chipWrap intentionally does NOT consume the shared --wc-pill-*
+ * tokens: each chip wears a per-chip --chip-color custom property so
+ * saved views can advertise their own accent. The outline-pill defaults
+ * (which derive from --wc-accent) wouldn't compose with that. See the
+ * docstring on --wc-pill-* in src/themes/tokens.css.
+ */
+
 /* ─── Main bar ───────────────────────────────────────────────── */
 .bar {
   display: flex;

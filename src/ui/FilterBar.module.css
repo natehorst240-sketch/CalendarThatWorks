@@ -163,28 +163,31 @@
 }
 .selectInput:focus { outline: none; border-color: var(--wc-accent); }
 
-/* ── Boolean (checkbox label) ── */
+/* ── Boolean (checkbox label) — outline-pill, see --wc-pill-* tokens ── */
 .boolLabel {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--wc-border);
-  border-radius: 100px;
-  background: var(--wc-surface);
-  font-size: 12px;
-  color: var(--wc-text);
+  padding: var(--wc-pill-padding-y) var(--wc-pill-padding-x);
+  border: 1px solid var(--wc-pill-border);
+  border-radius: var(--wc-pill-radius);
+  background: var(--wc-pill-bg);
+  font-size: var(--wc-pill-font-size);
+  font-weight: var(--wc-pill-font-weight);
+  color: var(--wc-pill-text);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition: var(--wc-pill-transition);
 }
 .boolLabel:hover {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-hover);
+  border-color: var(--wc-pill-border-hover);
+  color: var(--wc-pill-text-hover);
 }
 .boolLabelActive {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-active);
+  border-color: var(--wc-pill-border-active);
+  color: var(--wc-pill-text-active);
 }
 .boolCheck { cursor: pointer; accent-color: var(--wc-accent); }
 
@@ -252,30 +255,33 @@
   position: relative;
 }
 
+/* ── Group dropdown launcher — outline-pill, see --wc-pill-* tokens ── */
 .dropdownBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 100px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid var(--wc-border);
-  background: var(--wc-surface);
-  color: var(--wc-text);
+  padding: var(--wc-pill-padding-y) var(--wc-pill-padding-x);
+  border-radius: var(--wc-pill-radius);
+  font-size: var(--wc-pill-font-size);
+  font-weight: var(--wc-pill-font-weight);
+  border: 1px solid var(--wc-pill-border);
+  background: var(--wc-pill-bg);
+  color: var(--wc-pill-text);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition: var(--wc-pill-transition);
 }
 
 .dropdownBtn:hover {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-hover);
+  border-color: var(--wc-pill-border-hover);
+  color: var(--wc-pill-text-hover);
 }
 
 .dropdownBtnOpen {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-active);
+  border-color: var(--wc-pill-border-active);
+  color: var(--wc-pill-text-active);
 }
 
 .chevronIcon {

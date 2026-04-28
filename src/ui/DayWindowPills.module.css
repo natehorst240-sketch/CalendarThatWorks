@@ -2,6 +2,11 @@
  * DayWindowPills — segmented day-window selector for the sub-toolbar.
  * Token-driven; the active pill picks up var(--wc-surface-2) so the
  * contrast follows the active theme.
+ *
+ * Intentionally NOT consuming the shared --wc-pill-* tokens: this is
+ * a segmented selector inside a single bordered wrapper, not an
+ * outline-pill row. See the docstring on --wc-pill-* in
+ * src/themes/tokens.css for the boundary.
  */
 
 .root {

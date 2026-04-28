@@ -17,24 +17,27 @@
   margin-right: 4px;
 }
 
+/* Outline-pill — consumes the shared --wc-pill-* tokens defined in
+   src/themes/tokens.css. Edit the token set, not the per-rule values. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
-  border: 1px solid var(--wc-border);
-  border-radius: 999px;
-  background: var(--wc-surface);
-  color: var(--wc-text);
-  font-size: 12px;
-  font-weight: 500;
+  padding: var(--wc-pill-padding-y) var(--wc-pill-padding-x);
+  border: 1px solid var(--wc-pill-border);
+  border-radius: var(--wc-pill-radius);
+  background: var(--wc-pill-bg);
+  color: var(--wc-pill-text);
+  font-size: var(--wc-pill-font-size);
+  font-weight: var(--wc-pill-font-weight);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  transition: var(--wc-pill-transition);
 }
 
 .chip:hover {
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-hover);
+  border-color: var(--wc-pill-border-hover);
+  color: var(--wc-pill-text-hover);
 }
 
 .chip:focus-visible {
@@ -43,7 +46,7 @@
 }
 
 .chipActive {
-  background: color-mix(in srgb, var(--wc-accent) 18%, var(--wc-surface));
-  border-color: var(--wc-accent);
-  color: var(--wc-accent);
+  background: var(--wc-pill-bg-active);
+  border-color: var(--wc-pill-border-active);
+  color: var(--wc-pill-text-active);
 }

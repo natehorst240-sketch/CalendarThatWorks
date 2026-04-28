@@ -31,6 +31,38 @@
   --wc-danger:   #ef4444;
   --wc-success:  #10b981;
   --wc-warning:  #f59e0b;
+
+  /* ── Pill tokens (Shape A: outline-pill) ──────────────────────
+     Shared by FocusChips, FilterBar dropdown buttons, and FilterBar
+     boolean labels — the three places that render an outlined,
+     state-toggled pill. Three states: idle, hover, active. Active
+     wins over hover via cascade order in the consuming module CSS.
+
+     Two pill families intentionally do NOT consume these:
+       - DayWindowPills: a segmented selector inside a wrapper, with
+         no per-pill border. Consumes --wc-accent / --wc-surface-2.
+       - ProfileBar chips: tagged with a per-chip --chip-color custom
+         property so saved views can wear their own accent. The
+         outline-pill defaults wouldn't compose with that.
+  */
+  --wc-pill-radius:        100px;
+  --wc-pill-padding-y:     4px;
+  --wc-pill-padding-x:     10px;
+  --wc-pill-font-size:     12px;
+  --wc-pill-font-weight:   500;
+  --wc-pill-transition:    border-color 0.15s, background 0.15s, color 0.15s;
+
+  --wc-pill-bg:            var(--wc-surface);
+  --wc-pill-bg-hover:      color-mix(in srgb, var(--wc-accent) 8%,  var(--wc-surface));
+  --wc-pill-bg-active:     color-mix(in srgb, var(--wc-accent) 18%, var(--wc-surface));
+
+  --wc-pill-border:        var(--wc-border);
+  --wc-pill-border-hover:  var(--wc-accent);
+  --wc-pill-border-active: var(--wc-accent);
+
+  --wc-pill-text:          var(--wc-text);
+  --wc-pill-text-hover:    var(--wc-accent);
+  --wc-pill-text-active:   var(--wc-accent);
 }
 
 [data-wc-theme="dark"] {
