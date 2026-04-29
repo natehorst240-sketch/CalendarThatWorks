@@ -1,40 +1,42 @@
 /**
- * FilterGroupSidebar — slide-out panel with 3-tab navigation:
- * View, Focus, Saved.
+ * FilterGroupSidebar — slide-out panel with tab navigation.
  *
- * Replaces the FilterBar as the primary tool for manipulating
- * what the calendar shows and how it is organized. Available to
- * all users (not owner-gated like ConfigPanel).
+ * Tabs: Focus, Saved.
  *
- * Issue #268 renamed the tabs and header:
- *   Groups  → View   (a perspective picker; grouping builder is now "Advanced")
- *   Filters → Focus
- *   Views   → Saved
- *   "Organize" → "View Controls"
+ * The legacy "View" tab (perspective preset cards) was removed in favor
+ * of the Focus tab's cascade scope picker — the perspectives weren't
+ * actual operations, just labels of entities, and they competed
+ * confusingly with the toolbar's display-mode tabs (Month/Schedule/
+ * Base/etc.). When a `cascadeConfig` is supplied the Focus tab renders
+ * the cascade UI; otherwise it falls back to the legacy condition
+ * builder (`FiltersPanel`) so non-cascade hosts keep working.
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { X, SlidersHorizontal, Layers, Filter, Bookmark } from 'lucide-react';
-import ViewPanel from './ViewPanel';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { X, SlidersHorizontal, Filter, Bookmark } from 'lucide-react';
 import type { GroupLevel } from './GroupsPanel';
 import FiltersPanel from './FiltersPanel';
 import ViewsPanel from './ViewsPanel';
+import CascadePanel from './CascadePanel';
+import type { CascadeConfig, CascadeSelections } from './CascadePanel';
 import { useConditionBuilder } from '../hooks/useConditionBuilder';
 import type { Condition } from '../hooks/useConditionBuilder';
 import type { FilterField } from '../filters/filterSchema';
 import type { SortConfig } from '../types/grouping';
 import styles from './FilterGroupSidebar.module.css';
 
-export type SidebarTab = 'view' | 'focus' | 'saved';
+export type SidebarTab = 'focus' | 'saved';
 
 export type FilterGroupSidebarProps = {
   /** Whether the sidebar is open. */
   open: boolean;
   /** Called to close the sidebar. */
   onClose: () => void;
-  /** Tab to focus each time the sidebar opens. Defaults to 'view'. */
+  /** Tab to focus each time the sidebar opens. Defaults to 'focus'. */
   initialTab?: SidebarTab;
 
-  // Groups tab
+  // Group/sort wiring stays in the props (consumed by saved-view restore
+  // and by the cascade-driven group-level updates), but no longer has a
+  // dedicated tab UI.
   /** Current group-by levels. */
   groupLevels: GroupLevel[];
   /** Called when group levels change. */
@@ -47,6 +49,14 @@ export type FilterGroupSidebarProps = {
   showAllGroups: boolean;
   /** Called when showAllGroups changes. */
   onShowAllGroupsChange: (show: boolean) => void;
+
+  // Focus tab — cascade UI when cascadeConfig set, condition builder otherwise.
+  /** Optional cascade config. When provided, Focus tab renders the cascade. */
+  cascadeConfig?: CascadeConfig;
+  /** Current cascade selections. Required when cascadeConfig is provided. */
+  cascadeSelections?: CascadeSelections;
+  /** Called when cascade selections change. Required with cascadeConfig. */
+  onCascadeSelectionsChange?: (next: CascadeSelections) => void;
 
   // Filters tab
   /** Filter schema. */
@@ -90,14 +100,17 @@ export default function FilterGroupSidebar({
   open,
   onClose,
   initialTab,
-  // Groups
-  groupLevels,
-  onGroupLevelsChange,
-  sort,
-  onSortChange,
-  showAllGroups,
-  onShowAllGroupsChange,
-  // Filters
+  // (group/sort props kept for API compat but no longer drive a tab)
+  groupLevels: _groupLevels,
+  onGroupLevelsChange: _onGroupLevelsChange,
+  sort: _sort,
+  onSortChange: _onSortChange,
+  showAllGroups: _showAllGroups,
+  onShowAllGroupsChange: _onShowAllGroupsChange,
+  // Focus
+  cascadeConfig,
+  cascadeSelections,
+  onCascadeSelectionsChange,
   schema,
   items,
   onFiltersChange,
@@ -115,17 +128,28 @@ export default function FilterGroupSidebar({
   locationLabel,
   assetsLabel,
 }: FilterGroupSidebarProps) {
-  // Default to the View tab so the perspective picker is the owner's
-  // first stop. Focus/Saved open via explicit tab clicks.
-  const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'view');
+  // Default to Focus — it's the primary surface now that View is gone.
+  const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'focus');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Sync the active tab with the requested initialTab whenever the sidebar
-  // opens AND whenever the caller retargets initialTab while already open
-  // (e.g. clicking a different ContextSummary segment).
+  // opens AND whenever the caller retargets initialTab while already open.
+  // Map any legacy 'view' value onto 'focus' since the tab no longer exists.
   useEffect(() => {
-    if (open) setActiveTab(initialTab ?? 'view');
+    if (open) {
+      const next = (initialTab as string) === 'view' ? 'focus' : (initialTab ?? 'focus');
+      setActiveTab(next as SidebarTab);
+    }
   }, [open, initialTab]);
+
+  const cascadeCount = useMemo(() => {
+    if (!cascadeSelections) return 0;
+    let n = 0;
+    for (const k in cascadeSelections) {
+      if (cascadeSelections[k] && cascadeSelections[k]!.length > 0) n += 1;
+    }
+    return n;
+  }, [cascadeSelections]);
 
   // Condition builder for the Filters tab
   const conditionBuilder = useConditionBuilder({
@@ -212,19 +236,6 @@ export default function FilterGroupSidebar({
         {/* Tab strip */}
         <div className={styles['tabs']} role="tablist" aria-label="Sidebar tabs">
           <button
-            className={[styles['tab'], activeTab === 'view' && styles['active']].filter(Boolean).join(' ')}
-            onClick={() => setActiveTab('view')}
-            role="tab"
-            aria-selected={activeTab === 'view'}
-            aria-controls="sidebar-tab-view"
-          >
-            <Layers size={14} />
-            View
-            {groupLevels.length > 0 && (
-              <span className={styles['badge']}>{groupLevels.length}</span>
-            )}
-          </button>
-          <button
             className={[styles['tab'], activeTab === 'focus' && styles['active']].filter(Boolean).join(' ')}
             onClick={() => setActiveTab('focus')}
             role="tab"
@@ -233,8 +244,10 @@ export default function FilterGroupSidebar({
           >
             <Filter size={14} />
             Focus
-            {conditionBuilder.activeCount > 0 && (
-              <span className={styles['badge']}>{conditionBuilder.activeCount}</span>
+            {(cascadeConfig ? cascadeCount : conditionBuilder.activeCount) > 0 && (
+              <span className={styles['badge']}>
+                {cascadeConfig ? cascadeCount : conditionBuilder.activeCount}
+              </span>
             )}
           </button>
           <button
@@ -254,27 +267,28 @@ export default function FilterGroupSidebar({
 
         {/* Tab content */}
         <div className={styles['content']}>
-          {activeTab === 'view' && (
-            <div id="sidebar-tab-view" role="tabpanel" aria-label="View">
-              <ViewPanel
-                levels={groupLevels}
-                onLevelsChange={onGroupLevelsChange}
-                sort={sort}
-                onSortChange={onSortChange}
-                schema={schema}
-                showAllGroups={showAllGroups}
-                onShowAllGroupsChange={onShowAllGroupsChange}
-              />
-            </div>
-          )}
           {activeTab === 'focus' && (
             <div id="sidebar-tab-focus" role="tabpanel" aria-label="Focus">
-              <FiltersPanel
-                builder={conditionBuilder}
-                schema={schema}
-                items={items}
-                onFiltersChange={onFiltersChange}
-              />
+              {cascadeConfig && cascadeSelections && onCascadeSelectionsChange ? (
+                <CascadePanel
+                  config={cascadeConfig}
+                  selections={cascadeSelections}
+                  onSelectionsChange={onCascadeSelectionsChange}
+                  onSave={() => {
+                    // The cascade currently captures into the saved-view system
+                    // via the host's onSaveView. Naming is auto-derived; the
+                    // host can offer a rename via the Saved tab.
+                    onSaveView('Custom view', null);
+                  }}
+                />
+              ) : (
+                <FiltersPanel
+                  builder={conditionBuilder}
+                  schema={schema}
+                  items={items}
+                  onFiltersChange={onFiltersChange}
+                />
+              )}
             </div>
           )}
           {activeTab === 'saved' && (

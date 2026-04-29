@@ -1,6 +1,11 @@
 // @ts-nocheck — demo wrapper, follows App.tsx convention
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Check, ChevronDown, X as XIcon } from 'lucide-react';
 import styles from './Landing.module.css';
+import {
+  USER_PROFILES,
+  type DemoProfile,
+} from './profiles';
 
 const MOBILE_BREAKPOINT_PX = 1100;
 
@@ -27,13 +32,21 @@ function useIsMobile(): boolean {
 
 interface LandingProps {
   children: ReactNode;
+  activeProfile: DemoProfile;
+  onProfileChange: (profileId: string) => void;
 }
 
-export default function Landing({ children }: LandingProps) {
+export default function Landing({ children, activeProfile, onProfileChange }: LandingProps) {
   const isMobile = useIsMobile();
   return (
     <div className={styles.root}>
-      {isMobile ? <MobileShowcase /> : <DesktopFrame>{children}</DesktopFrame>}
+      {isMobile ? (
+        <MobileShowcase activeProfile={activeProfile} />
+      ) : (
+        <DesktopFrame activeProfile={activeProfile} onProfileChange={onProfileChange}>
+          {children}
+        </DesktopFrame>
+      )}
     </div>
   );
 }
@@ -59,7 +72,15 @@ function HeaderBar() {
   );
 }
 
-function DesktopFrame({ children }: { children: ReactNode }) {
+function DesktopFrame({
+  children,
+  activeProfile,
+  onProfileChange,
+}: {
+  children: ReactNode;
+  activeProfile: DemoProfile;
+  onProfileChange: (id: string) => void;
+}) {
   return (
     <div className={styles.desktop}>
       <HeaderBar />
@@ -75,7 +96,10 @@ function DesktopFrame({ children }: { children: ReactNode }) {
             </p>
           </section>
 
-          <ProfileCard />
+          <ProfileCard
+            activeProfile={activeProfile}
+            onProfileChange={onProfileChange}
+          />
           <FeaturesCard />
           <StatusCard />
 
@@ -92,20 +116,129 @@ function DesktopFrame({ children }: { children: ReactNode }) {
   );
 }
 
-function ProfileCard() {
+const APPROVAL_ROW_LABELS: Array<{ key: keyof DemoProfile['approval']; label: string }> = [
+  { key: 'canRequest',  label: 'Submit requests' },
+  { key: 'canApprove',  label: 'Approve' },
+  { key: 'canFinalize', label: 'Finalize' },
+  { key: 'canDeny',     label: 'Deny' },
+  { key: 'canRevoke',   label: 'Revoke finalized' },
+];
+
+function ProfileCard({
+  activeProfile,
+  onProfileChange,
+}: {
+  activeProfile: DemoProfile;
+  onProfileChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  // Click-outside + Escape close
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (!popoverRef.current) return;
+      if (!popoverRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
   return (
     <div className={styles.card}>
       <div className={styles.cardLabel}>Logged in as</div>
-      <div className={styles.profile}>
-        <div className={styles.avatar}>SF</div>
-        <div>
-          <div className={styles.profileName}>Sarah Foster</div>
-          <div className={styles.profileRole}>Ops Manager · Seattle (Hub)</div>
-        </div>
+      <div className={styles.profileSwitchAnchor} ref={popoverRef}>
+        <button
+          type="button"
+          className={styles.profileSwitchBtn}
+          onClick={() => setOpen(v => !v)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span
+            className={styles.avatar}
+            style={{
+              background: `linear-gradient(135deg, ${activeProfile.avatarFrom}, ${activeProfile.avatarTo})`,
+            }}
+          >
+            {activeProfile.initials}
+          </span>
+          <span className={styles.profileSwitchText}>
+            <span className={styles.profileName}>{activeProfile.name}</span>
+            <span className={styles.profileRole}>
+              {activeProfile.role} · {activeProfile.base}
+            </span>
+          </span>
+          <ChevronDown size={16} className={styles.profileSwitchChevron} aria-hidden="true" />
+        </button>
+
+        {open && (
+          <div className={styles.profileMenu} role="listbox">
+            {USER_PROFILES.map(p => {
+              const selected = p.id === activeProfile.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={[
+                    styles.profileMenuItem,
+                    selected && styles.profileMenuItemActive,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => {
+                    onProfileChange(p.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span
+                    className={styles.profileMenuAvatar}
+                    style={{ background: `linear-gradient(135deg, ${p.avatarFrom}, ${p.avatarTo})` }}
+                  >
+                    {p.initials}
+                  </span>
+                  <span className={styles.profileMenuText}>
+                    <span className={styles.profileMenuName}>{p.name}</span>
+                    <span className={styles.profileMenuRole}>{p.role}</span>
+                    <span className={styles.profileMenuSummary}>{p.summary}</span>
+                  </span>
+                  {selected && <Check size={14} className={styles.profileMenuCheck} aria-hidden="true" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
-      <div className={styles.profileMeta}>
-        Role-switching to demo the approval hierarchy is wired in next — for now
-        you're seeing the manager view (full approval rights).
+
+      <div className={styles.permissionList}>
+        {APPROVAL_ROW_LABELS.map(({ key, label }) => {
+          const allowed = activeProfile.approval[key];
+          return (
+            <div
+              key={key}
+              className={[styles.permissionRow, allowed ? styles.permYes : styles.permNo]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {allowed ? (
+                <Check size={12} aria-hidden="true" />
+              ) : (
+                <XIcon size={12} aria-hidden="true" />
+              )}
+              <span>{label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -170,7 +303,7 @@ function StatusItem({ value, label }: { value: string; label: string }) {
   );
 }
 
-function MobileShowcase() {
+function MobileShowcase({ activeProfile: _activeProfile }: { activeProfile: DemoProfile }) {
   return (
     <div className={styles.mobile}>
       <div className={styles.mobileHeader}>

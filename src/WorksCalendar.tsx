@@ -10,7 +10,7 @@ import {
   format, startOfMonth, endOfMonth, startOfDay,
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
-import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Layers, Map as MapIcon, Plus, Settings, Sparkles, Upload } from 'lucide-react';
+import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Map as MapIcon, Plus, Settings, Sparkles, Upload } from 'lucide-react';
 
 import { useCalendar }        from './hooks/useCalendar';
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
@@ -268,6 +268,15 @@ export type WorksCalendarProps = {
   dispatchEvaluator?: DispatchEvaluator;
   emptyState?: ReactNode;
   filterSchema?: FilterField[];
+  /**
+   * Optional cascade scope picker for the Focus tab of the View Controls
+   * sidebar. When set, replaces the legacy condition builder with a
+   * tiered multi-select picker (Region → Base → Type → …). Each tier's
+   * selection becomes a filter keyed by `tier.filterField`. The library
+   * stays generic — the host supplies tier definitions and option
+   * resolvers from its own data.
+   */
+  cascadeConfig?: import('./ui/CascadePanel').CascadeConfig;
   showAddButton?: boolean;
   /**
    * Opt-in interactive setup landing page. When true, first-time owners
@@ -559,6 +568,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
     // ── Filter schema (pass a custom FilterField[] to extend or replace defaults) ──
     filterSchema,
+    cascadeConfig,
 
     // ── UI toggles ──
     showAddButton           = false,
@@ -809,10 +819,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   // ── FilterGroupSidebar state ──
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarInitialTab, setSidebarInitialTab] = useState<SidebarTab>('view');
+  const [sidebarInitialTab, setSidebarInitialTab] = useState<SidebarTab>('focus');
 
   const handleScopeClick = useCallback(() => {
-    setSidebarInitialTab('view');
+    setSidebarInitialTab('focus');
     setSidebarOpen(true);
   }, []);
 
@@ -843,6 +853,107 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   const handleSidebarFiltersChange = useCallback((filters: Record<string, unknown>) => {
     cal.replaceFilters(filters);
   }, [cal]);
+
+  // ── Cascade scope selections ──
+  // Selections are owned at this level so saved-views can restore them
+  // (forthcoming) and so they round-trip with the calendar's filter state.
+  // Each tier's selection is mirrored into `cal.filters` via the
+  // `tier.filterField` key, so the existing filter pipeline picks them up
+  // without a separate plumbing path.
+  const [cascadeSelections, setCascadeSelections] = useState<
+    Readonly<Record<string, readonly string[]>>
+  >({});
+
+  const cascadeFieldKeys = useMemo(() => {
+    if (!cascadeConfig) return [] as string[];
+    const keys: string[] = [];
+    const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
+      for (const t of tiers) {
+        const k = (t as { filterField?: string }).filterField;
+        if (typeof k === 'string' && k.length > 0) keys.push(k);
+      }
+    };
+    collect(cascadeConfig.tiers);
+    if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
+    return keys;
+  }, [cascadeConfig]);
+
+  const cascadeTierByFieldKey = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!cascadeConfig) return map;
+    const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
+      for (const t of tiers) {
+        const k = (t as { filterField?: string }).filterField;
+        if (typeof k === 'string' && k.length > 0) map.set(k, t.id);
+      }
+    };
+    collect(cascadeConfig.tiers);
+    if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
+    return map;
+  }, [cascadeConfig]);
+
+  const handleCascadeSelectionsChange = useCallback(
+    (next: Readonly<Record<string, readonly string[]>>) => {
+      setCascadeSelections(next);
+      if (!cascadeConfig) return;
+
+      // Translate selections into filter pipeline format. Each tier with a
+      // `filterField` and a non-empty selection emits `filters[field] = Set`.
+      const patch: Record<string, unknown> = {};
+      const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
+        for (const t of tiers) {
+          const k = (t as { filterField?: string }).filterField;
+          if (typeof k !== 'string' || k.length === 0) continue;
+          const sel = next[t.id];
+          if (sel && sel.length > 0) {
+            patch[k] = new Set(sel);
+          } else {
+            patch[k] = new Set<string>();
+          }
+        }
+      };
+      collect(cascadeConfig.tiers);
+      if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
+
+      cal.replaceFilters({ ...cal.filters, ...patch });
+    },
+    [cascadeConfig, cal],
+  );
+
+  // Keep cascade selections in sync if cal.filters changes from elsewhere
+  // (saved-view apply, programmatic updates). Rebuild selections from any
+  // filter keys the cascade owns.
+  useEffect(() => {
+    if (!cascadeConfig) return;
+    if (cascadeFieldKeys.length === 0) return;
+    const next: Record<string, readonly string[]> = {};
+    for (const fieldKey of cascadeFieldKeys) {
+      const tierId = cascadeTierByFieldKey.get(fieldKey);
+      if (!tierId) continue;
+      const value = (cal.filters as Record<string, unknown>)[fieldKey];
+      if (value instanceof Set && value.size > 0) {
+        next[tierId] = Array.from(value).filter((v): v is string => typeof v === 'string');
+      }
+    }
+    setCascadeSelections(prev => {
+      // Skip churn when nothing changed.
+      const prevKeys = Object.keys(prev);
+      const nextKeys = Object.keys(next);
+      if (prevKeys.length === nextKeys.length) {
+        let same = true;
+        for (const k of nextKeys) {
+          const a = prev[k] ?? [];
+          const b = next[k] ?? [];
+          if (a.length !== b.length || a.some((v, i) => v !== b[i])) {
+            same = false;
+            break;
+          }
+        }
+        if (same) return prev;
+      }
+      return next;
+    });
+  }, [cal.filters, cascadeConfig, cascadeFieldKeys, cascadeTierByFieldKey]);
 
   // Keyboard shortcut: Cmd/Ctrl + / to toggle sidebar
   useEffect(() => {
@@ -2355,16 +2466,9 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                 {
                   id: 'focus',
                   label: 'Focus filters',
-                  hint: 'Narrow the calendar by category, source, or person',
+                  hint: 'Narrow the calendar by region, base, role, or category',
                   icon: <Filter size={18} aria-hidden="true" />,
                   onClick: () => { setSidebarInitialTab('focus'); setSidebarOpen(true); },
-                },
-                {
-                  id: 'groups',
-                  label: 'Group + sort',
-                  hint: 'Change how rows are grouped and sorted',
-                  icon: <Layers size={18} aria-hidden="true" />,
-                  onClick: () => { setSidebarInitialTab('view'); setSidebarOpen(true); },
                 },
                 // Only surface Map when it's actually one of the enabled views.
                 // WorksCalendar's view-validation effect snaps cal.view back
@@ -2803,7 +2907,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
           onSortChange={(next) => setActiveSort(next.length > 0 ? next : null)}
           showAllGroups={activeShowAllGroups}
           onShowAllGroupsChange={setActiveShowAllGroups}
-          // Filters tab
+          // Focus tab
+          {...(cascadeConfig ? { cascadeConfig } : {})}
+          cascadeSelections={cascadeSelections}
+          onCascadeSelectionsChange={handleCascadeSelectionsChange}
           schema={filterBarSchema}
           items={scopedEvents}
           onFiltersChange={handleSidebarFiltersChange}

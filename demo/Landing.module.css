@@ -194,6 +194,158 @@
   border-top: 1px dashed var(--border);
 }
 
+/* ─── Profile switcher (popover) ─────────────────────────────────── */
+
+.profileSwitchAnchor {
+  position: relative;
+}
+
+.profileSwitchBtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 4px 6px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 100ms ease;
+}
+
+.profileSwitchBtn:hover {
+  background: var(--bg-card-soft);
+}
+
+.profileSwitchText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.profileSwitchChevron {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.profileMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profileMenuItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 100ms ease;
+}
+
+.profileMenuItem:hover {
+  background: var(--bg-card-soft);
+}
+
+.profileMenuItemActive {
+  background: var(--accent-soft);
+}
+
+.profileMenuItemActive:hover {
+  background: var(--accent-soft);
+}
+
+.profileMenuAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.profileMenuText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.profileMenuName {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.profileMenuRole {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.profileMenuSummary {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.profileMenuCheck {
+  color: var(--accent);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+/* ─── Permission list ────────────────────────────────────────────── */
+
+.permissionList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.permissionRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.permYes {
+  color: #15803d;
+}
+
+.permNo {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-color: rgba(154, 138, 115, 0.5);
+}
+
 .featureRow {
   display: flex;
   align-items: flex-start;
