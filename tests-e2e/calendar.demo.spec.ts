@@ -51,14 +51,14 @@ for (const vp of viewports) {
         pageErrors.push(err.message);
       });
 
-      await page.goto('/');
+      await page.goto('/?embed=1');
       await expect(page.getByTestId('works-calendar')).toBeVisible();
       await expect(page.getByRole('toolbar', { name: /calendar navigation/i })).toBeVisible();
       expect(consoleErrors.concat(pageErrors).filter(ignoreEnvNoise)).toEqual([]);
     });
 
     test('main navigation buttons work', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/?embed=1');
       const calendar = page.getByTestId('works-calendar');
       await expect(calendar).toBeVisible();
 
@@ -73,7 +73,7 @@ for (const vp of viewports) {
     });
 
     test('all views can be selected', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/?embed=1');
 
       const views = ['Month', 'Week', 'Day', 'Agenda', 'Schedule'];
 
@@ -86,7 +86,7 @@ for (const vp of viewports) {
     });
 
     test('add event dialog opens', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/?embed=1');
       // Demo now defaults to schedule view; the "Add new event" button only
       // renders in non-schedule views, so switch to Month first.
       await page.getByRole('button', { name: /^Month$/i }).click();
@@ -97,7 +97,7 @@ for (const vp of viewports) {
     });
 
     test('layout is visible and not tiny', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/?embed=1');
       const root = page.getByTestId('works-calendar');
       await expect(root).toBeVisible();
       const box = await root.boundingBox();
@@ -109,7 +109,7 @@ for (const vp of viewports) {
     });
 
     test('save viewport screenshot', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/?embed=1');
       await expect(page.getByTestId('works-calendar')).toBeVisible();
       await page.screenshot({ path: 'qa-output/' + vp.name + '.png', fullPage: true });
     });

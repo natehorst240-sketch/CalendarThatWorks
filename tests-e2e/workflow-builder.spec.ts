@@ -44,7 +44,7 @@ test.describe('Workflow visual builder', () => {
     await page.addInitScript((key) => {
       try { localStorage.removeItem(key); } catch {}
     }, STORAGE_KEY);
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
   });
 

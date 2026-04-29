@@ -64,7 +64,7 @@ test.describe('WorksCalendar interaction crawler', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await expect(page.getByTestId(ROOT_TEST_ID)).toBeVisible();
   });
 

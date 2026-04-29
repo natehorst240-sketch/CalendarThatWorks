@@ -48,42 +48,42 @@ test.describe('Desktop (1280×900)', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
   test('month view', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     await snap(page, '01-month-desktop');
   });
 
   test('week view', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'week');
     await snap(page, '02-week-desktop');
   });
 
   test('day view', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'day');
     await snap(page, '03-day-desktop');
   });
 
   test('agenda view', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'agenda');
     await snap(page, '04-agenda-desktop');
   });
 
   test('schedule / timeline view', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'schedule');
     await snap(page, '05-schedule-desktop');
   });
 
   test('add-event modal open', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     // Click the + button or a day cell to open the modal
@@ -102,7 +102,7 @@ test.describe('Desktop (1280×900)', () => {
   });
 
   test('hover card on event', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     // Hover the first visible event pill
@@ -115,7 +115,7 @@ test.describe('Desktop (1280×900)', () => {
   });
 
   test('filter bar with active filter', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     // Click the first filter pill if present
     const filterPill = page.locator('[class*="filterPill"], [class*="FilterPill"]').first();
@@ -127,7 +127,7 @@ test.describe('Desktop (1280×900)', () => {
   });
 
   test('month view — navigate forward one month', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     const nextBtn = page.getByRole('button', { name: /next|›|chevron.*right/i }).first();
@@ -139,7 +139,7 @@ test.describe('Desktop (1280×900)', () => {
   });
 
   test('week view — time grid with events', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'week');
     // Navigate to a week that likely has events
@@ -156,21 +156,21 @@ test.describe('Mobile (375×812)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('month view mobile', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     await snap(page, '11-month-mobile');
   });
 
   test('agenda view mobile', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'agenda');
     await snap(page, '12-agenda-mobile');
   });
 
   test('week view mobile', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'week');
     await snap(page, '13-week-mobile');
@@ -183,14 +183,14 @@ test.describe('Tablet (768×1024)', () => {
   test.use({ viewport: { width: 768, height: 1024 } });
 
   test('month view tablet', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'month');
     await snap(page, '14-month-tablet');
   });
 
   test('schedule view tablet', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await waitForCalendar(page);
     await switchView(page, 'schedule');
     await snap(page, '15-schedule-tablet');

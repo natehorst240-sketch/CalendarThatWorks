@@ -341,6 +341,14 @@ function UpdateToast({ onUpdate, onDismiss }) {
 }
 
 /* ─── Demo App ──────────────────────────────────────────────────── */
+// `?embed=1` skips the marketing chrome and renders the calendar
+// full-bleed. e2e tests and any page that wants to embed the demo as
+// a raw calendar use this flag; the default `/` route shows the
+// framed Landing layout.
+const EMBED_MODE =
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).has('embed');
+
 function App() {
   const [events,            setEvents]            = useState(INITIAL_EVENTS);
   const [notes,             setNotes]             = useState({});
@@ -498,42 +506,48 @@ function App() {
     );
   }, [missionAssignments]);
 
+  const calendar = (
+    <WorksCalendar
+      events={events}
+      employees={employees}
+      assets={AIRCRAFT_RESOURCES}
+      pools={pools}
+      onPoolsChange={handlePoolsChange}
+      strictAssetFiltering={true}
+      assetRequestCategories={['maintenance', 'aircraft-request', 'asset-request', 'training', 'mission-assignment']}
+      onEmployeeAdd={handleEmployeeAdd}
+      onEmployeeDelete={handleEmployeeDelete}
+      calendarId={DEMO_CALENDAR_ID}
+      ownerPassword="demo1234"
+      showSetupLanding
+      onConfigSave={handleConfigSave}
+      notes={notes}
+      onNoteSave={handleNoteSave}
+      onNoteDelete={handleNoteDelete}
+      onEventSave={handleEventSave}
+      onEventDelete={handleEventDelete}
+      onScheduleSave={handleEventSave}
+      onAvailabilitySave={handleEventSave}
+      onApprovalAction={handleApprovalAction}
+      onEventClick={handleEventClick}
+      renderEvent={renderEvent}
+      theme={theme}
+      showAddButton={true}
+      categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
+      locationProvider={assetLocationProvider}
+      filterSchema={DEMO_FILTER_SCHEMA}
+      dispatchMissions={dispatchMissions}
+      dispatchEvaluator={dispatchEvaluator}
+    />
+  );
+
   return (
     <>
-      <Landing>
-        <WorksCalendar
-          events={events}
-          employees={employees}
-          assets={AIRCRAFT_RESOURCES}
-          pools={pools}
-          onPoolsChange={handlePoolsChange}
-          strictAssetFiltering={true}
-          assetRequestCategories={['maintenance', 'aircraft-request', 'asset-request', 'training', 'mission-assignment']}
-          onEmployeeAdd={handleEmployeeAdd}
-          onEmployeeDelete={handleEmployeeDelete}
-          calendarId={DEMO_CALENDAR_ID}
-          ownerPassword="demo1234"
-          showSetupLanding
-          onConfigSave={handleConfigSave}
-          notes={notes}
-          onNoteSave={handleNoteSave}
-          onNoteDelete={handleNoteDelete}
-          onEventSave={handleEventSave}
-          onEventDelete={handleEventDelete}
-          onScheduleSave={handleEventSave}
-          onAvailabilitySave={handleEventSave}
-          onApprovalAction={handleApprovalAction}
-          onEventClick={handleEventClick}
-          renderEvent={renderEvent}
-          theme={theme}
-          showAddButton={true}
-          categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
-          locationProvider={assetLocationProvider}
-          filterSchema={DEMO_FILTER_SCHEMA}
-          dispatchMissions={dispatchMissions}
-          dispatchEvaluator={dispatchEvaluator}
-        />
-      </Landing>
+      {EMBED_MODE ? (
+        <div style={{ height: '100vh', width: '100vw' }}>{calendar}</div>
+      ) : (
+        <Landing>{calendar}</Landing>
+      )}
 
       {missionOpen && (
         <MissionHoverCard

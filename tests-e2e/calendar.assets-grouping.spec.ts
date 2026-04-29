@@ -14,7 +14,7 @@ const SAVED_VIEWS_KEY = `wc-saved-views-${DEMO_CALENDAR_ID}`;
 test.describe('WorksCalendar Assets view', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
   });
 

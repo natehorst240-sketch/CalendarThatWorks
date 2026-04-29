@@ -24,7 +24,7 @@ function dateKey(offsetDays = 0): string {
 test.describe('WorksCalendar happy paths', () => {
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/');
+    await page.goto('/?embed=1');
     await expect(page.getByTestId('works-calendar')).toBeVisible();
     // Demo defaults to schedule view; these tests exercise month-view flows
     // (drag, add-event toolbar button), so normalize to Month first.
