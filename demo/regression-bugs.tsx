@@ -65,8 +65,13 @@ function App() {
     {
       id: 'editable-1',
       title: 'Edit Pen Fixture',
-      start: at(today, 4, 14, 0).toISOString(),
-      end: at(today, 4, 15, 0).toISOString(),
+      // Anchor the editable / span fixtures at small offsets so they always
+      // land inside the visible 5-week month grid. Larger offsets used to
+      // push them off-screen near month boundaries (the e2e Edit Pen test
+      // would silently fail when `today + 4` crossed into an unrendered
+      // week — the reason this fixture broke each cycle near month-end).
+      start: at(today, 0, 16, 0).toISOString(),
+      end: at(today, 0, 17, 0).toISOString(),
       category: 'Deploy',
       resource: 'emp-alpha',
       color: '#8b5cf6',
@@ -74,8 +79,8 @@ function App() {
     {
       id: 'span-overlap-1',
       title: 'Span Overflow Fixture',
-      start: at(today, 5, 8, 0).toISOString(),
-      end: at(today, 8, 18, 0).toISOString(),
+      start: at(today, 1, 8, 0).toISOString(),
+      end: at(today, 3, 18, 0).toISOString(),
       category: 'Project',
       resource: 'emp-alpha',
       color: '#0ea5e9',
