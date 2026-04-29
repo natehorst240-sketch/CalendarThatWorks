@@ -294,17 +294,20 @@ export const mission: DemoMissionRequest = {
   ],
 };
 
-// Mission calendar events — aircraft (per leg) + assigned crew (full window)
+// Mission calendar events — one aircraft event covering the full mission
+// window plus full-window crew events. Per-leg detail lives on `mission.legs`
+// and surfaces through MissionHoverCard, so the calendar pill renders as a
+// single multi-day bar in Month/Week instead of four short per-leg slivers.
 export const missionEvents: DemoEvent[] = [
-  // Aircraft on each leg
-  ...mission.legs.map(leg => ({
-    id: `mission-ac-${leg.id}`,
-    title: `${MISSION_TITLE} — ${leg.from} → ${leg.to}`,
+  // Aircraft — single span for the whole mission window
+  {
+    id: 'mission-ac-window',
+    title: MISSION_TITLE,
     category: 'mission-assignment' as const,
     visualPriority: 'high' as const,
-    start: leg.start, end: leg.end,
+    start: mission.start, end: mission.end,
     assignedTo: 'ac-n803lj', basedAt: 'b-seattle',
-  })),
+  },
   // Assigned crew covering the full mission window
   ...mission.assignments.pilots.map(p => ({
     id: `mission-pilot-${p.resourceId}`,
