@@ -227,12 +227,18 @@ function scheduleKindFor(category) {
 }
 
 const INITIAL_EVENTS = allEvents.map(e => {
-  const kind = scheduleKindFor(e.category);
+  // Source events (e.g. mission crew assignments in emsData) may already carry
+  // their own meta.kind. Don't override it — derive a kind from category only
+  // when the source didn't pre-tag the event.
+  const sourceMeta = (e as { meta?: Record<string, unknown> }).meta ?? null;
+  const kind = (sourceMeta && typeof sourceMeta['kind'] === 'string')
+    ? (sourceMeta['kind'] as string)
+    : scheduleKindFor(e.category);
   const approvalMeta = APPROVAL_CATS.has(e.category)
     ? { approvalStage: { stage: e.visualPriority === 'high' ? 'requested' : 'approved', updatedAt: e.start } }
     : null;
-  const meta = (kind || approvalMeta)
-    ? { ...(kind ? { kind } : {}), ...(approvalMeta ?? {}) }
+  const meta = (sourceMeta || kind || approvalMeta)
+    ? { ...(sourceMeta ?? {}), ...(kind ? { kind } : {}), ...(approvalMeta ?? {}) }
     : null;
   return {
     id: e.id, title: e.title, start: e.start, end: e.end,
@@ -824,6 +830,7 @@ function App() {
         <Landing
           activeProfile={activeProfile}
           onProfileChange={setActiveProfileId}
+          events={events}
         >
           {calendar}
         </Landing>

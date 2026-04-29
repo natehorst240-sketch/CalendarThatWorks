@@ -125,6 +125,35 @@ export function findProfile(id: string): DemoProfile {
 }
 
 /**
+ * Demo simulation: pretend a request was submitted by whichever profile id
+ * "would" submit that category. Drives the "My requests" card so each role
+ * sees a relevant queue without needing real per-event submitter tracking.
+ *
+ *   aircraft-request, asset-request → dispatcher
+ *   maintenance                     → base-supervisor (mechanic lives here)
+ *   anything else                   → dispatcher (safe default)
+ */
+export function simulatedRequesterIdFor(category: string): string {
+  if (category === 'maintenance') return 'base-supervisor';
+  return 'dispatcher';
+}
+
+/**
+ * Given an event's approval stage and the active profile, return whether
+ * that event is currently waiting on the profile to take an action.
+ *
+ *   requested  →  someone with canApprove
+ *   approved   →  someone with canFinalize
+ *   finalized  →  nobody (terminal)
+ *   denied     →  nobody (terminal)
+ */
+export function isAwaitingProfile(stage: string | null | undefined, profile: DemoProfile): boolean {
+  if (stage === 'requested') return profile.approval.canApprove;
+  if (stage === 'approved')  return profile.approval.canFinalize;
+  return false;
+}
+
+/**
  * Approval action -> required capability key. Used by the demo's
  * onApprovalAction handler to gate transitions on the active profile.
  */

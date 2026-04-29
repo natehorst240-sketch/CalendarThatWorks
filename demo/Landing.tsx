@@ -1,11 +1,21 @@
 // @ts-nocheck — demo wrapper, follows App.tsx convention
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, ChevronDown, X as XIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Check, ChevronDown, ChevronRight, Inbox, Send, X as XIcon } from 'lucide-react';
 import styles from './Landing.module.css';
 import {
   USER_PROFILES,
+  isAwaitingProfile,
+  simulatedRequesterIdFor,
   type DemoProfile,
 } from './profiles';
+
+interface ApprovalEvent {
+  id: string;
+  title: string;
+  start: string;
+  category: string;
+  meta?: { approvalStage?: { stage?: string; updatedAt?: string } };
+}
 
 const MOBILE_BREAKPOINT_PX = 1100;
 
@@ -34,16 +44,27 @@ interface LandingProps {
   children: ReactNode;
   activeProfile: DemoProfile;
   onProfileChange: (profileId: string) => void;
+  /** Live calendar events — drives the approval-queue counts in the chrome. */
+  events?: ApprovalEvent[];
 }
 
-export default function Landing({ children, activeProfile, onProfileChange }: LandingProps) {
+export default function Landing({
+  children,
+  activeProfile,
+  onProfileChange,
+  events = [],
+}: LandingProps) {
   const isMobile = useIsMobile();
   return (
     <div className={styles.root}>
       {isMobile ? (
         <MobileShowcase activeProfile={activeProfile} />
       ) : (
-        <DesktopFrame activeProfile={activeProfile} onProfileChange={onProfileChange}>
+        <DesktopFrame
+          activeProfile={activeProfile}
+          onProfileChange={onProfileChange}
+          events={events}
+        >
           {children}
         </DesktopFrame>
       )}
@@ -76,11 +97,18 @@ function DesktopFrame({
   children,
   activeProfile,
   onProfileChange,
+  events,
 }: {
   children: ReactNode;
   activeProfile: DemoProfile;
   onProfileChange: (id: string) => void;
+  events: ApprovalEvent[];
 }) {
+  const { myRequests, awaiting } = useMemo(
+    () => splitApprovalQueues(events, activeProfile),
+    [events, activeProfile],
+  );
+
   return (
     <div className={styles.desktop}>
       <HeaderBar />
@@ -100,6 +128,20 @@ function DesktopFrame({
             activeProfile={activeProfile}
             onProfileChange={onProfileChange}
           />
+          <ApprovalQueueCard
+            title="Awaiting your approval"
+            icon={<Inbox size={14} aria-hidden="true" />}
+            items={awaiting}
+            emptyState={awaitingEmptyText(activeProfile)}
+            defaultOpen={awaiting.length > 0}
+          />
+          <ApprovalQueueCard
+            title="My requests"
+            icon={<Send size={14} aria-hidden="true" />}
+            items={myRequests}
+            emptyState={`${activeProfile.role} hasn't submitted any open requests in this demo.`}
+            defaultOpen={false}
+          />
           <FeaturesCard />
           <StatusCard />
 
@@ -109,9 +151,211 @@ function DesktopFrame({
         </aside>
 
         <section className={styles.calendarFrame}>
-          <div className={styles.calendarWindow}>{children}</div>
+          <ScaledMonitor>{children}</ScaledMonitor>
         </section>
       </main>
+    </div>
+  );
+}
+
+/* ─── Scaled monitor frame ───────────────────────────────────────── */
+// Renders the calendar inside a transform: scale wrapper so the whole UI
+// (its own internal sidebars, toolbar, grid) shrinks together — the framed
+// window reads like a smaller monitor showing a real desktop calendar
+// instead of a cramped responsive layout. The inner stage is sized at
+// `frame / SCALE`, so after the visual scale-down it exactly fills the
+// frame (no whitespace, no cropping).
+const MONITOR_SCALE = 0.78;
+
+function ScaledMonitor({ children }: { children: ReactNode }) {
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  // Sane defaults so the calendar mounts at a reasonable virtual size on
+  // first paint, before ResizeObserver fires.
+  const [stage, setStage] = useState({ w: 1280, h: 800 });
+
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      setStage({
+        w: Math.round(rect.width / MONITOR_SCALE),
+        h: Math.round(rect.height / MONITOR_SCALE),
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div className={styles.calendarWindow} ref={frameRef}>
+      <div
+        className={styles.calendarStage}
+        style={{
+          width: stage.w,
+          height: stage.h,
+          transform: `scale(${MONITOR_SCALE})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Approval queue plumbing ────────────────────────────────────── */
+
+interface ApprovalQueueItem {
+  id: string;
+  title: string;
+  stage: string;
+  start: string;
+  category: string;
+}
+
+function splitApprovalQueues(
+  events: ApprovalEvent[],
+  profile: DemoProfile,
+): { myRequests: ApprovalQueueItem[]; awaiting: ApprovalQueueItem[] } {
+  const myRequests: ApprovalQueueItem[] = [];
+  const awaiting: ApprovalQueueItem[] = [];
+  for (const ev of events) {
+    const stage = ev.meta?.approvalStage?.stage;
+    if (!stage) continue;
+    const item: ApprovalQueueItem = {
+      id: ev.id,
+      title: ev.title,
+      stage,
+      start: ev.start,
+      category: ev.category,
+    };
+    // Awaiting your action: stage matches the profile's open capability.
+    if (isAwaitingProfile(stage, profile)) {
+      awaiting.push(item);
+    }
+    // My requests: simulated submitter matches active profile, and the
+    // request is still open (i.e. not finalized or denied).
+    if (
+      simulatedRequesterIdFor(ev.category) === profile.id &&
+      stage !== 'finalized' &&
+      stage !== 'denied'
+    ) {
+      myRequests.push(item);
+    }
+  }
+  // Most recent first.
+  awaiting.sort((a, b) => b.start.localeCompare(a.start));
+  myRequests.sort((a, b) => b.start.localeCompare(a.start));
+  return { myRequests, awaiting };
+}
+
+function awaitingEmptyText(profile: DemoProfile): string {
+  const { canApprove, canFinalize } = profile.approval;
+  if (!canApprove && !canFinalize) {
+    return `${profile.role} can't act on requests — switch to a role with approval rights to see the queue.`;
+  }
+  return 'Nothing waiting on you right now.';
+}
+
+const STAGE_LABEL: Record<string, string> = {
+  requested: 'Requested',
+  approved:  'Approved · awaiting finalize',
+  finalized: 'Finalized',
+  denied:    'Denied',
+};
+
+function ApprovalQueueCard({
+  title,
+  icon,
+  items,
+  emptyState,
+  defaultOpen,
+}: {
+  title: string;
+  icon: ReactNode;
+  items: ApprovalQueueItem[];
+  emptyState: string;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  // Track the previous item count so we can detect a 0 → N transition (e.g.
+  // switching from Dispatcher with no queue to Ops Manager with five waiting
+  // items) and auto-open the card. The earlier `items.length > 0 && !open`
+  // bail meant the card stayed collapsed forever once closed, even when the
+  // queue subsequently filled.
+  const prevCountRef = useRef(items.length);
+  useEffect(() => {
+    const prev = prevCountRef.current;
+    const curr = items.length;
+    if (prev === 0 && curr > 0) {
+      setOpen(true);
+    } else if (curr === 0 && open) {
+      setOpen(false);
+    }
+    prevCountRef.current = curr;
+  }, [items.length, open]);
+
+  return (
+    <div className={styles.card}>
+      <button
+        type="button"
+        className={styles.queueHeader}
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+      >
+        <span className={styles.queueIcon}>{icon}</span>
+        <span className={styles.queueTitle}>{title}</span>
+        <span
+          className={[
+            styles.queueBadge,
+            items.length === 0 && styles.queueBadgeEmpty,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {items.length}
+        </span>
+        <ChevronDown
+          size={14}
+          className={[styles.queueChevron, open && styles.queueChevronOpen]
+            .filter(Boolean)
+            .join(' ')}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <div className={styles.queueBody}>
+          {items.length === 0 ? (
+            <p className={styles.queueEmpty}>{emptyState}</p>
+          ) : (
+            <ul className={styles.queueList}>
+              {items.map(it => (
+                <li key={it.id} className={styles.queueRow}>
+                  <span className={styles.queueRowTitle}>{it.title}</span>
+                  <span
+                    className={[
+                      styles.queueStage,
+                      it.stage === 'requested' && styles.queueStageRequested,
+                      it.stage === 'approved' && styles.queueStageApproved,
+                      it.stage === 'finalized' && styles.queueStageFinalized,
+                      it.stage === 'denied' && styles.queueStageDenied,
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {STAGE_LABEL[it.stage] ?? it.stage}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
