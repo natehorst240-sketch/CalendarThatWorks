@@ -59,4 +59,49 @@ describe('resolveLabels', () => {
     expect(out['aircraft']).toBe('Rotor');
     expect(out['mission']).toBe('Run');
   });
+
+  /* ── Boundary coercion (Codex feedback on PR #469) ─────────────────────
+     Owner config is loaded from raw JSON without runtime validation, so
+     a stray `labels.event: 42` must NOT crash callers that downstream
+     `.toLowerCase()` the result. Coerce non-strings to fallbacks here. */
+
+  it('coerces non-string canonical labels to the fallback ladder', () => {
+    const out = resolveLabels({
+      profile: 'air_medical',
+      // Intentionally pathological — numbers / nulls / objects.
+      labels: { event: 42, resource: null, location: { x: 1 } } as unknown as Record<string, string>,
+    });
+    // Numeric/null/object overrides discarded → fall through to preset.
+    expect(out.event).toBe('Mission');
+    expect(out.resource).toBe('Aircraft');
+    expect(out.location).toBe('Base');
+    // The downstream `.toLowerCase()` that the toolbar runs must never throw.
+    expect(() => out.event.toLowerCase()).not.toThrow();
+  });
+
+  it('treats empty / whitespace-only overrides as missing', () => {
+    const out = resolveLabels({
+      profile: 'trucking',
+      labels: { event: '   ', resource: '' },
+    });
+    expect(out.event).toBe('Load');
+    expect(out.resource).toBe('Truck');
+  });
+
+  it('drops non-string free-form keys instead of leaking them through', () => {
+    const out = resolveLabels({
+      labels: { aircraft: 42, mission: 'Run' } as unknown as Record<string, string>,
+    });
+    expect(out['mission']).toBe('Run');
+    expect(out['aircraft']).toBeUndefined();
+  });
+
+  it('survives a non-object labels value at the boundary', () => {
+    const out = resolveLabels({
+      profile: 'air_medical',
+      labels: 'not-an-object' as unknown as Record<string, string>,
+    });
+    expect(out.event).toBe('Mission');
+    expect(out.resource).toBe('Aircraft');
+  });
 });
