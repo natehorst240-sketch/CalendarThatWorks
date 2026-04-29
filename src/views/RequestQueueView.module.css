@@ -1,0 +1,245 @@
+/* RequestQueueView — sprint #424 week 3.
+   Sibling-style with DispatchView so the two operational lists read as a
+   coherent set. Stage colours mirror the ApprovalDot palette so users see
+   the same colour vocabulary in the calendar pill and the queue row. */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--wc-bg);
+}
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  flex-wrap: wrap;
+}
+
+.title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+  color: var(--wc-text);
+}
+
+.titleLabel {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.titleHint {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
+
+.filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--wc-surface-alt, #e5e7eb);
+  color: var(--wc-text);
+  border: 1px solid transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filterChip:hover { background: color-mix(in srgb, var(--wc-accent, #3b82f6) 8%, transparent); }
+
+.filterChipActive {
+  background: var(--wc-accent, #3b82f6);
+  color: #fff;
+  border-color: var(--wc-accent, #3b82f6);
+}
+
+.filterCount {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ── Table ──────────────────────────────────────────────────── */
+.scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table thead {
+  position: sticky;
+  top: 0;
+  background: var(--wc-surface);
+  z-index: 1;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wc-text-muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--wc-border);
+  vertical-align: middle;
+  color: var(--wc-text);
+}
+
+.row:hover {
+  background: color-mix(in srgb, var(--wc-accent, #3b82f6) 4%, transparent);
+}
+
+.titleCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.titleCell:hover .eventTitle { text-decoration: underline; }
+
+.eventTitle {
+  font-weight: 600;
+}
+
+.eventCategory {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
+
+.cellWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.stageCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stagePill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1f2937;
+  background: var(--wc-surface-alt, #e5e7eb);
+}
+
+.stage_requested      { background: color-mix(in srgb, var(--wc-warning, #f59e0b) 25%, var(--wc-surface-alt, #e5e7eb)); color: var(--wc-text); }
+.stage_pending_higher { background: color-mix(in srgb, var(--wc-warning, #f59e0b) 25%, var(--wc-surface-alt, #e5e7eb)); color: var(--wc-text); border: 1px dashed color-mix(in srgb, var(--wc-warning, #f59e0b) 60%, transparent); }
+.stage_approved       { background: color-mix(in srgb, var(--wc-info, #3b82f6) 25%, var(--wc-surface-alt, #e5e7eb)); color: var(--wc-text); }
+.stage_finalized      { background: var(--wc-success, #10b981); color: #fff; }
+.stage_denied         { background: var(--wc-danger, #ef4444); color: #fff; opacity: 0.85; }
+
+.actionCol {
+  text-align: right;
+}
+
+.actionGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.actionApprove {
+  background: var(--wc-success, #10b981);
+  color: #fff;
+}
+.actionApprove:hover { filter: brightness(1.05); }
+
+.actionDeny {
+  background: transparent;
+  color: var(--wc-danger, #ef4444);
+  border-color: color-mix(in srgb, var(--wc-danger, #ef4444) 50%, transparent);
+}
+.actionDeny:hover { background: color-mix(in srgb, var(--wc-danger, #ef4444) 10%, transparent); }
+
+.moreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--wc-border);
+  color: var(--wc-text);
+  cursor: pointer;
+}
+.moreBtn:hover { background: color-mix(in srgb, var(--wc-accent, #3b82f6) 8%, transparent); }
+
+.actionMuted {
+  font-size: 12px;
+  color: var(--wc-text-faint, var(--wc-text-muted));
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--wc-text-muted);
+}
+
+.emptyHint {
+  font-size: 12px;
+  color: var(--wc-text-faint, var(--wc-text-muted));
+}

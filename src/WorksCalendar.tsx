@@ -102,6 +102,7 @@ import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
 import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
+import RequestQueueView       from './views/RequestQueueView';
 import MapView                from './views/MapView';
 
 type DispatchEvaluator = (
@@ -368,6 +369,7 @@ const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false },
   { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?' },
+  { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests' },
   { id: 'map',      label: 'Map',      alwaysOn: false, hint: 'Geographic plot of events that carry coordinates (meta.coords)' },
 ];
 
@@ -2704,6 +2706,14 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
                   // for the original currentDate range) and the row would be
                   // wrongly classified Available.
                   onAsOfChange={cal.setCurrentDate}
+                />
+              )}
+              {cal.view === 'requests' && (
+                <RequestQueueView
+                  events={expandedEvents as never}
+                  approvalsConfig={ownerCfg.config?.['approvals'] as Record<string, unknown> | undefined}
+                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
+                  onEventClick={handleEventClick}
                 />
               )}
               {cal.view === 'map' && (

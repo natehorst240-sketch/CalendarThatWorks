@@ -4,6 +4,8 @@
 import { parseISO, isValid, addHours } from 'date-fns';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import { isLifecycleState } from '../types/events';
+import { lifecycleFromApprovalStage } from './approvals/lifecycleFromApprovalStage';
+import type { ApprovalStage } from '../types/assets';
 
 let _idCounter = 0;
 function uid() { return `wc-${++_idCounter}`; }
@@ -47,13 +49,18 @@ export function normalizeEvent(raw: WorksCalendarEvent): NormalizedEvent {
 
   // Lifecycle is opt-in: prefer the top-level field, accept a meta override
   // so hosts can ride it through their existing payloads without changing
-  // their adapter. Falls back to null when neither is provided.
+  // their adapter. When neither is provided, derive from the approval
+  // stage when one exists — `requested → pending`, `approved → approved`,
+  // `finalized → scheduled` — so the request → approval → event loop
+  // (#424 wk3) doesn't need a separate writer. Falls back to null when
+  // there's no signal at all.
   const metaLifecycle = (raw.meta as { lifecycle?: unknown } | undefined)?.lifecycle;
+  const approvalStage = (raw.meta as { approvalStage?: ApprovalStage } | undefined)?.approvalStage;
   const lifecycle = isLifecycleState(raw.lifecycle)
     ? raw.lifecycle
     : isLifecycleState(metaLifecycle)
       ? metaLifecycle
-      : null;
+      : lifecycleFromApprovalStage(approvalStage?.stage ?? null);
 
   return {
     id:             raw.id             ?? uid(),

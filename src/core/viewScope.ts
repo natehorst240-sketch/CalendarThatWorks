@@ -8,7 +8,7 @@
  */
 import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from './scheduleModel';
 
-export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch' | 'map';
+export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch' | 'requests' | 'map';
 
 export type ViewScopeContext = {
   employees: Array<{ id: string; base?: string | null }>;
@@ -96,6 +96,10 @@ export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
   // user-chosen as-of time, so we accept everything here. Filters still
   // apply via the host pipeline; this just makes scoping a no-op.
   dispatch: { id: 'dispatch', includes: () => true },
+  // Requests view shows every event with an approval stage so the queue
+  // is independent of the calendar's currentDate filter; the view itself
+  // applies the stage filter strip on top of the loaded set.
+  requests: { id: 'requests', includes: () => true },
   map:      { id: 'map',      includes: () => true },
 });
 

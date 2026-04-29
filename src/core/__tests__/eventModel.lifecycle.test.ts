@@ -51,4 +51,40 @@ describe('normalizeEvent — lifecycle', () => {
     });
     expect(ev.lifecycle).toBeNull();
   });
+
+  it('derives lifecycle from approval stage when none is set', () => {
+    const cases: Array<[string, string | null]> = [
+      ['requested',      'pending'],
+      ['pending_higher', 'pending'],
+      ['approved',       'approved'],
+      ['finalized',      'scheduled'],
+      ['denied',         null],
+    ];
+    for (const [stage, expected] of cases) {
+      const ev = normalizeEvent({
+        id: `e-${stage}`,
+        title: 't',
+        start: baseStart,
+        end: baseEnd,
+        meta: {
+          approvalStage: { stage, updatedAt: '2026-04-29T00:00:00Z', history: [] },
+        },
+      });
+      expect(ev.lifecycle).toBe(expected);
+    }
+  });
+
+  it('explicit lifecycle wins over derived approval-stage lifecycle', () => {
+    const ev = normalizeEvent({
+      id: 'e5',
+      title: 't',
+      start: baseStart,
+      end: baseEnd,
+      lifecycle: 'completed',
+      meta: {
+        approvalStage: { stage: 'requested', updatedAt: '2026-04-29T00:00:00Z', history: [] },
+      },
+    });
+    expect(ev.lifecycle).toBe('completed');
+  });
 });
