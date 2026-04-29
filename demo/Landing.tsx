@@ -233,11 +233,21 @@ function ApprovalQueueCard({
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  // Re-sync when the count changes meaningfully (e.g. a new event arrives
-  // for the active profile while the card was collapsed).
+  // Track the previous item count so we can detect a 0 → N transition (e.g.
+  // switching from Dispatcher with no queue to Ops Manager with five waiting
+  // items) and auto-open the card. The earlier `items.length > 0 && !open`
+  // bail meant the card stayed collapsed forever once closed, even when the
+  // queue subsequently filled.
+  const prevCountRef = useRef(items.length);
   useEffect(() => {
-    if (items.length > 0 && !open) return; // don't auto-open if user collapsed it
-    if (items.length === 0 && open) setOpen(false);
+    const prev = prevCountRef.current;
+    const curr = items.length;
+    if (prev === 0 && curr > 0) {
+      setOpen(true);
+    } else if (curr === 0 && open) {
+      setOpen(false);
+    }
+    prevCountRef.current = curr;
   }, [items.length, open]);
 
   return (
