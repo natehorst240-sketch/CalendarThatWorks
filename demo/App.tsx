@@ -25,6 +25,7 @@ import {
 import MissionHoverCard, { allRequirementsMet } from './MissionHoverCard';
 import missionStyles from './MissionHoverCard.module.css';
 import { makeDispatchEvaluator } from './dispatchEvaluator';
+import Landing from './Landing';
 
 /* ─── Demo identity ─────────────────────────────────────────────── */
 // Air EMS demo: new calendar id so the IHC Fleet localStorage doesn't bleed
@@ -498,53 +499,42 @@ function App() {
   }, [missionAssignments]);
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#060d1a' }}>
-      <div style={{ flex: 1, padding: 0, minHeight: 0 }}>
-        <div style={{ height: '100%', width: '100%' }}>
-          <WorksCalendar
-            events={events}
-            employees={employees}
-            assets={AIRCRAFT_RESOURCES}
-            pools={pools}
-            onPoolsChange={handlePoolsChange}
-            strictAssetFiltering={true}
-            assetRequestCategories={['maintenance', 'aircraft-request', 'asset-request', 'training', 'mission-assignment']}
-            onEmployeeAdd={handleEmployeeAdd}
-            onEmployeeDelete={handleEmployeeDelete}
-            calendarId={DEMO_CALENDAR_ID}
-            ownerPassword="demo1234"
-            showSetupLanding
-            onConfigSave={handleConfigSave}
-            notes={notes}
-            onNoteSave={handleNoteSave}
-            onNoteDelete={handleNoteDelete}
-            onEventSave={handleEventSave}
-            onEventDelete={handleEventDelete}
-            onScheduleSave={handleEventSave}
-            onAvailabilitySave={handleEventSave}
-            onApprovalAction={handleApprovalAction}
-            onEventClick={handleEventClick}
-            renderEvent={renderEvent}
-            theme={theme}
-            showAddButton={true}
-            categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
-            locationProvider={assetLocationProvider}
-            filterSchema={DEMO_FILTER_SCHEMA}
-            dispatchMissions={dispatchMissions}
-            dispatchEvaluator={dispatchEvaluator}
-          />
-        </div>
-      </div>
+    <>
+      <Landing>
+        <WorksCalendar
+          events={events}
+          employees={employees}
+          assets={AIRCRAFT_RESOURCES}
+          pools={pools}
+          onPoolsChange={handlePoolsChange}
+          strictAssetFiltering={true}
+          assetRequestCategories={['maintenance', 'aircraft-request', 'asset-request', 'training', 'mission-assignment']}
+          onEmployeeAdd={handleEmployeeAdd}
+          onEmployeeDelete={handleEmployeeDelete}
+          calendarId={DEMO_CALENDAR_ID}
+          ownerPassword="demo1234"
+          showSetupLanding
+          onConfigSave={handleConfigSave}
+          notes={notes}
+          onNoteSave={handleNoteSave}
+          onNoteDelete={handleNoteDelete}
+          onEventSave={handleEventSave}
+          onEventDelete={handleEventDelete}
+          onScheduleSave={handleEventSave}
+          onAvailabilitySave={handleEventSave}
+          onApprovalAction={handleApprovalAction}
+          onEventClick={handleEventClick}
+          renderEvent={renderEvent}
+          theme={theme}
+          showAddButton={true}
+          categoriesConfig={UNIFIED_CATEGORIES_CONFIG}
+          locationProvider={assetLocationProvider}
+          filterSchema={DEMO_FILTER_SCHEMA}
+          dispatchMissions={dispatchMissions}
+          dispatchEvaluator={dispatchEvaluator}
+        />
+      </Landing>
 
-      {/* Demo hint: owner password floats below the gear icon */}
-      <div style={{
-        position: 'fixed', top: 56, right: 12, zIndex: 50,
-        fontSize: 10, color: '#94a3b8', pointerEvents: 'none', userSelect: 'none',
-      }}>
-        pw: <code style={{ background: 'rgba(0,0,0,.06)', padding: '1px 4px', borderRadius: 3 }}>demo1234</code>
-      </div>
-
-      {/* Mission workflow modal — shown when a mission-assignment or aircraft-request is clicked */}
       {missionOpen && (
         <MissionHoverCard
           mission={mission}
@@ -562,7 +552,7 @@ function App() {
           onDismiss={() => setNeedsRefresh(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 
