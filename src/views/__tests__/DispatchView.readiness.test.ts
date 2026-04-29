@@ -150,3 +150,45 @@ describe('decorateDispatchRows — equipment readiness', () => {
     expect(rows.find(r => r.asset.id === 'a3')?.equipmentReady).toBe(false);
   });
 });
+
+describe('decorateDispatchRows — breakdown (#424 wk4)', () => {
+  it('emits a status row marked satisfied for an idle asset', () => {
+    const skeleton = computeDispatchRows(NOON, ASSETS, EMPLOYEES, BASES, 'Base');
+    const rows = decorateDispatchRows(skeleton, NOON, [], EMPLOYEES);
+    const row = rows.find(r => r.asset.id === 'a1');
+    const status = row?.breakdown.find(b => b.id === 'status');
+    expect(status?.satisfied).toBe(true);
+    expect(status?.label.toLowerCase()).toContain('free');
+  });
+
+  it('marks the equipment row unsatisfied for a maintenance asset', () => {
+    const skeleton = computeDispatchRows(NOON, ASSETS, EMPLOYEES, BASES, 'Base');
+    const rows = decorateDispatchRows(skeleton, NOON, [], EMPLOYEES);
+    const row = rows.find(r => r.asset.id === 'a3');
+    const equipment = row?.breakdown.find(b => b.id === 'equipment');
+    expect(equipment?.satisfied).toBe(false);
+    expect(equipment?.severity).toBe('hard');
+  });
+
+  it('marks the crew row unsatisfied when no employee is free at the asset base', () => {
+    const skeleton = computeDispatchRows(NOON, ASSETS, EMPLOYEES, BASES, 'Base');
+    const rows = decorateDispatchRows(skeleton, NOON, [
+      // Alex (only Logan employee) booked at noon
+      { id: 'evt', start: NOON, end: ONE_PM, resource: 'e1' },
+    ], EMPLOYEES);
+    const row = rows.find(r => r.asset.id === 'a1');
+    const crew = row?.breakdown.find(b => b.id === 'crew');
+    expect(crew?.satisfied).toBe(false);
+    expect(crew?.severity).toBe('hard');
+  });
+
+  it('emits a base-assignment shortfall when the asset has no base', () => {
+    const orphan = { id: 'a-orphan', label: 'Drone', meta: {} };
+    const skeleton = computeDispatchRows(NOON, [orphan], EMPLOYEES, BASES, 'Hub');
+    const rows = decorateDispatchRows(skeleton, NOON, [], EMPLOYEES);
+    const base = rows[0]?.breakdown.find(b => b.id === 'base');
+    expect(base).toBeDefined();
+    expect(base?.satisfied).toBe(false);
+    expect(base?.severity).toBe('hard');
+  });
+});

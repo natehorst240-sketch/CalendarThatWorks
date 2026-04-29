@@ -23,6 +23,7 @@ function row(overrides: Partial<DispatchRow> = {}): DispatchRow {
     crewReady: true,
     equipmentReady: true,
     missing: [],
+    breakdown: [],
     ...overrides,
   };
 }

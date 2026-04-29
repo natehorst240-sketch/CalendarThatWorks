@@ -412,3 +412,102 @@
 .blockingLifecycle {
   margin-top: 4px;
 }
+
+/* ── Readiness breakdown (#424 wk4) ───────────────────────── */
+.summaryRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summaryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.summaryReady {
+  color: #fff;
+  background: var(--wc-success, #10b981);
+}
+
+.summaryBlocked {
+  color: #1f2937;
+  background: color-mix(in srgb, var(--wc-warning, #f59e0b) 25%, var(--wc-surface-alt, #e5e7eb));
+}
+
+.detailsToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--wc-border);
+  color: var(--wc-text-muted);
+  cursor: pointer;
+}
+
+.detailsToggle:hover {
+  background: color-mix(in srgb, var(--wc-accent, #3b82f6) 8%, transparent);
+  color: var(--wc-text);
+}
+
+.detailsRow td {
+  background: color-mix(in srgb, var(--wc-accent, #3b82f6) 4%, transparent);
+  padding: 10px 16px 14px;
+  border-bottom: 1px solid var(--wc-border);
+}
+
+.breakdownList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 16px;
+}
+
+.breakdownItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--wc-text);
+}
+
+.breakdownOk .breakdownIcon { color: var(--wc-success, #10b981); }
+.breakdownBad .breakdownIcon { color: var(--wc-danger, #ef4444); }
+.breakdownSoft .breakdownIcon { color: var(--wc-warning, #f59e0b); }
+
+.breakdownLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.breakdownCount {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--wc-surface-alt, #e5e7eb);
+}
+
+.breakdownDetail {
+  grid-column: 2;
+  font-size: 11px;
+  color: var(--wc-text-muted);
+}
