@@ -340,26 +340,31 @@ function MobileShowcase({ activeProfile: _activeProfile }: { activeProfile: Demo
           eyebrow="Scheduling core"
           title="Conflict engine"
           desc="Detects double-bookings, cert mismatches, and pool unavailability the moment you drag a shift into place."
+          visual={<ConflictVisual />}
         />
         <MobileFeatureCard
           eyebrow="Allocation"
           title="Resource pools"
           desc="Book against a pool (any PNW aircraft, any 8-seat room) and let the resolver pick by round-robin, least-loaded, or proximity."
+          visual={<PoolsVisual />}
         />
         <MobileFeatureCard
           eyebrow="Workflow"
           title="Multi-leg missions"
           desc="Mission requirements, crew assignments, aircraft selection, and compliance checks — in one workflow card per mission."
+          visual={<MissionVisual />}
         />
         <MobileFeatureCard
           eyebrow="Governance"
           title="Approval hierarchy"
           desc="Aircraft requests, maintenance, and asset bookings flow through request → approve → finalize, with role-aware permissions."
+          visual={<ApprovalVisual />}
         />
         <MobileFeatureCard
           eyebrow="Visibility"
           title="Filter cascade"
           desc="Narrow by region → base → crew type → role. Save the result as a one-tap saved view chip."
+          visual={<CascadeVisual />}
         />
       </div>
     </div>
@@ -370,18 +375,193 @@ function MobileFeatureCard({
   eyebrow,
   title,
   desc,
+  visual,
 }: {
   eyebrow: string;
   title: string;
   desc: string;
+  visual?: ReactNode;
 }) {
   return (
     <div className={styles.featureCard}>
       <span className={styles.featureCardEyebrow}>{eyebrow}</span>
       <h3 className={styles.featureCardTitle}>{title}</h3>
       <p className={styles.featureCardDesc}>{desc}</p>
-      <div className={styles.featureCardPlaceholder}>
-        Visual to come — placeholder
+      {visual && <div className={styles.featureCardVisual}>{visual}</div>}
+    </div>
+  );
+}
+
+/* ─── Visuals ────────────────────────────────────────────────────── */
+
+function ConflictVisual() {
+  return (
+    <div className={styles.visualFrame}>
+      <div className={styles.conflictGrid} aria-hidden="true">
+        <div className={styles.conflictTimeCol}>
+          <span>09</span>
+          <span>10</span>
+          <span>11</span>
+          <span>12</span>
+        </div>
+        <div className={styles.conflictPillCol}>
+          <div className={styles.conflictPillMaint}>
+            Maintenance · N802EC
+          </div>
+          <div className={styles.conflictPillMission}>
+            Mission · N802EC
+          </div>
+          <div className={styles.conflictHatch} />
+          <span className={styles.conflictBadge}>CONFLICT</span>
+        </div>
+      </div>
+      <div className={styles.visualCaption}>
+        Same aircraft can't fly two assignments. The engine flags it as you drop.
+      </div>
+    </div>
+  );
+}
+
+function PoolsVisual() {
+  const tails = [
+    { tail: 'N801AW', model: 'AW139', selected: false },
+    { tail: 'N802EC', model: 'EC135', selected: false },
+    { tail: 'N803LJ', model: 'LJ45',  selected: true  },
+    { tail: 'N804AW', model: 'AW139', selected: false },
+  ];
+  return (
+    <div className={styles.visualFrame}>
+      <div className={styles.poolsHeader}>
+        <span className={styles.poolsName}>PNW Fleet</span>
+        <span className={styles.poolsStrategy}>round-robin</span>
+      </div>
+      <div className={styles.poolsRow}>
+        {tails.map(t => (
+          <div
+            key={t.tail}
+            className={[styles.poolTile, t.selected && styles.poolTileSelected]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <span className={styles.poolTileTail}>{t.tail}</span>
+            <span className={styles.poolTileModel}>{t.model}</span>
+            {t.selected && <span className={styles.poolTileBadge}>chosen</span>}
+          </div>
+        ))}
+      </div>
+      <div className={styles.visualCaption}>
+        Booking targets the pool. Resolver picks the next available tail.
+      </div>
+    </div>
+  );
+}
+
+function MissionVisual() {
+  const stops = [
+    { code: 'GRU', city: 'São Paulo', t: '06:00 Mon' },
+    { code: 'JFK', city: 'New York',  t: '14:00 Mon' },
+    { code: 'LHR', city: 'London',    t: '06:00 Tue' },
+    { code: 'MUC', city: 'Munich',    t: '11:00 Tue' },
+    { code: 'SEA', city: 'Seattle',   t: '08:00 Thu' },
+  ];
+  return (
+    <div className={styles.visualFrame}>
+      <div className={styles.missionTimeline}>
+        {stops.map((s, i) => (
+          <div key={s.code} className={styles.missionStop}>
+            <div className={styles.missionStopHead}>
+              {i > 0 && <span className={styles.missionLine} aria-hidden="true" />}
+              <span className={styles.missionDot} aria-hidden="true" />
+            </div>
+            <span className={styles.missionCode}>{s.code}</span>
+            <span className={styles.missionCity}>{s.city}</span>
+            <span className={styles.missionTime}>{s.t}</span>
+          </div>
+        ))}
+      </div>
+      <div className={styles.visualCaption}>
+        Four legs across three days. One mission, one workflow card.
+      </div>
+    </div>
+  );
+}
+
+function ApprovalVisual() {
+  const steps = [
+    { label: 'Submitted',   role: 'Dispatcher',     state: 'done'    },
+    { label: 'Approved',    role: 'Base Supervisor', state: 'done'   },
+    { label: 'Finalized',   role: 'Ops Manager',    state: 'pending' },
+  ];
+  return (
+    <div className={styles.visualFrame}>
+      <div className={styles.approvalSteps}>
+        {steps.map((s, i) => (
+          <div key={s.label} className={styles.approvalStep}>
+            {i > 0 && (
+              <span
+                className={[
+                  styles.approvalConnector,
+                  s.state === 'done' && styles.approvalConnectorDone,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-hidden="true"
+              />
+            )}
+            <div
+              className={[
+                styles.approvalDot,
+                s.state === 'done' && styles.approvalDotDone,
+                s.state === 'pending' && styles.approvalDotPending,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              aria-hidden="true"
+            >
+              {s.state === 'done' ? <Check size={11} /> : <span className={styles.approvalDotInner} />}
+            </div>
+            <span className={styles.approvalLabel}>{s.label}</span>
+            <span className={styles.approvalRole}>{s.role}</span>
+          </div>
+        ))}
+      </div>
+      <div className={styles.visualCaption}>
+        Each role unlocks specific transitions. Switch profiles on desktop to see it.
+      </div>
+    </div>
+  );
+}
+
+function CascadeVisual() {
+  const tiers = [
+    { label: 'Region',  pills: [{ v: 'All' }, { v: 'PNW', sel: true }, { v: 'RM' }] },
+    { label: 'Base',    pills: [{ v: 'All' }, { v: 'Seattle', sel: true }, { v: 'Portland' }] },
+    { label: 'Type',    pills: [{ v: 'All' }, { v: 'Crew', sel: true }, { v: 'Asset' }] },
+    { label: 'Sub-type',pills: [{ v: 'All' }, { v: 'Pilot', sel: true }, { v: 'Medical' }, { v: 'Maint.' }] },
+  ];
+  return (
+    <div className={styles.visualFrame}>
+      <div className={styles.cascadeTiers}>
+        {tiers.map(t => (
+          <div key={t.label} className={styles.cascadeTier}>
+            <span className={styles.cascadeTierLabel}>{t.label}</span>
+            <div className={styles.cascadePills}>
+              {t.pills.map(p => (
+                <span
+                  key={p.v}
+                  className={[styles.cascadePill, p.sel && styles.cascadePillSel]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {p.v}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className={styles.visualCaption}>
+        Drill down → narrow what's visible. Save the result as a chip.
       </div>
     </div>
   );
