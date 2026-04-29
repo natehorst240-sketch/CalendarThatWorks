@@ -151,9 +151,58 @@ function DesktopFrame({
         </aside>
 
         <section className={styles.calendarFrame}>
-          <div className={styles.calendarWindow}>{children}</div>
+          <ScaledMonitor>{children}</ScaledMonitor>
         </section>
       </main>
+    </div>
+  );
+}
+
+/* ─── Scaled monitor frame ───────────────────────────────────────── */
+// Renders the calendar inside a transform: scale wrapper so the whole UI
+// (its own internal sidebars, toolbar, grid) shrinks together — the framed
+// window reads like a smaller monitor showing a real desktop calendar
+// instead of a cramped responsive layout. The inner stage is sized at
+// `frame / SCALE`, so after the visual scale-down it exactly fills the
+// frame (no whitespace, no cropping).
+const MONITOR_SCALE = 0.78;
+
+function ScaledMonitor({ children }: { children: ReactNode }) {
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  // Sane defaults so the calendar mounts at a reasonable virtual size on
+  // first paint, before ResizeObserver fires.
+  const [stage, setStage] = useState({ w: 1280, h: 800 });
+
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+      setStage({
+        w: Math.round(rect.width / MONITOR_SCALE),
+        h: Math.round(rect.height / MONITOR_SCALE),
+      });
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div className={styles.calendarWindow} ref={frameRef}>
+      <div
+        className={styles.calendarStage}
+        style={{
+          width: stage.w,
+          height: stage.h,
+          transform: `scale(${MONITOR_SCALE})`,
+          transformOrigin: 'top left',
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
