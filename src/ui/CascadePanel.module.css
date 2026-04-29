@@ -63,8 +63,13 @@
   gap: 5px;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid var(--wc-border, rgba(60, 35, 10, 0.14));
-  background: var(--wc-bg-card, #fff);
+  /* Sidebar canonical theme vars — `--wc-surface` for the pill body and
+     `--wc-text` for the label both resolve correctly in light AND dark
+     themes. Earlier this used `--wc-bg-card` which isn't a theme var, so
+     it fell back to #fff while text resolved to white in dark themes,
+     making unselected pills invisible. */
+  border: 1px solid var(--wc-border-dark, rgba(0, 0, 0, 0.18));
+  background: var(--wc-surface, #fff);
   color: var(--wc-text, #2d1f0e);
   font-size: 12px;
   font-weight: 500;
@@ -75,8 +80,8 @@
 }
 
 .pill:hover {
-  background: var(--wc-bg-card-hover, #fdfaf4);
-  border-color: var(--wc-border-strong, rgba(60, 35, 10, 0.22));
+  background: var(--wc-surface-2, rgba(0, 0, 0, 0.04));
+  border-color: var(--wc-accent, #c2410c);
 }
 
 .pillSelected {
@@ -86,8 +91,10 @@
 }
 
 .pillSelected:hover {
-  background: var(--wc-accent-deep, #9a3412);
-  border-color: var(--wc-accent-deep, #9a3412);
+  background: var(--wc-accent, #c2410c);
+  border-color: var(--wc-accent, #c2410c);
+  color: #fff;
+  filter: brightness(1.08);
 }
 
 .pillAll {
@@ -185,12 +192,12 @@
 
 .btnGhost {
   background: transparent;
-  border-color: var(--wc-border-strong, rgba(60, 35, 10, 0.18));
+  border-color: var(--wc-border-dark, rgba(0, 0, 0, 0.18));
   color: var(--wc-text-muted, #6b5a44);
 }
 
 .btnGhost:hover:not(:disabled) {
-  background: var(--wc-bg-card-hover, #fdfaf4);
+  background: var(--wc-surface-2, rgba(0, 0, 0, 0.04));
   color: var(--wc-text, #2d1f0e);
 }
 
@@ -201,8 +208,8 @@
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: var(--wc-accent-deep, #9a3412);
-  border-color: var(--wc-accent-deep, #9a3412);
+  background: var(--wc-accent-dim, #9a3412);
+  border-color: var(--wc-accent-dim, #9a3412);
 }
 
 .btnPrimary:disabled,

@@ -295,9 +295,12 @@ export const mission: DemoMissionRequest = {
 };
 
 // Mission calendar events — one aircraft event covering the full mission
-// window plus full-window crew events. Per-leg detail lives on `mission.legs`
-// and surfaces through MissionHoverCard, so the calendar pill renders as a
-// single multi-day bar in Month/Week instead of four short per-leg slivers.
+// window plus full-window crew "shift-kind" events. The aircraft event has
+// no meta.kind, so it surfaces in Month/Week as one continuous mission bar.
+// Crew events are tagged kind: 'shift' so the library's viewScope filters
+// them out of Month/Week (they'd otherwise stack as 6 overlapping multi-day
+// pills) — they still appear in Schedule and the Crew-on-shift surfaces
+// because the kind correctly marks them as active staffing.
 export const missionEvents: DemoEvent[] = [
   // Aircraft — single span for the whole mission window
   {
@@ -308,7 +311,8 @@ export const missionEvents: DemoEvent[] = [
     start: mission.start, end: mission.end,
     assignedTo: 'ac-n803lj', basedAt: 'b-seattle',
   },
-  // Assigned crew covering the full mission window
+  // Assigned crew covering the full mission window. `meta.kind: 'shift'`
+  // hides them from Month/Week noise but keeps them visible in Schedule.
   ...mission.assignments.pilots.map(p => ({
     id: `mission-pilot-${p.resourceId}`,
     title: MISSION_TITLE,
@@ -316,6 +320,7 @@ export const missionEvents: DemoEvent[] = [
     visualPriority: 'high' as const,
     start: mission.start, end: mission.end,
     assignedTo: p.resourceId, basedAt: 'b-seattle',
+    meta: { kind: 'shift' as const },
   })),
   ...mission.assignments.medical.map(m => ({
     id: `mission-med-${m.resourceId}`,
@@ -324,6 +329,7 @@ export const missionEvents: DemoEvent[] = [
     visualPriority: 'high' as const,
     start: mission.start, end: mission.end,
     assignedTo: m.resourceId, basedAt: 'b-seattle',
+    meta: { kind: 'shift' as const },
   })),
 ];
 
