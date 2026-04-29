@@ -31,7 +31,13 @@ import type {
 import type { ResourcePool } from '../pools/resourcePoolSchema'
 
 /** Stable id under which a preset is registered. */
-export type ProfileId = 'trucking' | 'aviation' | 'scheduling' | 'custom'
+export type ProfileId =
+  | 'trucking'
+  | 'aviation'
+  | 'air_medical'
+  | 'equipment_rental'
+  | 'scheduling'
+  | 'custom'
 
 export interface ProfilePreset {
   readonly id: ProfileId
@@ -149,6 +155,123 @@ export const PROFILE_PRESETS: Readonly<Record<ProfileId, ProfilePreset>> = {
     },
   },
 
+  air_medical: {
+    id: 'air_medical',
+    label: 'Air Medical',
+    description: 'Helicopter EMS and fixed-wing patient transport — aircraft, crew, missions.',
+    config: {
+      profile: 'air_medical',
+      labels: {
+        resource: 'Aircraft',
+        event:    'Mission',
+        location: 'Base',
+      },
+      resourceTypes: [
+        { id: 'aircraft',  label: 'Aircraft' },
+        { id: 'pilot',     label: 'Pilot' },
+        { id: 'paramedic', label: 'Flight Paramedic' },
+        { id: 'nurse',     label: 'Flight Nurse' },
+      ],
+      roles: [
+        { id: 'pilot-in-command',  label: 'Pilot in Command' },
+        { id: 'second-in-command', label: 'Second in Command' },
+        { id: 'flight-paramedic',  label: 'Flight Paramedic' },
+        { id: 'flight-nurse',      label: 'Flight Nurse' },
+        { id: 'dispatcher',        label: 'Dispatcher' },
+      ],
+      requirements: [
+        {
+          eventType: 'mission',
+          requires: [
+            { role: 'pilot-in-command',  count: 1 },
+            { role: 'flight-paramedic',  count: 1 },
+            { role: 'flight-nurse',      count: 1 },
+          ],
+        },
+      ],
+      settings: { conflictMode: 'block' },
+    },
+    sample: {
+      resources: [
+        { id: 'n801aw', name: 'Air-1 (EC135)', type: 'aircraft',
+          capabilities: { range_nm: 350, ifr: true, night_vision: true } },
+        { id: 'n803lj', name: 'Air-2 (BK117)', type: 'aircraft',
+          capabilities: { range_nm: 320, ifr: true, night_vision: false } },
+        { id: 'pic-1', name: 'Sam (PIC)',  type: 'pilot',
+          meta: { roles: ['pilot-in-command'] } },
+        { id: 'fm-1',  name: 'Pat (FP)',   type: 'paramedic',
+          meta: { roles: ['flight-paramedic'] } },
+        { id: 'fn-1',  name: 'Dee (FN)',   type: 'nurse',
+          meta: { roles: ['flight-nurse'] } },
+      ],
+      pools: [
+        { id: 'ifr-aircraft', name: 'IFR-capable aircraft',
+          type: 'query', strategy: 'first-available',
+          memberIds: [],
+          query: { op: 'eq', path: 'meta.capabilities.ifr', value: true } },
+        { id: 'crew-medical', name: 'Medical crew',
+          type: 'manual', strategy: 'least-loaded',
+          memberIds: ['fm-1', 'fn-1'] },
+      ],
+    },
+  },
+
+  equipment_rental: {
+    id: 'equipment_rental',
+    label: 'Equipment Rental',
+    description: 'Equipment yards — track machines, attendants, and rental windows.',
+    config: {
+      profile: 'equipment_rental',
+      labels: {
+        resource: 'Equipment',
+        event:    'Rental',
+        location: 'Yard',
+      },
+      resourceTypes: [
+        { id: 'equipment', label: 'Equipment' },
+        { id: 'vehicle',   label: 'Delivery Vehicle' },
+        { id: 'person',    label: 'Yard Attendant' },
+      ],
+      roles: [
+        { id: 'attendant',  label: 'Yard Attendant' },
+        { id: 'driver',     label: 'Delivery Driver' },
+        { id: 'dispatcher', label: 'Dispatcher' },
+      ],
+      requirements: [
+        {
+          eventType: 'rental',
+          requires: [
+            { role: 'attendant', count: 1, severity: 'soft' },
+          ],
+        },
+      ],
+      settings: { conflictMode: 'block' },
+    },
+    sample: {
+      resources: [
+        { id: 'eq-1', name: 'Skid Steer #1', type: 'equipment',
+          capabilities: { weight_class: 'compact', has_attachments: true } },
+        { id: 'eq-2', name: 'Excavator #4', type: 'equipment',
+          capabilities: { weight_class: 'mid', has_attachments: false } },
+        { id: 'eq-3', name: 'Trailer #2',   type: 'equipment',
+          capabilities: { weight_class: 'compact', has_attachments: false } },
+        { id: 'a1', name: 'Riley',  type: 'person',
+          meta: { roles: ['attendant'] } },
+        { id: 'd1', name: 'Casey',  type: 'person',
+          meta: { roles: ['driver'] } },
+      ],
+      pools: [
+        { id: 'attachable', name: 'Equipment with attachments',
+          type: 'query', strategy: 'first-available',
+          memberIds: [],
+          query: { op: 'eq', path: 'meta.capabilities.has_attachments', value: true } },
+        { id: 'attendants', name: 'Yard attendants',
+          type: 'manual', strategy: 'least-loaded',
+          memberIds: ['a1'] },
+      ],
+    },
+  },
+
   scheduling: {
     id: 'scheduling',
     label: 'Scheduling',
@@ -210,6 +333,8 @@ export function listProfilePresets(): readonly ProfilePreset[] {
   return [
     PROFILE_PRESETS.trucking,
     PROFILE_PRESETS.aviation,
+    PROFILE_PRESETS.air_medical,
+    PROFILE_PRESETS.equipment_rental,
     PROFILE_PRESETS.scheduling,
     PROFILE_PRESETS.custom,
   ]

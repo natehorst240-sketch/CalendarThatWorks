@@ -9,9 +9,9 @@ import {
 import type { CalendarConfig } from '../calendarConfig'
 
 describe('PROFILE_PRESETS — shape', () => {
-  it('ships exactly four presets with stable ids and labels', () => {
+  it('ships every registered preset with stable ids and labels', () => {
     expect(Object.keys(PROFILE_PRESETS).sort())
-      .toEqual(['aviation', 'custom', 'scheduling', 'trucking'])
+      .toEqual(['air_medical', 'aviation', 'custom', 'equipment_rental', 'scheduling', 'trucking'])
     for (const preset of Object.values(PROFILE_PRESETS)) {
       expect(preset.id).toBeTruthy()
       expect(preset.label).toBeTruthy()
@@ -21,7 +21,9 @@ describe('PROFILE_PRESETS — shape', () => {
 
   it('listProfilePresets returns the same set in a stable order', () => {
     const ids = listProfilePresets().map(p => p.id)
-    expect(ids).toEqual(['trucking', 'aviation', 'scheduling', 'custom'])
+    expect(ids).toEqual([
+      'trucking', 'aviation', 'air_medical', 'equipment_rental', 'scheduling', 'custom',
+    ])
   })
 
   it('every preset carries a `profile` field that matches its id', () => {
@@ -221,5 +223,66 @@ describe('applyProfileSampleData (#451)', () => {
     const out = applyProfileSampleData('trucking', base)
     expect(out.labels?.resource).toBe('My Truck')
     expect(out.profile).toBe('trucking')
+  })
+})
+
+/* ── Multi-industry presets (sprint #424 wk5) ──────────────────────────── */
+
+describe('air_medical preset', () => {
+  it('seeds aircraft + flight crew resource types and EMS roles', () => {
+    const out = applyProfilePreset('air_medical')
+    expect(out.profile).toBe('air_medical')
+    expect(out.labels?.resource).toBe('Aircraft')
+    expect(out.labels?.event).toBe('Mission')
+    expect(out.resourceTypes?.map(t => t.id)).toContain('paramedic')
+    expect(out.resourceTypes?.map(t => t.id)).toContain('nurse')
+    expect(out.roles?.map(r => r.id)).toEqual(expect.arrayContaining([
+      'pilot-in-command', 'flight-paramedic', 'flight-nurse',
+    ]))
+  })
+
+  it('ships a default mission requirement template on the preset', () => {
+    // applyProfilePreset intentionally doesn't merge `requirements`
+    // into the user's working config (the user owns templates) — but
+    // the preset itself ships them so demos / config-driven hosts can
+    // pull them via PROFILE_PRESETS directly.
+    const template = PROFILE_PRESETS.air_medical.config.requirements?.find(r => r.eventType === 'mission')
+    expect(template).toBeDefined()
+    const slotRoles = template!.requires
+      .map(s => 'role' in s ? s.role : null)
+      .filter((r): r is string => r !== null)
+    expect(slotRoles).toEqual(expect.arrayContaining([
+      'pilot-in-command', 'flight-paramedic', 'flight-nurse',
+    ]))
+  })
+
+  it('ships sample crew tagged with the matching role ids', () => {
+    const sample = getProfileSampleData('air_medical')
+    expect(sample).not.toBeNull()
+    const roles = sample!.resources.flatMap(r => (r.meta?.['roles'] as string[] | undefined) ?? [])
+    expect(roles).toEqual(expect.arrayContaining([
+      'pilot-in-command', 'flight-paramedic', 'flight-nurse',
+    ]))
+  })
+})
+
+describe('equipment_rental preset', () => {
+  it('seeds equipment + delivery resource types and yard roles', () => {
+    const out = applyProfilePreset('equipment_rental')
+    expect(out.profile).toBe('equipment_rental')
+    expect(out.labels?.resource).toBe('Equipment')
+    expect(out.labels?.event).toBe('Rental')
+    expect(out.labels?.location).toBe('Yard')
+    expect(out.resourceTypes?.map(t => t.id)).toEqual(expect.arrayContaining([
+      'equipment', 'vehicle', 'person',
+    ]))
+    expect(out.roles?.map(r => r.id)).toEqual(expect.arrayContaining([
+      'attendant', 'driver', 'dispatcher',
+    ]))
+  })
+
+  it('treats the attendant requirement as soft so off-hours rentals still go out', () => {
+    const template = PROFILE_PRESETS.equipment_rental.config.requirements?.find(r => r.eventType === 'rental')
+    expect(template?.requires.every(s => s.severity === 'soft')).toBe(true)
   })
 })

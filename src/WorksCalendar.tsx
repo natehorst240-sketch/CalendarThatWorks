@@ -47,6 +47,7 @@ import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, 
 import { SCHEDULE_WORKFLOW_CATEGORIES } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
+import { resolveLabels } from './core/config/resolveLabels';
 import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
@@ -1065,8 +1066,20 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Base/Region view config ───────────────────────────────────────────────
   const configuredBases   = ownerCfg.config?.['team']?.bases ?? [];
   const configuredRegions = ownerCfg.config?.['team']?.regions ?? [];
-  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? 'Base';
-  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? 'Asset';
+  // Profile-aware labels (#424 wk5). Hosts can keep using the legacy
+  // `team.locationLabel` / `team.assetsLabel` overrides, but when neither
+  // exists we fall back to the profile preset's defaults via
+  // `resolveLabels` — so an air-medical config picks "Aircraft" / "Base"
+  // automatically without per-key wiring.
+  const profileLabels = useMemo(
+    () => resolveLabels({
+      profile: ownerCfg.config?.['profile'] as string | undefined,
+      labels:  ownerCfg.config?.['labels']  as Record<string, string> | undefined,
+    }),
+    [ownerCfg.config?.['profile'], ownerCfg.config?.['labels']],
+  );
+  const locationLabel     = ownerCfg.config?.['team']?.locationLabel ?? profileLabels.location;
+  const assetsLabel       = ownerCfg.config?.['team']?.assetsLabel   ?? profileLabels.resource;
 
   // ── Visible-tabs config (Setup/ConfigPanel → Views) ──────────────────────
   const VIEWS = useMemo(() => {
