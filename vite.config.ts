@@ -40,6 +40,7 @@ export default defineConfig({
         'react', 'react-dom', 'xlsx', '@supabase/supabase-js',
         'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css',
         'react-map-gl', 'react-map-gl/maplibre',
+        'exceljs',
       ],
       output: {
         globals: {
