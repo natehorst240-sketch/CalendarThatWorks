@@ -47,6 +47,7 @@ export default defineConfig({
       include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
+      skipDiagnostics: true,
       // No rollupTypes here — the subpath module imports types from
       // the main library (`../core/pools/locationAdapters`), and
       // rolling them up duplicates declarations already shipped in
