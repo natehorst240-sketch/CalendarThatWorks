@@ -12,6 +12,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { ComponentType, CSSProperties } from 'react';
+import type { MapProps, MarkerProps, PopupProps, NavigationControlProps } from 'react-map-gl/maplibre';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import styles from './MapView.module.css';
 
@@ -79,10 +80,10 @@ function readCoords(ev: MapEvent): LngLat | null {
 }
 
 type MapModule = {
-  Map: ComponentType<any>;
-  Marker: ComponentType<any>;
-  Popup: ComponentType<any>;
-  NavigationControl: ComponentType<any>;
+  Map: ComponentType<MapProps>;
+  Marker: ComponentType<MarkerProps>;
+  Popup: ComponentType<PopupProps>;
+  NavigationControl: ComponentType<NavigationControlProps>;
 };
 
 type LoadState =
@@ -107,11 +108,11 @@ function useMapModule(): LoadState {
         // vite.config rollupOptions so they stay out of the published bundle;
         // the runtime catch below handles the genuinely-missing case for hosts
         // that haven't opted in.
-        const reactMap = (await import('react-map-gl/maplibre')) as any;
+        const reactMap = await import('react-map-gl/maplibre');
         await import('maplibre-gl/dist/maplibre-gl.css');
         if (cancelled) return;
         const mod: MapModule = {
-          Map: reactMap.Map ?? reactMap.default,
+          Map: reactMap.Map,
           Marker: reactMap.Marker,
           Popup: reactMap.Popup,
           NavigationControl: reactMap.NavigationControl,
