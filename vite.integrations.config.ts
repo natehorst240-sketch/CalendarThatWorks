@@ -11,8 +11,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'path';
-import { readFileSync, writeFileSync } from 'fs';
-import { glob } from 'glob';
+import { readFileSync, writeFileSync, globSync } from 'fs';
 
 /**
  * The emitted subpath `.d.ts` files import types relative to the
@@ -25,7 +24,7 @@ import { glob } from 'glob';
 const rewritePackageImportsPlugin = (): Plugin => ({
   name: 'rewrite-subpath-types',
   closeBundle() {
-    const files = glob.sync('dist/integrations/**/*.d.ts');
+    const files = globSync('dist/integrations/**/*.d.ts');
     for (const file of files) {
       const before = readFileSync(file, 'utf8');
       // Match `from '...src-tree-path...'` (relative path traversing
@@ -44,7 +43,7 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx'],
+      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/types/**/*.d.ts'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
       skipDiagnostics: true,

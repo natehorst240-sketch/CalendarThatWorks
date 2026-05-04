@@ -3,6 +3,20 @@ import type { NormalizedEvent } from '../types/events';
 
 type Row = Record<string, unknown>;
 
+interface ExcelJSWorksheet {
+  columns: Array<{ header: string; key: string; width: number }>;
+  addRow(row: Row): void;
+}
+
+interface ExcelJSWorkbook {
+  addWorksheet(name: string): ExcelJSWorksheet;
+  xlsx: { writeBuffer(): Promise<ArrayBuffer> };
+}
+
+interface ExcelJSModule {
+  Workbook: new () => ExcelJSWorkbook;
+}
+
 function eventsToRows(events: NormalizedEvent[]): Row[] {
   return events.map(ev => ({
     Title:    ev.title,
@@ -38,9 +52,7 @@ export async function exportToExcel(events: NormalizedEvent[], filename = 'calen
   const rows = eventsToRows(events);
 
   try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore — exceljs is an optional runtime peer; types not required at build time
-    const ExcelJS = await import('exceljs');
+    const ExcelJS = (await import('exceljs')) as unknown as ExcelJSModule;
     const workbook  = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Events');
 
