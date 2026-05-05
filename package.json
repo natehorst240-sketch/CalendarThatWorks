@@ -53,9 +53,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "perf:benchmark": "node scripts/perf-benchmark.mjs",
-    "perf:benchmark:update": "node scripts/perf-benchmark.mjs --write",
-    "examples": "vite --config vite.examples.config.ts",
+"examples": "vite --config vite.examples.config.ts",
     "build": "vite build && vite build --config vite.integrations.config.ts",
     "build:examples": "vite build --config vite.examples.config.ts",
     "type-check": "tsc --noEmit",
