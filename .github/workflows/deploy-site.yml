@@ -1,0 +1,60 @@
+name: Deploy site to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'src/**'
+      - 'package.json'
+  pull_request:
+    paths:
+      - 'site/**'
+      - 'src/**'
+      - 'package.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build library
+        run: npm ci && npm run build
+        working-directory: .
+
+      - name: Install site dependencies
+        run: npm install
+        working-directory: site
+
+      - name: Build site
+        run: npm run build
+        working-directory: site
+
+      - name: Deploy to Vercel (preview)
+        if: github.event_name == 'pull_request'
+        run: |
+          npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --cwd site \
+            > deployment-url.txt 2>&1
+          cat deployment-url.txt
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Vercel (production)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --prod \
+            --cwd site
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

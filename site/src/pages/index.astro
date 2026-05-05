@@ -1,0 +1,86 @@
+---
+import Base from '../layouts/Base.astro';
+import HeroCalendar from '../components/HeroCalendar';
+import ConflictDemo from '../components/ConflictDemo';
+import GeoDispatchDemo from '../components/GeoDispatchDemo';
+import ThemeShowcase from '../components/ThemeShowcase';
+import FeatureGrid from '../components/FeatureGrid.astro';
+---
+
+<Base>
+  <!-- Nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <span class="text-lg font-bold tracking-tight">WorksCalendar</span>
+      <div class="hidden md:flex items-center gap-8 text-sm text-white/60">
+        <a href="#features" class="hover:text-white transition-colors">Features</a>
+        <a href="#" class="hover:text-white transition-colors">Docs</a>
+        <a href="#" class="hover:text-white transition-colors">Pricing</a>
+      </div>
+      <a
+        href="#"
+        class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 transition-colors text-sm font-medium"
+      >
+        Get started →
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero copy -->
+  <section class="pt-32 pb-16 px-6 text-center max-w-4xl mx-auto">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand-500/30 bg-brand-500/10 text-brand-300 text-xs font-medium mb-8">
+      <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+      Now with geo dispatch &amp; conflict engine
+    </div>
+    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight leading-none mb-6">
+      Schedule anything.<br />
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-cyan-400">
+        Embed everywhere.
+      </span>
+    </h1>
+    <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10">
+      The calendar library built for operations — resource scheduling, conflict detection,
+      geo dispatch, and approval workflows in one embeddable component.
+    </p>
+    <div class="flex items-center justify-center gap-4 flex-wrap">
+      <a
+        href="#"
+        class="px-6 py-3 rounded-xl bg-white text-[#0a0a0f] font-semibold hover:bg-white/90 transition-colors"
+      >
+        View docs
+      </a>
+      <a
+        href="#demos"
+        class="px-6 py-3 rounded-xl border border-white/20 text-white/80 hover:border-white/40 hover:text-white transition-colors"
+      >
+        See it in action ↓
+      </a>
+    </div>
+  </section>
+
+  <!-- Hero demos -->
+  <section id="demos" class="py-16 px-6">
+    <div class="max-w-7xl mx-auto space-y-24">
+      <HeroCalendar client:load />
+      <ConflictDemo client:load />
+      <GeoDispatchDemo client:load />
+      <ThemeShowcase client:load />
+    </div>
+  </section>
+
+  <!-- Feature grid -->
+  <section id="features" class="py-24 px-6 border-t border-white/10">
+    <div class="max-w-7xl mx-auto">
+      <h2 class="text-3xl font-bold mb-4 text-center">Everything your team needs</h2>
+      <p class="text-white/50 text-center mb-16 max-w-xl mx-auto">
+        Every feature ships in the same package. No plugins, no tiers, no surprises.
+      </p>
+      <FeatureGrid />
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-12 px-6 text-center text-white/30 text-sm">
+    WorksCalendar · MIT License · Built for developers
+  </footer>
+</Base>

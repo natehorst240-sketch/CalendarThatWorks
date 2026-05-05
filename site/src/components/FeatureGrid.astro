@@ -1,0 +1,26 @@
+---
+const features = [
+  { icon: '🔁', title: 'Recurring events',       desc: 'RRULE-powered series with per-exception overrides' },
+  { icon: '👥', title: 'Resource pools',          desc: 'Round-robin or first-available booking across member groups' },
+  { icon: '✅', title: 'Approval workflows',      desc: 'Multi-tier sign-off with audit trail and stage transitions' },
+  { icon: '🗺', title: 'Dispatch view',           desc: 'Mission/request board with crew assignment and status tracking' },
+  { icon: '📤', title: 'Export to spreadsheet',  desc: 'One-click XLSX/CSV export of any visible event range' },
+  { icon: '📱', title: 'Mobile-responsive',       desc: 'Touch-optimized views, swipe navigation, portrait and landscape' },
+  { icon: '🔒', title: 'Owner config panel',      desc: 'Password-gated settings: themes, team, rules, templates' },
+  { icon: '🔍', title: 'Filters & saved views',   desc: 'Per-field filter chips, saveable named views, quick-access bar' },
+  { icon: '🖼', title: 'iFrame embed',            desc: 'Drop into any page as an iframe with embed-mode chrome removal' },
+  { icon: '📋', title: 'Event templates',         desc: 'Pre-configured event shapes for fast repeat bookings' },
+  { icon: '🔔', title: 'Availability & PTO',      desc: 'Block time, mark on-call, track leave across the roster' },
+  { icon: '🧩', title: 'Fully typed API',          desc: 'TypeScript-first with complete prop types, hook exports, and engine access' },
+];
+---
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {features.map(f => (
+    <div class="group rounded-xl border border-white/10 bg-white/5 p-5 hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-default">
+      <div class="text-3xl mb-3">{f.icon}</div>
+      <h3 class="font-semibold text-white mb-1">{f.title}</h3>
+      <p class="text-sm text-white/50 leading-relaxed">{f.desc}</p>
+    </div>
+  ))}
+</div>
