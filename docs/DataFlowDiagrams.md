@@ -220,61 +220,99 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
 ### 2b — Occurrence Expansion & Filtering (Subsystems 3 + 4)
 
 ```
-  CalendarState.events   cursor / view type
-  (Map<id, EngineEvent>) (month | week | day | schedule …)
+  CalendarState.events   rangeStart / rangeEnd
+  (Map<id, EngineEvent>) (computed from cursor + view type)
          │                        │
          └──────────┬─────────────┘
                     ▼
-       getOccurrencesInRange(rangeStart, rangeEnd)
+       getOccurrencesInRange(events, rangeStart, rangeEnd, opts)
          │
-         ├── For each EngineEvent:
-         │     Non-recurring → pass through if overlaps range
-         │     Has rrule     → expandRRule(start, rrule, exdates, range±7d)
-         │                     → Date[] → EngineOccurrence[]
-         │                     max 500 occurrences per series (guard)
+         ├── 1. Engine filter (pre-expansion, on EngineEvent[])
+         │        opts.filter?: { search: string            → title match only
+         │                        categories: Set<string>   → exact Set.has()
+         │                        resources:  Set<string> }  → exact Set.has()
+         │        Empty filter values pass through unchanged
          │
-         ▼
-       EngineOccurrence[]   (id, seriesId, start, end, title, resource, …)
+         ├── 2. expandOccurrences(filtered, rangeStart, rangeEnd, opts)
+         │        padDays     = opts.rangePadDays ?? 7
+         │        maxPerSeries = opts.maxPerSeries ?? 500
+         │        expStart = rangeStart − padDays
+         │        expEnd   = rangeEnd   + padDays
+         │
+         │        For each EngineEvent:
+         │          No rrule → emit if ev.start < rangeEnd && ev.end > rangeStart
+         │          Has rrule → expandRRule(ev.start, ev.rrule, exdates,
+         │                                  expStart, expEnd)
+         │                      → Date[] of occurrence starts
+         │                      for each start (up to maxPerSeries index):
+         │                        end = start + eventDurationMs
+         │                        emit only if overlaps unpadded range
+         │
+         ├── 3. Assignment join (when opts.assignments provided)
+         │        override occ.resourceIds via resourceIdsForEvent()
+         │
+         └── 4. Sort by start asc (default; skipped if opts.sort === false)
+                    ▼
+       EngineOccurrence[]
+       { occurrenceId · eventId · seriesId · detachedFrom
+         start · end · timezone · allDay · title · category
+         resourceId · resourceIds: string[]
+         status · color · isRecurring · occurrenceIndex
+         constraints[] · meta }
+
+  ── React-layer filter (separate from engine, on NormalizedEvent[]) ──
          │
          ▼
   ┌────────────────────────────────────────────────────────┐
-  │                  FILTER PIPELINE                       │
+  │          SCHEMA-DRIVEN FILTER  (filterEngine.ts)       │
   │                                                        │
-  │  applyFilters(occurrences, filterState, schema)        │
+  │  applyFilters(items, filterState, schema)              │
   │                                                        │
   │  For each FilterField in schema:                       │
-  │    text / search  → title + category + resource match  │
+  │    text / search  → title + resource + category +      │
+  │                     meta values (case-insensitive)     │
   │    date-range     → isWithinInterval check             │
-  │    multi-select   → Set membership (categories,        │
-  │                     resources, sources)                │
+  │    multi-select   → Set membership                     │
+  │    select         → exact equality                     │
+  │    boolean        → Boolean coercion match             │
   │    custom         → field.predicate(item, value)       │
   │                                                        │
   │  conditionEngine (AdvancedFilterBuilder):              │
-  │    evaluates AND/OR condition trees against event      │
-  │    meta fields using operators (eq, gt, contains, …)  │
+  │    conditionsToFilters(conditions[], schema)           │
+  │      CONVERTS visual condition rows → filterState obj  │
+  │      (does not evaluate — applyFilters does that)      │
+  │    operators: is · is_not · contains · not_contains    │
+  │    multi-select: accumulates Set; negation: __not flag │
   │                                                        │
   └───────────────────────┬────────────────────────────────┘
                           │
                           ▼
-                  filtered events[]
+                  filtered NormalizedEvent[]
                           │
                           ▼
   ┌────────────────────────────────────────────────────────┐
   │               GROUPING + SORT PIPELINE                 │
   │                                                        │
-  │  sortEvents(events, sortConfig)                        │
-  │    → stable sort by field asc/desc                     │
+  │  sortEvents(events, sortConfigs: SortConfig[])         │
+  │    multi-key stable sort; each SortConfig is a         │
+  │    tiebreaker; nulls always sort last                  │
+  │    → new sorted array (original not mutated)           │
   │                                                        │
-  │  groupRows(events, groupByConfig)                      │
-  │    buildFieldAccessor(field) → value extractor         │
-  │    group by 1–3 levels (category, resource, date, …)  │
-  │    → GroupRow[] with children and header labels        │
+  │  groupRows(rows, { groupBy, fieldAccessor,             │
+  │                    collapsedGroups, groupHeaderHeight })│
+  │    fieldAccessor: Accessor | Accessor[]  (1–N levels)  │
+  │    bucketize() per level; (Ungrouped) always last      │
+  │    → { flatRows: Row[], groupOrder: string[] }         │
+  │       flatRows interleaves _type:'groupHeader' rows    │
+  │       with event rows (flat/virtualised — no children) │
+  │       groupHeader: { groupKey · groupLabel · depth     │
+  │                      collapsed · count · rowH }        │
   │                                                        │
   └───────────────────────┬────────────────────────────────┘
                           │
                           ▼
-              grouped / sorted visibleEvents[]
-              passed to active View component
+              { flatRows[], groupOrder[] }
+              passed to active View component for rendering
 ```
 
 ---
