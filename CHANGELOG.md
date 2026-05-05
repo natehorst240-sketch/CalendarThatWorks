@@ -33,14 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Sprint 3 — Engine as single state source (issues #1, #3, #4)
 
 - **#3 Engine migration**: `CalendarEngine` is now the sole source of truth for
-  `view`, `cursor`, and base filter state (`search`, `categories`, `resources`).
-  Extended filter state (`dayWindow`, schema-driven fields, source toggles) remains
-  in React state but no longer duplicates engine state. `useCalendar` hook removed.
-- **#1 Duplicate recurrence removal**: `useOccurrences` hook deleted. All views use
-  the engine's `getOccurrencesInRange` read path via the orchestration hook.
-- **#4 Export wrapper consolidated**: `exportToExcelLazy.ts` and `excelExport.ts`
-  merged into a single file. The two-file lazy pattern was correct but added
-  unnecessary indirection for a single consumer.
+  `view` and `cursor`. `useCalendar` hook removed from `WorksCalendar.tsx` and
+  de-exported from the public API; view/cursor state is now owned inline with sync
+  effects that keep `engine.state.view` and `engine.state.cursor` accurate after
+  every navigation dispatch. Extended filter state (`dayWindow`, schema-driven
+  fields, source toggles) remains in React state and is not modelled by the engine.
+  `CalendarView` engine type widened to include all 10 view ids; `navigateNext` /
+  `navigatePrev` fixed to use a monthly step for all non-week/day views.
+- **#1 Duplicate recurrence removal**: `useOccurrences` hook de-exported from the
+  public API. All views use the engine's `getOccurrencesInRange` read path via
+  `useCalendarEngine`; the legacy `useOccurrences` hook is no longer part of the
+  published surface.
+- **#4 Export wrapper consolidated**: `exportToExcelLazy.ts` deleted. `index.ts`
+  now exports `exportToExcel` directly from `excelExport.ts`, which already handles
+  lazy ExcelJS loading internally via `await import('exceljs')`. The extra indirection
+  file had no remaining justification.
 
 ## [0.6.2] - 2026-05-03
 

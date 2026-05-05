@@ -84,7 +84,7 @@ export type { LeftRailAction }           from './ui/LeftRail';
 export { normalizeEvent, normalizeEvents } from './core/eventModel';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';
-export { exportToExcel }                  from './export/exportToExcelLazy';
+export { exportToExcel }                  from './export/excelExport';
 export {
   toInvoiceLineItems,
   invoiceLineItemsToCSV,
@@ -103,7 +103,6 @@ export type {
   MaintenanceLogEntry,
   MaintenanceLogOptions,
 } from './export/maintenanceExport';
-export { useCalendar }                    from './hooks/useCalendar';
 export { useOwnerConfig }                 from './hooks/useOwnerConfig';
 export { useRealtimeEvents }              from './hooks/useRealtimeEvents';
 export { useSavedViews, serializeFilters, deserializeFilters } from './hooks/useSavedViews';
@@ -133,7 +132,6 @@ export type { FocusChipDef, FocusChipsProps } from './ui/FocusChips';
 export { default as CalendarErrorBoundary } from './ui/CalendarErrorBoundary';
 export { createLocalStorageDataAdapter } from './external/localStorageDataAdapter';
 export { parseICS, fetchAndParseICS }     from './core/icalParser';
-export { useOccurrences }                 from './hooks/useOccurrences';
 export { useDrag }                        from './hooks/useDrag';
 export { useFeedEvents }                  from './hooks/useFeedEvents';
 export { layoutOverlaps, layoutSpans, displayEndDay } from './core/layout';

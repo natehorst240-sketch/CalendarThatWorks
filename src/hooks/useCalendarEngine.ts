@@ -54,6 +54,8 @@ export type UseCalendarEngineOptions = {
   announcerRef: React.RefObject<AnnouncerRef | null>;
   /** Current visible date range — drives occurrence expansion. */
   range: { start: Date; end: Date };
+  /** Initial calendar view. Defaults to 'month'. */
+  initialView?: string;
   /** Called whenever the engine commits a new pools snapshot (round-robin advance). */
   onPoolsChange?: (pools: ResourcePool[], meta: { sequence: number }) => void;
 };
@@ -94,6 +96,7 @@ export function useCalendarEngine({
   blockedWindows,
   announcerRef,
   range,
+  initialView,
   onPoolsChange,
 }: UseCalendarEngineOptions): UseCalendarEngineResult {
   // ── Engine singleton init (synchronous, before first render) ─────────────
@@ -103,8 +106,9 @@ export function useCalendarEngine({
   const poolsSequenceRef = useRef(0);
 
   if (engineRef.current === null) {
+    const initState = rawPools && rawPools.length > 0 ? { pools: rawPools } : {};
     engineRef.current = new CalendarEngine(
-      rawPools && rawPools.length > 0 ? { pools: rawPools } : undefined,
+      initialView ? { ...initState, view: initialView as AnyValue } : (rawPools && rawPools.length > 0 ? initState : undefined),
     );
     undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
     lastPoolsRef.current = engineRef.current.state.pools;

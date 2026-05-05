@@ -15,7 +15,9 @@ import type { EngineEvent } from './schema/eventSchema';
 
 // ─── Filter / View state ──────────────────────────────────────────────────────
 
-export type CalendarView = 'month' | 'week' | 'day' | 'schedule';
+export type CalendarView =
+  | 'month' | 'week' | 'day' | 'schedule'
+  | 'agenda' | 'base' | 'assets' | 'dispatch' | 'requests' | 'map';
 
 export interface FilterState {
   readonly search: string;

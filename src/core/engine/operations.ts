@@ -91,21 +91,28 @@ function clearSelection(state: CalendarState): CalendarState {
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 
+function navigationStep(view: string): 'month' | 'week' | 'day' {
+  if (view === 'week')  return 'week';
+  if (view === 'day')   return 'day';
+  // month, schedule, agenda, base, assets, dispatch, requests, map → monthly step
+  return 'month';
+}
+
 function navigateNext(state: CalendarState): CalendarState {
   const { view, cursor } = state;
-  let next: Date;
-  if (view === 'month')    next = addMonths(cursor, 1);
-  else if (view === 'week') next = addWeeks(cursor, 1);
-  else                      next = addDays(cursor, 1);
+  const step = navigationStep(view);
+  const next = step === 'month' ? addMonths(cursor, 1)
+             : step === 'week'  ? addWeeks(cursor, 1)
+             :                    addDays(cursor, 1);
   return { ...state, cursor: next };
 }
 
 function navigatePrev(state: CalendarState): CalendarState {
   const { view, cursor } = state;
-  let next: Date;
-  if (view === 'month')    next = addMonths(cursor, -1);
-  else if (view === 'week') next = addWeeks(cursor, -1);
-  else                      next = addDays(cursor, -1);
+  const step = navigationStep(view);
+  const next = step === 'month' ? addMonths(cursor, -1)
+             : step === 'week'  ? addWeeks(cursor, -1)
+             :                    addDays(cursor, -1);
   return { ...state, cursor: next };
 }
 
