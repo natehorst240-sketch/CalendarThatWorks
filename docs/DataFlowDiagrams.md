@@ -709,6 +709,365 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
 
 ---
 
+## Level 3 — Process Internals
+
+Detailed decomposition of the highest-complexity processes within Level 2 subsystems: validation pipeline (3a), React subscription chain (3b), MonthView layout (3c), WeekView/DayView time grid (3d), initialization sequence (3e), undo/redo (3f), SyncQueue retry/conflict (3g).
+
+---
+
+### 3a — Engine Validation Pipeline (full decomposition of 2a validateConstraints)
+
+```
+  EngineOperation  (after pool resolution in resolvePoolOnSubmit)
+         │
+         ▼
+  validateOperation(op, state, config)
+         │
+         ├─ 1. validateEvent(op)
+         │       required fields present? (id, title, start, end)
+         │       start < end?
+         │       → hard violation if fails
+         │
+         ├─ 2. validateOverlap(op, state.events)
+         │       for same resource: does new interval overlap any existing?
+         │       op.eventId excluded from check (allow move to same slot)
+         │       → hard violation if overlap found
+         │
+         ├─ 3. validateDependencies(op, state.dependencies)
+         │       MOVE or DELETE:
+         │         successors (via _dependenciesByFromEvent):
+         │           newEnd ≤ successor.start?  → hard if violated
+         │         predecessors (via _dependenciesByToEvent):
+         │           predecessor.end ≤ newStart? → hard if violated
+         │       O(k) index lookup per direction
+         │
+         ├─ 4. gateEventRequirements(op, config.requirements)   [→ 2h]
+         │       evaluateRequirements for each ConfigRequirement
+         │       'blocking' shortfall → hard violation (reject)
+         │       'warning'  shortfall → soft violation (warn, allow override)
+         │       'info'     shortfall → surface in UI only
+         │
+         ├─ 5. evaluateConflicts(rules, allEvents, [candidateId])  [→ 2g]
+         │       ResourceOverlapRule, CategoryMutexRule, MinRestRule,
+         │       CapacityOverflowRule, OutsideBusinessHoursRule,
+         │       PolicyViolationRule, HoldConflictRule,
+         │       AvailabilityViolationRule
+         │       rule.severity 'hard' → hard violation
+         │       rule.severity 'soft' → soft violation
+         │
+         └─ 6. validateWorkingHours(op, config.businessHours)
+                  event outside businessHours.days / .start / .end?
+                  allDay events: skip
+                  → soft violation (warn, allow override)
+
+  Aggregation:
+    any hard violation               → OperationResult { status: 'rejected',              violations }
+    any soft (force flag not set)    → OperationResult { status: 'pending-confirmation',
+                                         violations }
+    none                             → proceed to resolveOperationScope()
+                                         → buildOperation() → applyOperation()
+                                         → beginTransaction() → commitTransaction()
+```
+
+---
+
+### 3b — React Hook Subscription Chain
+
+```
+  CalendarEngine singleton
+  (useRef — stable across renders, created once in useCalendarEngine)
+         │
+         │  engine.subscribe(listener)   [on mount]
+         ▼
+  StateListener registry   Set<(state: CalendarState) => void>
+         │
+         │  engine._notify(newState)     [after every commitTransaction()]
+         ▼
+  useCalendarEngine listener:
+    engineVer.current++              ← useRef counter, triggers no render alone
+    setEngineVer(engineVer.current)  ← useState setter → schedules re-render
+
+         │  React re-render
+         ▼
+  useCalendarEngine re-runs:
+    engine.getOccurrencesInRange(rangeStart, rangeEnd)
+      → expandedEvents: NormalizedEvent[]
+    engine.state.assignments → approvalRequestEvents
+    → returned to WorksCalendar as stable-shaped object
+
+         │  passed down
+         ▼
+  CalendarContext.Provider  (ctxValue — useMemo, recalculates on engineVer change)
+  { renderEvent · renderHoverCard · colorRules · businessHours
+    permissions · editMode · conflictingEventIds · displayTimezone }
+
+         │  useContext(CalendarContext) in each View component
+         ▼
+  View component reads ctx.renderEvent, ctx.colorRules, etc.
+  via typed dot-notation  (no bracket hacks — CalendarContextValue fully typed)
+
+  Batching note:
+    Multiple engine._notify() calls within one synchronous transaction
+    are coalesced by React 18 automatic batching — one re-render per commit.
+    Pool sync + event sync both notify; only one paint.
+```
+
+---
+
+### 3c — MonthView Layout Algorithm
+
+```
+  visibleEvents[] for the month window
+         │
+         ▼
+  1. Build week grid
+       weeks[] = eachWeekOfInterval(monthStart, monthEnd, { weekStartsOn })
+       each week = 7 DayCell components
+
+  2. Partition per week
+       allDayOrSpanning = events where allDay === true
+                          OR span ≥ 1 calendar day
+       timedSingle      = remaining (start/end on same calendar day)
+
+  3. All-day / multi-day pill layout  (top band of each DayCell row)
+       For each week:
+         candidates = allDayOrSpanning events overlapping this week
+         layoutSpans(candidates, weekStart, weekEnd)
+           → sort by duration desc (longer events claim lower _row indexes)
+           → greedy row assignment: _row = first row with no overlap
+           → _colStart = max(displayStartDay, weekStart)
+           → _colEnd   = min(displayEndDay,   weekEnd)
+         maxVisibleRows = 3  (pills beyond row 2 → hidden)
+         overflow = count hidden → "+N more" chip on DayCell
+         chip click → opens AgendaView scoped to that date
+
+  4. Timed event pill layout  (within individual DayCell body)
+       For each day:
+         timedForDay = timedSingle events on this day
+         layoutOverlaps(timedForDay)
+           → sort by start asc, duration desc
+           → group by overlapping intervals
+           → within each group: assign _col (0-based), _numCols
+           → pill left  = (_col / _numCols) × 100%
+           → pill width = (1 / _numCols) × 100%
+
+  5. Render pass
+       DayCell: all-day band (top, sticky height) + timed body (flex-grow)
+       timed pill height = (durationMinutes / 60) × hourHeightPx
+                           min 20px  (touch target floor)
+       today cell: accent background
+       out-of-month days: muted text + no event creates
+```
+
+---
+
+### 3d — WeekView / DayView Time Grid
+
+```
+  visibleEvents[] for the week (or single day)
+         │
+         ▼
+  1. Time column construction
+       hourSlots = Array(24)     each slot = pixelsPerMinute × 60  (default 64px/hr)
+       sticky time labels: '12 AM', '1 AM' … '11 PM'
+       scrollable body: time grid + resource columns side by side
+
+  2. Timed event pixel positioning
+       For each event:
+         topPx    = (start.getHours() × 60 + start.getMinutes()) × pixelsPerMinute
+         heightPx = durationMinutes × pixelsPerMinute
+                    floor: 20px  (ensures tap target even for 5-min events)
+
+  3. Overlap resolution  (per resource/day column)
+       layoutOverlaps(eventsInColumn)
+         → sort by start asc
+         → sweep-line: track active intervals
+         → group into overlap clusters
+         → within cluster: assign _col, _numCols
+         → pill left  = colLeft + (_col / _numCols) × colWidth
+         → pill width = colWidth / _numCols − 2px  (gap)
+
+  4. All-day banner  (above scrollable grid, sticky)
+       allDayEvents for the week → layoutSpans()
+       row assignment identical to MonthView step 3
+
+  5. Business hours shading
+       businessHours.days / .start / .end  (from CalendarContext)
+       cells outside hours → overlay div with dimmed bg
+       visual only — enforcement is in validateWorkingHours (3a step 6)
+
+  6. Current-time indicator
+       redLine topPx = minutesSinceMidnight(now) × pixelsPerMinute
+       updates every 60 s via useInterval
+       rendered only when today falls within the view window
+       z-index above pills, below hover card
+```
+
+---
+
+### 3e — Config / Engine Initialization Sequence
+
+```
+  WorksCalendar mount
+         │
+  ┌──────┴──────────────────────────────────────────────────────────┐
+  │  Synchronous init (render phase)                                │
+  │                                                                 │
+  │  useState: view = initialView ?? 'month'                        │
+  │  useState: currentDate = new Date()                             │
+  │  useState: filters = createInitialFilters(schema)              │
+  │  useState: dayWindow = null                                     │
+  │                                                                 │
+  │  useMemo: allNormalized = normalizeEvents(events prop)          │
+  │                                                                 │
+  │  useCalendarEngine(allNormalized, options):                     │
+  │    useRef: engine = new CalendarEngine()   (empty state)        │
+  │    useRef: undoRedo = new UndoRedoManager(engine)               │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │ after mount (useEffect queue)
+  ┌──────────────────────────▼──────────────────────────────────────┐
+  │  Effect 1 — pool sync  [dep: rawPools from useOwnerConfig]      │
+  │    loadPools() → ResourcePool[]                                 │
+  │    engine.syncPools(pools)   ← pools now in CalendarState       │
+  │    setEngineVer()            ← triggers first re-render         │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │
+  ┌──────────────────────────▼──────────────────────────────────────┐
+  │  Effect 2 — event sync  [dep: allNormalized]                    │
+  │    engine.syncEvents(allNormalized)                             │
+  │    setEngineVer()            ← triggers re-render               │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │
+  ┌──────────────────────────▼──────────────────────────────────────┐
+  │  Effect 3 — view sync   [dep: view]                             │
+  │    engine.dispatch({ type: 'SET_VIEW', view })                  │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │
+  ┌──────────────────────────▼──────────────────────────────────────┐
+  │  Effect 4 — cursor sync  [dep: currentDate]                     │
+  │    engine.dispatch({ type: 'NAVIGATE_TO', date: currentDate })  │
+  └──────────────────────────┬──────────────────────────────────────┘
+                             │  engine ready, UI rendered
+                             ▼
+  ⚠ Config gap: businessHours, requirements, conflict rules are
+    passed as props and forwarded to validateConstraints() at
+    operation time — NOT loaded into engine state at init.
+    Engine validates against whatever config props are current
+    at the moment of dispatch, not the config at mount.
+    Safe for typical usage; a host that mutates config mid-session
+    gets correct validation from the next op onward, not retroactively.
+```
+
+---
+
+### 3f — Undo / Redo Snapshot Mechanism
+
+```
+  applyEngineOp() called  (before dispatching to engine)
+         │
+         ▼
+  UndoRedoManager.snapshot()
+    clone engine.state:
+      events:      new Map(engine.state.events)       deep-copy entries
+      assignments: new Map(engine.state.assignments)
+      pools:       [...engine.state.pools]             shallow-copy array
+      cursor:      { ...engine.state.cursor }
+    push snapshot → undoStack[]
+    clear redoStack[]          ← any redo branch is abandoned
+    enforce max depth: pop oldest if undoStack.length > 50
+
+         │ operation dispatched → committed → UI updated
+         ▼
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Ctrl+Z  /  cal.undo()                                           │
+  │                                                                  │
+  │  if undoStack empty → no-op                                      │
+  │  handle = undoStack.pop()                                        │
+  │  redoStack.push(currentStateSnapshot)   ← preserve for redo     │
+  │  engine.rollbackTo(handle)                                       │
+  │    engine._state = handle.state                                  │
+  │    engine._notify(restoredState)        ← triggers re-render     │
+  └──────────────────────────────────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  Ctrl+Y  /  cal.redo()                                           │
+  │                                                                  │
+  │  if redoStack empty → no-op                                      │
+  │  handle = redoStack.pop()                                        │
+  │  undoStack.push(currentStateSnapshot)                            │
+  │  engine.rollbackTo(handle)                                       │
+  │    engine._notify(restoredState)        ← triggers re-render     │
+  └──────────────────────────────────────────────────────────────────┘
+
+  Snapshot scope:
+    ✓  Events (create · move · edit · delete)
+    ✓  Assignments (resource changes)
+    ✓  Pool cursors (round-robin advance)
+    ✗  View / cursor    (navigation is not undoable)
+    ✗  Filter state     (filter changes are not undoable)
+    ✗  Config / savedViews  (persistence layer, outside engine state)
+    ✗  Adapter sync     (optimistic writes already in-flight stay in-flight)
+```
+
+---
+
+### 3g — SyncQueue: Optimistic Update, Retry, and Conflict Resolution
+
+```
+  createEvent / updateEvent / deleteEvent called on SyncManager
+         │
+         ├─ 1. Optimistic apply  (synchronous)
+         │      engine.applyOperation() immediately
+         │      local Map updated → UI reflects change instantly
+         │      SyncStatus for this id → 'pending'
+         │
+         ├─ 2. SyncQueue.enqueue({ op, adapterFn, retryCount: 0 })
+         │
+         └─ 3. Background flush  (async, queued via Promise microtask)
+                   │
+                   ▼
+             adapterFn() call  (REST · WS · Supabase · ICS)
+                   │
+          ┌────────┴──────────────┐
+          ✓ success               ✗ failure
+          │                       │
+          ▼                       ├─ transient / network error
+     SyncStatus → 'synced'        │    retryCount < maxRetries (default 5)?
+     replace local entry with     │      backoff: 2^retryCount × 1000 ms
+     server copy                  │      re-enqueue with retryCount++
+     (server-assigned id          │    else:
+      replaces optimistic id      │      SyncStatus → 'error'
+      on create)                  │      onSyncError(op, err) callback
+                                  │      entry stays in local Map (not reverted)
+                                  │      host decides: retry manually or discard
+                                  │
+                                  └─ conflict  (server version newer than local)
+                                       conflictResolver(local, server):
+                                         'server-wins'
+                                           → revert optimistic change
+                                           → apply server copy to local Map
+                                         'client-wins'
+                                           → force-push local version to adapter
+                                           → re-enqueue with force flag
+                                         'latest-wins'
+                                           → compare updatedAt timestamps
+                                           → pick newer, apply & re-sync
+                                         'manual'
+                                           → onConflict(local, server) callback
+                                           → host surfaces resolution modal
+                                           → user picks or merges version
+                                           → resolved copy re-enqueued as update
+
+  connectLive() parallel path:
+    adapter.subscribe(AdapterChangeCallback)
+      insert → merge into local Map (skip if id already 'pending' — local wins)
+      update → apply if local SyncStatus is 'synced'  (don't clobber pending)
+      delete → remove from local Map
+      reload → replace full Map, reset all SyncStatuses to 'synced'
+```
+
+---
+
 ## Sprint Implementation Status
 
 All six audit issues resolved across three sprints. See `CHANGELOG [Unreleased]` for details.
