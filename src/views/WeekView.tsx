@@ -11,6 +11,7 @@ import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
+import type { NormalizedEvent } from '../types/events';
 
 const SPAN_H            = 28;
 const SPAN_GAP          = 3;
@@ -235,7 +236,7 @@ export default function WeekView({
     const ariaLabel = `${ev.title}, ${timeLabel}${ev.category ? `, ${ev.category}` : ''}`;
 
     const inner = ctx?.renderEvent
-      ? ctx.renderEvent(ev, { view: 'week', isCompact: false, onClick, color })
+      ? ctx.renderEvent(ev as unknown as NormalizedEvent, { view: 'week', isCompact: false, onClick, color })
       : null;
 
     return (

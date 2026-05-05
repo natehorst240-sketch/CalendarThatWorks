@@ -33,7 +33,7 @@ export default function DayView({
   const dayStart  = config?.display?.dayStart ?? 6;
   const dayEnd    = config?.display?.dayEnd   ?? 22;
   const pxPerHour = 64;
-  const bizHours  = ctx?.['businessHours'] ?? null;
+  const bizHours  = ctx?.businessHours ?? null;
 
   const gridRef            = useRef<HTMLDivElement | null>(null);
   const clickCandidateRef  = useRef<{ ev: CalendarViewEvent; startX: number; startY: number; moved: boolean } | null>(null);
@@ -97,7 +97,7 @@ export default function DayView({
   );
   const dayEvents = useMemo(() => layoutOverlaps(rawTimed), [rawTimed]);
 
-  const displayTz = ctx?.['displayTimezone'] ?? null;
+  const displayTz = ctx?.displayTimezone ?? null;
 
   const now     = new Date();
   const nowHour = displayTz ? hoursInTimezone(now, displayTz) : getHours(now) + getMinutes(now) / 60;
@@ -121,8 +121,10 @@ export default function DayView({
 
   function isBizHour(h: number) {
     if (!bizHours) return true;
-    const bizDays = bizHours.days ?? [1, 2, 3, 4, 5];
-    return bizDays.includes(currentDate.getDay()) && h >= bizHours.start && h < bizHours.end;
+    const bizDays = (bizHours?.['days'] as number[] | undefined) ?? [1, 2, 3, 4, 5];
+    return bizDays.includes(currentDate.getDay()) &&
+      h >= (bizHours?.['start'] as number) &&
+      h < (bizHours?.['end'] as number);
   }
 
   // ── Drag ────────────────────────────────────────────────────────────────

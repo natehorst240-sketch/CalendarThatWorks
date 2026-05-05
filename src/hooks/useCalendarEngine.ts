@@ -31,7 +31,7 @@ function opAnnouncement(op: AnyValue): string {
 }
 
 export type PendingAlert = {
-  violations: AnyValue[];
+  violations: readonly AnyValue[];
   isHard: boolean;
   onConfirm: (() => void) | null;
 };
@@ -46,10 +46,10 @@ export type UseCalendarEngineOptions = {
   /** Merged, normalised event list from all sources (static + fetch + ICS + realtime). */
   allNormalized: AnyValue[];
   /** Initial / controlled resource pools. */
-  rawPools?: ResourcePool[] | null;
+  rawPools?: ResourcePool[] | null | undefined;
   /** businessHours and blockedWindows forwarded to the engine's OperationContext. */
   businessHours?: AnyValue;
-  blockedWindows?: AnyValue[];
+  blockedWindows?: AnyValue[] | undefined;
   /** Ref to the ScreenReaderAnnouncer instance mounted in WorksCalendar. */
   announcerRef: React.RefObject<AnnouncerRef | null>;
   /** Current visible date range — drives occurrence expansion. */
@@ -57,7 +57,7 @@ export type UseCalendarEngineOptions = {
   /** Initial calendar view. Defaults to 'month'. */
   initialView?: string;
   /** Called whenever the engine commits a new pools snapshot (round-robin advance). */
-  onPoolsChange?: (pools: ResourcePool[], meta: { sequence: number }) => void;
+  onPoolsChange?: ((pools: ResourcePool[], meta: { sequence: number }) => void) | undefined;
 };
 
 export type UseCalendarEngineResult = {

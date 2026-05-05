@@ -25,7 +25,6 @@ export default defineConfig({
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*', 'src/test-setup.ts'],
       rollupTypes: true,
       outDir: 'dist',
-      skipDiagnostics: true,
     }),
     copyPublishAssetsPlugin(),
   ],

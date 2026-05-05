@@ -32,7 +32,7 @@ import { useResourceLocations } from '../hooks/useResourceLocations.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import AuditDrawer from './AuditDrawer';
 import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
-import type { CalendarViewEvent } from '../types/ui';
+import type { CalendarViewEvent, ColorRule } from '../types/ui';
 import type { GroupByInput } from '../hooks/useNormalizedConfig';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from '../types/assets';
 import type { ResourcePool } from '../core/pools/resourcePoolSchema';
@@ -258,7 +258,7 @@ function buildCategoryColorMap(categoriesConfig?: CategoryColorConfig): Map<stri
 function resolveAssetColor(
   ev: AssetsViewEvent,
   categoryColorMap: Map<string, string>,
-  colorRules: Record<string, unknown>[] | undefined,
+  colorRules: ReadonlyArray<Record<string, unknown> | ColorRule> | undefined,
 ): string | undefined {
   const ruleColor = resolveColor(ev as never, colorRules);
   if (ruleColor) return ruleColor;

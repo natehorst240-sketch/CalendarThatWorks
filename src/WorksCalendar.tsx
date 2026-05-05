@@ -26,6 +26,7 @@ import { useSavedFlash }      from './hooks/useSavedFlash';
 import { useEventOptions }    from './hooks/useEventOptions';
 import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
+import type { CalendarContextValue } from './types/ui';
 import { normalizeEvents }    from './core/eventModel';
 import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
@@ -1241,7 +1242,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     recurringPrompt,
   } = useCalendarEngine({
     allNormalized,
-    rawPools,
+    rawPools: rawPools ?? null,
     businessHours: ownerCfg.config?.['businessHours'] ?? businessHours,
     blockedWindows,
     announcerRef,
@@ -2309,8 +2310,10 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   }, [inlineEditTarget, applyEngineOp, onEventDelete]);
 
   // ── Context value ────────────────────────────────────────────────────────
-  const ctxValue = useMemo(() => ({
-    renderEvent, renderHoverCard, colorRules, businessHours, emptyState,
+  const ctxValue = useMemo((): CalendarContextValue => ({
+    renderEvent:     renderEvent     as CalendarContextValue['renderEvent'],
+    renderHoverCard: renderHoverCard as CalendarContextValue['renderHoverCard'],
+    colorRules, businessHours, emptyState,
     permissions: perms,
     editMode,
     conflictingEventIds,
@@ -3049,7 +3052,7 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             onConfirm={pendingAlert.onConfirm ? () => {
               const commit = pendingAlert.onConfirm;
               setPendingAlert(null);
-              commit();
+              if (commit) commit();
             } : null}
             onCancel={() => setPendingAlert(null)}
           />

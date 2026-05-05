@@ -39,6 +39,7 @@ export type CalendarContextValue = {
   permissions?: PermissionCaps | undefined;
   editMode?: boolean | undefined;
   conflictingEventIds?: ReadonlySet<string> | undefined;
+  displayTimezone?: string | undefined;
 };
 
 export type UpdateConfig = (updater: (current: AnyRecord) => AnyRecord) => void;
