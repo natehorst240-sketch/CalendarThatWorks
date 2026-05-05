@@ -163,12 +163,13 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
                         │      prepare poolUpdate (cursor advance)        │
                         │                       │                         │
                         │                       ▼                         │
-                        │  validateOperation()  ──► validateConstraints() │
-                        │      ├── validateEvent()      (hard: reject)    │
-                        │      ├── validateOverlap()    (hard)            │
-                        │      ├── validateDependencies() (hard)          │
-                        │      ├── validateWorkingHours() (soft: warn)    │
-                        │      └── validateEventConstraints() (configurable)│
+                        │  validateOperation():                           │
+                        │      ├── validateDuration()        (hard: reject)│
+                        │      ├── validateBlockedWindow()   (hard)        │
+                        │      ├── validateEventConstraints()(configurable)│
+                        │      ├── validateDependencies()    (hard)        │
+                        │      ├── validateOverlap()         (hard)        │
+                        │      └── validateWorkingHours()    (soft: warn)  │
                         │                       │                         │
                         │              hard violation?                    │
                         │               YES ──► OperationResult{rejected} │
@@ -208,9 +209,10 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
              changes}
 
   UndoRedoManager wraps the engine:
-    snapshot() before each mutation → TransactionHandle
-    rollbackTo(handle) on Ctrl+Z  → restores events + pools
-    re-apply stack on Ctrl+Y
+    push(label?) before each mutation → snapshots events, assignments,
+      dependencies, resourceCalendars, pools into undoStack
+    undo() on Ctrl+Z → engine.restoreState(snapshot) → restores all five maps
+    redo() on Ctrl+Y → engine.restoreState(snapshot) from redoStack
 ```
 
 ---
@@ -531,11 +533,16 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
 
 ```
   EvaluateConflictsInput
-  { rules: ConflictRule[]            ← host-configured rule set
-    events: ConflictEvent[]          ← full event set to check against
-    candidateIds: string[]           ← event IDs being validated
-    businessHours?: { days, start, end }
-    holds?: HoldRegistry }
+  { proposed: ConflictEvent          ← single event being written
+    events: ConflictEvent[]          ← all existing events to check against
+    rules: ConflictRule[]            ← host-configured rule set
+    enabled?: boolean                ← master switch (default true)
+    resources?: Map<id, EngineResource>
+    assignments?: Map<id, Assignment>
+    categories?: Map<id, CategoryDef>
+    now?: Date
+    holds?: Hold[]
+    holderId?: string }
          │
          ▼
   ┌─────────────────────────────────────────────────────────────────────┐
@@ -549,28 +556,30 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   │  │  MinRestRule             — minimum gap between shifts        │  │
   │  │  CapacityOverflowRule    — resource over max capacity        │  │
   │  │  OutsideBusinessHoursRule— event outside configured hours    │  │
-  │  │  PolicyViolationRule     — custom predicate function         │  │
+  │  │  PolicyViolationRule     — min-lead-time · max-dur ·          │  │
+  │  │                            max-advance · blackout-dates     │  │
   │  │  HoldConflictRule        — overlaps a live booking hold      │  │
   │  │  AvailabilityViolationRule— event during marked unavailability│  │
   │  └──────────────────────────────────────────────────────────────┘  │
   │                                                                     │
-  │  Each rule returns:                                                 │
-  │    conflictingIds: string[]     (the colliding event IDs)           │
-  │    severity: 'hard' | 'soft'                                        │
-  │    message: string                                                  │
+  │  Each evaluator returns:                                            │
+  │    Violation | null                                                 │
+  │    { rule · severity: 'hard'|'soft' · message                      │
+  │      conflictingEventId?: string  (singular — pairwise rules only)  │
+  │      details: { type: ruleName, … } }                              │
   └──────────────────────────┬──────────────────────────────────────────┘
                              │
                              ▼
   ConflictEvaluationResult
-  { conflictingEventIds: Set<string>   ← passed to CalendarContext
-    violations: ConflictViolation[] }  ← per-rule detail
+  { violations: Violation[]
+    severity: 'none' | 'soft' | 'hard'
+    allowed: boolean }              ← true when no hard violations
 
   Integration points:
-    CalendarEngine.validateConstraints()
-      → evaluateConflicts for hard severity  → reject OperationResult
-      → evaluateConflicts for soft severity  → pending-confirmation result
-    WorksCalendar conflictingEventIds prop (host-side pre-evaluation)
-      → passed via CalendarContext → pills render conflict overlay styling
+    ⚠ NOT part of CalendarEngine.validateOperation(). Host or external
+      gate calls evaluateConflicts() before or after the standard pipeline.
+    ConflictEvaluationResult.violations → surface in UI as conflict overlays
+    allowed: false (any hard violation) → reject OperationResult upstream
 ```
 
 ---
@@ -600,20 +609,23 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
                              │
                              ▼
   RequirementsEvaluation
-  { met: boolean
-    shortfalls: RequirementShortfall[]
-      { requirementId · role · needed · assigned · severity } }
+  { missing: RequirementShortfall[]      ← empty means all requirements met
+      { kind: 'role' | 'pool'
+        severity: 'hard' | 'soft'
+        role?: string · pool?: string
+        required: number · assigned: number · missing: number
+        poolUnknown?: boolean } }
 
   ┌─────────────────────────────────────────────────────────────────────┐
   │                  gateEventRequirements()                            │
   │                                                                     │
-  │  Wraps evaluateRequirements for use inside the engine:              │
-  │    'blocking' shortfalls → hard violation  (reject operation)       │
-  │    'warning'  shortfalls → soft violation  (warn, allow override)   │
-  │    'info'     shortfalls → surface in UI only, never blocks         │
+  │  Wraps evaluateRequirements into a ValidationResult:                │
+  │    shortfall.severity 'hard' → hard violation (reject operation)    │
+  │    shortfall.severity 'soft' → soft violation (warn, allow override)│
+  │    missing.length === 0      → { allowed: true, violations: [] }    │
   │                                                                     │
-  │  Called from CalendarEngine.validateConstraints()                   │
-  │    after validateOverlap(), before applyOperation()                 │
+  │  ⚠ NOT called from CalendarEngine.validateOperation(). Separate     │
+  │    utility; host or external gate invokes it independently.         │
   └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -622,29 +634,33 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
 ### 2i — Geo Conflict Engine
 
 ```
-  GeoEventInput[]
-  { id · start · end · resourceId
-    location: LatLon }    ← resolved via location adapter (pre-step)
+  evaluateGeoConflicts(rules, proposed, others)
+    proposed: GeoEventInput   ← single event being written
+    others:   GeoEventInput[] ← all other events to check against
+    { id · start · end · resourceId
+      location: LatLon }      ← resolved via location adapter (pre-step)
          │
          ▼
   ┌─────────────────────────────────────────────────────────────────────┐
   │                   evaluateGeoConflicts()                            │
   │                                                                     │
-  │  geoConflictRules: GeoConflictRule[]                                │
+  │  geoConflictRules: GeoConflictRule[]   (default: empty array)       │
   │                                                                     │
   │  GeoTravelFeasibilityRule:                                          │
-  │    for each consecutive event pair on the same resource:            │
-  │      gap         = event2.start − event1.end   (minutes)           │
-  │      dist        = haversineKm(loc1, loc2)     (km)                │
-  │      speedKmh    = rule.speedKmh  (default 80 — ground travel)     │
-  │      travelTime  = dist / speedKmh × 60        (minutes)           │
+  │    for each other event on the same resource consecutive with       │
+  │    proposed:                                                        │
+  │      gap         = proposed.start − other.end   (minutes)          │
+  │                  OR other.start − proposed.end                      │
+  │      dist        = haversineDistanceKm(loc1, loc2)   (km)          │
+  │      speedKmh    = rule.speedKmh  (default 800 — jet cruise)       │
+  │      travelTime  = dist / speedKmh × 60             (minutes)      │
   │      if travelTime > gap → infeasible → violation                   │
   └──────────────────────────┬──────────────────────────────────────────┘
                              │
                              ▼
   GeoConflictViolation[]
   { ruleId · resourceId
-    event1Id · event2Id
+    conflictingEventId        ← singular (the other event that conflicts)
     distanceKm · gapMinutes · travelMinutes
     message }
 
@@ -674,28 +690,30 @@ Detailed flows for all major subsystems: engine (2a), occurrence/filter (2b), ad
   │                      evaluateQuery()                                │
   │                                                                     │
   │  QueryContext                                                       │
-  │  { resources: ConfigResource[]                                      │
-  │    locations?: Map<id, ResourceLocation>                            │
-  │    capabilities?: Map<id, string[]>                                 │
-  │    requestLocation?: LatLon     ← origin for distance clauses      │
-  │    now?: Date }                                                     │
+  │  { proposedLocation?: LatLon  ← origin for 'within' distance clauses│
+  │  }                                                                  │
   │                                                                     │
-  │  ResourceQuery clauses  (AND-combined):                             │
+  │  ResourceQuery — recursive tree of clauses:                         │
   │  ┌───────────────────────────────────────────────────────────────┐ │
-  │  │  capability: string[]    → resource has all listed caps       │ │
-  │  │  role: string            → resource.role matches              │ │
-  │  │  withinDistance:         → haversineKm(resource, origin) ≤ N │ │
-  │  │    { km|miles, from: DistanceFrom.requestLocation            │ │
-  │  │                   | DistanceFrom.fixed(LatLon) }             │ │
-  │  │  availableAt: DateRange  → not booked in window              │ │
-  │  │  custom: (res, ctx) => boolean                               │ │
+  │  │  and(clauses[]) / or(clauses[]) / not(clause)  — combinators  │ │
+  │  │  exists(path)         → field is present (not undefined)      │ │
+  │  │  eq(path, value)      → field === value                       │ │
+  │  │  neq(path, value)     → field !== value                       │ │
+  │  │  in(path, values[])   → field in set                         │ │
+  │  │  gt/gte/lt/lte(path, n) → numeric comparisons                │ │
+  │  │  within(path, { km|miles,                                     │ │
+  │  │          from: { kind:'point', lat, lon }                     │ │
+  │  │               | { kind:'proposed' } })                        │ │
+  │  │  path = top-level key (id/name/capacity/…) or meta dot-path  │ │
   │  └───────────────────────────────────────────────────────────────┘ │
   └──────────────────────────┬──────────────────────────────────────────┘
                              │
                              ▼
   QueryEvaluation
   { matched: string[]            ← resource IDs passing all clauses
-    excluded: QueryExclusion[]   ← { resourceId · reason · clause } }
+    excluded: QueryExclusion[]   ← { id: string · reason: string }
+                                    reason = first failing clause path
+                                    e.g. 'gte(capabilities.capacity_lbs)' }
 
   Back in resolvePoolOnSubmit (2a):
     matched[] filtered to pool.members intersection
@@ -721,44 +739,43 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
   EngineOperation  (after pool resolution in resolvePoolOnSubmit)
          │
          ▼
-  validateOperation(op, state, config)
+  validateOperation(op, events, ctx)
+    (skips time-based rules for 'update' / 'delete'; group-change uses
+     separate validateGroupChange with ctx.groupChangeValidators)
          │
-         ├─ 1. validateEvent(op)
-         │       required fields present? (id, title, start, end)
-         │       start < end?
+         ├─ 1. validateDuration(op)
+         │       start < end?  minimum duration met?
          │       → hard violation if fails
          │
-         ├─ 2. validateOverlap(op, state.events)
-         │       for same resource: does new interval overlap any existing?
-         │       op.eventId excluded from check (allow move to same slot)
-         │       → hard violation if overlap found
+         ├─ 2. validateBlockedWindow(op, ctx)
+         │       does op fall within a configured blocked window?
+         │       → hard violation if blocked
          │
-         ├─ 3. validateDependencies(op, state.dependencies)
-         │       MOVE or DELETE:
+         ├─ 3. validateEventConstraints(op, ctx)
+         │       event-level custom constraint checks
+         │       → hard or soft violation per constraint config
+         │
+         ├─ 4. validateDependencies(op, ctx.dependencies)
+         │       MOVE:
          │         successors (via _dependenciesByFromEvent):
          │           newEnd ≤ successor.start?  → hard if violated
          │         predecessors (via _dependenciesByToEvent):
          │           predecessor.end ≤ newStart? → hard if violated
          │       O(k) index lookup per direction
          │
-         ├─ 4. gateEventRequirements(op, config.requirements)   [→ 2h]
-         │       evaluateRequirements for each ConfigRequirement
-         │       'blocking' shortfall → hard violation (reject)
-         │       'warning'  shortfall → soft violation (warn, allow override)
-         │       'info'     shortfall → surface in UI only
+         ├─ 5. validateOverlap(op, events)
+         │       for same resource: does new interval overlap any existing?
+         │       op.eventId excluded from check (allow move to same slot)
+         │       → hard violation if overlap found
          │
-         ├─ 5. evaluateConflicts(rules, allEvents, [candidateId])  [→ 2g]
-         │       ResourceOverlapRule, CategoryMutexRule, MinRestRule,
-         │       CapacityOverflowRule, OutsideBusinessHoursRule,
-         │       PolicyViolationRule, HoldConflictRule,
-         │       AvailabilityViolationRule
-         │       rule.severity 'hard' → hard violation
-         │       rule.severity 'soft' → soft violation
-         │
-         └─ 6. validateWorkingHours(op, config.businessHours)
+         └─ 6. validateWorkingHours(op, ctx)
                   event outside businessHours.days / .start / .end?
                   allDay events: skip
                   → soft violation (warn, allow override)
+
+  ⚠ evaluateConflicts() [→ 2g] and gateEventRequirements() [→ 2h] are
+    NOT called from validateOperation. They are separate utilities that
+    host wiring may invoke before or after the standard pipeline.
 
   Aggregation:
     any hard violation               → OperationResult { status: 'rejected',              violations }
@@ -784,8 +801,8 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
          │  engine._notify(newState)     [after every commitTransaction()]
          ▼
   useCalendarEngine listener:
-    engineVer.current++              ← useRef counter, triggers no render alone
-    setEngineVer(engineVer.current)  ← useState setter → schedules re-render
+    tickEngine()                     ← useReducer dispatcher: engineVer + 1
+                                       schedules re-render via React
 
          │  React re-render
          ▼
@@ -928,14 +945,14 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
   ┌──────────────────────────▼──────────────────────────────────────┐
   │  Effect 1 — pool sync  [dep: rawPools from useOwnerConfig]      │
   │    loadPools() → ResourcePool[]                                 │
-  │    engine.syncPools(pools)   ← pools now in CalendarState       │
-  │    setEngineVer()            ← triggers first re-render         │
+  │    engine.setPools(pools)    ← pools now in CalendarState       │
+  │    tickEngine()              ← triggers first re-render         │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
   ┌──────────────────────────▼──────────────────────────────────────┐
   │  Effect 2 — event sync  [dep: allNormalized]                    │
-  │    engine.syncEvents(allNormalized)                             │
-  │    setEngineVer()            ← triggers re-render               │
+  │    engine.setEvents(allNormalized)                              │
+  │    tickEngine()              ← triggers re-render               │
   └──────────────────────────┬──────────────────────────────────────┘
                              │
   ┌──────────────────────────▼──────────────────────────────────────┐
@@ -966,12 +983,13 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
   applyEngineOp() called  (before dispatching to engine)
          │
          ▼
-  UndoRedoManager.snapshot()
-    clone engine.state:
-      events:      new Map(engine.state.events)       deep-copy entries
-      assignments: new Map(engine.state.assignments)
-      pools:       [...engine.state.pools]             shallow-copy array
-      cursor:      { ...engine.state.cursor }
+  UndoRedoManager.push(label?)    ← call before dispatching each mutation
+    captureSnapshot() reads current engine state:
+      events:            ReadonlyMap<id, EngineEvent>
+      assignments:       ReadonlyMap<id, Assignment>
+      dependencies:      ReadonlyMap<id, Dependency>
+      resourceCalendars: ReadonlyMap<id, ResourceCalendar>
+      pools:             ReadonlyMap<id, ResourcePool>
     push snapshot → undoStack[]
     clear redoStack[]          ← any redo branch is abandoned
     enforce max depth: pop oldest if undoStack.length > 50
@@ -979,29 +997,32 @@ Detailed decomposition of the highest-complexity processes within Level 2 subsys
          │ operation dispatched → committed → UI updated
          ▼
   ┌──────────────────────────────────────────────────────────────────┐
-  │  Ctrl+Z  /  cal.undo()                                           │
+  │  Ctrl+Z  /  undoRedo.undo()                                      │
   │                                                                  │
   │  if undoStack empty → no-op                                      │
-  │  handle = undoStack.pop()                                        │
-  │  redoStack.push(currentStateSnapshot)   ← preserve for redo     │
-  │  engine.rollbackTo(handle)                                       │
-  │    engine._state = handle.state                                  │
-  │    engine._notify(restoredState)        ← triggers re-render     │
+  │  snapshot = undoStack.pop()                                      │
+  │  redoStack.push(captureSnapshot())   ← preserve current for redo │
+  │  engine.restoreState(snapshot)                                   │
+  │    restores events, assignments, dependencies,                   │
+  │    resourceCalendars, pools atomically                           │
+  │    engine._notify()              ← triggers re-render            │
   └──────────────────────────────────────────────────────────────────┘
 
   ┌──────────────────────────────────────────────────────────────────┐
-  │  Ctrl+Y  /  cal.redo()                                           │
+  │  Ctrl+Y  /  undoRedo.redo()                                      │
   │                                                                  │
   │  if redoStack empty → no-op                                      │
-  │  handle = redoStack.pop()                                        │
-  │  undoStack.push(currentStateSnapshot)                            │
-  │  engine.rollbackTo(handle)                                       │
-  │    engine._notify(restoredState)        ← triggers re-render     │
+  │  snapshot = redoStack.pop()                                      │
+  │  undoStack.push(captureSnapshot())                               │
+  │  engine.restoreState(snapshot)                                   │
+  │    engine._notify()              ← triggers re-render            │
   └──────────────────────────────────────────────────────────────────┘
 
   Snapshot scope:
     ✓  Events (create · move · edit · delete)
     ✓  Assignments (resource changes)
+    ✓  Dependencies
+    ✓  Resource calendars
     ✓  Pool cursors (round-robin advance)
     ✗  View / cursor    (navigation is not undoable)
     ✗  Filter state     (filter changes are not undoable)
