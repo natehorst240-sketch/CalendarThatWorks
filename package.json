@@ -35,7 +35,8 @@
     "./styles/family/grid": "./dist/themes/family/grid.css",
     "./styles/family/ops": "./dist/themes/family/ops.css",
     "./styles/family/neon": "./dist/themes/family/neon.css",
-    "./themes": "./dist/works-calendar.es.js"
+    "./themes": "./dist/works-calendar.es.js",
+    "./dist/*": "./dist/*"
   },
   "files": [
     "dist",
@@ -83,7 +84,7 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^6.9.6",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20.19.39",
