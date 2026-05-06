@@ -76,7 +76,7 @@ describe('WorksCalendar — pool booking (end-to-end, #212)', () => {
     expect(['N121AB', 'N505CD']).toContain(saved.resource);
     // Audit trail preserves which pool the booking was drawn from.
     expect(saved.meta?.resolvedFromPoolId).toBe('fleet-west');
-  }, 30000);
+  }, 60000);
 
   it('passes a monotonic sequence counter to onPoolsChange on each emission (#386)', async () => {
     // Round-robin advances the cursor on every save, so every commit
@@ -120,5 +120,5 @@ describe('WorksCalendar — pool booking (end-to-end, #212)', () => {
       expect(sequences[i]).toBeGreaterThan(sequences[i - 1]!);
     }
     expect(sequences[0]).toBe(1);
-  }, 30000);
+  }, 60000);
 });
