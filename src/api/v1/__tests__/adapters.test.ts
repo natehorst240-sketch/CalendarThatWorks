@@ -13,9 +13,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RestAdapter }       from '../adapters/RestAdapter';
-import { SupabaseAdapter }   from '../adapters/SupabaseAdapter';
+import { RestAdapter }         from '../adapters/RestAdapter';
+import { SupabaseAdapter }     from '../adapters/SupabaseAdapter';
 import { ICSAdapter, serializeToICS } from '../adapters/ICSAdapter';
+import { FirebaseAdapter }     from '../adapters/FirebaseAdapter';
+import { PocketBaseAdapter }   from '../adapters/PocketBaseAdapter';
 import type { CalendarAdapter, AdapterChange } from '../adapters/CalendarAdapter';
 import type { CalendarEventV1 } from '../types';
 
@@ -572,5 +574,229 @@ describe('serializeToICS', () => {
     });
     expect(reparsed.length).toBe(1);
     expect(reparsed[0]!['title']).toBe('Round-trip');
+  });
+});
+
+// ─── FirebaseAdapter ──────────────────────────────────────────────────────────
+
+describe('FirebaseAdapter', () => {
+  const docSnap = (id: string, data: Record<string, unknown>) => ({
+    id,
+    data: () => data,
+    exists: true,
+  });
+
+  function makeSnapshot(docs: ReturnType<typeof docSnap>[]) {
+    return {
+      docs,
+      forEach: (cb: (d: ReturnType<typeof docSnap>) => void) => docs.forEach(cb),
+      docChanges: () => [] as never[],
+    };
+  }
+
+  it('implements CalendarAdapter', () => {
+    const fns = {
+      collection: vi.fn(), query: vi.fn(), where: vi.fn(), orderBy: vi.fn(),
+      getDocs: vi.fn(), addDoc: vi.fn(), updateDoc: vi.fn(), deleteDoc: vi.fn(),
+      doc: vi.fn(), onSnapshot: vi.fn(),
+    };
+    const adapter: CalendarAdapter = new FirebaseAdapter({
+      db: {}, collection: 'events', adapterFns: fns,
+    });
+    expect(typeof adapter.loadRange).toBe('function');
+    expect(typeof adapter.createEvent).toBe('function');
+    expect(typeof adapter.updateEvent).toBe('function');
+    expect(typeof adapter.deleteEvent).toBe('function');
+    expect(typeof adapter.subscribe).toBe('function');
+  });
+
+  it('loadRange calls getDocs and maps results', async () => {
+    const row = { ...ev(), start: S, end: E };
+    const snap = makeSnapshot([docSnap('doc-1', row)]);
+    const fns = {
+      collection: vi.fn().mockReturnValue('colRef'),
+      query:      vi.fn().mockReturnValue('query'),
+      where:      vi.fn().mockReturnValue('where'),
+      orderBy:    vi.fn().mockReturnValue('orderBy'),
+      getDocs:    vi.fn().mockResolvedValue(snap),
+      addDoc:     vi.fn(), updateDoc: vi.fn(), deleteDoc: vi.fn(),
+      doc:        vi.fn(), onSnapshot: vi.fn(),
+    };
+
+    const adapter = new FirebaseAdapter({ db: {}, collection: 'events', adapterFns: fns });
+    const events = await adapter.loadRange(S, E);
+
+    expect(fns.getDocs).toHaveBeenCalledOnce();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.id).toBe('doc-1');
+  });
+
+  it('createEvent calls addDoc and returns mapped event', async () => {
+    const fns = {
+      collection: vi.fn().mockReturnValue('colRef'),
+      query: vi.fn(), where: vi.fn(), orderBy: vi.fn(),
+      getDocs: vi.fn(),
+      addDoc:     vi.fn().mockResolvedValue({ id: 'new-id' }),
+      updateDoc: vi.fn(), deleteDoc: vi.fn(), doc: vi.fn(), onSnapshot: vi.fn(),
+    };
+    const adapter = new FirebaseAdapter({ db: {}, collection: 'events', adapterFns: fns });
+    const created = await adapter.createEvent!(ev());
+    expect(fns.addDoc).toHaveBeenCalledOnce();
+    expect(created.id).toBe('new-id');
+  });
+
+  it('updateEvent calls updateDoc', async () => {
+    const fns = {
+      collection: vi.fn(), query: vi.fn(), where: vi.fn(), orderBy: vi.fn(),
+      getDocs: vi.fn(), addDoc: vi.fn(),
+      updateDoc:  vi.fn().mockResolvedValue(undefined),
+      deleteDoc:  vi.fn(),
+      doc:        vi.fn().mockReturnValue('docRef'),
+      onSnapshot: vi.fn(),
+    };
+    const adapter = new FirebaseAdapter({ db: {}, collection: 'events', adapterFns: fns });
+    await adapter.updateEvent!('ev-1', { title: 'Updated' });
+    expect(fns.updateDoc).toHaveBeenCalledWith('docRef', expect.objectContaining({ title: 'Updated' }));
+  });
+
+  it('deleteEvent calls deleteDoc', async () => {
+    const fns = {
+      collection: vi.fn(), query: vi.fn(), where: vi.fn(), orderBy: vi.fn(),
+      getDocs: vi.fn(), addDoc: vi.fn(), updateDoc: vi.fn(),
+      deleteDoc:  vi.fn().mockResolvedValue(undefined),
+      doc:        vi.fn().mockReturnValue('docRef'),
+      onSnapshot: vi.fn(),
+    };
+    const adapter = new FirebaseAdapter({ db: {}, collection: 'events', adapterFns: fns });
+    await adapter.deleteEvent!('ev-1');
+    expect(fns.deleteDoc).toHaveBeenCalledWith('docRef');
+  });
+
+  it('subscribe wires onSnapshot and maps changes', () => {
+    const unsub = vi.fn();
+    const fns = {
+      collection: vi.fn().mockReturnValue('colRef'),
+      query:      vi.fn().mockReturnValue('query'),
+      where:      vi.fn(), orderBy: vi.fn(), getDocs: vi.fn(), addDoc: vi.fn(),
+      updateDoc: vi.fn(), deleteDoc: vi.fn(), doc: vi.fn(),
+      onSnapshot: vi.fn().mockImplementation((_q, cb) => {
+        cb({
+          docChanges: () => [
+            { type: 'added',    doc: docSnap('d1', ev() as unknown as Record<string, unknown>) },
+            { type: 'modified', doc: docSnap('d2', ev({ id: 'd2' }) as unknown as Record<string, unknown>) },
+            { type: 'removed',  doc: docSnap('d3', {}) },
+          ],
+        });
+        return unsub;
+      }),
+    };
+    const adapter = new FirebaseAdapter({ db: {}, collection: 'events', adapterFns: fns });
+    const changes: AdapterChange[] = [];
+    const stop = adapter.subscribe!(c => changes.push(c));
+    expect(changes).toHaveLength(3);
+    expect(changes[0]!.type).toBe('insert');
+    expect(changes[1]!.type).toBe('update');
+    expect(changes[2]!.type).toBe('delete');
+    stop();
+    expect(unsub).toHaveBeenCalled();
+  });
+});
+
+// ─── PocketBaseAdapter ────────────────────────────────────────────────────────
+
+describe('PocketBaseAdapter', () => {
+  function makePb() {
+    const col = {
+      getList:     vi.fn().mockResolvedValue({ items: [{ ...ev(), id: 'pb-1' }] }),
+      create:      vi.fn().mockResolvedValue({ ...ev(), id: 'pb-new' }),
+      update:      vi.fn().mockResolvedValue({ ...ev(), id: 'pb-1', title: 'Updated' }),
+      delete:      vi.fn().mockResolvedValue(true),
+      subscribe:   vi.fn().mockResolvedValue(vi.fn()),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
+    };
+    const pb = { collection: vi.fn().mockReturnValue(col) };
+    return { pb, col };
+  }
+
+  it('implements CalendarAdapter', () => {
+    const { pb } = makePb();
+    const adapter: CalendarAdapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    expect(typeof adapter.loadRange).toBe('function');
+    expect(typeof adapter.createEvent).toBe('function');
+    expect(typeof adapter.subscribe).toBe('function');
+  });
+
+  it('loadRange calls getList with date filter', async () => {
+    const { pb, col } = makePb();
+    const adapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    const events = await adapter.loadRange(S, E);
+    expect(col.getList).toHaveBeenCalledWith(1, 500, expect.objectContaining({
+      filter: expect.stringContaining('start >='),
+    }));
+    expect(events).toHaveLength(1);
+  });
+
+  it('extraFilter is ANDed with date range', async () => {
+    const { pb, col } = makePb();
+    const adapter = new PocketBaseAdapter({
+      pb, collection: 'events', extraFilter: 'org = "acme"',
+    });
+    await adapter.loadRange(S, E);
+    const filter: string = col.getList.mock.calls[0][2].filter;
+    expect(filter).toContain('org = "acme"');
+    expect(filter).toContain('start >=');
+  });
+
+  it('createEvent calls pb.create', async () => {
+    const { pb, col } = makePb();
+    const adapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    const created = await adapter.createEvent!(ev());
+    expect(col.create).toHaveBeenCalledOnce();
+    expect(created.id).toBe('pb-new');
+  });
+
+  it('updateEvent calls pb.update with id', async () => {
+    const { pb, col } = makePb();
+    const adapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    const updated = await adapter.updateEvent!('pb-1', { title: 'Updated' });
+    expect(col.update).toHaveBeenCalledWith('pb-1', expect.objectContaining({ title: 'Updated' }));
+    expect(updated.title).toBe('Updated');
+  });
+
+  it('deleteEvent calls pb.delete', async () => {
+    const { pb, col } = makePb();
+    const adapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    await adapter.deleteEvent!('pb-1');
+    expect(col.delete).toHaveBeenCalledWith('pb-1');
+  });
+
+  it('subscribe wires pb.subscribe and maps actions', async () => {
+    let handler: ((e: { action: string; record: Record<string, unknown> }) => void) | undefined;
+    const unsubFn = vi.fn();
+    const pb = {
+      collection: vi.fn().mockReturnValue({
+        subscribe:   vi.fn().mockImplementation((_topic, cb) => {
+          handler = cb;
+          return Promise.resolve(unsubFn);
+        }),
+        unsubscribe: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
+
+    const adapter = new PocketBaseAdapter({ pb, collection: 'events' });
+    const changes: AdapterChange[] = [];
+    adapter.subscribe!(c => changes.push(c));
+
+    // allow the subscribe promise to resolve
+    await Promise.resolve();
+
+    handler!({ action: 'create', record: { ...ev(), id: 'r1' } });
+    handler!({ action: 'update', record: { ...ev(), id: 'r2' } });
+    handler!({ action: 'delete', record: { id: 'r3' } as Record<string, unknown> });
+
+    expect(changes[0]!.type).toBe('insert');
+    expect(changes[1]!.type).toBe('update');
+    expect(changes[2]!.type).toBe('delete');
+    expect((changes[2] as { type: 'delete'; id: string }).id).toBe('r3');
   });
 });

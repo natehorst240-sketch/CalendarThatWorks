@@ -117,6 +117,12 @@ export type { ICSAdapterOptions }  from './adapters/ICSAdapter';
 export { WebSocketAdapter } from './adapters/WebSocketAdapter';
 export type { WebSocketAdapterOptions } from './adapters/WebSocketAdapter';
 
+export { FirebaseAdapter }   from './adapters/FirebaseAdapter';
+export type { FirebaseAdapterOptions }   from './adapters/FirebaseAdapter';
+
+export { PocketBaseAdapter } from './adapters/PocketBaseAdapter';
+export type { PocketBaseAdapterOptions } from './adapters/PocketBaseAdapter';
+
 // ── Sync infrastructure ───────────────────────────────────────────────────────
 // Full primitives are also available from 'works-calendar/api/v1/sync'.
 export { SyncQueue, SyncManager, clientWins, serverWins, latestWins, manualResolve, resolverFor, ConflictError } from './sync/index';

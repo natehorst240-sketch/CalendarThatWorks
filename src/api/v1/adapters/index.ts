@@ -2,7 +2,8 @@
  * CalendarEngine v1 — integration adapters barrel.
  *
  * Import adapters from here:
- *   import { RestAdapter, SupabaseAdapter, ICSAdapter, WebSocketAdapter } from 'works-calendar/api/v1/adapters';
+ *   import { RestAdapter, SupabaseAdapter, ICSAdapter, WebSocketAdapter,
+ *            FirebaseAdapter, PocketBaseAdapter } from 'works-calendar/api/v1/adapters';
  *   import type { CalendarAdapter, AdapterChange } from 'works-calendar/api/v1/adapters';
  */
 export type {
@@ -24,3 +25,9 @@ export type { ICSAdapterOptions } from './ICSAdapter';
 
 export { WebSocketAdapter } from './WebSocketAdapter';
 export type { WebSocketAdapterOptions } from './WebSocketAdapter';
+
+export { FirebaseAdapter } from './FirebaseAdapter';
+export type { FirebaseAdapterOptions } from './FirebaseAdapter';
+
+export { PocketBaseAdapter } from './PocketBaseAdapter';
+export type { PocketBaseAdapterOptions } from './PocketBaseAdapter';
