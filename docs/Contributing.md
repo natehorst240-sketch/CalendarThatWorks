@@ -6,10 +6,18 @@ Thanks for contributing to WorksCalendar.
 
 ```bash
 npm install
-npm run dev
-npm run examples
-npm test
+npm run dev      # start the interactive demo at localhost:5173
+npm run examples # run the example suite
+npm test         # run the unit test suite
 ```
+
+`npm run dev` serves `demo/main.tsx` via Vite — a minimal React app that
+mounts `WorksCalendar` with drag enabled and seeded events so you can test
+UI changes without publishing the package.
+
+The `demo/` directory is **never published to npm**. Only `dist/`,
+`README.md`, and `LICENSE` are included in the npm package (controlled by
+the `files` field in `package.json`).
 
 ## Recommended workflow
 
