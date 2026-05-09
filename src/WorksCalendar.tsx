@@ -31,13 +31,12 @@ import { normalizeEvents }    from './core/eventModel';
 import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import { fromLegacyEvents }   from './core/engine/adapters/fromLegacyEvents.ts';
 import type { LegacyEvent }  from './core/engine/adapters/fromLegacyEvents.ts';
-import { occurrenceToLegacy, toLegacyEvent } from './core/engine/adapters/toLegacyEvents.ts';
-import { validateOperation } from './core/engine/validation/validateOperation.ts';
-import { evaluateConflicts } from './core/conflictEngine.ts';
-import type { ConflictEvent, ConflictRule } from './core/conflictEngine.ts';
 import type { OperationContext } from './core/engine/validation/validationTypes';
+import { validateOperation } from './core/engine/validation/validateOperation.ts';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import { useCalendarEngine } from './hooks/useCalendarEngine';
+import { useEventMutations } from './hooks/useEventMutations';
+import { useScheduleMutations } from './hooks/useScheduleMutations';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
 import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
@@ -76,19 +75,6 @@ import ImportZone             from './ui/ImportZone';
 import ScheduleTemplateDialog from './ui/ScheduleTemplateDialog';
 import AvailabilityForm        from './ui/AvailabilityForm';
 import ScheduleEditorForm      from './ui/ScheduleEditorForm';
-import { detectShiftConflicts, buildOpenShiftEvent } from './core/scheduleOverlap';
-import {
-  buildCoverageMeta,
-  buildOpenShiftPatch,
-  buildShiftStatusMeta,
-  findLinkedMirroredCoverage,
-  findLinkedOpenShifts,
-  resolveEventId,
-} from './core/scheduleMutations';
-import {
-  normalizeScheduleKind,
-  SCHEDULE_KINDS,
-} from './core/scheduleModel';
 import { createId } from './core/createId';
 import ValidationAlert          from './ui/ValidationAlert';
 import InlineEventEditor        from './ui/InlineEventEditor';
@@ -1512,6 +1498,35 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
 
   useImperativeHandle(ref, () => api, [api]);
 
+  // ── Event mutations ──────────────────────────────────────────────────────
+  const {
+    emitEventSave,
+    checkEventConflicts,
+    handleEventSave,
+    handleEventMove,
+    handleEventResize,
+    handleEventGroupChange,
+    handleEventDelete,
+    handleInlineSave,
+    handleInlineDelete,
+  } = useEventMutations({
+    applyEngineOp,
+    applyWithRecurringCheck,
+    getSavedEventPayload,
+    engine,
+    engineVer,
+    expandedEvents,
+    onEventSave,
+    onEventMove,
+    onEventResize,
+    onEventDelete,
+    onEventGroupChange,
+    ownerConfig: ownerCfg.config,
+    inlineEditTarget,
+    setFormEvent,
+    setInlineEditTarget,
+  });
+
   // ── Callbacks ────────────────────────────────────────────────────────────
   const handleEventClick = useCallback((ev: LooseValue) => {
     if (editModeRef.current) {
@@ -1527,531 +1542,29 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     onEventClickProp?.(ev);
   }, [onEventClickProp]);
 
-  const emitEventSave = useCallback((eventId: LooseValue, fallbackEvent: LooseValue = null, fallbackPatch: LooseValue = null) => {
-    const savedPayload = getSavedEventPayload(eventId, fallbackEvent, fallbackPatch);
-    if (savedPayload) onEventSave?.(savedPayload);
-  }, [getSavedEventPayload, onEventSave]);
+  // ── Schedule mutations ───────────────────────────────────────────────────
+  const {
+    handleShiftStatusChange,
+    handleCoverageAssign,
+    handleEmployeeAction,
+    handleAvailabilitySave,
+    handleScheduleEditorSave,
+  } = useScheduleMutations({
+    applyEngineOp,
+    emitEventSave,
+    getSavedEventPayload,
+    expandedEvents,
+    configuredEmployees,
+    onEventDelete,
+    onAvailabilitySave,
+    onScheduleSave,
+    onEmployeeAction: onEmployeeAction as LooseValue,
+    ownerConfig: ownerCfg.config,
+    setAvailabilityState,
+    setScheduleEditorState,
+  });
 
-  const handleShiftStatusChange = useCallback((ev: LooseValue, status: LooseValue) => {
-    const eventId = resolveEventId(ev);
-    if (!eventId) return;
-    const linkedOpenShifts = findLinkedOpenShifts(expandedEvents, ev);
-    const primaryOpenShift = linkedOpenShifts[0] ?? null;
-    const linkedMirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
 
-    const newMeta = buildShiftStatusMeta(ev, { status, openShiftId: resolveEventId(primaryOpenShift) });
-    applyEngineOp(
-      { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
-      () => emitEventSave(eventId, ev, { meta: newMeta }),
-    );
-
-    if (!status) {
-      linkedOpenShifts.forEach((openEv) => {
-        const openId = resolveEventId(openEv);
-        if (!openId) return;
-        applyEngineOp({ type: 'delete', id: openId, source: 'api' }, () => onEventDelete?.(openId));
-      });
-
-      linkedMirroredCoverage.forEach((coverEv) => {
-        const coverId = resolveEventId(coverEv);
-        if (!coverId) return;
-        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => onEventDelete?.(coverId));
-      });
-    }
-  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete]);
-
-  const handleCoverageAssign = useCallback((ev: LooseValue, coveringEmployeeId: LooseValue) => {
-    const eventId = resolveEventId(ev);
-    if (!eventId) return;
-    const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
-
-    const openShiftCandidates = findLinkedOpenShifts(expandedEvents, ev);
-    const primaryOpenShift = openShiftCandidates[0] ?? null;
-    const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
-
-    if (!normalizedCoveringEmployeeId) {
-      const clearedMeta = {
-        ...(ev.meta ?? {}),
-        coveredBy: null as LooseValue,
-      };
-      applyEngineOp(
-        { type: 'update', id: eventId, patch: { meta: clearedMeta }, source: 'api' },
-        () => emitEventSave(eventId, ev, { meta: clearedMeta }),
-      );
-
-      if (primaryOpenShift) {
-        const openId = resolveEventId(primaryOpenShift);
-        if (openId) {
-          const openMeta = {
-            ...(primaryOpenShift.meta ?? {}),
-            coveredBy: null as LooseValue,
-            status: 'open',
-          };
-          applyEngineOp(
-            { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
-            () => emitEventSave(openId, primaryOpenShift, { meta: openMeta }),
-          );
-        }
-      }
-
-      mirroredCoverage.forEach((coverEv) => {
-        const coverId = resolveEventId(coverEv);
-        if (!coverId) return;
-        applyEngineOp({ type: 'delete', id: coverId, source: 'api' }, () => onEventDelete?.(coverId));
-      });
-      return;
-    }
-
-    // 1. Mark the shift as covered
-    const newMeta = buildCoverageMeta(ev, normalizedCoveringEmployeeId, resolveEventId(primaryOpenShift));
-    applyEngineOp(
-      { type: 'update', id: eventId, patch: { meta: newMeta }, source: 'api' },
-      () => emitEventSave(eventId, ev, { meta: newMeta }),
-    );
-
-    // 2. If there is a linked open-shift record, mark it as covered too
-    if (primaryOpenShift) {
-      const [openShiftEv, ...duplicateOpenShifts] = openShiftCandidates;
-      if (openShiftEv === undefined) return;
-      duplicateOpenShifts.forEach((duplicateOpenShift) => {
-        const duplicateId = resolveEventId(duplicateOpenShift);
-        if (!duplicateId) return;
-        applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
-      });
-      const openMeta = {
-        ...(openShiftEv.meta ?? {}),
-        coveredBy: normalizedCoveringEmployeeId,
-        status:    'covered',
-      };
-      const openId = resolveEventId(openShiftEv);
-      if (openId) {
-        applyEngineOp(
-          { type: 'update', id: openId, patch: { meta: openMeta }, source: 'api' },
-          () => emitEventSave(openId, openShiftEv, { meta: openMeta }),
-        );
-      }
-    }
-
-    mirroredCoverage.slice(1).forEach((duplicateEv) => {
-      const duplicateId = resolveEventId(duplicateEv);
-      if (!duplicateId) return;
-      applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
-    });
-
-    // 3. Create or update the mirrored on-call event on the covering employee's row.
-    //    Clamp the mirrored event to the PTO request window (meta.requestStart/End)
-    //    when available, so the coverage bar only spans the days actually needing
-    //    coverage — not the entire underlying shift.
-    const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
-    const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
-    const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
-    const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
-    const requestEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : shiftEnd;
-    const mirrorStart = requestStart > shiftStart ? requestStart : shiftStart;
-    const mirrorEnd   = requestEnd   < shiftEnd   ? requestEnd   : shiftEnd;
-    const mirroredPatch = {
-      title:    `Covering: ${ev.title ?? 'Shift'}`,
-      start:    mirrorStart,
-      end:      mirrorEnd,
-      category: onCallCat,
-      resource: normalizedCoveringEmployeeId,
-      meta: {
-        kind:              SCHEDULE_KINDS.COVERING,
-        sourceShiftId:     eventId,
-        coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
-      },
-    };
-    const existingMirror = mirroredCoverage[0];
-    if (existingMirror) {
-      const mirrorId = resolveEventId(existingMirror);
-      if (mirrorId) {
-        applyEngineOp(
-          { type: 'update', id: mirrorId, patch: mirroredPatch, source: 'api' },
-          () => emitEventSave(mirrorId, existingMirror, mirroredPatch),
-        );
-      }
-    } else {
-      const mirrorId = createId('cover');
-      applyEngineOp(
-        { type: 'create', event: { ...mirroredPatch, id: mirrorId }, source: 'api' },
-        () => emitEventSave(mirrorId, mirroredPatch, { id: mirrorId }),
-      );
-    }
-  }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerCfg.config?.['onCallCategory']]);
-
-  /**
-   * Handle employee action card clicks.
-   * - 'pto' | 'unavailable' | 'availability' → opens AvailabilityForm
-   * - 'schedule' → opens ScheduleEditorForm
-   * All actions also bubble to the external onEmployeeAction prop.
-   */
-  const handleEmployeeAction = useCallback((empId: LooseValue, actionInput: LooseValue) => {
-    const emp = configuredEmployees.find((e: LooseValue) => String(e.id) === String(empId)) ?? { id: empId, name: empId };
-    const actionPayload = typeof actionInput === 'string'
-      ? { type: actionInput }
-      : (actionInput ?? {});
-    const action = actionPayload.type;
-    if (!action) return;
-    const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
-    if (AVAILABILITY_ACTIONS.has(action)) {
-      const initialEvent = action === 'availability'
-        ? expandedEvents
-          .filter((ev: LooseValue) => {
-            const evKind = normalizeScheduleKind(ev?.kind ?? ev?.meta?.kind);
-            const evCat  = String(ev?.category ?? '').toLowerCase();
-            const resourceId = String(ev?.resource ?? ev?.resourceId ?? ev?.employeeId ?? '');
-            return resourceId === String(empId) && (evKind === 'availability' || evCat === 'availability');
-          })
-          .sort((a: LooseValue, b: LooseValue) => {
-            const aStart = a?.start ? new Date(a.start).getTime() : 0;
-            const bStart = b?.start ? new Date(b.start).getTime() : 0;
-            return bStart - aStart;
-          })
-          .map((ev: LooseValue) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
-        : actionPayload.sourceShift
-          ? {
-            title: action === 'pto' ? 'PTO' : 'Unavailable',
-            start: actionPayload.sourceShift.start,
-            end: actionPayload.sourceShift.end,
-            allDay: actionPayload.sourceShift.allDay ?? true,
-            meta: actionPayload.sourceShift.meta ?? {},
-          }
-        : null;
-      const initialStart = actionPayload.sourceShift?.start
-        ? new Date(actionPayload.sourceShift.start)
-        : new Date();
-      setAvailabilityState({ emp, kind: action, start: initialStart, initialEvent });
-    } else if (action === 'schedule') {
-      setScheduleEditorState({ emp, start: new Date() });
-    }
-    onEmployeeAction?.(empId, actionInput);
-  }, [configuredEmployees, expandedEvents, onEmployeeAction]);
-
-  /** Save an availability/PTO event through the engine then notify the host.
-   *  Also runs overlap detection: any uncovered shift that overlaps the PTO/
-   *  unavailable window automatically gets an open-shift event created. */
-  const handleAvailabilitySave = useCallback((availEv: LooseValue) => {
-    const existingAvailability = expandedEvents.find(
-      (ev: LooseValue) => String(ev._eventId ?? ev.id) === String(availEv.id),
-    );
-    const availabilityId = existingAvailability
-      ? String(existingAvailability._eventId ?? existingAvailability.id)
-      : String(availEv.id ?? createId('avail'));
-    const saveOp = existingAvailability
-      ? {
-        type: 'update',
-        id: availabilityId,
-        patch: {
-          title: availEv.title,
-          start: availEv.start,
-          end: availEv.end,
-          allDay: availEv.allDay,
-          category: availEv.category,
-          color: availEv.color,
-          resource: availEv.resource,
-          resourceId: availEv.resource,
-          meta: availEv.meta,
-        },
-        source: 'api',
-      }
-      : { type: 'create', event: { ...availEv, id: availabilityId }, source: 'api' };
-
-    // 1. Create or update the availability event itself
-    applyEngineOp(saveOp, () => {
-      const savedPayload = getSavedEventPayload(availabilityId, availEv, { id: availabilityId });
-      if (savedPayload) onAvailabilitySave?.(savedPayload);
-    });
-
-    // 2. Detect overlapping shifts and auto-create open-shift records
-    const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
-    if (isLeave) {
-      const onCallCat = ownerCfg.config?.['onCallCategory'] ?? 'on-call';
-      const { conflictingEvents } = detectShiftConflicts({
-        employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
-        requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
-        requestEnd:    availEv.end   instanceof Date ? availEv.end   : new Date(availEv.end),
-        allEvents:     expandedEvents,
-        onCallCategory: onCallCat,
-      });
-      conflictingEvents.forEach(shiftEv => {
-        const shiftId = shiftEv._eventId ?? String(shiftEv.id ?? '');
-        if (!shiftId) return;
-        const existingOpenShifts = findLinkedOpenShifts(expandedEvents, shiftEv);
-        existingOpenShifts.slice(1).forEach((duplicateOpenShift) => {
-          const duplicateId = resolveEventId(duplicateOpenShift);
-          if (!duplicateId) return;
-          applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
-        });
-
-        const openShiftPatch = buildOpenShiftPatch(existingOpenShifts[0], shiftEv, availEv.kind);
-        const openShift = existingOpenShifts[0]
-          ? { ...existingOpenShifts[0], ...openShiftPatch }
-          : buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
-
-        if (existingOpenShifts[0]) {
-          const openId = resolveEventId(existingOpenShifts[0]);
-          if (openId) {
-            applyEngineOp(
-              { type: 'update', id: openId, patch: openShiftPatch, source: 'api' },
-              () => emitEventSave(openId, existingOpenShifts[0], openShiftPatch),
-            );
-          }
-        } else {
-          applyEngineOp(
-            { type: 'create', event: openShift, source: 'api' },
-            () => emitEventSave(openShift['id'], openShift),
-          );
-        }
-
-        // Mark the original shift as needing coverage
-        const updatedMeta = {
-          ...(shiftEv.meta ?? {}),
-          shiftStatus:  availEv.kind,   // 'pto' | 'unavailable'
-          openShiftId:  openShift['id'],
-          coveredBy:    null as LooseValue,
-          requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
-          requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
-        };
-        applyEngineOp(
-          { type: 'update', id: shiftId, patch: { meta: updatedMeta }, source: 'api' },
-          () => emitEventSave(shiftId, shiftEv, { meta: updatedMeta }),
-        );
-      });
-    }
-
-    setAvailabilityState(null);
-  }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerCfg.config?.['onCallCategory']]);
-
-  /** Save one or more shift events (from ScheduleEditorForm) through the engine. */
-  const handleScheduleEditorSave = useCallback((shiftEvOrArr: LooseValue) => {
-    const events = Array.isArray(shiftEvOrArr) ? shiftEvOrArr : [shiftEvOrArr];
-    events.forEach((ev: LooseValue, index: LooseValue) => {
-      const scheduleId = String(ev.id ?? createId(`shift-${index}`));
-      applyEngineOp(
-        { type: 'create', event: { ...ev, id: scheduleId }, source: 'api' },
-        () => {
-          const savedPayload = getSavedEventPayload(scheduleId, ev, { id: scheduleId });
-          if (savedPayload) onScheduleSave?.(savedPayload);
-        },
-      );
-    });
-    setScheduleEditorState(null);
-  }, [applyEngineOp, getSavedEventPayload, onScheduleSave]);
-
-  // All handlers run through applyEngineOp before touching host state.
-  // applyWithRecurringCheck is provided by useCalendarEngine.
-
-  // Pre-save conflict check for EventForm. Builds an `evaluateConflicts`
-  // input from the live event set and the owner-configured rule set.
-  // Returns null when conflicts are disabled or no rules are configured
-  // so the form takes the legacy fast path.
-  //
-  // Windowing: do NOT use `expandedEvents` here — that array is scoped
-  // to the currently-rendered range (current month/week/day), so a user
-  // who edits an event's date into another month would miss every
-  // conflict outside the visible window and silently bypass hard rules.
-  // Instead, re-expand the engine over a window that hugs the proposed
-  // event's [start, end] interval, padded by the largest min-rest rule
-  // so neighboring shifts inside the rest threshold are still seen.
-  const checkEventConflicts = useCallback((proposed: LooseValue) => {
-    const conflictsCfg = ownerCfg.config?.['conflicts'] ?? {};
-    const rules = (conflictsCfg.rules ?? []) as ConflictRule[];
-    const enabled = conflictsCfg.enabled !== false;
-    if (!enabled || rules.length === 0) return null;
-
-    const proposedStart = proposed.start instanceof Date ? proposed.start : new Date(proposed.start);
-    const proposedEnd   = proposed.end   instanceof Date ? proposed.end   : new Date(proposed.end);
-    if (Number.isNaN(proposedStart.getTime()) || Number.isNaN(proposedEnd.getTime())) {
-      return null;
-    }
-
-    // Largest min-rest minutes across the rule set sets the buffer; fall
-    // back to 24h so resource-overlap / category-mutex with adjacent
-    // events still surfaces even without a min-rest rule.
-    const DAY_MS = 24 * 60 * 60 * 1000;
-    const restBufferMs = rules.reduce((max, r) => {
-      if (r.type === 'min-rest' && typeof r.minutes === 'number') {
-        return Math.max(max, r.minutes * 60_000);
-      }
-      return max;
-    }, DAY_MS);
-
-    const windowStart = new Date(proposedStart.getTime() - restBufferMs);
-    const windowEnd   = new Date(proposedEnd.getTime()   + restBufferMs);
-    const events = engine.getOccurrencesInRange(windowStart, windowEnd).map(occurrenceToLegacy);
-
-    return evaluateConflicts({
-      proposed: proposed as ConflictEvent,
-      events:   events as unknown as ConflictEvent[],
-      rules,
-      enabled,
-    });
-  }, [ownerCfg.config, engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues the engine's mutation count
-
-  const handleEventSave = useCallback((rawEv: LooseValue) => {
-    const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);
-    const newEnd   = rawEv.end   instanceof Date ? rawEv.end   : new Date(rawEv.end);
-    // Expanded recurring occurrences from the engine carry _eventId.
-    // Legacy recurring shapes may only carry _seriesId.
-    const recurringMasterId = rawEv._eventId ?? rawEv._seriesId ?? null;
-    // Fallback to id for non-recurring/legacy event shapes from the EventForm.
-    const eventId  = recurringMasterId ?? (rawEv.id ? String(rawEv.id) : null);
-
-    // Defensive RRULE preservation: if a recurring edit payload arrives with a
-    // missing RRULE (e.g. an occurrence shape that lost series fields), keep
-    // the series master cadence instead of accidentally stripping recurrence.
-    const existingMaster = recurringMasterId ? engine.state.events.get(String(recurringMasterId)) : null;
-    const resolvedRrule = rawEv.rrule ?? existingMaster?.rrule ?? null;
-
-    if (!eventId) {
-      // New event — no scope picker needed.
-      const createdId = String(rawEv.id ?? createId('event'));
-      const op = {
-        type:  'create',
-        event: {
-          id:             createdId,
-          title:          rawEv.title      ?? '(untitled)',
-          start:          newStart,
-          end:            newEnd,
-          allDay:         rawEv.allDay     ?? false,
-          resourceId:     rawEv.resource   ?? null,
-          // Pool-seeded drafts carry resourcePoolId through; the engine
-          // resolves it to a concrete resourceId at submit (#212).
-          resourcePoolId: rawEv.resourcePoolId ?? null,
-          category:       rawEv.category   ?? null,
-          color:          rawEv.color      ?? null,
-          status:         rawEv.status     ?? 'confirmed',
-          rrule:          resolvedRrule,
-          exdates:        rawEv.exdates    ?? [],
-          meta:           rawEv.meta       ?? {},
-        },
-        source: 'form',
-      };
-      applyEngineOp(op, (result: LooseValue) => {
-        // applyCreate generates its own engine id, so look the saved
-        // record up by the id the engine actually assigned — otherwise
-        // pool-resolved events fall through to the fallback payload,
-        // which still carries resource: null from the form (#212).
-        const createdChange = result?.changes?.find((c: any) => c.type === 'created');
-        const engineId = createdChange?.event?.id ?? createdId;
-        const savedPayload = getSavedEventPayload(engineId, rawEv, { id: engineId });
-        if (savedPayload) onEventSave?.(savedPayload);
-        setFormEvent(null);
-      });
-      return;
-    }
-
-    // Existing event — may be a recurring occurrence.
-    applyWithRecurringCheck(
-      rawEv,
-      (scope: LooseValue) => ({
-        type:  'update',
-        id:    eventId,
-        patch: {
-          title:      rawEv.title      ?? '(untitled)',
-          start:      newStart,
-          end:        newEnd,
-          allDay:     rawEv.allDay     ?? false,
-          resourceId: rawEv.resource   ?? null,
-          category:   rawEv.category   ?? null,
-          color:      rawEv.color      ?? null,
-          status:     rawEv.status     ?? 'confirmed',
-          rrule:      resolvedRrule,
-        },
-        source: 'form',
-      }),
-      (result: LooseValue) => {
-        // For scoped recurring ops the engine may produce multiple changes
-        // (e.g. updated master + created detached occurrence). Emit onEventSave
-        // for every changed/created event so the host stays fully in sync.
-        if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
-            if (change.type === 'created') {
-              onEventSave?.(toLegacyEvent(change.event) as any);
-            } else if (change.type === 'updated') {
-              onEventSave?.(toLegacyEvent(change.after) as any);
-            }
-          });
-        } else {
-          const savedPayload = getSavedEventPayload(eventId, rawEv);
-          if (savedPayload) onEventSave?.(savedPayload);
-        }
-        setFormEvent(null);
-      },
-      'Edit',
-    );
-  }, [applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, onEventSave]);
-
-  const handleEventMove = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
-    const raw = ev._raw ?? ev;
-    const id  = ev._eventId ?? String(ev.id);
-    applyWithRecurringCheck(
-      ev,
-      (scope: LooseValue) => ({ type: 'move', id, newStart, newEnd, source: 'drag' }),
-      (result: LooseValue) => {
-        if (onEventMove) {
-          onEventMove(ev, newStart, newEnd);
-        } else if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
-            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
-            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
-          });
-        } else {
-          const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
-          if (savedPayload) onEventSave?.(savedPayload);
-        }
-      },
-      'Move',
-    );
-  }, [applyWithRecurringCheck, getSavedEventPayload, onEventMove, onEventSave]);
-
-  const handleEventResize = useCallback((ev: LooseValue, newStart: LooseValue, newEnd: LooseValue) => {
-    const raw = ev._raw ?? ev;
-    const id  = ev._eventId ?? String(ev.id);
-    applyWithRecurringCheck(
-      ev,
-      (scope: LooseValue) => ({ type: 'resize', id, newStart, newEnd, source: 'resize' }),
-      (result: LooseValue) => {
-        if (onEventResize) {
-          onEventResize(ev, newStart, newEnd);
-        } else if (result?.changes?.length > 1) {
-          result.changes.forEach((change: LooseValue) => {
-            if (change.type === 'created') onEventSave?.(toLegacyEvent(change.event) as any);
-            else if (change.type === 'updated') onEventSave?.(toLegacyEvent(change.after) as any);
-          });
-        } else {
-          const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
-          if (savedPayload) onEventSave?.(savedPayload);
-        }
-      },
-      'Resize',
-    );
-  }, [applyWithRecurringCheck, getSavedEventPayload, onEventResize, onEventSave]);
-
-  const handleEventGroupChange = useCallback((ev: LooseValue, patch: LooseValue) => {
-    if (!patch || typeof patch !== 'object') return;
-    const raw = ev._raw ?? ev;
-    const id  = ev._eventId ?? String(ev.id);
-    applyEngineOp(
-      { type: 'group-change', id, patch, source: 'drag' },
-      () => {
-        if (onEventGroupChange) onEventGroupChange(ev, patch);
-        else emitEventSave(id, raw, patch);
-      },
-    );
-  }, [applyEngineOp, emitEventSave, onEventGroupChange]);
-
-  const handleEventDelete = useCallback((id: LooseValue) => {
-    // Find the event so we can check if it's recurring.
-    const ev      = expandedEvents.find((e: LooseValue) => String(e.id) === String(id)) ?? { id };
-    const eventId = ev._eventId ?? String(id);
-    applyWithRecurringCheck(
-      ev,
-      (scope: LooseValue) => ({ type: 'delete', id: eventId, source: 'form' }),
-      () => { onEventDelete?.(id); setFormEvent(null); },
-      'Delete',
-    );
-  }, [applyWithRecurringCheck, expandedEvents, onEventDelete]);
 
   const handleImport = useCallback((imported: LooseValue, meta: LooseValue) => {
     onImport?.(imported);
@@ -2276,38 +1789,6 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     }
     setFormEvent(formEv);
   }, [engine]);
-
-  /** Save quick display customizations from InlineEventEditor. */
-  const handleInlineSave = useCallback((patch: LooseValue) => {
-    const ev = inlineEditTarget?.event;
-    if (!ev) return;
-    const eventId = ev._eventId ?? String(ev.id);
-    applyEngineOp({
-      type:   'update',
-      id:     eventId,
-      patch:  { title: patch.title, color: patch.color, meta: patch.meta },
-      source: 'inline-edit',
-    }, () => {
-      const savedPayload = getSavedEventPayload(eventId, ev, patch);
-      if (savedPayload) onEventSave?.(savedPayload);
-      setInlineEditTarget(null);
-    });
-  }, [inlineEditTarget, applyEngineOp, getSavedEventPayload, onEventSave]);
-
-  /** Delete an event directly from InlineEventEditor. Mirrors the
-   *  recurring-aware id resolution used by handleInlineSave: a recurring
-   *  occurrence's `id` is the per-occurrence key, while `_eventId` is the
-   *  series master id the engine knows. Using the wrong one makes the
-   *  delete a no-op and emits the wrong id upstream. */
-  const handleInlineDelete = useCallback(() => {
-    const ev = inlineEditTarget?.event;
-    if (!ev) return;
-    const eventId = ev._eventId ?? String(ev.id);
-    applyEngineOp({ type: 'delete', id: eventId, source: 'api' }, () => {
-      onEventDelete?.(eventId);
-      setInlineEditTarget(null);
-    });
-  }, [inlineEditTarget, applyEngineOp, onEventDelete]);
 
   // ── Context value ────────────────────────────────────────────────────────
   const ctxValue = useMemo((): CalendarContextValue => ({
