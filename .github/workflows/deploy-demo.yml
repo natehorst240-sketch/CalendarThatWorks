@@ -2,7 +2,7 @@ name: Deploy Demo to GitHub Pages
 
 on:
   push:
-    branches: ["claude/fluid-pill-drag-drop-bcoUE"]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
