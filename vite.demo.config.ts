@@ -6,7 +6,7 @@ const isProd = process.env.NODE_ENV === 'production';
 export default defineConfig({
   plugins: [react()],
   root: 'demo',
-  base: isProd ? '/calendarthatworks/' : '/',
+  base: isProd ? '/CalendarThatWorks/' : '/',
   build: {
     outDir: '../demo-dist',
     emptyOutDir: true,
