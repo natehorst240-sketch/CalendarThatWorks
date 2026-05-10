@@ -28,6 +28,8 @@ export function DayCellPillList({
   onEventMove, renderPill, containerClass, ghostNode,
 }: Props) {
   const isDraggingRef = useRef(false);
+  // Block one prop sync after a cross-container drop while the parent confirms the move.
+  const pendingDropRef = useRef(false);
 
   const [containerRef, localItems, setLocalItems] = useDragAndDrop<NormalizedEvent, HTMLDivElement>(
     events,
@@ -41,6 +43,7 @@ export function DayCellPillList({
       onDragEnd: ({ value }: DragEndEventData<NormalizedEvent>) => {
         isDraggingRef.current = false;
         if (isSameDay(value.start, day) || !onEventMove) return;
+        pendingDropRef.current = true;
         const durationMs = value.end.getTime() - value.start.getTime();
         const newStart = new Date(startOfDay(day));
         if (!value.allDay) {
@@ -52,9 +55,12 @@ export function DayCellPillList({
   );
 
   useEffect(() => {
-    if (!isDraggingRef.current) {
-      setLocalItems(events);
+    if (isDraggingRef.current) return;
+    if (pendingDropRef.current) {
+      pendingDropRef.current = false;
+      return;
     }
+    setLocalItems(events);
   }, [events, setLocalItems]);
 
   return (
