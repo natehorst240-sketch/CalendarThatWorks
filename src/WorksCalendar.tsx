@@ -16,7 +16,7 @@ import { useOwnerConfig }     from './hooks/useOwnerConfig';
 import { useFetchEvents }     from './hooks/useFetchEvents';
 import { useSourceStore }      from './hooks/useSourceStore';
 import { useSourceAggregator } from './hooks/useSourceAggregator';
-import { useSavedViews, deserializeFilters } from './hooks/useSavedViews';
+import { useSavedViews } from './hooks/useSavedViews';
 import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
 import type { SortConfig } from './types/grouping.ts';
 import { sortEvents } from './core/sortEngine.ts';
@@ -37,8 +37,12 @@ import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import { useCalendarEngine } from './hooks/useCalendarEngine';
 import { useEventMutations } from './hooks/useEventMutations';
 import { useScheduleMutations } from './hooks/useScheduleMutations';
+import { useGroupingSort } from './hooks/useGroupingSort';
+import { useCascadeFilters } from './hooks/useCascadeFilters';
+import { useSetupLanding } from './hooks/useSetupLanding';
+import { useSavedViewsManager } from './hooks/useSavedViewsManager';
 import RecurringScopeDialog   from './ui/RecurringScopeDialog';
-import SetupLanding, { type SetupLandingResult, type SetupRecipeId } from './ui/SetupLanding';
+import SetupLanding, { type SetupLandingResult } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
 import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
@@ -419,71 +423,6 @@ const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   createMax: 200,
 };
 
-/**
- * Translate a SetupLanding recipe id into a real Saved View payload.
- * These are the "plain-language starting points" the landing page offers
- * owners who don't want to build filters by hand. Returns null if the id
- * isn't recognised so future additions fail soft.
- */
-function buildRecipeSavedView(
-  id: SetupRecipeId,
-  weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6,
-): { name: string; filters: Record<string, unknown>; view: string | null; groupBy: GroupByInput | null } | null {
-  const emptyFilters = {
-    categories: new Set<string>(),
-    resources:  new Set<string>(),
-    sources:    new Set<string>(),
-    search:     '',
-    dateRange:  null as null | { start: string; end: string },
-  };
-
-  switch (id) {
-    case 'everything':
-      return { name: 'Show everything', filters: { ...emptyFilters }, view: null, groupBy: null };
-
-    case 'by-person':
-      return {
-        name:    'Group by person',
-        filters: { ...emptyFilters },
-        view:    'schedule',
-        groupBy: 'resource',
-      };
-
-    case 'by-type':
-      return {
-        name:    'Group by type',
-        filters: { ...emptyFilters },
-        view:    null,
-        groupBy: 'category',
-      };
-
-    case 'on-call':
-      return {
-        name:    'On-call only',
-        filters: { ...emptyFilters, categories: new Set(['on-call']) },
-        view:    null,
-        groupBy: null,
-      };
-
-    case 'this-week': {
-      const now      = new Date();
-      const weekStart = startOfWeek(now, { weekStartsOn });
-      const weekEnd   = endOfWeek(now, { weekStartsOn });
-      return {
-        name: 'This week only',
-        filters: {
-          ...emptyFilters,
-          dateRange: { start: weekStart.toISOString(), end: weekEnd.toISOString() },
-        },
-        view:    'week',
-        groupBy: null,
-      };
-    }
-
-    default:
-      return null;
-  }
-}
 let exportToExcelFn: LooseValue = null;
 
 async function exportVisibleEvents(events: LooseValue) {
@@ -812,113 +751,37 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
   // ── Admin-managed event options (categories) ─────────────────────────────
   const eventOptions = useEventOptions(calendarId);
 
-  // ── Saved view active state ──────────────────────────────────────────────
-  const [savedViewActiveId, setSavedViewActiveId] = useState<string | null>(null);
-  const [savedViewDirty,    setSavedViewDirty]    = useState(false);
-  const skipDirtyRef = useRef(false);
+  // ── Saved views store ────────────────────────────────────────────────────
   const savedViews = useSavedViews(calendarId);
 
   // ── Setup landing gate ──────────────────────────────────────────────────
-  // Shown before the calendar for first-time owners until they finish or
-  // skip the guide. The landing persists its decision via setup.completed;
-  // this session flag is just for "show on demand" re-opens later.
-  const [setupDismissed, setSetupDismissed] = useState(false);
-  const setupCompleted  = !!ownerCfg.config?.['setup']?.completed;
-  const shouldShowSetup = showSetupLanding && !setupCompleted && !setupDismissed;
-
-  const handleSetupSkip = useCallback(() => {
-    ownerCfg.updateConfig(prev => ({
-      ...prev,
-      setup: { ...(prev['setup'] ?? {}), completed: true },
-    }));
-    setSetupDismissed(true);
-  }, [ownerCfg.updateConfig]);
-
-  // Re-trigger the SetupLanding guide on demand. Setting completed=false
-  // alone is not enough because setupDismissed is a session flag set when
-  // the guide was last finished/skipped — both must be reset to put the
-  // user back on the landing page. Closing the config panel ensures the
-  // landing has the screen to itself.
-  const handleReopenSetup = useCallback(() => {
-    ownerCfg.updateConfig(prev => ({
-      ...prev,
-      setup: { ...(prev['setup'] ?? {}), completed: false },
-    }));
-    setSetupDismissed(false);
-    ownerCfg.closeConfig();
-  }, [ownerCfg.updateConfig, ownerCfg.closeConfig]);
-
-  const handleSetupFinish = useCallback((result: SetupLandingResult) => {
-    // 1) Persist title / theme / default view / team / setup.completed.
-    ownerCfg.updateConfig(prev => {
-      // Merge wizard-seeded assets without clobbering existing entries (so
-      // re-opening the wizard never blows away assets configured later).
-      const existingAssets = (Array.isArray(prev['assets']) ? prev['assets'] : []) as Array<{ id: string }>;
-      const existingIds = new Set(existingAssets.map(a => a.id));
-      const seededAssets = result.assetSeeds
-        .filter(seed => !existingIds.has(seed.id))
-        .map(seed => ({
-          id: seed.id,
-          label: seed.label,
-          meta: { assetTypeId: seed.assetTypeId },
-        }));
-
-      return {
-        ...prev,
-        title: result.calendarName,
-        setup: {
-          ...(prev['setup'] ?? {}),
-          completed: true,
-          preferredTheme: result.theme,
-        },
-        display: {
-          ...(prev['display'] ?? {}),
-          defaultView: result.defaultView,
-          enabledViews: result.enabledViews,
-        },
-        team: {
-          ...(prev['team'] ?? {}),
-          locationLabel: result.locationLabel,
-          members: [
-            ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
-              .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
-            ...result.teamMembers,
-          ],
-        },
-        assetTypes: result.assetTypes,
-        assets: [...existingAssets, ...seededAssets],
-        requirementTemplates: result.requirementTemplates,
-      };
-    });
-
-    // 2) Save each chosen recipe as a Smart View so it shows up in the
-    //    views bar. Recipes map to real filter + groupBy state; the owner
-    //    can edit or delete any of them later.
-    for (const recipeId of result.recipes) {
-      const recipe = buildRecipeSavedView(recipeId, weekStartDay);
-      if (!recipe) continue;
-      savedViews.saveView(recipe.name, recipe.filters, {
-        view: recipe.view,
-        groupBy: recipe.groupBy,
-      });
-    }
-
-    setSetupDismissed(true);
-  }, [ownerCfg.updateConfig, savedViews, weekStartDay]);
+  const setupCompleted = !!ownerCfg.config?.['setup']?.completed;
+  const {
+    setupDismissed,
+    shouldShowSetup,
+    handleSetupSkip,
+    handleReopenSetup,
+    handleSetupFinish,
+  } = useSetupLanding({
+    showSetupLanding,
+    setupCompleted,
+    updateConfig: ownerCfg.updateConfig,
+    closeConfig:  ownerCfg.closeConfig,
+    savedViews,
+    weekStartDay,
+  });
 
   // ── Active groupBy / sort (controlled by props; overridden when a saved view is applied) ──
-  const [activeGroupBy, setActiveGroupBy] = useState<GroupByInput | null>(groupBy ?? null);
-  useEffect(() => setActiveGroupBy(groupBy ?? null), [groupBy]);
-
-  const normalizeSortProp = (s: SortConfig | SortConfig[] | null | undefined): SortConfig[] | null => {
-    if (!s) return null;
-    return Array.isArray(s) ? s : [s];
-  };
-  const [activeSort, setActiveSort] = useState<SortConfig[] | null>(normalizeSortProp(sort));
-  useEffect(() => setActiveSort(normalizeSortProp(sort)), [sort]);
-
-  const [activeShowAllGroups, setActiveShowAllGroups] = useState<boolean>(!!showAllGroups);
-  useEffect(() => setActiveShowAllGroups(!!showAllGroups), [showAllGroups]);
+  const {
+    activeGroupBy,
+    setActiveGroupBy,
+    activeSort,
+    setActiveSort,
+    activeShowAllGroups,
+    setActiveShowAllGroups,
+    sidebarGroupLevels,
+    handleSidebarGroupLevelsChange,
+  } = useGroupingSort({ groupBy, sort: sort ?? null, showAllGroups: !!showAllGroups });
 
   // ── FilterGroupSidebar state ──
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -929,146 +792,16 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     setSidebarOpen(true);
   }, []);
 
-  // Derive GroupLevel[] from activeGroupBy for the sidebar's GroupsPanel
-  const sidebarGroupLevels = useMemo<GroupLevel[]>(() => {
-    if (!activeGroupBy) return [];
-    if (typeof activeGroupBy === 'string') return [{ field: activeGroupBy, showEmpty: false }];
-    if (Array.isArray(activeGroupBy)) {
-      return activeGroupBy.map(item =>
-        typeof item === 'string'
-          ? { field: item, showEmpty: false }
-          : { field: item.field, showEmpty: !!item.showEmpty },
-      );
-    }
-    return [];
-  }, [activeGroupBy]);
-
-  const handleSidebarGroupLevelsChange = useCallback((levels: GroupLevel[]) => {
-    if (levels.length === 0) {
-      setActiveGroupBy(null);
-    } else if (levels.length === 1) {
-      setActiveGroupBy(levels[0]!.field);
-    } else {
-      setActiveGroupBy(levels.map(l => ({ field: l.field, showEmpty: l.showEmpty })));
-    }
-  }, []);
-
   const handleSidebarFiltersChange = useCallback((filters: Record<string, unknown>) => {
     cal.replaceFilters(filters);
   }, [cal]);
 
   // ── Cascade scope selections ──
-  // Selections are owned at this level so saved-views can restore them
-  // (forthcoming) and so they round-trip with the calendar's filter state.
-  // Each tier's selection is mirrored into `cal.filters` via the
-  // `tier.filterField` key, so the existing filter pipeline picks them up
-  // without a separate plumbing path.
-  const [cascadeSelections, setCascadeSelections] = useState<
-    Readonly<Record<string, readonly string[]>>
-  >({});
-
-  const cascadeFieldKeys = useMemo(() => {
-    if (!cascadeConfig) return [] as string[];
-    const keys: string[] = [];
-    const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
-      for (const t of tiers) {
-        const k = t.filterField;
-        if (typeof k === 'string' && k.length > 0) keys.push(k);
-      }
-    };
-    collect(cascadeConfig.tiers);
-    if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
-    return keys;
-  }, [cascadeConfig]);
-
-  const cascadeTierByFieldKey = useMemo(() => {
-    const map = new Map<string, string>();
-    if (!cascadeConfig) return map;
-    const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
-      for (const t of tiers) {
-        const k = t.filterField;
-        if (typeof k === 'string' && k.length > 0) map.set(k, t.id);
-      }
-    };
-    collect(cascadeConfig.tiers);
-    if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
-    return map;
-  }, [cascadeConfig]);
-
-  const handleCascadeSelectionsChange = useCallback(
-    (next: Readonly<Record<string, readonly string[]>>) => {
-      setCascadeSelections(next);
-      if (!cascadeConfig) return;
-
-      // Translate selections into filter pipeline format. Each tier with a
-      // `filterField` and a non-empty selection emits `filters[field] = Set`.
-      const patch: Record<string, unknown> = {};
-      const collect = (tiers: ReadonlyArray<import('./ui/CascadePanel').CascadeTier>) => {
-        for (const t of tiers) {
-          const k = t.filterField;
-          if (typeof k !== 'string' || k.length === 0) continue;
-          const sel = next[t.id];
-          if (sel && sel.length > 0) {
-            patch[k] = new Set(sel);
-          } else {
-            patch[k] = new Set<string>();
-          }
-        }
-      };
-      collect(cascadeConfig.tiers);
-      if (cascadeConfig.moreOptions) collect(cascadeConfig.moreOptions);
-
-      cal.replaceFilters({ ...cal.filters, ...patch });
-    },
-    [cascadeConfig, cal],
-  );
-
-  // Keep cascade selections in sync if cal.filters changes from elsewhere
-  // (saved-view apply, programmatic updates). Rebuild selections from any
-  // filter keys the cascade owns.
-  useEffect(() => {
-    if (!cascadeConfig) return;
-    if (cascadeFieldKeys.length === 0) return;
-    const next: Record<string, readonly string[]> = {};
-    for (const fieldKey of cascadeFieldKeys) {
-      const tierId = cascadeTierByFieldKey.get(fieldKey);
-      if (!tierId) continue;
-      const value = (cal.filters as Record<string, unknown>)[fieldKey];
-      // Accept both Set<string> (live form) and string[] (serialized/programmatic
-      // form) so the cascade UI reflects scope no matter how filters were applied.
-      let values: readonly string[] | null = null;
-      if (value instanceof Set) {
-        if (value.size > 0) {
-          values = Array.from(value).filter((v): v is string => typeof v === 'string');
-        }
-      } else if (Array.isArray(value)) {
-        if (value.length > 0) {
-          values = value.filter((v): v is string => typeof v === 'string');
-        }
-      }
-      if (values && values.length > 0) {
-        next[tierId] = values;
-      }
-    }
-    setCascadeSelections(prev => {
-      // Skip churn when nothing changed.
-      const prevKeys = Object.keys(prev);
-      const nextKeys = Object.keys(next);
-      if (prevKeys.length === nextKeys.length) {
-        let same = true;
-        for (const k of nextKeys) {
-          const a = prev[k] ?? [];
-          const b = next[k] ?? [];
-          if (a.length !== b.length || a.some((v, i) => v !== b[i])) {
-            same = false;
-            break;
-          }
-        }
-        if (same) return prev;
-      }
-      return next;
-    });
-  }, [cal.filters, cascadeConfig, cascadeFieldKeys, cascadeTierByFieldKey]);
+  const { cascadeSelections, handleCascadeSelectionsChange } = useCascadeFilters({
+    cascadeConfig,
+    calFilters: cal.filters,
+    replaceFilters: cal.replaceFilters,
+  });
 
   // Keyboard shortcut: Cmd/Ctrl + / to toggle sidebar
   useEffect(() => {
@@ -1095,70 +828,31 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
     [locationProvider],
   );
 
-  const handleSidebarSaveView = useCallback((name: string, color: string | null) => {
-    savedViews.saveView(name, cal.filters, {
-      color,
-      view: cal.view,
-      ...captureSavedViewFields(cal.view, {
-        groupBy: activeGroupBy,
-        sort: activeSort,
-        showAllGroups: activeShowAllGroups,
-        zoomLevel: activeAssetsZoom,
-        collapsedGroups: activeAssetsCollapsed,
-        selectedBaseIds,
-      }),
-    });
-  }, [cal, savedViews, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]);
-
-  // Mark dirty when filters/view/groupBy/sort/showAllGroups/assets-state change
-  // after a saved view was applied. A ref skips the first run that fires
-  // synchronously after handleApplyView seeds state from the saved view.
-  useEffect(() => {
-    if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
-    if (savedViewActiveId)    setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleApplyView = useCallback((savedView: LooseValue) => {
-    // Clicking an already-active view deselects it and restores default state.
-    if (savedView.id === savedViewActiveId) {
-      setSavedViewActiveId(null);
-      setSavedViewDirty(false);
-      return;
-    }
-    skipDirtyRef.current = true;
-    cal.replaceFilters(deserializeFilters(savedView.filters, schema));
-    if (savedView.view) cal.setView(savedView.view);
-    setActiveGroupBy(savedView.groupBy ?? null);
-    setActiveSort(Array.isArray(savedView.sort) ? savedView.sort : null);
-    setActiveShowAllGroups(!!savedView.showAllGroups);
-    if (savedView.zoomLevel) setActiveAssetsZoom(savedView.zoomLevel);
-    setActiveAssetsCollapsed(
-      Array.isArray(savedView.collapsedGroups)
-        ? new Set(savedView.collapsedGroups)
-        : new Set(),
-    );
-    setSelectedBaseIds(
-      Array.isArray(savedView.selectedBaseIds) ? savedView.selectedBaseIds : [],
-    );
-    setSavedViewActiveId(savedView.id);
-    setSavedViewDirty(false);
-  }, [cal, schema, savedViewActiveId]);
-
-  // Clearing filters from the UI also deselects the active saved view so
-  // the chip doesn't stay highlighted after the user has moved on.
-  const handleClearFilters = useCallback(() => {
-    cal.clearFilters();
-    setSavedViewActiveId(null);
-    setSavedViewDirty(false);
-  }, [cal]);
-
-  const handleDeleteView = useCallback((id: LooseValue) => {
-    savedViews.deleteView(id);
-    if (savedViewActiveId === id) {
-      setSavedViewActiveId(null);
-      setSavedViewDirty(false);
-    }
-  }, [savedViews, savedViewActiveId]);
+  // ── Saved views manager (apply / dirty-track / delete / sidebar-save) ───
+  const {
+    savedViewActiveId,
+    savedViewDirty,
+    handleApplyView,
+    handleClearFilters,
+    handleDeleteView,
+    handleSidebarSaveView,
+  } = useSavedViewsManager({
+    cal,
+    schema,
+    savedViews,
+    activeGroupBy,
+    setActiveGroupBy,
+    activeSort,
+    setActiveSort,
+    activeShowAllGroups,
+    setActiveShowAllGroups,
+    activeAssetsZoom,
+    setActiveAssetsZoom,
+    activeAssetsCollapsed,
+    setActiveAssetsCollapsed,
+    selectedBaseIds,
+    setSelectedBaseIds,
+  });
 
   // ── Visible date range (drives fetch + occurrence expansion) ─────────────
   const range = useMemo(
