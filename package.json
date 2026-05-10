@@ -40,6 +40,11 @@
     "./styles/family/ops": "./dist/themes/family/ops.css",
     "./styles/family/neon": "./dist/themes/family/neon.css",
     "./themes": "./dist/works-calendar.es.js",
+    "./lite": {
+      "types": "./dist/index.lite.d.ts",
+      "import": "./dist/works-calendar-lite.es.js",
+      "require": "./dist/works-calendar-lite.umd.js"
+    },
     "./dist/*": "./dist/*"
   },
   "files": [
@@ -60,7 +65,7 @@
     "build:demo": "vite build --config vite.demo.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "vite build && vite build --config vite.integrations.config.ts",
+    "build": "vite build && vite build --config vite.integrations.config.ts && vite build --config vite.lite.config.ts",
     "type-check": "tsc --noEmit",
     "type-check:watch": "tsc --noEmit --watch",
     "prepublishOnly": "npm run build"
