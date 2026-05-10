@@ -6,19 +6,19 @@ import {
   useImperativeHandle, forwardRef, useMemo,
 } from 'react';
 import type { ForwardedRef, ReactNode } from 'react';
-import {
-  format, startOfMonth, endOfMonth, startOfDay,
-  startOfWeek, endOfWeek, addDays, addWeeks, addMonths,
-} from 'date-fns';
+import { format, startOfWeek, endOfWeek, addDays, addWeeks, addMonths } from 'date-fns';
 import { Bookmark, ChevronLeft, ChevronRight, Download, Filter, Plus, Settings, Sparkles, Upload } from 'lucide-react';
+
+import type { WorksCalendarProps, CalendarApi, CalendarView } from './WorksCalendar.types';
+export type { WorksCalendarEvent, CalendarView, CalendarRole, ScheduleInstantiationLimits, CalendarApi, WorksCalendarProps, DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator } from './WorksCalendar.types';
+import { ALL_VIEWS, DEFAULT_SCHEDULE_INSTANTIATION_LIMITS, exportVisibleEvents, viewRange } from './core/calendarViewConfig';
+import type { ViewDef } from './core/calendarViewConfig';
 
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
 import { useFetchEvents }     from './hooks/useFetchEvents';
 import { useSourceStore }      from './hooks/useSourceStore';
 import { useSourceAggregator } from './hooks/useSourceAggregator';
 import { useSavedViews } from './hooks/useSavedViews';
-import type { GroupByInput } from './hooks/useNormalizedConfig.ts';
-import type { SortConfig } from './types/grouping.ts';
 import { sortEvents } from './core/sortEngine.ts';
 import { useRealtimeEvents }  from './hooks/useRealtimeEvents';
 import { usePermissions }     from './hooks/usePermissions';
@@ -27,7 +27,6 @@ import { useTouchSwipe }     from './hooks/useTouchSwipe';
 import { CalendarContext }    from './core/CalendarContext';
 import type { CalendarContextValue } from './types/ui';
 import { normalizeEvents }    from './core/eventModel';
-import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
 import type { AnnouncerRef } from './ui/ScreenReaderAnnouncer';
 import { useCalendarEngine } from './hooks/useCalendarEngine';
 import { useEventMutations } from './hooks/useEventMutations';
@@ -42,7 +41,7 @@ import CalendarModals from './ui/CalendarModals';
 import SetupLanding, { type SetupLandingResult } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
-import { DEFAULT_FILTER_SCHEMA, buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
+import { buildDefaultFilterSchema, makeResourceResolver, viewScopedSchema, type FilterField } from './filters/filterSchema';
 import { SCHEDULE_WORKFLOW_CATEGORIES, isScheduleWorkflowEvent } from './core/scheduleModel';
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
@@ -51,18 +50,15 @@ import { buildActiveFilterPills, buildFilterSummary, hasActiveFilters, createIni
 import { AppShell }           from './ui/AppShell';
 import { AppHeader }          from './ui/AppHeader';
 import { LeftRail }           from './ui/LeftRail';
-import type { LeftRailAction } from './ui/LeftRail';
 import { SubToolbar }         from './ui/SubToolbar';
 import { DayWindowPills }     from './ui/DayWindowPills';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './ui/RightPanel';
 import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
-import FilterBar              from './ui/FilterBar';
 import ProfileBar             from './ui/ProfileBar';
 import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './ui/FocusChips';
 import type { FocusChipDef } from './ui/FocusChips';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
-import type { GroupLevel } from './ui/GroupsPanel';
 import OwnerLock              from './ui/OwnerLock';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import SavedFlash             from './ui/SavedFlash';
@@ -76,343 +72,22 @@ import ScheduleView           from './views/ScheduleView';
 import AssetsView             from './views/AssetsView';
 import BaseGanttView          from './views/BaseGanttView';
 import DispatchView           from './views/DispatchView';
-import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
 import RequestQueueView       from './views/RequestQueueView';
 import { MapPeekWidget }      from './ui/MapPeekWidget';
 
-type DispatchEvaluator = (
-  assetId: string,
-  missionId: string,
-  asOf: Date,
-) => DispatchMissionReadiness;
-export type { DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator };
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
-import type { AssetsZoomLevel, LocationData, LocationProvider } from './types/assets';
+import type { AssetsZoomLevel, LocationProvider } from './types/assets';
 
 import styles from './WorksCalendar.module.css';
 import './styles/family/index.css';
 import { customThemeToCssVars } from './core/themeSchema';
 
-import type { EventStatus, WorksCalendarEvent } from './types/events';
-export type { WorksCalendarEvent };
-export type CalendarView = ViewId;
-export type CalendarRole = 'admin' | 'user' | 'readonly';
-
-export type ScheduleInstantiationLimits = {
-  previewMax?: number;
-  createMax?: number;
-};
-
-type UnknownRecord = Record<string, unknown>;
-type ScheduleTemplateAdapter = {
-  listScheduleTemplates?: () => Promise<unknown>;
-  createScheduleTemplate?: (template: UnknownRecord) => Promise<unknown>;
-  deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
-  [key: string]: unknown;
-};
-type EmployeeId = string | number;
-type EmployeeRecord = { id: EmployeeId; name?: string; [key: string]: unknown };
-type EmployeeActionInput = { type?: string; [key: string]: unknown };
-type EventGroupPatch = Record<string, unknown>;
-type AssetLocationData = LocationData | null;
-type AvailabilitySavePayload = {
-  status?: string;
-  coveredBy?: string | null;
-  [key: string]: unknown;
-};
-
-export type CalendarApi = {
-  navigateTo: (date: Date) => void;
-  setView: (view: CalendarView) => void;
-  goToToday: () => void;
-  openEvent: (id: string) => void;
-  getVisibleEvents: () => WorksCalendarEvent[];
-  clearFilters: () => void;
-  addEvent: (defaults?: Partial<WorksCalendarEvent>) => void;
-  undo: () => boolean;
-  redo: () => boolean;
-  readonly canUndo: boolean;
-  readonly canRedo: boolean;
-};
-
-export type WorksCalendarProps = {
-  events?: WorksCalendarEvent[];
-  fetchEvents?: (...args: unknown[]) => Promise<WorksCalendarEvent[]>;
-  icalFeeds?: UnknownRecord[];
-  onImport?: (events: WorksCalendarEvent[]) => void;
-  scheduleTemplates?: UnknownRecord[];
-  scheduleTemplateAdapter?: ScheduleTemplateAdapter;
-  scheduleInstantiationLimits?: ScheduleInstantiationLimits;
-  onScheduleTemplateAnalytics?: (payload: UnknownRecord) => void;
-  calendarId?: string;
-  ownerPassword?: string;
-  onConfigSave?: (config: UnknownRecord) => void;
-  devMode?: boolean;
-  notes?: UnknownRecord;
-  onNoteSave?: (note: UnknownRecord) => void;
-  onNoteDelete?: (noteId: string) => void;
-  onEventClick?: (event: WorksCalendarEvent) => void;
-  onEventSave?: (event: WorksCalendarEvent) => void;
-  onEventMove?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
-  onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
-  onEventDelete?: (eventId: string) => void;
-  onEventGroupChange?: (event: WorksCalendarEvent, patch: EventGroupPatch) => void;
-  onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
-  onViewChange?: (view: CalendarView) => void;
-  onMapWidgetOpenChange?: (open: boolean) => void;
-  showMapWidget?: boolean;
-  enableApprovalFlowsTab?: boolean;
-  supabaseUrl?: string;
-  supabaseKey?: string;
-  supabaseTable?: string;
-  supabaseFilter?: string;
-  role?: CalendarRole;
-  employees?: EmployeeRecord[];
-  onEmployeeAdd?: (member: EmployeeRecord) => void;
-  onEmployeeDelete?: (employeeId: EmployeeId) => void;
-  onEmployeeAction?: (employeeId: EmployeeId, action: EmployeeActionInput) => void;
-  onAvailabilitySave?: (payload: AvailabilitySavePayload) => void;
-  onScheduleSave?: (payload: WorksCalendarEvent) => void;
-  blockedWindows?: UnknownRecord[];
-  theme?: string;
-  colorRules?: UnknownRecord[];
-  /**
-   * MapLibre style URL forwarded to the chrome-level MapPeekWidget when
-   * the user opens it (panel or fullscreen). Ignored when the
-   * `react-map-gl` / `maplibre-gl` peers aren't installed in the host.
-   */
-  mapStyle?: string;
-  businessHours?: UnknownRecord;
-  renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
-  renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
-  renderToolbar?: (api: CalendarApi) => ReactNode;
-  /** Extra icon-button actions appended to the LeftRail after the built-in
-   *  Saved-views / Focus-filters / Settings buttons. Each entry has the
-   *  same shape as the rail's internal actions (see `LeftRailAction` in
-   *  the package's public exports): `{ id, label, icon, hint?, active?,
-   *  onClick }`. Use this to surface embedder-specific shortcuts (export,
-   *  notifications, custom drawers, etc.) without forking the chrome. */
-  leftRailExtras?: LeftRailAction[];
-  /** ReactNode appended to the RightPanel after the built-in Region map
-   *  + Crew on shift sections. For visual consistency wrap your content
-   *  in `<RightPanelSection title="…">…</RightPanelSection>` (also
-   *  exported). Pass any number of sections; they stack vertically and
-   *  inherit theme tokens. */
-  rightPanelExtras?: ReactNode;
-  renderFilterBar?: (args: UnknownRecord) => ReactNode;
-  renderSavedViewsBar?: (args: UnknownRecord) => ReactNode;
-  /**
-   * Visible quick-filter chips rendered above the view area. Opt-in:
-   *   - omitted (default) → no chip row renders
-   *   - `true`            → renders the library's DEFAULT_FOCUS_CHIPS
-   *   - `FocusChipDef[]`  → renders that custom chip list
-   * Clicking a chip toggles its categories on the calendar's `category`
-   * filter. Hosts that don't define the referenced categories render a
-   * no-op chip (harmless).
-   */
-  focusChips?: FocusChipDef[] | boolean;
-  /**
-   * Pending missions/requests offered as the "For mission" picker on the
-   * Dispatch view. Empty/undefined hides the picker (the view falls back
-   * to generic readiness). Pair with `dispatchEvaluator` — the picker is
-   * also hidden when no evaluator is wired.
-   */
-  dispatchMissions?: DispatchMissionCandidate[];
-  /**
-   * Per-(asset, mission) readiness evaluator for the Dispatch view. Hosts
-   * translate their domain primitives (cert matching, capability checks,
-   * hours remaining, etc.) into the readiness shape the table expects.
-   */
-  dispatchEvaluator?: DispatchEvaluator;
-  /**
-   * Called when the dispatcher clicks "Assign" on an available asset row.
-   * Receives the asset id, the selected mission id (or null), and the
-   * active as-of time. Hosts should create a booking event and call onEventSave.
-   */
-  onDispatchAssign?: (assetId: string, missionId: string | null, asOf: Date) => void;
-  emptyState?: ReactNode;
-  filterSchema?: FilterField[];
-  /**
-   * Optional cascade scope picker for the Focus tab of the View Controls
-   * sidebar. When set, replaces the legacy condition builder with a
-   * tiered multi-select picker (Region → Base → Type → …). Each tier's
-   * selection becomes a filter keyed by `tier.filterField`. The library
-   * stays generic — the host supplies tier definitions and option
-   * resolvers from its own data.
-   */
-  cascadeConfig?: import('./ui/CascadePanel').CascadeConfig;
-  showAddButton?: boolean;
-  /**
-   * Hide the event-template dropdown in the Add/Edit Event form. Hosts
-   * whose domain doesn't map to the built-in templates ("Daily standup",
-   * "Sprint planning", etc.) can suppress the picker entirely instead
-   * of showing irrelevant options.
-   */
-  hideEventTemplates?: boolean;
-  /**
-   * Category-aware resource suggester for the Add/Edit Event form.
-   * When provided, the form's resource input gets a `<datalist>`
-   * scoped to the suggester's output for the currently picked
-   * category. Lets hosts wire their domain knowledge (e.g.
-   * "maintenance category → mechanics + aircraft only") into the
-   * picker without surfacing every employee/asset for every
-   * category.
-   */
-  eventResourceSuggestions?: (category: string) => Array<{ value: string; label: string }>;
-  /**
-   * Opt-in interactive setup landing page. When true, first-time owners
-   * (those with `config.setup.completed === false`) see a full-page
-   * guided walkthrough before the calendar renders — with a prominent
-   * "Skip setup guide" button for owners who already know the product.
-   *
-   * Defaults to false so hosts and test fixtures keep their current
-   * behavior. Turn it on from the host app to enable the guided flow.
-   */
-  showSetupLanding?: boolean;
-  initialView?: CalendarView;
-  weekStartDay?: 0 | 1;
-  groupBy?: GroupByInput;
-  sort?: SortConfig | SortConfig[];
-  showAllGroups?: boolean;
-
-  // ── Assets view ──
-  locationProvider?: LocationProvider;
-  categoriesConfig?: Record<string, unknown>;
-  assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
-  strictAssetFiltering?: boolean;
-  assetRequestCategories?: string[];
-  onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
-  onApprovalAction?: (event: WorksCalendarEvent, action: string) => void | Promise<void>;
-  renderAssetLocation?: (locationData: AssetLocationData, asset: { id: string }) => ReactNode;
-  /**
-   * Optional renderer for the location banner of a pool row. Pools
-   * aggregate multiple resources, so the per-resource locations map
-   * has no entry — the banner stays empty by default. Provide a
-   * renderer if your domain has a natural aggregation (centroid,
-   * dominant region, "N/A · mixed", etc.). Issue #386 item #9.
-   */
-  renderPoolLocation?: (pool: { id: string; memberIds: readonly string[] }) => ReactNode;
-  renderAssetBadges?: (asset: { id: string }) => ReactNode;
-  /** Maintenance rules offered in the EventForm. When non-empty, the form
-   *  shows a Maintenance section; lifecycle='complete' triggers a built-in
-   *  call to completeMaintenance() so projected nextDue* fields land on
-   *  event.meta.maintenance automatically. */
-  maintenanceRules?: readonly import('./types/maintenance').MaintenanceRule[];
-  renderConflictBody?: (args: UnknownRecord) => ReactNode;
-
-  /**
-   * Resource pools (#212). Bookings can target a pool id via
-   * `event.resourcePoolId`; the engine resolves a concrete member at
-   * submit time and advances the round-robin cursor. Hosts that care
-   * about cross-reload persistence should read the initial array from
-   * their own store and keep it in sync via `onPoolsChange`.
-   */
-  pools?: ResourcePool[];
-  /**
-   * Fires whenever the engine commits a pool state change (e.g. a
-   * round-robin cursor advance). Hosts should persist the array so the
-   * cursor survives page reloads. Omit to skip persistence entirely.
-   *
-   * `meta.sequence` is a monotonic counter scoped to this WorksCalendar
-   * instance — it increments by one on every emission. Hosts that
-   * persist asynchronously can compare the sequence on each callback
-   * to discard out-of-order writes (e.g. a slow `fetch` PUT that
-   * lands after a faster one) and avoid clobbering the latest cursor.
-   */
-  onPoolsChange?: (pools: ResourcePool[], meta: { sequence: number }) => void;
-
-  /** Optional logo image displayed at the left of the toolbar. */
-  logoSrc?: string;
-  /** Alt text for the logo image. Treated as decorative if omitted. */
-  logoAlt?: string;
-  /** Optional background image URL applied to the calendar root. */
-  backgroundImage?: string;
-};
-
-
-
 // Phase 1 migration boundary: keep WorksCalendar callback seams intentionally
 // loose while removing implicit `any` from root handlers.
-type LooseValue = any;
+type LooseValue = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Human-readable announcement text for a completed engine operation. */
-function opAnnouncement(op: LooseValue) {
-  switch (op.type) {
-    case 'create': return `Event "${op.event?.title ?? 'Untitled'}" created.`;
-    case 'update': return 'Event updated.';
-    case 'delete': return 'Event deleted.';
-    case 'move':   return 'Event moved.';
-    case 'resize': return 'Event resized.';
-    case 'group-change': return 'Event reassigned.';
-    default:       return 'Change applied.';
-  }
-}
 
-type ViewGroup = 'calendar' | 'operations';
-type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string; group: ViewGroup };
-const ALL_VIEWS: readonly ViewDef[] = [
-  { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO',                   group: 'calendar' },
-  { id: 'week',     label: 'Week',     alwaysOn: true,  hint: 'Scheduled events by day — not staffing or on-call',                group: 'calendar' },
-  { id: 'day',      label: 'Day',      alwaysOn: false,                                                                            group: 'calendar' },
-  { id: 'agenda',   label: 'Agenda',   alwaysOn: false,                                                                            group: 'calendar' },
-  { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status',       group: 'calendar' },
-  { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side', group: 'calendar' },
-  { id: 'assets',   label: 'Assets',   alwaysOn: false,                                                                            group: 'operations' },
-  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations' },
-  { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests',    group: 'operations' },
-  // Map is intentionally NOT a view tab — it's an in-shell floating
-  // widget mounted at the chrome level (see MapPeekWidget below). Putting
-  // it on a tab forces a full workspace switch just to peek at where
-  // assets are, which is the wrong tradeoff for a situational-awareness
-  // surface.
-];
-
-const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
-  previewMax: 200,
-  createMax: 200,
-};
-
-let exportToExcelFn: LooseValue = null;
-
-async function exportVisibleEvents(events: LooseValue) {
-  if (!exportToExcelFn) {
-    ({ exportToExcel: exportToExcelFn } = await import('./export/excelExport.js'));
-  }
-  return exportToExcelFn(events);
-}
-
-/** Compute the visible [start, end] range for a given view + date. */
-function viewRange(view: LooseValue, date: LooseValue, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
-  switch (view) {
-    case 'week':
-      return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };
-    case 'day':
-      return { start: date, end: addDays(date, 1) };
-    case 'base':
-      // Base Gantt view defaults to 14 days and can expand to 90. Always
-      // materialize the 90-day window so toggling in-view doesn't require
-      // a re-fetch and occurrences at the end of the span aren't missing.
-      return { start: startOfDay(date), end: addDays(startOfDay(date), 90) };
-    case 'month': {
-      // MonthView renders a calendar grid that spills into the previous
-      // month's tail and the next month's head (startOfWeek(monthStart)
-      // → endOfWeek(monthEnd)). The fetched range needs to match the grid,
-      // not just the calendar month — otherwise events that fall on
-      // visible spillover days (e.g. May 1-2 in an April grid) are
-      // dropped before reaching the view and silently disappear.
-      const monthStart = startOfMonth(date);
-      const monthEnd   = endOfMonth(date);
-      return {
-        start: startOfWeek(monthStart, { weekStartsOn: weekStartDay }),
-        end:   endOfWeek(monthEnd,     { weekStartsOn: weekStartDay }),
-      };
-    }
-    default: // agenda, schedule (timeline), assets
-      return { start: startOfMonth(date), end: endOfMonth(date) };
-  }
-}
 
 export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendar(
   {
