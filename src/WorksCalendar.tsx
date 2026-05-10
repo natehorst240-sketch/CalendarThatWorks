@@ -7,11 +7,11 @@ import {
 } from 'react';
 import type { ForwardedRef, ReactNode } from 'react';
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { Bookmark, Download, Filter, Plus, Settings, Upload } from 'lucide-react';
+import { Bookmark, Filter, Settings } from 'lucide-react';
 
 import type { WorksCalendarProps, CalendarApi, CalendarView } from './WorksCalendar.types';
 export type { WorksCalendarEvent, CalendarView, CalendarRole, ScheduleInstantiationLimits, CalendarApi, WorksCalendarProps, DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator } from './WorksCalendar.types';
-import { ALL_VIEWS, DEFAULT_SCHEDULE_INSTANTIATION_LIMITS, exportVisibleEvents, viewRange } from './core/calendarViewConfig';
+import { ALL_VIEWS, DEFAULT_SCHEDULE_INSTANTIATION_LIMITS, viewRange } from './core/calendarViewConfig';
 
 import { useOwnerConfig }     from './hooks/useOwnerConfig';
 import { useFetchEvents }     from './hooks/useFetchEvents';
@@ -38,6 +38,7 @@ import { useScheduleTemplates } from './hooks/useScheduleTemplates';
 import { useModalState } from './hooks/useModalState';
 import CalendarModals from './ui/CalendarModals';
 import CalendarToolbar from './ui/CalendarToolbar';
+import CalendarViewGrid from './ui/CalendarViewGrid';
 import SetupLanding, { type SetupLandingResult } from './ui/SetupLanding';
 import { applyFilters, getCategories, getResources } from './filters/filterEngine';
 import { resolveCssTheme, normalizeTheme, THEME_META } from './styles/themes';
@@ -46,28 +47,16 @@ import { SCHEDULE_WORKFLOW_CATEGORIES, isScheduleWorkflowEvent } from './core/sc
 import { useTabScopedEvents } from './hooks/useTabScopedEvents';
 import { captureSavedViewFields, type ViewId } from './core/viewScope';
 import { resolveLabels } from './core/config/resolveLabels';
-import { hasActiveFilters, createInitialFilters, clearFilterValue } from './filters/filterState';
+import { createInitialFilters, clearFilterValue } from './filters/filterState';
 import { AppShell }           from './ui/AppShell';
 import { LeftRail }           from './ui/LeftRail';
-import { SubToolbar }         from './ui/SubToolbar';
-import { DayWindowPills }     from './ui/DayWindowPills';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './ui/RightPanel';
 import { shiftEmployeeIdsAt } from './hooks/useShiftOverlap';
-import FilterGroupSidebar, { SidebarToggleButton } from './ui/FilterGroupSidebar';
+import FilterGroupSidebar from './ui/FilterGroupSidebar';
 import type { SidebarTab } from './ui/FilterGroupSidebar';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import SavedFlash             from './ui/SavedFlash';
-import ActiveFilterStrip      from './ui/ActiveFilterStrip';
 import CalendarErrorBoundary   from './ui/CalendarErrorBoundary';
-import MonthView              from './views/MonthView';
-import WeekView               from './views/WeekView';
-import DayView                from './views/DayView';
-import AgendaView             from './views/AgendaView';
-import ScheduleView           from './views/ScheduleView';
-import AssetsView             from './views/AssetsView';
-import BaseGanttView          from './views/BaseGanttView';
-import DispatchView           from './views/DispatchView';
-import RequestQueueView       from './views/RequestQueueView';
 import { MapPeekWidget }      from './ui/MapPeekWidget';
 
 import { createManualLocationProvider } from './providers/ManualLocationProvider.ts';
@@ -1084,196 +1073,73 @@ export const WorksCalendar = forwardRef<CalendarApi, WorksCalendarProps>(functio
             assetsLabel={assetsLabel}
             weekStartDay={weekStartDay}
           />}
-          main={
-        <div className={styles['mainPane']}>
-          <div className={styles['calendarCard']}>
-            <SubToolbar
-              leftSlot={<>
-                <SidebarToggleButton
-                  isOpen={sidebarOpen}
-                  onClick={() => setSidebarOpen(v => !v)}
-                  filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
-                  groupCount={sidebarGroupLevels.length}
-                />
-                {hasAddButton && cal.view !== 'schedule' && (
-                  <button
-                    className={styles['addBtn']}
-                    onClick={() => setFormEvent({})}
-                    aria-label={`Add new ${profileLabels.event.toLowerCase()}`}
-                    title={profileLabels.event === 'Event' ? undefined : `Create a new ${profileLabels.event.toLowerCase()}`}
-                  >
-                    <Plus size={14} aria-hidden="true" />
-                    <span className={styles['addBtnLabel']}> New {profileLabels.event}</span>
-                  </button>
-                )}
-                {hasAddButton && hasScheduleTemplates && (
-                  <button
-                    className={styles['addBtn']}
-                    onClick={() => {
-                      setScheduleOpen(true);
-                      onScheduleTemplateAnalytics?.({
-                        event: 'schedule_dialog_opened',
-                        at: new Date().toISOString(),
-                        templateCount: visibleScheduleTemplates.length,
-                      });
-                    }}
-                    aria-label="Add schedule from template"
-                  >
-                    <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
-                  </button>
-                )}
-              </>}
-              centerSlot={
-                /* Day-window pills only have meaning on the Gantt-style
-                 * timeline views — the other views (Month / Week / Day /
-                 * Agenda) have intrinsic spans and ignore cal.dayWindow.
-                 * Hiding the pills there avoids the "pressing this button
-                 * does nothing" UX trap. */
-                (cal.view === 'schedule' || cal.view === 'base' || cal.view === 'assets')
-                  ? <DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />
-                  : null
-              }
-              rightSlot={<>
-                {hasImport && (
-                  <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
-                    <Upload size={15} aria-hidden="true" />
-                  </button>
-                )}
-                <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
-                  <Download size={15} aria-hidden="true" />
-                </button>
-              </>}
-            />
-            <ActiveFilterStrip
-              filters={cal.filters as Record<string, unknown>}
-              schema={schema}
-              onChange={(key, value) => cal.setFilter(key, value)}
-              onClear={(key) => cal.clearFilter(key)}
-              onClearAll={handleClearFilters}
-            />
-        {/* ── View area ── */}
-        <div
-          ref={swipeAreaRef}
-          className={styles['viewArea']}
-          onClickCapture={editMode ? (e) => {
-            lastClickCoordsRef.current = { x: e.clientX, y: e.clientY };
-          } : undefined}
-        >
-          {isEmpty && emptyState ? (
-            <div className={styles['emptyStateWrap']}>{emptyState}</div>
-          ) : (
-            <>
-              {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
-              {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
-              {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={handleEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} employees={configuredEmployees} />}
-              {cal.view === 'schedule' && (
-                <ScheduleView
-                  currentDate={cal.currentDate}
-                  events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  onEventGroupChange={handleEventGroupChange}
-                  onDateSelect={handleScheduleDateSelect}
-                  employees={configuredEmployees}
-                  onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
-                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
-                  onShiftStatusChange={handleShiftStatusChange}
-                  onCoverageAssign={handleCoverageAssign}
-                  onEmployeeAction={handleEmployeeAction}
-                  groupBy={activeGroupBy}
-                  sort={activeSort}
-                  roles={ownerCfg.config?.['team']?.roles ?? []}
-                  bases={ownerCfg.config?.['team']?.bases ?? []}
-                  dayWindow={cal.dayWindow}
-                />
-              )}
-              {cal.view === 'base' && (
-                <BaseGanttView
-                  currentDate={cal.currentDate}
-                  events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  employees={configuredEmployees}
-                  assets={effectiveAssets ?? []}
-                  bases={configuredBases}
-                  regions={configuredRegions}
-                  locationLabel={locationLabel}
-                  assetsLabel={assetsLabel}
-                  selectedBaseIds={selectedBaseIds}
-                  onBaseSelectionChange={setSelectedBaseIds}
-                  dayWindow={cal.dayWindow}
-                />
-              )}
-              {cal.view === 'assets'   && (
-                <AssetsView
-                  currentDate={cal.currentDate}
-                  events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  onDateSelect={handleScheduleDateSelect}
-                  onPoolDateSelect={handlePoolDateSelect}
-                  groupBy={activeGroupBy}
-                  onGroupByChange={setActiveGroupBy}
-                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.['categoriesConfig']}
-                  assets={effectiveAssets}
-                  pools={rawPools ?? []}
-                  strictAssetFiltering={strictAssetFiltering}
-                  resolveResourceLabel={resolveResourceLabel}
-                  zoomLevel={activeAssetsZoom}
-                  onZoomChange={setActiveAssetsZoom}
-                  collapsedGroups={activeAssetsCollapsed}
-                  onCollapsedGroupsChange={setActiveAssetsCollapsed}
-                  locationProvider={effectiveLocationProvider}
-                  renderAssetLocation={renderAssetLocation}
-                  renderPoolLocation={renderPoolLocation}
-                  renderAssetBadges={renderAssetBadges}
-                  onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
-                  onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
-                  approvalsConfig={ownerCfg.config?.['approvals']}
-                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
-                  label={assetsLabel}
-                  dayWindow={cal.dayWindow}
-                />
-              )}
-              {cal.view === 'dispatch' && (
-                <DispatchView
-                  events={expandedEvents}
-                  employees={configuredEmployees}
-                  assets={effectiveAssets ?? []}
-                  bases={configuredBases}
-                  locationLabel={locationLabel}
-                  label={assetsLabel}
-                  onEventClick={handleEventClick}
-                  missions={dispatchMissions}
-                  evaluateForMission={dispatchEvaluator}
-                  onAssign={onDispatchAssign}
-                  // Sync the calendar's currentDate with the dispatcher's chosen
-                  // as-of moment so recurring-event expansion + fetch ranges
-                  // re-anchor around it. Without this, a far-future as-of would
-                  // see no overlapping events (since they were never expanded
-                  // for the original currentDate range) and the row would be
-                  // wrongly classified Available.
-                  onAsOfChange={cal.setCurrentDate}
-                />
-              )}
-              {cal.view === 'requests' && (
-                <RequestQueueView
-                  // Approval queue must be window-independent — see
-                  // `approvalRequestEvents` above for why we use the
-                  // engine's master records instead of expandedEvents.
-                  events={approvalRequestEvents as never}
-                  approvalsConfig={ownerCfg.config?.['approvals'] as Record<string, unknown> | undefined}
-                  onApprovalAction={onApprovalAction as ((event: LooseValue, action: string) => void | Promise<void>) | undefined}
-                  onEventClick={handleEventClick}
-                />
-              )}
-              {/* Map lives in the right rail (see `rightPanel` above)
-                  rather than as a workspace overlay — it shouldn't sit
-                  on top of the active view's content. */}
-            </>
-          )}
-        </div>
-          </div>
-        </div>
-          }
+          main={<CalendarViewGrid
+            cal={cal}
+            ownerCfg={ownerCfg}
+            perms={perms}
+            schema={schema}
+            filterBarSchema={filterBarSchema}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            sidebarGroupLevels={sidebarGroupLevels}
+            hasAddButton={hasAddButton}
+            hasScheduleTemplates={hasScheduleTemplates}
+            hasImport={hasImport}
+            profileLabels={profileLabels}
+            visibleScheduleTemplates={visibleScheduleTemplates}
+            onScheduleTemplateAnalytics={onScheduleTemplateAnalytics}
+            visibleEvents={visibleEvents}
+            expandedEvents={expandedEvents}
+            approvalRequestEvents={approvalRequestEvents}
+            isEmpty={isEmpty}
+            emptyState={emptyState}
+            sharedViewProps={sharedViewProps}
+            swipeAreaRef={swipeAreaRef}
+            lastClickCoordsRef={lastClickCoordsRef}
+            editMode={editMode}
+            activeGroupBy={activeGroupBy}
+            activeSort={activeSort}
+            activeShowAllGroups={activeShowAllGroups}
+            configuredEmployees={configuredEmployees}
+            effectiveAssets={effectiveAssets}
+            configuredBases={configuredBases}
+            configuredRegions={configuredRegions}
+            locationLabel={locationLabel}
+            assetsLabel={assetsLabel}
+            selectedBaseIds={selectedBaseIds}
+            setSelectedBaseIds={setSelectedBaseIds}
+            categoriesConfig={categoriesConfig}
+            rawPools={rawPools}
+            strictAssetFiltering={strictAssetFiltering}
+            resolveResourceLabel={resolveResourceLabel}
+            activeAssetsZoom={activeAssetsZoom}
+            setActiveAssetsZoom={setActiveAssetsZoom}
+            activeAssetsCollapsed={activeAssetsCollapsed}
+            setActiveAssetsCollapsed={setActiveAssetsCollapsed}
+            effectiveLocationProvider={effectiveLocationProvider}
+            renderAssetLocation={renderAssetLocation}
+            renderPoolLocation={renderPoolLocation}
+            renderAssetBadges={renderAssetBadges}
+            dispatchMissions={dispatchMissions}
+            dispatchEvaluator={dispatchEvaluator}
+            onDispatchAssign={onDispatchAssign}
+            onApprovalAction={onApprovalAction}
+            canRequestAsset={canRequestAsset}
+            setFormEvent={setFormEvent}
+            setScheduleOpen={setScheduleOpen}
+            setImportOpen={setImportOpen}
+            setAssetRequestOpen={setAssetRequestOpen}
+            setActiveGroupBy={setActiveGroupBy}
+            handleClearFilters={handleClearFilters}
+            handleScheduleDateSelect={handleScheduleDateSelect}
+            handlePoolDateSelect={handlePoolDateSelect}
+            handleEmployeeAddInternal={handleEmployeeAddInternal}
+            handleEmployeeDeleteInternal={handleEmployeeDeleteInternal}
+            handleShiftStatusChange={handleShiftStatusChange}
+            handleCoverageAssign={handleCoverageAssign}
+            handleEmployeeAction={handleEmployeeAction}
+            handleEventClick={handleEventClick}
+          />}
         />
 
         {/* ── Filter / Groups / Views overlay drawer ── */}
