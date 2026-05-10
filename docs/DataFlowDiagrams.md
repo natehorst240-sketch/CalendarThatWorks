@@ -4,15 +4,26 @@ Three levels of DFD covering the full library. Context (Level 0) → subsystems
 (Level 1) → internals of the four most complex subsystems (Level 2).
 
 > **Architecture status**: Diagrams below reflect the **target architecture**
-> after the three-sprint refactor (see CHANGELOG `[0.7.0]`). The key
+> after the three-sprint refactor (see CHANGELOG `[0.7.0]`), with one further
+> decomposition pass applied to `WorksCalendar.tsx` (now ~500 lines). The key
 > structural changes from the audit:
 > - `CalendarEngine` is now the **sole** source of truth for view, cursor, and
 >   base filter state. The legacy `useCalendar` hook and its parallel state are gone.
-> - `useCalendarEngine` owns engine setup, undo/redo, and all mutation handlers —
->   `WorksCalendar.tsx` is now a pure UI shell.
+> - `useCalendarEngine` owns engine setup and the undo/redo stack. Mutation
+>   handlers, schedule templates, and keyboard undo/redo are in `useCalendarMutations`.
+> - `WorksCalendar.tsx` orchestration is now split across four dedicated hooks:
+>   - `useCalendarSetup` — owner config, theme, employees, schema, nav state
+>   - `useCalendarWorkspace` — perms, saved views, sidebar, grouping, cascade filters
+>   - `useCalendarDataPipeline` — event aggregation, engine sync, view scoping, filtering
+>   - `useCalendarMutations` — event/schedule mutations, templates, undo shortcut, date-select handlers
+> - Left-rail and right-panel rendering extracted to `ui/CalendarSideRails.tsx`.
 > - `useOccurrences` deleted; all views use the engine's `getOccurrencesInRange`
 >   read path exclusively.
 > - `CalendarContextValue` is fully typed — no more `[key: string]: any` escape hatch.
+>
+> **Note**: Diagrams 3b (React Hook Subscription Chain) and 3e (Initialization
+> Sequence) predate the `useCalendarSetup` / `useCalendarWorkspace` /
+> `useCalendarMutations` split and show the earlier single-hook structure.
 
 ---
 
