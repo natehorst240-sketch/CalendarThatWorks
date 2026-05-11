@@ -7,27 +7,42 @@ import type { FilterField } from '../filters/filterSchema';
 import { createInitialFilters, clearFilterValue } from '../filters/filterState';
 import { resolveCssTheme, normalizeTheme, THEME_META } from '../styles/themes';
 import { customThemeToCssVars } from '../core/themeSchema';
-import type { CalendarView } from '../WorksCalendar.types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+import type { CalendarView, WorksCalendarProps, EmployeeId, EmployeeRecord } from '../WorksCalendar.types';
 
 export interface UseCalendarSetupInput {
   calendarId: string;
   ownerPassword: string | undefined;
-  onConfigSave: LooseValue;
+  onConfigSave: WorksCalendarProps['onConfigSave'];
   devMode: boolean;
   weekStartDayProp: number | undefined;
-  theme: LooseValue;
-  backgroundImage: LooseValue;
-  filterSchema: LooseValue;
-  employees: LooseValue[];
-  assets: LooseValue;
+  theme: string | undefined;
+  backgroundImage: string | undefined;
+  filterSchema: WorksCalendarProps['filterSchema'];
+  employees: WorksCalendarProps['employees'];
+  assets: WorksCalendarProps['assets'];
   initialView: string | undefined;
-  onViewChange: LooseValue;
-  onEmployeeAdd: LooseValue;
-  onEmployeeDelete: LooseValue;
+  onViewChange: WorksCalendarProps['onViewChange'];
+  onEmployeeAdd: WorksCalendarProps['onEmployeeAdd'];
+  onEmployeeDelete: WorksCalendarProps['onEmployeeDelete'];
 }
+
+/** The navigation + filter object threaded through all orchestration hooks. */
+export type CalObject = {
+  view: string;
+  setView: (v: string) => void;
+  currentDate: Date;
+  setCurrentDate: (d: Date | ((prev: Date) => Date)) => void;
+  dayWindow: number | null;
+  setDayWindow: (w: number | null | ((prev: number | null) => number | null)) => void;
+  filters: Record<string, unknown>;
+  navigate: (direction: number) => void;
+  goToToday: () => void;
+  replaceFilters: (newFilters: Record<string, unknown>) => void;
+  clearFilters: () => void;
+  setFilter: (key: string, value: unknown) => void;
+  toggleFilter: (key: string, value: unknown) => void;
+  clearFilter: (key: string) => void;
+};
 
 export function useCalendarSetup({
   calendarId, ownerPassword, onConfigSave, devMode,
@@ -54,7 +69,7 @@ export function useCalendarSetup({
     const parentMembers = Array.isArray(employees) ? employees : [];
     if (configMembers.length === 0) return parentMembers;
     if (parentMembers.length === 0) return configMembers;
-    const configById = new Map(configMembers.map((m: LooseValue) => [String(m.id), m]));
+    const configById = new Map(configMembers.map((m: EmployeeRecord) => [String(m.id), m]));
     const parentOnly = parentMembers.filter((m) => !configById.has(String(m.id)));
     return [...configMembers, ...parentOnly];
   }, [employees, ownerCfg.config?.['team']?.members]);
@@ -119,19 +134,19 @@ export function useCalendarSetup({
     onViewChange?.(view as CalendarView);
   }, [view, onViewChange]);
 
-  const handleEmployeeAddInternal = useCallback((member: LooseValue) => {
+  const handleEmployeeAddInternal = useCallback((member: EmployeeRecord) => {
     ownerCfg.updateConfig(c => {
       const existing = c['team']?.members ?? [];
-      if (existing.some((m: LooseValue) => String(m.id) === String(member.id))) return c;
+      if (existing.some((m: EmployeeRecord) => String(m.id) === String(member.id))) return c;
       return { ...c, team: { ...(c['team'] ?? {}), members: [...existing, member] }, setup: { ...(c['setup'] ?? {}), completed: true } };
     });
     onEmployeeAdd?.(member);
   }, [ownerCfg.updateConfig, onEmployeeAdd]);
 
-  const handleEmployeeDeleteInternal = useCallback((id: LooseValue) => {
+  const handleEmployeeDeleteInternal = useCallback((id: EmployeeId) => {
     ownerCfg.updateConfig(c => ({
       ...c,
-      team: { ...(c['team'] ?? {}), members: (c['team']?.members ?? []).filter((m: LooseValue) => String(m.id) !== String(id)) },
+      team: { ...(c['team'] ?? {}), members: (c['team']?.members ?? []).filter((m: EmployeeRecord) => String(m.id) !== String(id)) },
     }));
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);

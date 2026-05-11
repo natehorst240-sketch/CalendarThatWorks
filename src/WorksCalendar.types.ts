@@ -29,18 +29,18 @@ export type ScheduleInstantiationLimits = {
 };
 
 type UnknownRecord = Record<string, unknown>;
-type ScheduleTemplateAdapter = {
+export type ScheduleTemplateAdapter = {
   listScheduleTemplates?: () => Promise<unknown>;
   createScheduleTemplate?: (template: UnknownRecord) => Promise<unknown>;
   deleteScheduleTemplate?: (templateId: string) => Promise<unknown>;
   [key: string]: unknown;
 };
-type EmployeeId = string | number;
-type EmployeeRecord = { id: EmployeeId; name?: string; [key: string]: unknown };
-type EmployeeActionInput = { type?: string; [key: string]: unknown };
+export type EmployeeId = string | number;
+export type EmployeeRecord = { id: EmployeeId; name?: string; [key: string]: unknown };
+export type EmployeeActionInput = { type?: string; [key: string]: unknown };
 type EventGroupPatch = Record<string, unknown>;
 type AssetLocationData = LocationData | null;
-type AvailabilitySavePayload = {
+export type AvailabilitySavePayload = {
   status?: string;
   coveredBy?: string | null;
   [key: string]: unknown;

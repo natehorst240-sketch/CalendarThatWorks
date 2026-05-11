@@ -76,6 +76,8 @@ export interface NormalizedEvent {
   exdates: Array<Date | string>;
   _raw: WorksCalendarEvent;
   _recurring?: boolean | undefined;
+  /** Series master id added by the engine occurrence adapter — use for mutations. */
+  _eventId?: string | undefined;
   _seriesId?: string | undefined;
   _feedLabel?: string | undefined;
   _col?: number | undefined;

@@ -6,26 +6,30 @@ import { useSetupLanding } from './useSetupLanding';
 import { useGroupingSort } from './useGroupingSort';
 import { useCascadeFilters } from './useCascadeFilters';
 import { useSavedViewsManager } from './useSavedViewsManager';
+import { useOwnerConfig } from './useOwnerConfig';
 import { createManualLocationProvider } from '../providers/ManualLocationProvider.ts';
 import type { AssetsZoomLevel, LocationProvider } from '../types/assets';
 import type { SidebarTab } from '../ui/FilterGroupSidebar';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+import type { FilterField } from '../filters/filterSchema';
+import type { GroupByInput } from './useNormalizedConfig.ts';
+import type { SortConfig } from '../types/grouping.ts';
+import type { CascadeConfig } from '../ui/CascadePanel';
+import type { CalendarRole } from '../WorksCalendar.types';
+import type { CalObject } from './useCalendarSetup';
 
 export interface UseCalendarWorkspaceInput {
   calendarId: string;
-  cal: LooseValue;
-  schema: LooseValue;
-  ownerCfg: LooseValue;
-  cascadeConfig: LooseValue;
-  groupBy: LooseValue;
-  sort: LooseValue;
+  cal: CalObject;
+  schema: FilterField[];
+  ownerCfg: ReturnType<typeof useOwnerConfig>;
+  cascadeConfig: CascadeConfig | undefined;
+  groupBy: GroupByInput | undefined;
+  sort: SortConfig | SortConfig[] | null | undefined;
   showAllGroups: boolean;
-  locationProvider: LooseValue;
+  locationProvider: LocationProvider | undefined;
   showSetupLanding: boolean;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  role: LooseValue;
+  role: CalendarRole | undefined;
 }
 
 export function useCalendarWorkspace({

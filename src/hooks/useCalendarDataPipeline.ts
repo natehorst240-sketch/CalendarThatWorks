@@ -14,35 +14,37 @@ import { viewScopedSchema } from '../filters/filterSchema';
 import { resolveLabels } from '../core/config/resolveLabels';
 import { SCHEDULE_WORKFLOW_CATEGORIES } from '../core/scheduleModel';
 import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
-import type { CalendarView } from '../WorksCalendar.types';
+import type { CalendarView, WorksCalendarProps } from '../WorksCalendar.types';
+import type { WorksCalendarEvent } from '../types/events';
 import type { ViewId } from '../core/viewScope';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+import type { FilterField } from '../filters/filterSchema';
+import type { SortConfig } from '../types/grouping.ts';
+import type { CalObject } from './useCalendarSetup';
+import { useOwnerConfig } from './useOwnerConfig';
 
 export interface UseCalendarDataPipelineInput {
-  cal: LooseValue;
-  ownerCfg: LooseValue;
+  cal: CalObject;
+  ownerCfg: ReturnType<typeof useOwnerConfig>;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
-  rawEvents: LooseValue[];
-  fetchEvents: LooseValue;
-  icalFeeds: LooseValue;
+  rawEvents: WorksCalendarProps['events'];
+  fetchEvents: WorksCalendarProps['fetchEvents'];
+  icalFeeds: WorksCalendarProps['icalFeeds'];
   calendarId: string;
-  supabaseUrl: LooseValue;
-  supabaseKey: LooseValue;
-  supabaseTable: LooseValue;
-  supabaseFilter: LooseValue;
-  rawPools: LooseValue;
-  businessHours: LooseValue;
-  blockedWindows: LooseValue;
-  onPoolsChange: LooseValue;
-  configuredEmployees: LooseValue[];
-  effectiveAssets: LooseValue;
+  supabaseUrl: string | undefined;
+  supabaseKey: string | undefined;
+  supabaseTable: string | undefined;
+  supabaseFilter: string | undefined;
+  rawPools: WorksCalendarProps['pools'];
+  businessHours: WorksCalendarProps['businessHours'];
+  blockedWindows: WorksCalendarProps['blockedWindows'];
+  onPoolsChange: WorksCalendarProps['onPoolsChange'];
+  configuredEmployees: NonNullable<WorksCalendarProps['employees']>;
+  effectiveAssets: WorksCalendarProps['assets'];
   selectedBaseIds: string[];
-  assetRequestCategories: LooseValue;
-  categoriesConfig: LooseValue;
-  schema: LooseValue;
-  activeSort: LooseValue;
+  assetRequestCategories: WorksCalendarProps['assetRequestCategories'];
+  categoriesConfig: WorksCalendarProps['categoriesConfig'];
+  schema: FilterField[];
+  activeSort: SortConfig[] | null;
 }
 
 export function useCalendarDataPipeline({
@@ -69,7 +71,7 @@ export function useCalendarDataPipeline({
     sourceStore,
   });
 
-  const [supabaseClient, setSupabaseClient] = useState<LooseValue | null>(null);
+  const [supabaseClient, setSupabaseClient] = useState<unknown>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
@@ -85,8 +87,8 @@ export function useCalendarDataPipeline({
 
   const allNormalized = useMemo(() => {
     const map = new Map();
-    const noId: LooseValue[] = [];
-    [...rawEvents, ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
+    const noId: WorksCalendarEvent[] = [];
+    [...(rawEvents ?? []), ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
       if (ev.id != null) map.set(String(ev.id), ev);
       else noId.push(ev);
     });
@@ -145,7 +147,7 @@ export function useCalendarDataPipeline({
   }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
 
   const scopedEvents = useTabScopedEvents(cal.view, engineResult.expandedEvents, {
-    employees: configuredEmployees ?? [],
+    employees: (configuredEmployees ?? []) as { id: string; base?: string | null }[],
     assets:    effectiveAssets ?? [],
     bases:     configuredBases ?? [],
     selectedBaseIds,

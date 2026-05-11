@@ -1,62 +1,68 @@
 import { useCallback, useEffect } from 'react';
+import type React from 'react';
 import { useEventMutations } from './useEventMutations';
 import { useScheduleMutations } from './useScheduleMutations';
 import { useScheduleTemplates } from './useScheduleTemplates';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+import { useOwnerConfig } from './useOwnerConfig';
+import { useSourceStore } from './useSourceStore';
+import { usePermissions } from './usePermissions';
+import type { UseCalendarEngineResult } from './useCalendarEngine';
+import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
+import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
+import type { WorksCalendarProps, CalendarRole, EmployeeRecord } from '../WorksCalendar.types';
+import type { UseModalStateReturn } from './useModalState';
 
 export interface UseCalendarMutationsInput {
   // Templates
-  scheduleTemplates: LooseValue;
-  scheduleInstantiationLimits: LooseValue;
-  scheduleTemplateAdapter: LooseValue;
-  onScheduleTemplateAnalytics: LooseValue;
-  role: LooseValue;
-  ownerCfg: LooseValue;
-  businessHours: LooseValue;
-  blockedWindows: LooseValue;
+  scheduleTemplates: WorksCalendarProps['scheduleTemplates'];
+  scheduleInstantiationLimits: WorksCalendarProps['scheduleInstantiationLimits'];
+  scheduleTemplateAdapter: WorksCalendarProps['scheduleTemplateAdapter'];
+  onScheduleTemplateAnalytics: WorksCalendarProps['onScheduleTemplateAnalytics'];
+  role: CalendarRole | undefined;
+  ownerCfg: ReturnType<typeof useOwnerConfig>;
+  businessHours: WorksCalendarProps['businessHours'];
+  blockedWindows: WorksCalendarProps['blockedWindows'];
   // Engine
-  applyEngineOp: LooseValue;
-  applyWithRecurringCheck: LooseValue;
-  getSavedEventPayload: LooseValue;
-  engine: LooseValue;
-  engineVer: LooseValue;
-  expandedEvents: LooseValue[];
-  visibleEvents: LooseValue[];
-  undoManager: LooseValue;
-  announcerRef: LooseValue;
-  sourceStore: LooseValue;
+  applyEngineOp: UseCalendarEngineResult['applyEngineOp'];
+  applyWithRecurringCheck: UseCalendarEngineResult['applyWithRecurringCheck'];
+  getSavedEventPayload: UseCalendarEngineResult['getSavedEventPayload'];
+  engine: UseCalendarEngineResult['engine'];
+  engineVer: number;
+  expandedEvents: NormalizedEvent[];
+  visibleEvents: NormalizedEvent[];
+  undoManager: UseCalendarEngineResult['undoManager'];
+  announcerRef: React.RefObject<AnnouncerRef | null>;
+  sourceStore: ReturnType<typeof useSourceStore>;
   // Event callbacks
-  onEventSave: LooseValue;
-  onEventMove: LooseValue;
-  onEventResize: LooseValue;
-  onEventDelete: LooseValue;
-  onEventGroupChange: LooseValue;
-  onAvailabilitySave: LooseValue;
-  onScheduleSave: LooseValue;
-  onEmployeeAction: LooseValue;
-  onEventClickProp: LooseValue;
-  onDateSelect: LooseValue;
-  onImport: LooseValue;
+  onEventSave: WorksCalendarProps['onEventSave'];
+  onEventMove: WorksCalendarProps['onEventMove'];
+  onEventResize: WorksCalendarProps['onEventResize'];
+  onEventDelete: WorksCalendarProps['onEventDelete'];
+  onEventGroupChange: WorksCalendarProps['onEventGroupChange'];
+  onAvailabilitySave: WorksCalendarProps['onAvailabilitySave'];
+  onScheduleSave: WorksCalendarProps['onScheduleSave'];
+  onEmployeeAction: WorksCalendarProps['onEmployeeAction'];
+  onEventClickProp: WorksCalendarProps['onEventClick'];
+  onDateSelect: WorksCalendarProps['onDateSelect'];
+  onImport: WorksCalendarProps['onImport'];
   // Setup-derived
-  configuredEmployees: LooseValue[];
+  configuredEmployees: EmployeeRecord[];
   devMode: boolean;
   showAddButton: boolean;
-  perms: LooseValue;
-  // Modal state setters
-  inlineEditTarget: LooseValue;
-  setFormEvent: LooseValue;
-  setInlineEditTarget: LooseValue;
-  setSelectedEvent: LooseValue;
-  editModeRef: LooseValue;
-  lastClickCoordsRef: LooseValue;
-  importFlash: LooseValue;
-  setImportOpen: LooseValue;
-  setImportMsg: LooseValue;
-  setAvailabilityState: LooseValue;
-  setScheduleEditorState: LooseValue;
-  setScheduleOpen: LooseValue;
+  perms: ReturnType<typeof usePermissions>;
+  // Modal state (subset of UseModalStateReturn)
+  inlineEditTarget: UseModalStateReturn['inlineEditTarget'];
+  setFormEvent: UseModalStateReturn['setFormEvent'];
+  setInlineEditTarget: UseModalStateReturn['setInlineEditTarget'];
+  setSelectedEvent: UseModalStateReturn['setSelectedEvent'];
+  editModeRef: UseModalStateReturn['editModeRef'];
+  lastClickCoordsRef: UseModalStateReturn['lastClickCoordsRef'];
+  importFlash: UseModalStateReturn['importFlash'];
+  setImportOpen: UseModalStateReturn['setImportOpen'];
+  setImportMsg: UseModalStateReturn['setImportMsg'];
+  setAvailabilityState: UseModalStateReturn['setAvailabilityState'];
+  setScheduleEditorState: UseModalStateReturn['setScheduleEditorState'];
+  setScheduleOpen: UseModalStateReturn['setScheduleOpen'];
 }
 
 export function useCalendarMutations({
@@ -76,18 +82,18 @@ export function useCalendarMutations({
     buildSchedulePreview, handleScheduleInstantiate,
     handleCreateScheduleTemplate, handleDeleteScheduleTemplate,
   } = useScheduleTemplates({
-    scheduleTemplates, scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
+    scheduleTemplates: scheduleTemplates ?? [], scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
     role, isOwner: ownerCfg.isOwner,
-    engine: engine as unknown as { state: { events: Map<string, LooseValue> } },
+    engine: engine as unknown as { state: { events: Map<string, unknown> } },
     ownerBusinessHours: ownerCfg.config?.['businessHours'],
-    businessHours, blockedWindows,
+    businessHours, blockedWindows: blockedWindows ?? [],
     applyEngineOp, getSavedEventPayload, onEventSave,
     onInstantiateSuccess: () => setScheduleOpen(false),
   });
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const onKeyDown = (e: LooseValue) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
       if (e.key === 'z' && !e.shiftKey) {
@@ -118,14 +124,14 @@ export function useCalendarMutations({
     inlineEditTarget, setFormEvent, setInlineEditTarget,
   });
 
-  const handleEventClick = useCallback((ev: LooseValue) => {
+  const handleEventClick = useCallback((ev: NormalizedEvent) => {
     if (editModeRef.current) {
       setSelectedEvent(null);
       setInlineEditTarget({ event: ev, x: lastClickCoordsRef.current.x, y: lastClickCoordsRef.current.y });
       return;
     }
     setSelectedEvent(ev);
-    onEventClickProp?.(ev);
+    onEventClickProp?.(ev._raw ?? (ev as unknown as WorksCalendarEvent));
   }, [onEventClickProp, editModeRef, setSelectedEvent, setInlineEditTarget, lastClickCoordsRef]);
 
   const {
@@ -135,21 +141,22 @@ export function useCalendarMutations({
     applyEngineOp, emitEventSave, getSavedEventPayload,
     expandedEvents, configuredEmployees,
     onEventDelete, onAvailabilitySave, onScheduleSave,
-    onEmployeeAction: onEmployeeAction as LooseValue,
+    onEmployeeAction,
     ownerConfig: ownerCfg.config,
     setAvailabilityState, setScheduleEditorState,
   });
 
-  const handleImport = useCallback((imported: LooseValue, meta: LooseValue) => {
-    onImport?.(imported);
-    sourceStore.addSource({ type: 'csv', label: meta?.label ?? 'CSV Import', color: '#8b5cf6', events: imported, importedAt: new Date().toISOString() });
+  const handleImport = useCallback((imported: WorksCalendarProps['events'], meta: { label?: string } | null) => {
+    const events = imported ?? [];
+    onImport?.(events);
+    sourceStore.addSource({ type: 'csv', label: meta?.label ?? 'CSV Import', color: '#8b5cf6', events, importedAt: new Date().toISOString() });
     setImportOpen(false);
     const count = Array.isArray(imported) ? imported.length : 0;
     setImportMsg(`Imported ${count} event${count === 1 ? '' : 's'}`);
     importFlash.trigger();
   }, [onImport, sourceStore, importFlash, setImportOpen, setImportMsg]);
 
-  const handleEditFromHoverCard = useCallback((ev: LooseValue) => {
+  const handleEditFromHoverCard = useCallback((ev: NormalizedEvent) => {
     setSelectedEvent(null);
     let formEv = ev._raw ?? ev;
     if (ev._recurring && ev._eventId) {
@@ -164,23 +171,23 @@ export function useCalendarMutations({
   const hasImport    = !!(onImport || ownerCfg.isOwner);
   const isEmpty      = visibleEvents.length === 0;
 
-  const handleDateSelect = useCallback((start: LooseValue, end: LooseValue) => {
+  const handleDateSelect = useCallback((start: Date, end: Date) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end);
     setFormEvent({ start, end });
   }, [hasAddButton, onDateSelect, setFormEvent]);
 
-  const handleScheduleDateSelect = useCallback((start: LooseValue, end: LooseValue, resourceId: LooseValue) => {
+  const handleScheduleDateSelect = useCallback((start: Date, end: Date, resourceId: string) => {
     if (!hasAddButton) return;
     onDateSelect?.(start, end, resourceId);
     const startDate = start instanceof Date ? start : new Date(start);
     const endDate = end instanceof Date ? end : new Date(end);
-    const emp = configuredEmployees.find((e: LooseValue) => String(e.id) === String(resourceId));
+    const emp = configuredEmployees.find((e) => String(e.id) === String(resourceId));
     if (!emp) { setFormEvent({ start: startDate, end: endDate, resource: resourceId }); return; }
     setScheduleEditorState({ emp, start: startDate, end: endDate });
   }, [configuredEmployees, hasAddButton, onDateSelect, setFormEvent, setScheduleEditorState]);
 
-  const handlePoolDateSelect = useCallback((start: LooseValue, end: LooseValue, poolId: LooseValue) => {
+  const handlePoolDateSelect = useCallback((start: Date, end: Date, poolId: string) => {
     if (!hasAddButton) return;
     const startDate = start instanceof Date ? start : new Date(start);
     const endDate   = end   instanceof Date ? end   : new Date(end);
