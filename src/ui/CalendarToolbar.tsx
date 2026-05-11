@@ -8,7 +8,14 @@ import { ALL_VIEWS } from '../core/calendarViewConfig';
 import type { ViewDef } from '../core/calendarViewConfig';
 import { captureSavedViewFields } from '../core/viewScope';
 import { hasActiveFilters, buildActiveFilterPills, buildFilterSummary } from '../filters/filterState';
+import { VIEW_SHORTCUT_KEYS } from '../hooks/useKeyboardShortcuts';
 import styles from '../WorksCalendar.module.css';
+
+// view id → keyboard shortcut digit (inverse of VIEW_SHORTCUT_KEYS), used to
+// advertise the binding on each view button via aria-keyshortcuts.
+const VIEW_SHORTCUT_BY_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(VIEW_SHORTCUT_KEYS).map(([key, id]) => [id, key]),
+);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseValue = any;
@@ -100,15 +107,17 @@ export default function CalendarToolbar({
                 className={styles['navBtn']}
                 onClick={() => cal.navigate(-1)}
                 aria-label="Previous"
+                aria-keyshortcuts="k ArrowLeft"
                 title={`Previous ${cal.view}`}
               >
                 <ChevronLeft size={18} aria-hidden="true" />
               </button>
-              <button className={styles['todayBtn']} onClick={cal.goToToday}>Today</button>
+              <button className={styles['todayBtn']} onClick={cal.goToToday} aria-keyshortcuts="t">Today</button>
               <button
                 className={styles['navBtn']}
                 onClick={() => cal.navigate(1)}
                 aria-label="Next"
+                aria-keyshortcuts="j ArrowRight"
                 title={`Next ${cal.view}`}
               >
                 <ChevronRight size={18} aria-hidden="true" />
@@ -129,6 +138,7 @@ export default function CalendarToolbar({
                 className={[styles['viewBtn'], cal.view === v.id && styles['activeView']].filter(Boolean).join(' ')}
                 onClick={() => cal.setView(v.id)}
                 aria-pressed={cal.view === v.id}
+                aria-keyshortcuts={VIEW_SHORTCUT_BY_ID[v.id]}
                 title={v.hint}
                 data-wc-view-button={v.id}
               >

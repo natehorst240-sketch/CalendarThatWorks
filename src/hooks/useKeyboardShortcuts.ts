@@ -17,7 +17,11 @@
  */
 import { useEffect } from 'react';
 
-const VIEW_KEYS = {
+/**
+ * Single-digit keys that switch the active view. Exported so the toolbar can
+ * advertise the same bindings via `aria-keyshortcuts` (single source of truth).
+ */
+export const VIEW_SHORTCUT_KEYS = {
   '1': 'month',
   '2': 'week',
   '3': 'day',
@@ -63,9 +67,9 @@ export function useKeyboardShortcuts(api: {
       if (hasOpenModal()) return;
 
       // View switches: digits 1..6
-      if (Object.prototype.hasOwnProperty.call(VIEW_KEYS, e.key)) {
+      if (Object.prototype.hasOwnProperty.call(VIEW_SHORTCUT_KEYS, e.key)) {
         e.preventDefault();
-        setView?.(VIEW_KEYS[e.key as keyof typeof VIEW_KEYS]);
+        setView?.(VIEW_SHORTCUT_KEYS[e.key as keyof typeof VIEW_SHORTCUT_KEYS]);
         return;
       }
 

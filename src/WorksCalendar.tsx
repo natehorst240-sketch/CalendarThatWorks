@@ -33,10 +33,11 @@ import CalendarErrorBoundary     from './ui/CalendarErrorBoundary';
 import styles from './WorksCalendar.module.css';
 import './styles/family/index.css';
 
-// Phase 1 migration boundary
-type LooseValue = any; // eslint-disable-line @typescript-eslint/no-explicit-any
-
-
+// Views whose layout is a vertical calendar grid/list, so a horizontal
+// touch swipe unambiguously maps to "previous / next period". Timeline-style
+// views (timeline, base, assets) are intentionally excluded — they scroll
+// horizontally and a swipe there would fight the scroll container.
+const SWIPE_NAV_VIEWS = new Set(['month', 'week', 'day', 'agenda', 'schedule']);
 
 const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function WorksCalendarImpl(
   {
@@ -250,7 +251,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, engine, engineVer,
     expandedEvents, visibleEvents, undoManager, announcerRef, sourceStore,
     onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
-    onAvailabilitySave, onScheduleSave, onEmployeeAction: onEmployeeAction as LooseValue,
+    onAvailabilitySave, onScheduleSave, onEmployeeAction,
     onEventClickProp, onDateSelect, onImport,
     configuredEmployees, devMode, showAddButton, perms,
     inlineEditTarget, setFormEvent, setInlineEditTarget, setSelectedEvent,
@@ -258,18 +259,18 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     setAvailabilityState, setScheduleEditorState, setScheduleOpen,
   });
 
-  const api = useMemo(() => ({
-    navigateTo:       (date: LooseValue) => cal.setCurrentDate(date),
-    setView:          (v: LooseValue)    => cal.setView(v),
-    goToToday:        ()                 => cal.goToToday(),
-    openEvent:        (id: LooseValue)   => { const ev = expandedEvents.find((e: LooseValue) => e.id === id); if (ev) setSelectedEvent(ev); },
-    getVisibleEvents: ()                 => visibleEvents,
-    clearFilters:     ()                 => cal.clearFilters(),
-    addEvent:         (d = {})           => setFormEvent(d),
-    undo:             ()                 => undoManager.undo(),
-    redo:             ()                 => undoManager.redo(),
-    get canUndo()                        { return undoManager.canUndo; },
-    get canRedo()                        { return undoManager.canRedo; },
+  const api = useMemo((): CalendarApi => ({
+    navigateTo:       (date)  => cal.setCurrentDate(date),
+    setView:          (v)     => cal.setView(v),
+    goToToday:        ()      => cal.goToToday(),
+    openEvent:        (id)    => { const ev = expandedEvents.find(e => e.id === id); if (ev) setSelectedEvent(ev); },
+    getVisibleEvents: ()      => visibleEvents,
+    clearFilters:     ()      => cal.clearFilters(),
+    addEvent:         (d = {}) => setFormEvent(d),
+    undo:             ()      => undoManager.undo(),
+    redo:             ()      => undoManager.redo(),
+    get canUndo()             { return undoManager.canUndo; },
+    get canRedo()             { return undoManager.canRedo; },
   }), [cal, expandedEvents, visibleEvents, undoManager, setSelectedEvent, setFormEvent]);
 
   useImperativeHandle(ref, () => api, [api]);
@@ -283,7 +284,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   const swipeAreaRef = useRef<HTMLDivElement | null>(null);
   useTouchSwipe({
     targetRef: swipeAreaRef,
-    enabled: cal.view === 'month' || cal.view === 'schedule',
+    enabled: SWIPE_NAV_VIEWS.has(cal.view),
     onSwipeLeft: () => cal.navigate(1),
     onSwipeRight: () => cal.navigate(-1),
   });
@@ -439,7 +440,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
             canRequestAsset={canRequestAsset}
             effectiveAssets={effectiveAssets}
             currentDate={cal.currentDate}
-            requirementTemplates={ownerCfg.config?.['requirementTemplates'] as LooseValue}
+            requirementTemplates={ownerCfg.config?.['requirementTemplates']}
             availabilityState={availabilityState}
             setAvailabilityState={setAvailabilityState}
             handleAvailabilitySave={handleAvailabilitySave}

@@ -3,6 +3,7 @@ import { useFetchEvents } from './useFetchEvents';
 import { useSourceStore } from './useSourceStore';
 import { useSourceAggregator } from './useSourceAggregator';
 import { useRealtimeEvents } from './useRealtimeEvents';
+import type { SupabaseRealtimeClientLike } from './useRealtimeEvents';
 import { normalizeEvents } from '../core/eventModel';
 import { useCalendarEngine } from './useCalendarEngine';
 import { useTabScopedEvents } from './useTabScopedEvents';
@@ -71,11 +72,11 @@ export function useCalendarDataPipeline({
     sourceStore,
   });
 
-  const [supabaseClient, setSupabaseClient] = useState<unknown>(null);
+  const [supabaseClient, setSupabaseClient] = useState<SupabaseRealtimeClientLike | null>(null);
   useEffect(() => {
     if (!supabaseUrl || !supabaseKey) return;
     import('@supabase/supabase-js')
-      .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey)))
+      .then(({ createClient }) => setSupabaseClient(createClient(supabaseUrl, supabaseKey) as unknown as SupabaseRealtimeClientLike))
       .catch(() => console.warn('[WorksCalendar] @supabase/supabase-js not installed.'));
   }, [supabaseUrl, supabaseKey]);
 
@@ -86,9 +87,15 @@ export function useCalendarDataPipeline({
   });
 
   const allNormalized = useMemo(() => {
-    const map = new Map();
+    // Heterogeneous inputs (host events, fetched events, CSV/ICS source rows,
+    // realtime rows) are reconciled by id here, then normalized into the
+    // canonical event shape.
+    const incoming = [
+      ...(rawEvents ?? []), ...fetchedEvents, ...sourceEvents, ...realtimeEvents,
+    ] as unknown as WorksCalendarEvent[];
+    const map = new Map<string, WorksCalendarEvent>();
     const noId: WorksCalendarEvent[] = [];
-    [...(rawEvents ?? []), ...fetchedEvents, ...sourceEvents, ...realtimeEvents].forEach(ev => {
+    incoming.forEach(ev => {
       if (ev.id != null) map.set(String(ev.id), ev);
       else noId.push(ev);
     });
