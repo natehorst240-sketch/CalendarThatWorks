@@ -437,3 +437,350 @@ describe('advance — purity', () => {
     expect(s1.instance).toEqual(snapshot)
   })
 })
+
+// ─── timeout auto-deny ────────────────────────────────────────────────────────
+
+describe('advance — timeout auto-deny', () => {
+  it('auto-deny reuses the denied edge', () => {
+    const wf: Workflow = {
+      id: 'sla-deny', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x', slaMinutes: 5, onTimeout: 'auto-deny' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+        { id: 'denied', type: 'terminal', outcome: 'denied' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'a', to: 'denied', when: 'denied' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'timeout' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('denied')
+  })
+})
+
+// ─── join reached outside parallel scope ──────────────────────────────────────
+
+describe('advance — join outside parallel scope', () => {
+  it('fails when autoAdvance lands on a join node outside a parallel scope', () => {
+    const wf: Workflow = {
+      id: 'bad-join', version: 1, trigger: 'on_submit', startNodeId: 'j',
+      nodes: [
+        { id: 'j', type: 'join', pairedWith: 'par-that-does-not-exist' },
+      ],
+      edges: [],
+    }
+    const r = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed && 'reason' in failed && failed.reason).toMatch(/outside a parallel scope/i)
+  })
+})
+
+// ─── Parallel workflow fixtures ───────────────────────────────────────────────
+
+const parAll: Workflow = {
+  id: 'par-all', version: 1, trigger: 'on_submit', startNodeId: 'par',
+  nodes: [
+    { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1', 'b2'] },
+    { id: 'b1',   type: 'approval', assignTo: 'role:mgr1' },
+    { id: 'b2',   type: 'approval', assignTo: 'role:mgr2' },
+    { id: 'join', type: 'join', pairedWith: 'par' },
+    { id: 'done', type: 'terminal', outcome: 'finalized' },
+  ],
+  edges: [
+    { from: 'b1',   to: 'join', when: 'branch-completed' },
+    { from: 'b2',   to: 'join', when: 'branch-completed' },
+    { from: 'join', to: 'done' },
+  ],
+}
+
+const parAny: Workflow = {
+  ...parAll,
+  id: 'par-any',
+  nodes: parAll.nodes.map(n =>
+    n.id === 'par' ? { ...n, mode: 'requireAny' as const } : n,
+  ),
+}
+
+const parN: Workflow = {
+  ...parAll,
+  id: 'par-n',
+  nodes: parAll.nodes.map(n =>
+    n.id === 'par' ? { ...n, mode: 'requireN' as const, n: 1 } : n,
+  ),
+}
+
+// ─── Parallel requireAll ──────────────────────────────────────────────────────
+
+describe('advance — parallel requireAll', () => {
+  it('starts and parks both branches', () => {
+    const r = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('awaiting')
+    expect(r.instance.currentNodeId).toBeNull()
+    const frames = r.instance.parallelFrames ?? []
+    expect(frames).toHaveLength(1)
+    expect(frames[0]?.branches.map(b => b.activeNodeId)).toEqual(['b1', 'b2'])
+  })
+
+  it('stays awaiting after one approval, completes after both', () => {
+    const s1 = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+
+    const s2 = advance({ workflow: parAll, instance: s1.instance, action: { type: 'approve', actor: 'alice', targetNodeId: 'b1' }, at: AT })
+    expect(s2.ok).toBe(true)
+    if (!s2.ok) return
+    expect(s2.instance.status).toBe('awaiting') // b2 still pending
+
+    const s3 = advance({ workflow: parAll, instance: s2.instance, action: { type: 'approve', actor: 'bob', targetNodeId: 'b2' }, at: AT })
+    expect(s3.ok).toBe(true)
+    if (!s3.ok) return
+    expect(s3.instance.status).toBe('completed')
+    expect(s3.instance.outcome).toBe('finalized')
+    expect(s3.instance.parallelFrames ?? []).toHaveLength(0)
+  })
+
+  it('fails immediately when one branch denies (requireAll fail-fast)', () => {
+    const s1 = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+
+    const r = advance({ workflow: parAll, instance: s1.instance, action: { type: 'deny', reason: 'nope', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed && 'reason' in failed && failed.reason).toMatch(/quorum/i)
+  })
+
+  it('returns error when targetNodeId is not pending', () => {
+    const s1 = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: parAll, instance: s1.instance, action: { type: 'approve', targetNodeId: 'nonexistent' }, at: AT })
+    expect(r.ok).toBe(false)
+    expect('error' in r && r.error).toMatch(/no pending branch/)
+  })
+
+  it('returns error when two branches are pending and no targetNodeId supplied', () => {
+    const s1 = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    // Both branches pending, no targetNodeId → ambiguous
+    const r = advance({ workflow: parAll, instance: s1.instance, action: { type: 'approve' }, at: AT })
+    expect(r.ok).toBe(false)
+    expect('error' in r && r.error).toMatch(/branches awaiting/)
+  })
+
+  it('cancels a running parallel, closing open branch entries', () => {
+    const s1 = advance({ workflow: parAll, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: parAll, instance: s1.instance, action: { type: 'cancel' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('cancelled')
+    expect(r.instance.parallelFrames ?? []).toHaveLength(0)
+  })
+
+  it('fails when parallel has no paired join node', () => {
+    const orphan: Workflow = {
+      id: 'orphan', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par', type: 'parallel', mode: 'requireAll', branches: ['b1'] },
+        { id: 'b1',  type: 'approval', assignTo: 'role:x' },
+      ],
+      edges: [{ from: 'b1', to: 'par' }],
+    }
+    const r = advance({ workflow: orphan, instance: null, action: { type: 'start' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+    const failed = r.emit.find(e => e.type === 'workflow_failed')
+    expect(failed && 'reason' in failed && failed.reason).toMatch(/no paired join/i)
+  })
+})
+
+// ─── Parallel requireAny ──────────────────────────────────────────────────────
+
+describe('advance — parallel requireAny', () => {
+  it('completes when the first branch approves', () => {
+    const s1 = advance({ workflow: parAny, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: parAny, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('finalized')
+  })
+
+  it('fails when all branches deny (requireAny exhausted)', () => {
+    const wf: Workflow = {
+      ...parAny,
+      id: 'par-any-deny',
+      nodes: parAny.nodes.map(n =>
+        n.id === 'par' ? { ...n, branches: ['b1'] } : n,
+      ),
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'deny', reason: 'no', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
+// ─── Parallel requireN ────────────────────────────────────────────────────────
+
+describe('advance — parallel requireN', () => {
+  it('completes when N branches approve (n=1)', () => {
+    const s1 = advance({ workflow: parN, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: parN, instance: s1.instance, action: { type: 'approve', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('completed')
+    expect(r.instance.outcome).toBe('finalized')
+  })
+
+  it('fails early when positive + remaining < required', () => {
+    // 2 branches, n=2, but 1 denies → can never reach 2 positives → fail
+    const wf: Workflow = {
+      ...parAll,
+      id: 'par-n2',
+      nodes: parAll.nodes.map(n =>
+        n.id === 'par' ? { ...n, mode: 'requireN' as const, n: 2 } : n,
+      ),
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'deny', reason: 'no', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('failed')
+  })
+})
+
+// ─── Parallel branch timeout ──────────────────────────────────────────────────
+
+describe('advance — parallel branch timeout', () => {
+  it('escalates a branch approval via timeout edge', () => {
+    const wf: Workflow = {
+      id: 'par-timeout', version: 1, trigger: 'on_submit', startNodeId: 'par',
+      nodes: [
+        { id: 'par',  type: 'parallel', mode: 'requireAll', branches: ['b1', 'b2'] },
+        { id: 'b1',   type: 'approval', assignTo: 'role:x', onTimeout: 'escalate' },
+        { id: 'b1e',  type: 'approval', assignTo: 'role:director' },
+        { id: 'b2',   type: 'approval', assignTo: 'role:y' },
+        { id: 'join', type: 'join', pairedWith: 'par' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'b1',   to: 'b1e',  when: 'timeout' },
+        { from: 'b1',   to: 'join',  when: 'branch-completed' },
+        { from: 'b1e',  to: 'join',  when: 'branch-completed' },
+        { from: 'b2',   to: 'join',  when: 'branch-completed' },
+        { from: 'join', to: 'done' },
+      ],
+    }
+    const s1 = advance({ workflow: wf, instance: null, action: { type: 'start' }, at: AT })
+    if (!s1.ok) throw new Error('precondition')
+    // Timeout b1 → escalates to b1e
+    const r = advance({ workflow: wf, instance: s1.instance, action: { type: 'timeout', targetNodeId: 'b1' }, at: AT })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.instance.status).toBe('awaiting')
+    const frames = r.instance.parallelFrames ?? []
+    expect(frames[0]?.branches.map(b => b.activeNodeId)).toContain('b1e')
+  })
+})
+
+// ─── tick() ───────────────────────────────────────────────────────────────────
+
+import { tick } from '../advance'
+
+describe('tick', () => {
+  const slaWf: Workflow = {
+    id: 'sla-tick', version: 1, trigger: 'on_submit', startNodeId: 'a',
+    nodes: [
+      { id: 'a', type: 'approval', assignTo: 'role:x', slaMinutes: 60, onTimeout: 'escalate' },
+      { id: 'escalated', type: 'approval', assignTo: 'role:director' },
+      { id: 'done', type: 'terminal', outcome: 'finalized' },
+      { id: 'denied', type: 'terminal', outcome: 'denied' },
+    ],
+    edges: [
+      { from: 'a', to: 'done', when: 'approved' },
+      { from: 'a', to: 'denied', when: 'denied' },
+      { from: 'a', to: 'escalated', when: 'timeout' },
+      { from: 'escalated', to: 'done', when: 'approved' },
+      { from: 'escalated', to: 'denied', when: 'denied' },
+    ],
+  }
+
+  function started(): WorkflowInstance {
+    const r = advance({ workflow: slaWf, instance: null, action: { type: 'start' }, at: AT })
+    if (!r.ok) throw new Error('precondition')
+    return r.instance
+  }
+
+  it('returns null when instance is not awaiting', () => {
+    const r = advance({ workflow: slaWf, instance: null, action: { type: 'start' }, at: AT })
+    if (!r.ok) throw new Error()
+    // complete it
+    const done = advance({ workflow: slaWf, instance: r.instance, action: { type: 'approve' }, at: AT })
+    if (!done.ok) throw new Error()
+    expect(tick(slaWf, done.instance, AT)).toBeNull()
+  })
+
+  it('returns null when the awaited node has no slaMinutes', () => {
+    const noSla: Workflow = {
+      ...slaWf,
+      nodes: slaWf.nodes.map(n =>
+        n.id === 'a' ? { ...n, slaMinutes: undefined } : n,
+      ),
+    }
+    const inst = (() => {
+      const r = advance({ workflow: noSla, instance: null, action: { type: 'start' }, at: AT })
+      if (!r.ok) throw new Error()
+      return r.instance
+    })()
+    expect(tick(noSla, inst, AT)).toBeNull()
+  })
+
+  it('returns null when SLA has not elapsed yet', () => {
+    const inst = started()
+    const nowIso = '2026-04-20T10:30:00.000Z' // 30 min after AT, sla=60
+    expect(tick(slaWf, inst, nowIso)).toBeNull()
+  })
+
+  it('fires a timeout when SLA has elapsed', () => {
+    const inst = started()
+    const nowIso = '2026-04-20T12:00:00.000Z' // 120 min after AT, sla=60
+    const result = tick(slaWf, inst, nowIso)
+    expect(result).not.toBeNull()
+    expect(result?.ok).toBe(true)
+    if (!result || !result.ok) return
+    expect(result.instance.currentNodeId).toBe('escalated')
+  })
+
+  it('returns null when enteredAt cannot be found in history', () => {
+    const inst: WorkflowInstance = {
+      workflowId: slaWf.id, workflowVersion: 1,
+      status: 'awaiting', currentNodeId: 'a',
+      history: [], // empty — no enteredAt
+    }
+    expect(tick(slaWf, inst, AT)).toBeNull()
+  })
+
+  it('returns null when nowIso is not a parseable date', () => {
+    const inst = started()
+    expect(tick(slaWf, inst, 'not-a-date')).toBeNull()
+  })
+})
