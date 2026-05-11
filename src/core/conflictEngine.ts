@@ -192,6 +192,8 @@ const VALID: ConflictEvaluationResult = {
   allowed: true,
 }
 
+const NO_EVENTS: readonly ConflictEvent[] = []
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function toDate(value: Date | string | number): Date {
@@ -207,6 +209,41 @@ function sameResource(a: ConflictEvent, b: ConflictEvent): boolean {
   const ra = a.resource ?? ''
   const rb = b.resource ?? ''
   return ra !== '' && ra === rb
+}
+
+/** Rules that compare the proposed event against one other event at a time. */
+type PairwiseRule = ResourceOverlapRule | CategoryMutexRule | MinRestRule
+
+function isPairwiseRule(rule: ConflictRule): rule is PairwiseRule {
+  return (
+    rule.type === 'resource-overlap' ||
+    rule.type === 'category-mutex' ||
+    rule.type === 'min-rest'
+  )
+}
+
+/**
+ * The proposed event's resource bucket — `events` that share its resource,
+ * with the proposed event itself removed (same self-skip rule the old
+ * pairwise loop used). Returns the shared empty array when the proposed
+ * event is unscoped or no rule needs the bucket, so callers never pay the
+ * O(events) filter for nothing.
+ *
+ * Every pairwise rule (resource-overlap / category-mutex / min-rest) and
+ * the capacity-overflow rule require `sameResource(proposed, other)`, so
+ * scanning this bucket — rather than the full event list, once per rule —
+ * is what lets the engine stay responsive past 1000 events.
+ */
+function sameResourceBucket(
+  proposed: ConflictEvent,
+  events: readonly ConflictEvent[],
+  needed: boolean,
+): readonly ConflictEvent[] {
+  const key = proposed.resource ?? ''
+  if (key === '' || !needed) return NO_EVENTS
+  return events.filter(
+    (e) => (e.resource ?? '') === key && !(e.id && proposed.id && e.id === proposed.id),
+  )
 }
 
 // ─── Built-in rule evaluators ───────────────────────────────────────────────
@@ -264,28 +301,41 @@ function evalCategoryMutex(
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-/** Units a single event contributes to the resource's workload for capacity checks. */
-function unitsFor(
-  event: ConflictEvent,
+/**
+ * Build `eventId → summed units` for a single resource in one pass over
+ * the assignment map. Events absent from the returned map fall back to
+ * 100 units (one full slot) — matching the legacy per-event scan that
+ * returned 100 on no match. Returns `null` when no assignment map was
+ * provided (every event is then assumed to occupy 100 units).
+ *
+ * Replaces the old per-event `unitsFor()` which scanned every assignment
+ * for every event — an O(events × assignments) hot loop inside
+ * `evalCapacityOverflow`.
+ */
+function buildUnitsIndex(
   resourceId: string,
   assignments: ReadonlyMap<string, Assignment> | undefined,
-): number {
-  if (!assignments) return 100
-  let total = 0
-  let matched = false
+): Map<string, number> | null {
+  if (!assignments) return null
+  const index = new Map<string, number>()
   for (const a of assignments.values()) {
-    if (a.eventId === event.id && a.resourceId === resourceId) {
-      total += a.units
-      matched = true
-    }
+    if (a.resourceId !== resourceId) continue
+    index.set(a.eventId, (index.get(a.eventId) ?? 0) + a.units)
   }
-  return matched ? total : 100
+  return index
+}
+
+function unitsFromIndex(eventId: string, index: Map<string, number> | null): number {
+  if (!index) return 100
+  const units = index.get(eventId)
+  return units === undefined ? 100 : units
 }
 
 function evalCapacityOverflow(
   rule: CapacityOverflowRule,
   proposed: ConflictEvent,
-  events: readonly ConflictEvent[],
+  /** Pre-filtered: events on the proposed resource, self already removed. */
+  sameResourceEvents: readonly ConflictEvent[],
   resources: ReadonlyMap<string, EngineResource> | undefined,
   assignments: ReadonlyMap<string, Assignment> | undefined,
 ): Violation | null {
@@ -303,15 +353,13 @@ function evalCapacityOverflow(
   const ps = toDate(proposed.start)
   const pe = toDate(proposed.end)
 
-  const proposedUnits = unitsFor(proposed, resourceId, assignments)
-  let totalUnits = proposedUnits
-  for (const other of events) {
-    if (other.id && proposed.id && other.id === proposed.id) continue
-    if (!sameResource(proposed, other)) continue
+  const unitsIndex = buildUnitsIndex(resourceId, assignments)
+  let totalUnits = unitsFromIndex(proposed.id, unitsIndex)
+  for (const other of sameResourceEvents) {
     const os = toDate(other.start)
     const oe = toDate(other.end)
     if (!overlaps(ps, pe, os, oe)) continue
-    totalUnits += unitsFor(other, resourceId, assignments)
+    totalUnits += unitsFromIndex(other.id, unitsIndex)
   }
 
   if (totalUnits <= capacityUnits) return null
@@ -610,10 +658,14 @@ function evalMinRest(
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
- * Run every rule against every other event and return aggregated violations.
+ * Run every rule against the proposed event and return aggregated violations.
  *
- * Complexity is O(rules × events); for the calendar's typical working set
- * (<1000 events, <10 rules) this is well under the perf budget. Rules are
+ * Cost is O(events + assignments) for index building plus
+ * O(bucket × pairwiseRules) for the pairwise checks, where `bucket` is the
+ * subset of events sharing the proposed event's resource. The old
+ * implementation re-scanned the full event list once per rule (and, for
+ * capacity-overflow, re-scanned every assignment once per event), which
+ * degraded sharply past ~1000 events; this path stays flat. Rules are
  * pure and side-effect-free so the result is fully memoisable by caller.
  */
 export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvaluationResult {
@@ -623,12 +675,23 @@ export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvalua
   const nowMs = now !== undefined ? toDate(now).getTime() : Date.now()
   const violations: Violation[] = []
 
+  const pairwiseRules = rules.filter(isPairwiseRule)
+  const hasCapacityRule = rules.some((r) => r.type === 'capacity-overflow')
+
+  // Resolve the proposed event's resource bucket once: every rule below that
+  // walks the event list cares only about same-resource events.
+  const sameResourceEvents = sameResourceBucket(
+    proposed,
+    events,
+    pairwiseRules.length > 0 || hasCapacityRule,
+  )
+
   // Single-pass (non-pairwise) rules — evaluated once per rule.
   for (const rule of rules) {
     let v: Violation | null = null
     switch (rule.type) {
       case 'capacity-overflow':
-        v = evalCapacityOverflow(rule, proposed, events, resources, assignments)
+        v = evalCapacityOverflow(rule, proposed, sameResourceEvents, resources, assignments)
         break
       case 'outside-business-hours':
         v = evalOutsideBusinessHours(rule, proposed, resources)
@@ -648,18 +711,19 @@ export function evaluateConflicts(input: EvaluateConflictsInput): ConflictEvalua
     if (v) violations.push(v)
   }
 
-  // Pairwise rules — evaluated for every (other, rule) combination.
-  for (const other of events) {
-    if (other.id && proposed.id && other.id === proposed.id) continue
-    for (const rule of rules) {
-      let v: Violation | null = null
-      switch (rule.type) {
-        case 'resource-overlap': v = evalResourceOverlap(rule, proposed, other); break
-        case 'category-mutex':   v = evalCategoryMutex(rule, proposed, other);   break
-        case 'min-rest':         v = evalMinRest(rule, proposed, other);         break
-        default: break
+  // Pairwise rules — evaluated for every (same-resource event, rule) combo.
+  if (pairwiseRules.length > 0) {
+    for (const other of sameResourceEvents) {
+      for (const rule of pairwiseRules) {
+        let v: Violation | null = null
+        switch (rule.type) {
+          case 'resource-overlap': v = evalResourceOverlap(rule, proposed, other); break
+          case 'category-mutex':   v = evalCategoryMutex(rule, proposed, other);   break
+          case 'min-rest':         v = evalMinRest(rule, proposed, other);         break
+          default: break
+        }
+        if (v) violations.push(v)
       }
-      if (v) violations.push(v)
     }
   }
 

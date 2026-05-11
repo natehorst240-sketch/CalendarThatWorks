@@ -863,3 +863,89 @@ describe('conflictEngine — availability-violation rule (#214)', () => {
     expect(result.violations).toEqual([]);
   });
 });
+
+// ─── Scaling — large event sets ──────────────────────────────────────────────
+
+describe('conflictEngine — scaling to 1000+ events', () => {
+  // Build N events spread across `resourceCount` resources, one per hour.
+  const buildEvents = (n: number, resourceCount: number): ConflictEvent[] => {
+    const out: ConflictEvent[] = [];
+    for (let i = 0; i < n; i++) {
+      const startMs = Date.UTC(2026, 0, 1, 0, 0) + i * 60 * 60 * 1000;
+      out.push({
+        id: `ev-${i}`,
+        start: new Date(startMs),
+        end: new Date(startMs + 60 * 60 * 1000),
+        resource: `R${i % resourceCount}`,
+      });
+    }
+    return out;
+  };
+
+  it('only flags conflicts on the proposed event\'s resource (ignores the other ~2000 events)', () => {
+    const events = buildEvents(2000, 50);
+    // Proposed overlaps ev-0 (resource R0, 00:00-01:00) and ev-50 etc. are R0
+    // too (every 50th). It overlaps just ev-0's window here.
+    const proposed: ConflictEvent = {
+      id: 'proposed',
+      start: new Date(Date.UTC(2026, 0, 1, 0, 30)),
+      end: new Date(Date.UTC(2026, 0, 1, 1, 0)),
+      resource: 'R0',
+    };
+    const result = evaluateConflicts({
+      proposed,
+      events,
+      rules: [{ id: 'ovr', type: 'resource-overlap' }],
+    });
+    expect(result.allowed).toBe(false);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0].conflictingEventId).toBe('ev-0');
+  });
+
+  it('is fast for 5000 events with several rules', () => {
+    const events = buildEvents(5000, 100);
+    const proposed: ConflictEvent = {
+      id: 'proposed',
+      start: new Date(Date.UTC(2026, 0, 1, 0, 30)),
+      end: new Date(Date.UTC(2026, 0, 1, 1, 30)),
+      resource: 'R0',
+    };
+    const rules: ConflictRule[] = [
+      { id: 'ovr', type: 'resource-overlap' },
+      { id: 'rest', type: 'min-rest', minutes: 30 },
+      { id: 'cap', type: 'capacity-overflow' },
+    ];
+    const t0 = performance.now();
+    for (let i = 0; i < 20; i++) evaluateConflicts({ proposed, events, rules });
+    const perCall = (performance.now() - t0) / 20;
+    // Generous bound — pre-optimisation this re-scanned all 5000 events per
+    // rule on every call. Just a guard against an accidental O(n·rules) regression.
+    expect(perCall).toBeLessThan(20);
+  });
+
+  it('capacity-overflow scales with assignments (no per-event assignment rescan)', () => {
+    const events = buildEvents(1000, 1); // all on R0, sequential hours
+    // One assignment per event, all on R0.
+    const assignments = new Map<string, Assignment>();
+    for (let i = 0; i < 1000; i++) {
+      assignments.set(`asn-${i}`, makeAssignment(`asn-${i}`, { eventId: `ev-${i}`, resourceId: 'R0', units: 100 }));
+    }
+    const resources = new Map<string, EngineResource>([['R0', { id: 'R0', name: 'Room', capacity: 1 }]]);
+    const proposed: ConflictEvent = {
+      id: 'proposed',
+      start: new Date(Date.UTC(2026, 0, 1, 0, 30)),
+      end: new Date(Date.UTC(2026, 0, 1, 1, 0)),
+      resource: 'R0',
+    };
+    const result = evaluateConflicts({
+      proposed,
+      events,
+      rules: [{ id: 'cap', type: 'capacity-overflow' }],
+      resources,
+      assignments,
+    });
+    // proposed (100) + ev-0 (100, overlapping) = 200 > capacity 1*100 → overflow.
+    expect(result.allowed).toBe(false);
+    expect(result.violations[0].details).toMatchObject({ type: 'capacity-overflow', totalUnits: 200 });
+  });
+});
