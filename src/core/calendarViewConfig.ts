@@ -3,11 +3,12 @@ import {
   startOfWeek, endOfWeek, addDays,
 } from 'date-fns';
 import type { ViewId } from './viewScope';
+import type { NormalizedEvent } from '../types/events';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+/** Minimal shape `opAnnouncement` reads off an engine operation. */
+type AnnouncedOp = { type?: string; event?: { title?: string } };
 
-export function opAnnouncement(op: LooseValue): string {
+export function opAnnouncement(op: AnnouncedOp): string {
   switch (op.type) {
     case 'create': return `Event "${op.event?.title ?? 'Untitled'}" created.`;
     case 'update': return 'Event updated.';
@@ -39,8 +40,8 @@ export const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   createMax: 200,
 };
 
-let exportToExcelFn: LooseValue = null;
-export async function exportVisibleEvents(events: LooseValue): Promise<void> {
+let exportToExcelFn: ((events: NormalizedEvent[]) => Promise<void>) | null = null;
+export async function exportVisibleEvents(events: NormalizedEvent[]): Promise<void> {
   if (!exportToExcelFn) {
     ({ exportToExcel: exportToExcelFn } = await import('../export/excelExport.js'));
   }
@@ -48,7 +49,7 @@ export async function exportVisibleEvents(events: LooseValue): Promise<void> {
 }
 
 /** Compute the visible [start, end] range for a given view + date. */
-export function viewRange(view: LooseValue, date: LooseValue, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
+export function viewRange(view: string, date: Date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 0) {
   switch (view) {
     case 'week':
       return { start: startOfWeek(date, { weekStartsOn: weekStartDay }), end: endOfWeek(date, { weekStartsOn: weekStartDay }) };

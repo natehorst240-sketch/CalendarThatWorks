@@ -1,14 +1,52 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useCallback, useRef } from 'react';
 import { useSavedFlash } from './useSavedFlash';
+import type { NormalizedEvent } from '../types/events';
+import type { EmployeeRecord } from '../WorksCalendar.types';
 
-type LooseValue = any;
+/**
+ * Draft event the user is composing in the editor / new-event form. Loose by
+ * design — accepts the public `WorksCalendarEvent` shape, the internal
+ * `NormalizedEvent`, and the partial drafts the toolbar / pool / cell-click
+ * paths build, plus a handful of form-only fields (e.g. `resourcePoolId`).
+ */
+export interface FormEventDraft {
+  /** Accepts both the public `WorksCalendarEvent` shape (`id?: string | undefined`)
+   *  and the internal `NormalizedEvent` shape (`id: string`). */
+  id?: string | undefined;
+  /** Set when launching the form from a resource-pool row. */
+  resourcePoolId?: string | null;
+  start?: Date | string | undefined;
+  end?: Date | string | undefined;
+  resource?: string | undefined;
+}
+
+/** Anchor for the in-place pill editor popover. */
+export interface InlineEditTarget {
+  event: NormalizedEvent;
+  x: number;
+  y: number;
+}
+
+/** Modal state for the PTO / Unavailable picker. */
+export interface AvailabilityModalState {
+  emp: EmployeeRecord;
+  kind: string;
+  start: Date | string;
+  initialEvent?: NormalizedEvent | null;
+}
+
+/** Modal state for the shift / on-call editor. */
+export interface ScheduleEditorModalState {
+  emp: EmployeeRecord;
+  start: Date;
+  end: Date;
+}
 
 export interface UseModalStateReturn {
-  selectedEvent: LooseValue | null;
-  setSelectedEvent: (ev: LooseValue | null) => void;
-  formEvent: LooseValue | null;
-  setFormEvent: (ev: LooseValue | null) => void;
+  selectedEvent: NormalizedEvent | null;
+  setSelectedEvent: (ev: NormalizedEvent | null) => void;
+  formEvent: FormEventDraft | null;
+  setFormEvent: (ev: FormEventDraft | null) => void;
   conflictingEventIds: ReadonlySet<string>;
   handleLiveConflicts: (ids: readonly string[] | null) => void;
   assetRequestOpen: boolean;
@@ -20,25 +58,25 @@ export interface UseModalStateReturn {
   importFlash: ReturnType<typeof useSavedFlash>;
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
-  availabilityState: LooseValue | null;
-  setAvailabilityState: (v: LooseValue | null) => void;
-  scheduleEditorState: LooseValue | null;
-  setScheduleEditorState: (v: LooseValue | null) => void;
+  availabilityState: AvailabilityModalState | null;
+  setAvailabilityState: (v: AvailabilityModalState | null) => void;
+  scheduleEditorState: ScheduleEditorModalState | null;
+  setScheduleEditorState: (v: ScheduleEditorModalState | null) => void;
   pillHoverTitle: boolean;
   setPillHoverTitle: (v: boolean) => void;
   editMode: boolean;
   setEditMode: React.Dispatch<React.SetStateAction<boolean>>;
   helpOpen: boolean;
   setHelpOpen: (v: boolean) => void;
-  inlineEditTarget: LooseValue | null;
-  setInlineEditTarget: (v: LooseValue | null) => void;
+  inlineEditTarget: InlineEditTarget | null;
+  setInlineEditTarget: (v: InlineEditTarget | null) => void;
   lastClickCoordsRef: React.MutableRefObject<{ x: number; y: number }>;
   editModeRef: React.MutableRefObject<boolean>;
 }
 
 export function useModalState(): UseModalStateReturn {
-  const [selectedEvent, setSelectedEvent] = useState<LooseValue | null>(null);
-  const [formEvent, setFormEvent] = useState<LooseValue | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<NormalizedEvent | null>(null);
+  const [formEvent, setFormEvent] = useState<FormEventDraft | null>(null);
 
   const [conflictingEventIds, setConflictingEventIds] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -60,12 +98,12 @@ export function useModalState(): UseModalStateReturn {
   const [importMsg, setImportMsg] = useState('');
   const importFlash = useSavedFlash(2500);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [availabilityState, setAvailabilityState] = useState<LooseValue | null>(null);
-  const [scheduleEditorState, setScheduleEditorState] = useState<LooseValue | null>(null);
+  const [availabilityState, setAvailabilityState] = useState<AvailabilityModalState | null>(null);
+  const [scheduleEditorState, setScheduleEditorState] = useState<ScheduleEditorModalState | null>(null);
   const [pillHoverTitle, setPillHoverTitle] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [inlineEditTarget, setInlineEditTarget] = useState<LooseValue | null>(null);
+  const [inlineEditTarget, setInlineEditTarget] = useState<InlineEditTarget | null>(null);
 
   const lastClickCoordsRef = useRef({ x: 0, y: 0 });
   const editModeRef = useRef(false);

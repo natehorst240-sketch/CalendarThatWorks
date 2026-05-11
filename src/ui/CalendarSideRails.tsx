@@ -1,16 +1,23 @@
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Bookmark, Filter, Settings } from 'lucide-react';
-import { LeftRail } from './LeftRail';
+import { LeftRail, type LeftRailAction } from './LeftRail';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './RightPanel';
 import { MapPeekWidget } from './MapPeekWidget';
 import { isScheduleWorkflowEvent } from '../core/scheduleModel';
+import type { NormalizedEvent } from '../types/events';
+import type { EmployeeRecord } from '../WorksCalendar.types';
+import type { SidebarTab } from './FilterGroupSidebar';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+/** Slice of `useOwnerConfig`'s return that the rails need. */
+interface OwnerCfgSlice {
+  isOwner: boolean;
+  setConfigOpen: Dispatch<SetStateAction<boolean>>;
+}
 
 interface CalendarLeftRailProps {
-  ownerCfg: LooseValue;
-  leftRailExtras: LooseValue;
-  setSidebarInitialTab: LooseValue;
+  ownerCfg: OwnerCfgSlice;
+  leftRailExtras: readonly LeftRailAction[] | undefined;
+  setSidebarInitialTab: Dispatch<SetStateAction<SidebarTab>>;
   setSidebarOpen: (v: boolean) => void;
 }
 
@@ -21,7 +28,7 @@ export function CalendarLeftRail({ ownerCfg, leftRailExtras, setSidebarInitialTa
         { id: 'saved-views', label: 'Saved views', hint: 'Manage your view library', icon: <Bookmark size={18} aria-hidden="true" />, onClick: () => { setSidebarInitialTab('saved'); setSidebarOpen(true); } },
         { id: 'focus', label: 'Focus filters', hint: 'Narrow the calendar by region, base, role, or category', icon: <Filter size={18} aria-hidden="true" />, onClick: () => { setSidebarInitialTab('focus'); setSidebarOpen(true); } },
         ...(ownerCfg.isOwner ? [{ id: 'settings', label: 'Settings', hint: 'Calendar configuration', icon: <Settings size={18} aria-hidden="true" />, onClick: () => ownerCfg.setConfigOpen(true) }] : []),
-        ...(leftRailExtras ?? []).filter((extra: LooseValue) => !['saved-views', 'focus', 'settings'].includes(extra.id)),
+        ...(leftRailExtras ?? []).filter((extra) => !['saved-views', 'focus', 'settings'].includes(extra.id)),
       ]}
     />
   );
@@ -29,13 +36,13 @@ export function CalendarLeftRail({ ownerCfg, leftRailExtras, setSidebarInitialTa
 
 interface CalendarRightPanelProps {
   showMapWidget: boolean;
-  expandedEvents: LooseValue[];
-  handleEventClick: LooseValue;
-  onMapWidgetOpenChange: LooseValue;
-  mapStyle: LooseValue;
-  configuredEmployees: LooseValue[];
-  onShiftIds: LooseValue;
-  rightPanelExtras: LooseValue;
+  expandedEvents: readonly NormalizedEvent[];
+  handleEventClick: (event: NormalizedEvent) => void;
+  onMapWidgetOpenChange: ((open: boolean) => void) | undefined;
+  mapStyle: string | undefined;
+  configuredEmployees: EmployeeRecord[];
+  onShiftIds: ReadonlySet<string>;
+  rightPanelExtras: ReactNode;
 }
 
 export function CalendarRightPanel({
@@ -47,7 +54,7 @@ export function CalendarRightPanel({
       {showMapWidget && (
         <RightPanelSection title="Region map">
           <MapPeekWidget
-            events={(expandedEvents as LooseValue[]).filter(ev => !isScheduleWorkflowEvent(ev)) as never}
+            events={expandedEvents.filter(ev => !isScheduleWorkflowEvent(ev)) as never}
             onEventClick={handleEventClick as never}
             {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
             {...(mapStyle ? { mapStyle } : {})}

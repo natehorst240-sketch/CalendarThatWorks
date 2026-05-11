@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { deserializeFilters } from './useSavedViews';
 import { captureSavedViewFields } from '../core/viewScope';
@@ -6,7 +5,18 @@ import type { GroupByInput } from './useNormalizedConfig';
 import type { SortConfig } from '../types/grouping';
 import type { AssetsZoomLevel } from '../types/assets';
 
-type LooseValue = any;
+/** Persisted saved view as read by `handleApplyView`. */
+interface SavedViewRecord {
+  id: string;
+  filters?: Record<string, unknown> | null;
+  view?: string;
+  groupBy?: GroupByInput | null;
+  sort?: SortConfig[] | null;
+  showAllGroups?: boolean;
+  zoomLevel?: AssetsZoomLevel;
+  collapsedGroups?: string[];
+  selectedBaseIds?: string[];
+}
 
 interface CalHandle {
   view: string;
@@ -42,9 +52,9 @@ export interface UseSavedViewsManagerParams {
 export interface UseSavedViewsManagerReturn {
   savedViewActiveId: string | null;
   savedViewDirty: boolean;
-  handleApplyView: (savedView: LooseValue) => void;
+  handleApplyView: (savedView: SavedViewRecord) => void;
   handleClearFilters: () => void;
-  handleDeleteView: (id: LooseValue) => void;
+  handleDeleteView: (id: string) => void;
   handleSidebarSaveView: (name: string, color: string | null) => void;
 }
 
@@ -92,7 +102,7 @@ export function useSavedViewsManager({
     if (savedViewActiveId) setSavedViewDirty(true);
   }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]);
 
-  const handleApplyView = useCallback((savedView: LooseValue) => {
+  const handleApplyView = useCallback((savedView: SavedViewRecord) => {
     if (savedView.id === savedViewActiveId) {
       setSavedViewActiveId(null);
       setSavedViewDirty(false);
@@ -123,7 +133,7 @@ export function useSavedViewsManager({
     setSavedViewDirty(false);
   }, [cal]);
 
-  const handleDeleteView = useCallback((id: LooseValue) => {
+  const handleDeleteView = useCallback((id: string) => {
     savedViews.deleteView(id);
     if (savedViewActiveId === id) {
       setSavedViewActiveId(null);

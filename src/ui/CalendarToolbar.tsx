@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { AppHeader } from './AppHeader';
@@ -9,6 +10,15 @@ import type { ViewDef } from '../core/calendarViewConfig';
 import { captureSavedViewFields } from '../core/viewScope';
 import { hasActiveFilters, buildActiveFilterPills, buildFilterSummary } from '../filters/filterState';
 import { VIEW_SHORTCUT_KEYS } from '../hooks/useKeyboardShortcuts';
+import { useCalendarSetup } from '../hooks/useCalendarSetup';
+import { useOwnerConfig } from '../hooks/useOwnerConfig';
+import { useSavedViews } from '../hooks/useSavedViews';
+import type { InlineEditTarget } from '../hooks/useModalState';
+import type { CalendarApi, WorksCalendarProps } from '../WorksCalendar.types';
+import type { NormalizedEvent } from '../types/events';
+import type { FilterField } from '../filters/filterSchema';
+import type { SidebarTab } from './FilterGroupSidebar';
+import type { GroupByInput } from '../hooks/useNormalizedConfig';
 import styles from '../WorksCalendar.module.css';
 
 // view id → keyboard shortcut digit (inverse of VIEW_SHORTCUT_KEYS), used to
@@ -17,16 +27,19 @@ const VIEW_SHORTCUT_BY_ID: Record<string, string> = Object.fromEntries(
   Object.entries(VIEW_SHORTCUT_KEYS).map(([key, id]) => [id, key]),
 );
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+type CalendarHandle = ReturnType<typeof useCalendarSetup>['cal'];
+type OwnerCfgHandle = ReturnType<typeof useOwnerConfig>;
+type SavedViewsHandle = ReturnType<typeof useSavedViews>;
+type SavedViewArg = Parameters<SavedViewsHandle['saveView']>[2];
+type CaptureCtx = Parameters<typeof captureSavedViewFields>[1];
 
 export interface CalendarToolbarProps {
-  cal: LooseValue;
-  ownerCfg: LooseValue;
-  api: LooseValue;
-  renderToolbar?: LooseValue;
-  renderSavedViewsBar?: LooseValue;
-  renderFilterBar?: LooseValue;
+  cal: CalendarHandle;
+  ownerCfg: OwnerCfgHandle;
+  api: CalendarApi;
+  renderToolbar?: WorksCalendarProps['renderToolbar'];
+  renderSavedViewsBar?: WorksCalendarProps['renderSavedViewsBar'];
+  renderFilterBar?: WorksCalendarProps['renderFilterBar'];
   focusChips?: FocusChipDef[] | boolean | undefined;
   logoSrc?: string | undefined;
   logoAlt?: string | undefined;
@@ -34,24 +47,24 @@ export interface CalendarToolbarProps {
   calendarTitle: string;
   fetchLoading: boolean;
   editMode: boolean;
-  setEditMode: LooseValue;
-  setInlineEditTarget: LooseValue;
+  setEditMode: Dispatch<SetStateAction<boolean>>;
+  setInlineEditTarget: (target: InlineEditTarget | null) => void;
   setHelpOpen: (v: boolean) => void;
-  savedViews: LooseValue;
+  savedViews: SavedViewsHandle;
   savedViewActiveId: string | null;
   savedViewDirty: boolean;
-  handleApplyView: LooseValue;
-  handleDeleteView: LooseValue;
-  handleClearFilters: LooseValue;
-  savedViewCaptureCtx: LooseValue;
-  activeGroupBy: LooseValue;
+  handleApplyView: (savedView: { id: string; [key: string]: unknown }) => void;
+  handleDeleteView: (id: string) => void;
+  handleClearFilters: () => void;
+  savedViewCaptureCtx: CaptureCtx;
+  activeGroupBy: GroupByInput | null;
   VIEWS: readonly ViewDef[];
   setSidebarOpen: (v: boolean) => void;
-  setSidebarInitialTab: LooseValue;
+  setSidebarInitialTab: Dispatch<SetStateAction<SidebarTab>>;
   handleScopeClick: () => void;
-  schema: LooseValue;
-  filterBarSchema: LooseValue;
-  scopedEvents: LooseValue;
+  schema: FilterField[];
+  filterBarSchema: FilterField[];
+  scopedEvents: readonly NormalizedEvent[];
   locationLabel: string;
   assetsLabel: string;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -191,9 +204,9 @@ export default function CalendarToolbar({
             activeId:    savedViewActiveId,
             isDirty:     savedViewDirty,
             applyView:   handleApplyView,
-            saveView:    (name: LooseValue, opts: LooseValue) => savedViews.saveView(name, cal.filters, { view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx), ...opts }),
+            saveView:    (name: string, opts: SavedViewArg) => savedViews.saveView(name, cal.filters, { view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx), ...opts }),
             updateView:  savedViews.updateView,
-            resaveView:  (id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx)),
+            resaveView:  (id: string) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx)),
             deleteView:  handleDeleteView,
             toggleStripVisibility: savedViews.toggleStripVisibility,
             clearFilters: cal.clearFilters,
@@ -201,7 +214,7 @@ export default function CalendarToolbar({
             currentFilters: cal.filters,
             currentView:    cal.view,
             schema,
-            buildFilterSummary: (filters: LooseValue) => buildFilterSummary(filters, schema),
+            buildFilterSummary: (filters: Record<string, unknown>) => buildFilterSummary(filters, schema),
           })
         : (() => {
           const resolvedFocusChips: FocusChipDef[] | null = focusChips
@@ -213,7 +226,7 @@ export default function CalendarToolbar({
               <FocusChips
                 chips={resolvedFocusChips}
                 activeCategories={activeCategories}
-                onCategoriesChange={(next: LooseValue) => cal.setFilter('categories', next)}
+                onCategoriesChange={(next: Set<string>) => cal.setFilter('categories', next)}
               />
               <button
                 type="button"
@@ -241,15 +254,15 @@ export default function CalendarToolbar({
               hasActiveFilters={hasActiveFilters(cal.filters, schema)}
               tailSlot={tailSlot}
               onApply={handleApplyView}
-              onAdd={({ name, color }: { name: LooseValue; color: LooseValue }) =>
+              onAdd={({ name, color }: { name: string; color: string | null }) =>
                 savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
               }
-              onResave={(id: LooseValue) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
+              onResave={(id: string) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}
               onToggleVisibility={savedViews.toggleStripVisibility}
               onClearFilters={handleClearFilters}
-              onEditConditions={ownerCfg.isOwner ? (id: LooseValue) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
+              onEditConditions={ownerCfg.isOwner ? (id: string) => ownerCfg.openConfigToTab('smartViews', { smartViewEditId: id }) : undefined}
             />
           );
         })()
