@@ -126,9 +126,9 @@ describe('ConfigPanel — Overview tab', () => {
 // ─── New section taxonomy ─────────────────────────────────────────────────────
 
 describe('ConfigPanel — section taxonomy', () => {
-  it('exposes the seven outcome-grouped sections', () => {
+  it('exposes the six outcome-grouped sections', () => {
     mount();
-    for (const label of ['Appearance', 'Layout & Labels', 'Event Display', 'Data', 'Saved Views', 'Workflows', 'Access']) {
+    for (const label of ['Appearance', 'Layout & Labels', 'Event Display', 'Data', 'Saved Views', 'Workflows']) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
   });

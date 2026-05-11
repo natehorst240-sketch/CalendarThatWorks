@@ -47,6 +47,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `package.json` exports: added `./api/v1/server` entry point for
   `createNextHandler` and server-side utilities.
 
+- **Owner access is now role-based** (`role` prop). `useOwnerConfig` derives
+  `isOwner` from `role === 'admin'` (or `devMode`) instead of a SHA-256
+  password comparison. Editing config, the setup wizard, and edit mode are
+  gated on the host-supplied `role` — `WorksCalendar` is a presentation layer
+  and trusts the host's auth. A browser-only password check was obfuscation,
+  not security.
+
+### Removed
+
+- **`ownerPassword` prop** and the in-app owner login modal (`OwnerLock` /
+  `OwnerLoginModal`). Pass `role="admin"` from your auth layer instead.
+  `useOwnerConfig` no longer returns `authenticate`, `authError`, or
+  `isAuthLoading`.
+- **`config.access.viewerPassword`** and the ConfigPanel **Access** tab — the
+  field was never enforced and a client-side viewer password is the same
+  security theater. `ConfigPanelTabId` no longer includes `'access'`.
+
 
 
 ### Sprint 1 — Engine internals & strict typing (issues #2, #5)

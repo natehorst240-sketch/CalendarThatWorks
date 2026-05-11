@@ -66,7 +66,6 @@ const TABS = [
   { id: 'approvalFlows', label: 'Approval Flows' },
   { id: 'conflicts',   label: 'Conflicts' },
   { id: 'requestForm', label: 'Request Form' },
-  { id: 'access',      label: 'Access' },
 ];
 
 // Tabs are presented in a vertical sidebar grouped into accordion sections.
@@ -80,7 +79,6 @@ const SECTIONS = [
   { id: 'data',         label: 'Data',           tabs: ['assets', 'team', 'feeds', 'templates'] },
   { id: 'savedViews',   label: 'Saved Views',    tabs: ['smartViews'] },
   { id: 'workflows',    label: 'Workflows',      tabs: ['approvals', 'approvalFlows', 'conflicts', 'requestForm'] },
-  { id: 'access',       label: 'Access',         tabs: ['access'] },
 ];
 
 function sectionContaining(tabId: ConfigPanelTabId | string) {
@@ -136,9 +134,6 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
   { label: 'Approval flows',                tabId: 'approvalFlows', keywords: 'stages routing' },
   { label: 'Conflict rules',                tabId: 'conflicts',  keywords: 'overlap mutex rest' },
   { label: 'Request form fields',           tabId: 'requestForm' },
-
-  // Access
-  { label: 'Viewer password',               tabId: 'access',     keywords: 'read only password' },
 ];
 
 type ConfigPanelSectionProps = {
@@ -554,7 +549,6 @@ export default function ConfigPanel({
           )}
           {tab === 'conflicts'   && <ConflictsTab   config={config} onUpdate={onUpdate} />}
           {tab === 'requestForm' && <RequestFormTab config={config} onUpdate={onUpdate} />}
-          {tab === 'access'      && <AccessTab      config={config} onUpdate={onUpdate} />}
           </div>
         </div>
       </div>
@@ -625,12 +619,6 @@ function OverviewTab({ goTo }: { goTo: (tabId: string) => void }) {
         { tabId: 'approvals',   title: 'Approvals',         desc: 'Tiered approval workflow for events.' },
         { tabId: 'conflicts',   title: 'Conflict rules',    desc: 'Resource-overlap, mutex, min-rest checks.' },
         { tabId: 'requestForm', title: 'Request form',      desc: 'Schema-driven form fields shown to requesters.' },
-      ],
-    },
-    {
-      heading: 'Access',
-      cards: [
-        { tabId: 'access', title: 'Viewer password', desc: 'Password gate for read-only viewers.' },
       ],
     },
   ];
@@ -2751,18 +2739,3 @@ export function ConflictsTab({ config, onUpdate }: ConfigPanelSectionProps) {
   );
 }
 
-/* ----- Access tab ----- */
-function AccessTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  return (
-    <div className={styles['section']}>
-      <p className={styles['sectionDesc']}>Optionally require a password to view this calendar.</p>
-      <label className={styles['formRow']}>
-        <span>Viewer password</span>
-        <input type="password" className={styles['input']}
-          value={config['access']?.viewerPassword || ''}
-          onChange={e => onUpdate(c => ({ ...c, access: { ...c['access'], viewerPassword: e.target.value } }))}
-          placeholder="Leave blank for open access" />
-      </label>
-    </div>
-  );
-}

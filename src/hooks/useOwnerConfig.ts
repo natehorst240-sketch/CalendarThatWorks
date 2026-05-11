@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
- * useOwnerConfig.js — Owner authentication + config state.
+ * useOwnerConfig — owner config state + role-derived edit access.
+ *
+ * The calendar is a presentation layer; authentication is the host app's job.
+ * `isOwner` is derived from the `role` prop (and `devMode`) — there is no
+ * client-side password check, which on a browser-only library would be
+ * obfuscation, not security.
  */
 import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { loadConfig, saveConfig } from '../core/configSchema';
+import type { CalendarRole } from '../WorksCalendar.types';
 
 type OwnerConfig = Record<string, any>;
 
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode = false }: {
+export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMode = false }: {
   calendarId: string;
-  ownerPassword?: string | undefined;
+  role?: CalendarRole | undefined;
   onConfigSave?: ((config: OwnerConfig) => void) | undefined;
   devMode?: boolean | undefined;
 }): {
@@ -24,49 +25,19 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
   setConfigOpen: Dispatch<SetStateAction<boolean>>;
   configInitialTab: string | null;
   smartViewEditId: string | null;
-  authError: string;
-  isAuthLoading: boolean;
-  authenticate: (password: string) => Promise<boolean>;
   updateConfig: (updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => void;
   closeConfig: () => void;
   openGear: () => void;
   openConfigToTab: (tabId: string | null, opts?: { smartViewEditId?: string | null }) => void;
 } {
   const [config,        setConfig]        = useState<OwnerConfig>(() => loadConfig(calendarId));
-  const [isOwner,       setIsOwner]       = useState(devMode);
   const [configOpen,    setConfigOpen]    = useState(false);
   const [configInitialTab, setConfigInitialTab] = useState<string | null>(null);
   const [smartViewEditId, setSmartViewEditId] = useState<string | null>(null);
-  const [authError,     setAuthError]     = useState('');
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const pendingNotifyRef = useRef(false);
 
-  const authenticate = useCallback(async (password: string) => {
-    if (!ownerPassword) {
-      setIsOwner(true);
-      setConfigOpen(true);
-      setAuthError('');
-      return true;
-    }
-    setIsAuthLoading(true);
-    try {
-      const [inputHash, storedHash] = await Promise.all([
-        sha256(password),
-        sha256(ownerPassword),
-      ]);
-      if (inputHash === storedHash) {
-        setIsOwner(true);
-        setConfigOpen(true);
-        setAuthError('');
-        return true;
-      } else {
-        setAuthError('Incorrect password');
-        return false;
-      }
-    } finally {
-      setIsAuthLoading(false);
-    }
-  }, [ownerPassword]);
+  // Host app decides who can edit config — no client-side password.
+  const isOwner = role === 'admin' || devMode;
 
   const updateConfig = useCallback((updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => {
     setConfig(prev => {
@@ -91,7 +62,6 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
     if (isOwner) {
       setConfigOpen(true);
     }
-    // else OwnerLock component handles the prompt
   }, [isOwner]);
 
   // Deep-link helper: open ConfigPanel focused on a specific tab id. Used by
@@ -109,9 +79,6 @@ export function useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMod
     configOpen, setConfigOpen,
     configInitialTab,
     smartViewEditId,
-    authError,
-    isAuthLoading,
-    authenticate,
     updateConfig,
     closeConfig,
     openGear,

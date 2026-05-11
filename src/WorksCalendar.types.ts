@@ -70,7 +70,6 @@ export type WorksCalendarProps = {
   scheduleInstantiationLimits?: ScheduleInstantiationLimits;
   onScheduleTemplateAnalytics?: (payload: UnknownRecord) => void;
   calendarId?: string;
-  ownerPassword?: string;
   onConfigSave?: (config: UnknownRecord) => void;
   devMode?: boolean;
   notes?: UnknownRecord;

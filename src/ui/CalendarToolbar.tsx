@@ -4,7 +4,6 @@ import { AppHeader } from './AppHeader';
 import ProfileBar from './ProfileBar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './FocusChips';
 import type { FocusChipDef } from './FocusChips';
-import OwnerLock from './OwnerLock';
 import { ALL_VIEWS } from '../core/calendarViewConfig';
 import type { ViewDef } from '../core/calendarViewConfig';
 import { captureSavedViewFields } from '../core/viewScope';
@@ -30,7 +29,6 @@ export interface CalendarToolbarProps {
   editMode: boolean;
   setEditMode: LooseValue;
   setInlineEditTarget: LooseValue;
-  ownerPassword?: string | undefined;
   setHelpOpen: (v: boolean) => void;
   savedViews: LooseValue;
   savedViewActiveId: string | null;
@@ -74,7 +72,7 @@ export default function CalendarToolbar({
   cal, ownerCfg, api,
   renderToolbar, renderSavedViewsBar, renderFilterBar, focusChips,
   logoSrc, logoAlt, devMode, calendarTitle, fetchLoading,
-  editMode, setEditMode, setInlineEditTarget, ownerPassword, setHelpOpen,
+  editMode, setEditMode, setInlineEditTarget, setHelpOpen,
   savedViews, savedViewActiveId, savedViewDirty,
   handleApplyView, handleDeleteView, handleClearFilters,
   savedViewCaptureCtx, activeGroupBy,
@@ -160,15 +158,6 @@ export default function CalendarToolbar({
                   <Sparkles size={15} aria-hidden="true" />
                   {editMode && <span className={styles['wandBtnLabel']}>Done</span>}
                 </button>
-              )}
-              {ownerPassword && (
-                <OwnerLock
-                  isOwner={ownerCfg.isOwner}
-                  authError={ownerCfg.authError}
-                  isAuthLoading={ownerCfg.isAuthLoading}
-                  onAuthenticate={ownerCfg.authenticate}
-                  onOpen={() => ownerCfg.setConfigOpen(true)}
-                />
               )}
             </div>
           }

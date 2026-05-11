@@ -18,13 +18,16 @@ The Setup Wizard is a first-time onboarding modal for calendar owners.
 ## Typical flow
 
 1. Render `WorksCalendar` with a stable `calendarId`.
-2. Provide an `ownerPassword` so owner mode can authenticate.
+2. Give the owner the `role="admin"` prop (default) so config + the wizard are
+   editable. The host app decides who is an admin — `WorksCalendar` is a
+   presentation layer and trusts whatever auth (OAuth, SAML, session cookies,
+   etc.) the host already uses.
 3. Complete wizard once; config persists under that `calendarId`.
 
 ```jsx
 <WorksCalendar
   calendarId="team-alpha"
-  ownerPassword={process.env.REACT_APP_OWNER_PASSWORD}
+  role={currentUser.isAdmin ? 'admin' : 'user'}
   events={events}
   onEventSave={saveEvent}
 />
@@ -34,4 +37,5 @@ The Setup Wizard is a first-time onboarding modal for calendar owners.
 
 - Seed a few categories/resources before onboarding demos.
 - Pair wizard onboarding with saved-view defaults for new teams.
-- Never use demo passwords in production.
+- Track setup completion in your own backend if you don't want to rely on
+  `localStorage` — toggle `showSetupLanding` based on that state.

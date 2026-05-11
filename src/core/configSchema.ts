@@ -121,11 +121,6 @@ export const DEFAULT_CONFIG: Record<string, any> = {
   // Full custom theme object applied via CSS variable injection.
   customTheme: {},
 
-  // Access control
-  access: {
-    viewerPassword: '',
-  },
-
   // First-class asset registry. When non-empty, AssetsView renders one row
   // per entry (label for display, id matched against event.resource). Empty
   // array preserves the legacy event.resource-derived behavior. Edited from

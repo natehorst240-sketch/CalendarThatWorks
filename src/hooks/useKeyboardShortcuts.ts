@@ -13,7 +13,7 @@
  *   - Skips when focus is inside an input / textarea / select / contentEditable
  *   - Skips when any modifier key (Ctrl / Meta / Alt) is held
  *   - Skips when an aria-modal dialog is open (lets ConfigPanel, EventForm,
- *     OwnerLoginModal, etc. own the keyboard while they're up)
+ *     etc. own the keyboard while they're up)
  */
 import { useEffect } from 'react';
 

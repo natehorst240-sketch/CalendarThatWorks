@@ -7,11 +7,11 @@ import type { FilterField } from '../filters/filterSchema';
 import { createInitialFilters, clearFilterValue } from '../filters/filterState';
 import { resolveCssTheme, normalizeTheme, THEME_META } from '../styles/themes';
 import { customThemeToCssVars } from '../core/themeSchema';
-import type { CalendarView, WorksCalendarProps, EmployeeId, EmployeeRecord } from '../WorksCalendar.types';
+import type { CalendarRole, CalendarView, WorksCalendarProps, EmployeeId, EmployeeRecord } from '../WorksCalendar.types';
 
 export interface UseCalendarSetupInput {
   calendarId: string;
-  ownerPassword: string | undefined;
+  role: CalendarRole;
   onConfigSave: WorksCalendarProps['onConfigSave'];
   devMode: boolean;
   weekStartDayProp: number | undefined;
@@ -45,12 +45,12 @@ export type CalObject = {
 };
 
 export function useCalendarSetup({
-  calendarId, ownerPassword, onConfigSave, devMode,
+  calendarId, role, onConfigSave, devMode,
   weekStartDayProp, theme, backgroundImage,
   filterSchema, employees, assets, initialView,
   onViewChange, onEmployeeAdd, onEmployeeDelete,
 }: UseCalendarSetupInput) {
-  const ownerCfg = useOwnerConfig({ calendarId, ownerPassword, onConfigSave, devMode });
+  const ownerCfg = useOwnerConfig({ calendarId, role, onConfigSave, devMode });
   const weekStartDay = (weekStartDayProp ?? ownerCfg.config?.['display']?.weekStartDay ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
   const customThemeVars = useMemo(() => customThemeToCssVars(ownerCfg.config?.['customTheme']), [ownerCfg.config?.['customTheme']]);
   const rootStyle = useMemo<React.CSSProperties>(() => ({

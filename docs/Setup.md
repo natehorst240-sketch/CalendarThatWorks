@@ -23,7 +23,7 @@ Work through it top to bottom. Every step is optional after Step 1 — pick only
 7.9. [Conflict detection (optional)](#79-conflict-detection-optional)
 8. [Pick a theme](#8-pick-a-theme)
 9. [Let outsiders book time (optional)](#9-let-outsiders-book-time-optional)
-10. [Turn on the setup wizard & owner mode (optional)](#10-turn-on-the-setup-wizard--owner-mode-optional)
+10. [Turn on the setup wizard & owner role (optional)](#10-turn-on-the-setup-wizard--owner-role-optional)
 10.5. [Bulk-import events from a spreadsheet (optional)](#105-bulk-import-events-from-a-spreadsheet-optional)
 11. [Ship it](#11-ship-it)
 12. [Pick-your-path cheat sheet](#12-pick-your-path-cheat-sheet)
@@ -437,11 +437,11 @@ In your WorksCalendar, pass a list of categories that should go through approval
   assetRequestCategories={['vehicle', 'room', 'equipment']}
   initialView="assets"
   calendarId="team-alpha"
-  ownerPassword={import.meta.env.VITE_OWNER_PASSWORD}
+  role="admin"
 />
 ```
 
-Then as the owner, open the config panel → **Approvals** tab and flip `enabled` on. (Same tab lets you edit everything below without writing code.)
+Then as the owner (`role="admin"`), open the config panel → **Approvals** tab and flip `enabled` on. (Same tab lets you edit everything below without writing code.)
 
 ### 2. Decide who approves what
 
@@ -707,37 +707,37 @@ const adapter = createLocalStorageDataAdapter({ key: 'intake' });
 
 Swap the adapter for Supabase, Google, M365, or your own API — the form doesn't care.
 
-## 10. Turn on the setup wizard & owner mode (optional)
+## 10. Turn on the setup wizard & owner role (optional)
 
-The calendar has two modes built in: **viewer** (default — most users) and **owner** (admin — the person who sets up theme, team, categories, and saved views). Owner mode is unlocked with a password you choose.
+The calendar has a `role` prop with three values: **`admin`** (the default — the person who sets up theme, team, categories, and saved views), **`user`**, and **`readonly`**. Only `admin` can edit config, see the setup wizard, or use the magic-wand edit mode.
 
-### Why owner mode matters
+> **There is no built-in password.** `WorksCalendar` runs entirely in the browser, so a client-side password check would be obfuscation, not security — anyone can read your bundled JS or flip a flag in dev tools. Instead, the host app decides who gets `role="admin"` using whatever auth it already has (OAuth, SAML, session cookies, an internal API, etc.).
 
-Without it, everyone sees the same screen and has the same power. With it:
+### Why the role matters
 
-- Viewers see only the calendar and the filters you allow.
-- Owners see the config panel (Approvals, Conflicts, Team, Categories, Theme), the setup wizard, and the magic-wand button.
-- You can put the owner password in an env var so only you (or your manager) can flip into admin mode.
+Without it, everyone gets `admin` (the default) and has the same power. Set it per user and:
+
+- `user` / `readonly` see only the calendar and the filters you allow.
+- `admin` sees the config panel (Approvals, Conflicts, Team, Categories, Theme), the setup wizard, and the magic-wand button.
 
 ### Turn it on
 
 ```jsx
 <WorksCalendar
   calendarId="team-alpha"
-  ownerPassword={import.meta.env.VITE_OWNER_PASSWORD}
+  role={currentUser.isAdmin ? 'admin' : 'user'}
   events={events}
   onEventSave={handleSave}
 />
 ```
 
-First load triggers the **Setup Wizard** — a modal that walks the owner through theme, team, categories, and starter saved views. It opens once. The owner can reopen it anytime via the wand button.
+For an admin, first load triggers the **Setup Wizard** — a modal that walks them through theme, team, categories, and starter saved views. It opens once. They can reopen it anytime via the wand button.
 
 ### Rules of thumb
 
-- **Use a real password**, not `admin` or `demo`. Viewers can see your bundled JS.
+- **Derive `role` from your real auth**, not from a query param or a hardcoded value the user can edit.
 - **Give every physical calendar a unique `calendarId`.** All owner config is keyed by it.
-- **Rotate the password** if a former admin leaves the team.
-- **Never commit the password to Git.** Use env vars, same as the Google/M365 client IDs.
+- **Want server-tracked setup state?** Toggle `showSetupLanding` based on your backend instead of relying on the calendar's `localStorage` flag.
 
 More: [Setup wizard](./SetupWizard.md).
 
@@ -795,10 +795,10 @@ Not sure which combination fits you? Start here.
 | A contractor / freelancer | LocalStorage + Google sync | External form for client bookings, categories |
 | A shift-based team (clinic, restaurant, ops) | Supabase + `schedule` view + employees | PTO workflow, saved views, conflict detection, CSV import for last year's schedule |
 | A fleet / rental / room-booking business | Supabase + `assets` view | Approvals workflow, timeline view, external form |
-| An internal tool inside Microsoft 365 | M365 sync + `week` view | Setup wizard, owner mode, saved views |
+| An internal tool inside Microsoft 365 | M365 sync + `week` view | Setup wizard, `role="admin"` for admins, saved views |
 | A school / church / community group | iCal feed + `month` view | Categories, themes, grouping by classroom/room |
 | Multiple teams in one calendar | Supabase + `timeline` + grouping | Saved views per team, multi-source merging |
-| A regulated org (HIPAA, finance) | Custom API + owner mode + approvals | Audit drawer, conflict detection with `block`, [HIPAA notes](./HIPAA-Security.md) |
+| A regulated org (HIPAA, finance) | Custom API + `role`-gated admins + approvals | Audit drawer, conflict detection with `block`, [HIPAA notes](./HIPAA-Security.md) |
 
 ## What to read next
 

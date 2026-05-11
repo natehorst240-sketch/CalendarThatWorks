@@ -54,7 +54,6 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     calendarId              = 'default',
 
     // ── Owner ──
-    ownerPassword           = '',
     onConfigSave,
 
     // ── Dev mode ──
@@ -172,7 +171,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     configuredEmployees, effectiveAssets, resolveResourceLabel,
     schema, cal, handleEmployeeAddInternal, handleEmployeeDeleteInternal,
   } = useCalendarSetup({
-    calendarId, ownerPassword, onConfigSave, devMode, weekStartDayProp,
+    calendarId, role, onConfigSave, devMode, weekStartDayProp,
     theme, backgroundImage, filterSchema, employees, assets, initialView,
     onViewChange, onEmployeeAdd, onEmployeeDelete,
   });
@@ -336,7 +335,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
                 focusChips={focusChips} logoSrc={logoSrc} logoAlt={logoAlt}
                 devMode={devMode} calendarTitle={calendarTitle} fetchLoading={fetchLoading}
                 editMode={editMode} setEditMode={setEditMode} setInlineEditTarget={setInlineEditTarget}
-                ownerPassword={ownerPassword} setHelpOpen={setHelpOpen}
+                setHelpOpen={setHelpOpen}
                 savedViews={savedViews} savedViewActiveId={savedViewActiveId} savedViewDirty={savedViewDirty}
                 handleApplyView={handleApplyView} handleDeleteView={handleDeleteView} handleClearFilters={handleClearFilters}
                 savedViewCaptureCtx={savedViewCaptureCtx} activeGroupBy={activeGroupBy}

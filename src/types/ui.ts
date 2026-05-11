@@ -107,8 +107,7 @@ export type ConfigPanelTabId =
   | 'approvals'
   | 'approvalFlows'
   | 'conflicts'
-  | 'requestForm'
-  | 'access';
+  | 'requestForm';
 
 export interface ConfigPanelProps {
   config: AnyRecord;
