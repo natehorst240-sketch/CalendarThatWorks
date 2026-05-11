@@ -224,6 +224,63 @@ describe('RestAdapter.subscribe (polling)', () => {
     unsub();
     expect(cb).not.toHaveBeenCalled();
   });
+
+  it('polls on interval and emits reload events when pollInterval is set', async () => {
+    vi.useFakeTimers();
+    const events: CalendarEventV1[] = [];
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => events });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: 1000 });
+      const cb = vi.fn();
+      const unsub = a.subscribe(cb, { rangeStart: S, rangeEnd: E });
+      await vi.advanceTimersByTimeAsync(1001);
+      expect(stub).toHaveBeenCalled();
+      expect(cb).toHaveBeenCalledWith({ type: 'reload', events: [] });
+      unsub();
+    } finally {
+      globalThis.fetch = origFetch;
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not emit after unsubscribe (active=false guard)', async () => {
+    vi.useFakeTimers();
+    const events: CalendarEventV1[] = [];
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => events });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: 1000 });
+      const cb = vi.fn();
+      const unsub = a.subscribe(cb, { rangeStart: S, rangeEnd: E });
+      unsub(); // active = false before timer fires
+      await vi.advanceTimersByTimeAsync(1001);
+      expect(cb).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = origFetch;
+      vi.useRealTimers();
+    }
+  });
+
+  it('uses default rangeStart/rangeEnd when opts is omitted', async () => {
+    vi.useFakeTimers();
+    const stub = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = stub as typeof fetch;
+    try {
+      const a = new RestAdapter({ baseUrl: 'http://api/events', pollInterval: 1000 });
+      const cb = vi.fn();
+      const unsub = a.subscribe(cb);
+      await vi.advanceTimersByTimeAsync(1001);
+      expect(stub).toHaveBeenCalled();
+      unsub();
+    } finally {
+      globalThis.fetch = origFetch;
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('RestAdapter.exportFeed', () => {

@@ -675,4 +675,62 @@ describe('SyncManager', () => {
     await flushPromises();
     expect(m.queue.pendingCount).toBe(0);
   });
+
+  // ── Auto-retry via setTimeout (maxRetries > 0) ────────────────────────────
+
+  it('auto-retries a create after transient failure when maxRetries > 0', async () => {
+    vi.useFakeTimers();
+    vi.mocked(adapter.createEvent!)
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValue({ ...ev(), id: 'server-auto-retry' });
+
+    const m = new SyncManager({ adapter, maxRetries: 1, retryBaseDelay: 10 });
+    void m.createEvent(ev({ id: undefined }));
+
+    // Flush initial failure microtasks, then advance past retry delay (10ms * 2^1 = 20ms)
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(25);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(m.events.has('server-auto-retry')).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('auto-retries an update when maxRetries > 0', async () => {
+    vi.useFakeTimers();
+    vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
+    vi.mocked(adapter.updateEvent!)
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValue(ev({ title: 'Auto-Retried' }));
+
+    const m = new SyncManager({ adapter, maxRetries: 1, retryBaseDelay: 10 });
+    await m.loadRange(S, E);
+    void m.updateEvent('ev-1', { title: 'Optimistic' });
+
+    await vi.advanceTimersByTimeAsync(0);   // flush initial failure microtasks
+    await vi.advanceTimersByTimeAsync(25);  // fire retry setTimeout (delay = 10ms * 2^1 = 20ms)
+    await vi.advanceTimersByTimeAsync(0);   // flush async .then chain
+
+    expect(m.events.get('ev-1')?.title).toBe('Auto-Retried');
+    vi.useRealTimers();
+  });
+
+  it('auto-retries a delete when maxRetries > 0', async () => {
+    vi.useFakeTimers();
+    vi.mocked(adapter.loadRange).mockResolvedValue([ev()]);
+    vi.mocked(adapter.deleteEvent!)
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValue(undefined);
+
+    const m = new SyncManager({ adapter, maxRetries: 1, retryBaseDelay: 10 });
+    await m.loadRange(S, E);
+    void m.deleteEvent('ev-1');
+
+    await vi.advanceTimersByTimeAsync(0);   // flush initial failure microtasks
+    await vi.advanceTimersByTimeAsync(25);  // fire retry setTimeout (delay = 10ms * 2^1 = 20ms)
+    await vi.advanceTimersByTimeAsync(0);   // flush retry dispatch microtasks
+
+    expect(adapter.deleteEvent).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
 });
