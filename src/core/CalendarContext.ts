@@ -47,7 +47,7 @@ export function resolveColor(
             return typeof color === 'string' ? color : undefined;
           }
         }
-      } catch (_) { /* ignore rule errors */ }
+      } catch { /* ignore rule errors */ }
     }
   }
   return ev.color;

@@ -36,12 +36,6 @@ type PreviewConflict = {
   violations?: Array<{ rule?: string | undefined; message?: string | undefined }> | undefined;
 };
 
-type PreviewResult = {
-  generated: GeneratedEvent[];
-  conflicts: PreviewConflict[];
-  error: string;
-};
-
 type InstantiateRequest = {
   templateId?: string | undefined;
   anchor: Date;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 

@@ -104,7 +104,7 @@ export class EventBus {
 
   constructor(opts: EventBusOptions = {}) {
     this._onError = opts.onError ?? ((err, ch) => {
-      // eslint-disable-next-line no-console
+       
       console.error(`[EventBus] handler for "${ch}" threw:`, err);
     });
   }

@@ -249,7 +249,7 @@ export class ICSAdapter implements CalendarAdapter {
     if (!this._refreshInterval) return () => {};
 
     let active = true;
-    let controller = new AbortController();
+    const controller = new AbortController();
 
     const poll = async () => {
       if (!active) return;

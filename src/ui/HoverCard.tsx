@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useEffect, type ChangeEvent, type MouseEvent } from 'react';
 import { format, isSameDay } from 'date-fns';
-import { X, Clock, Tag, Anchor, FileText, StickyNote, Pencil } from 'lucide-react';
+import { X, Clock, Tag, Anchor, StickyNote, Pencil } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import EventStatusBadge from './EventStatusBadge';
 import styles from './HoverCard.module.css';
 
-export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor, resolveResourceLabel }: any) {
+export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor: _anchor, resolveResourceLabel }: any) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);

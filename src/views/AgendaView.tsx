@@ -2,7 +2,7 @@ import type { DragEvent, TouchEvent } from 'react';
 import { useMemo, useState, useCallback, useRef } from 'react';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
-  format, isSameDay, isToday, startOfDay,
+  format, isToday, startOfDay,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay } from '../core/layout';

@@ -628,4 +628,24 @@ describe('resolvePool — closest strategy (#386 v2 distance)', () => {
       expect(result.evaluated).not.toContain('sfo-1')
     }
   })
+
+  it('readPath: top-level key path (id/name/capacity) is read directly from the resource', () => {
+    // Use locationPath pointing at a TOP_LEVEL_KEY ('id').  The value
+    // is a string, not a LatLon, so isLatLon returns false and every
+    // member gets Infinity distance.  The strategy still picks the
+    // first non-conflicting member in memberIds order.
+    type R = import('../../engine/schema/resourceSchema').EngineResource
+    const rA = { id: 'a', name: 'A', meta: {} } as unknown as R
+    const rB = { id: 'b', name: 'B', meta: {} } as unknown as R
+    const reg = new Map([rA, rB].map(r => [r.id, r]))
+    const pool: ResourcePool = {
+      id: 'p', name: 'Test', memberIds: ['a', 'b'], strategy: 'closest',
+    }
+    const result = resolvePool({
+      pool, proposed, events: [], rules: [],
+      resources: reg, proposedLocation: SLC, locationPath: 'id',
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.resourceId).toBe('a')
+  })
 })

@@ -13,6 +13,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { applyOperation } from '../operations/applyOperation';
+import { resolveRecurringEdit } from '../recurrence/resolveRecurringEdit';
 import { CalendarEngine } from '../CalendarEngine';
 import { UndoRedoManager } from '../UndoRedoManager';
 import { makeEvent } from '../schema/eventSchema';
@@ -39,6 +40,59 @@ function makeDailyStandup(): EngineEvent {
 function makeEvents(ev: EngineEvent): Map<string, EngineEvent> {
   return new Map([[ev.id, ev]]);
 }
+
+// ─── 0. resolveSeriesEdit branch coverage ────────────────────────────────────
+//
+// applyOperation short-circuits series-scope updates before calling
+// resolveRecurringEdit, so these tests call resolveRecurringEdit directly
+// to exercise the TRUE branches for resourceId, resourcePoolId, color,
+// newStart, and newEnd in resolveSeriesEdit (lines 215-217, 221-222).
+
+describe('resolveSeriesEdit — TRUE branches for resourceId / resourcePoolId / color / newStart / newEnd', () => {
+  it('applies resourceId, resourcePoolId, and color when present in patch', () => {
+    const master = makeDailyStandup();
+    const [change] = resolveRecurringEdit(master, d(2026, 1, 7, 9), {
+      resourceId:     'truck-1',
+      resourcePoolId: 'pool-east',
+      color:          '#ff0000',
+    }, 'series');
+
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
+    expect(change!.after.resourceId).toBe('truck-1');
+    expect(change!.after.resourcePoolId).toBe('pool-east');
+    expect(change!.after.color).toBe('#ff0000');
+  });
+
+  it('shifts master start/end when newStart and newEnd are provided', () => {
+    const master = makeDailyStandup();
+    const newStart = d(2026, 1, 5, 10);
+    const newEnd   = d(2026, 1, 5, 10, 15);
+    const [change] = resolveRecurringEdit(master, d(2026, 1, 7, 9), {
+      newStart,
+      newEnd,
+    }, 'series');
+
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
+    expect(change!.after.start.getTime()).toBe(newStart.getTime());
+    expect(change!.after.end.getTime()).toBe(newEnd.getTime());
+  });
+
+  it('null-clears resourceId and color when patch contains explicit null values', () => {
+    const master: ReturnType<typeof makeDailyStandup> & { resourceId?: string | null; color?: string | null } =
+      { ...makeDailyStandup(), resourceId: 'old-truck', color: '#aabbcc' };
+    const [change] = resolveRecurringEdit(master, d(2026, 1, 7, 9), {
+      resourceId: null,
+      color:      null,
+    }, 'series');
+
+    expect(change!.type).toBe('updated');
+    if (change!.type !== 'updated') return;
+    expect(change!.after.resourceId).toBeNull();
+    expect(change!.after.color).toBeNull();
+  });
+});
 
 // ─── 1. Delete single occurrence ─────────────────────────────────────────────
 

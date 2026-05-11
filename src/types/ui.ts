@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import type { ReactNode } from 'react';
 import type { NormalizedEvent } from './events';
 import type { EventStatus, EventLifecycleState } from './events';

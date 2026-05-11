@@ -25,8 +25,6 @@ const VIEW_KEYS = {
   '5': 'schedule',
   '6': 'assets',
 } as const;
-type CalendarView = typeof VIEW_KEYS[keyof typeof VIEW_KEYS];
-
 function isTypingTarget(el: Element | null): boolean {
   if (!el) return false;
   const tag = el.tagName;

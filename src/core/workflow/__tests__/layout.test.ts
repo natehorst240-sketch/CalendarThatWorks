@@ -207,6 +207,27 @@ describe('layoutWorkflow — corner cases', () => {
     expect(backEdge!.d.split('L').length).toBeGreaterThanOrEqual(3)
   })
 
+  it('edges referencing unknown nodes produce empty-path fallback', () => {
+    // An edge where `from` has no position (dangling edge from orphan node)
+    // hits the `if (!a || !b)` fallback branch that emits d:''.
+    const wf: Workflow = {
+      id: 'dangling', version: 1, trigger: 'on_submit', startNodeId: 'a',
+      nodes: [
+        { id: 'a', type: 'approval', assignTo: 'role:x' },
+        { id: 'done', type: 'terminal', outcome: 'finalized' },
+      ],
+      edges: [
+        { from: 'a', to: 'done', when: 'approved' },
+        { from: 'missing', to: 'done', when: 'approved' },
+      ],
+    }
+    const r = layoutWorkflow(wf)
+    const fallback = r.edgePaths.find(e => e.from === 'missing')
+    expect(fallback).toBeDefined()
+    expect(fallback!.d).toBe('')
+    expect(fallback!.midpoint).toEqual({ x: 0, y: 0 })
+  })
+
   it('self-loops render as a curve', () => {
     const wf: Workflow = {
       id: 'self', version: 1, trigger: 'on_submit', startNodeId: 'a',

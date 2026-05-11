@@ -193,6 +193,27 @@ describe('transitionApproval — counts + single-tier shortcut', () => {
   })
 })
 
+describe('transitionApproval — additional branch coverage', () => {
+  it('uses current timestamp when at is not supplied', () => {
+    // Covers the `input.at ?? new Date().toISOString()` fallback (line 225).
+    const r = transitionApproval(null, { action: 'submit' })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(typeof r.stage.updatedAt).toBe('string')
+    expect(r.stage.updatedAt.length).toBeGreaterThan(10)
+  })
+
+  it('emits ILLEGAL_TRANSITION with "null" when from-stage is absent (null)', () => {
+    // Covers the `from ?? 'null'` branch when current is null and the action
+    // is not 'submit' — no valid transition exists from null for approve.
+    const r = transitionApproval(null, { action: 'approve', at: AT })
+    expect(r).toMatchObject({
+      ok: false,
+      error: { code: 'ILLEGAL_TRANSITION', message: expect.stringContaining('"null"') },
+    })
+  })
+})
+
 describe('legalActionsFrom', () => {
   it('returns the entry action for null (submit only)', () => {
     expect(legalActionsFrom(null)).toEqual(['submit'])

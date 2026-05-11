@@ -1,10 +1,11 @@
 /**
  * invoiceExport — pure transform + CSV serialization.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   toInvoiceLineItems,
   invoiceLineItemsToCSV,
+  downloadInvoicesCSV,
 } from '../invoiceExport';
 import type { NormalizedEvent } from '../../types/events';
 
@@ -156,5 +157,73 @@ describe('invoiceLineItemsToCSV', () => {
   it('emits a header-only CSV for empty input (accounting tools import cleanly)', () => {
     const csv = invoiceLineItemsToCSV([]);
     expect(csv).toBe('"Event ID","Date","Customer","Description","Quantity","Rate","Total","Currency","Status"');
+  });
+
+  it('formats NaN date as empty string in the date column', () => {
+    const ev = makeEvent({
+      start: new Date('invalid') as any,
+      meta:  { billing: { rate: 50 } },
+    });
+    const entries = toInvoiceLineItems([ev]);
+    const csv = invoiceLineItemsToCSV(entries);
+    const row = csv.split('\n')[1]!;
+    const cols = row.split(',');
+    expect(cols[1]).toBe('""');
+  });
+});
+
+// ── toInvoiceLineItems — deriveQuantity edge cases ───────────────────────────
+
+describe('toInvoiceLineItems — deriveQuantity edge cases', () => {
+  it('returns 0 when event duration is 0ms (start === end)', () => {
+    const ev = makeEvent({
+      start: new Date('2026-04-10T09:00:00Z'),
+      end:   new Date('2026-04-10T09:00:00Z'),
+      meta:  { billing: { rate: 50 } },
+    });
+    expect(toInvoiceLineItems([ev])[0]!.quantity).toBe(0);
+  });
+
+  it('returns 0 when event end is before start (negative duration)', () => {
+    const ev = makeEvent({
+      start: new Date('2026-04-10T11:00:00Z'),
+      end:   new Date('2026-04-10T09:00:00Z'),
+      meta:  { billing: { rate: 50 } },
+    });
+    expect(toInvoiceLineItems([ev])[0]!.quantity).toBe(0);
+  });
+});
+
+// ── downloadInvoicesCSV ──────────────────────────────────────────────────────
+
+describe('downloadInvoicesCSV', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('triggers a DOM download and uses the default filename', () => {
+    const ev = makeEvent({ meta: { billing: { rate: 50 } } });
+    const clickSpy = vi.fn();
+    const mockAnchor = { href: '', download: '', click: clickSpy };
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as unknown as HTMLElement);
+    vi.spyOn(document.body, 'appendChild').mockReturnValue(mockAnchor as unknown as Node);
+    vi.spyOn(document.body, 'removeChild').mockReturnValue(mockAnchor as unknown as Node);
+
+    downloadInvoicesCSV([ev]);
+
+    expect(clickSpy).toHaveBeenCalled();
+    expect(mockAnchor.download).toBe('invoices.csv');
+  });
+
+  it('uses a custom filename when provided', () => {
+    const ev = makeEvent({ meta: { billing: { rate: 50 } } });
+    const mockAnchor = { href: '', download: '', click: vi.fn() };
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as unknown as HTMLElement);
+    vi.spyOn(document.body, 'appendChild').mockReturnValue(mockAnchor as unknown as Node);
+    vi.spyOn(document.body, 'removeChild').mockReturnValue(mockAnchor as unknown as Node);
+
+    downloadInvoicesCSV([ev], {}, 'q2-invoices');
+
+    expect(mockAnchor.download).toBe('q2-invoices.csv');
   });
 });

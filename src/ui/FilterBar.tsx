@@ -78,7 +78,7 @@ export default function FilterBar({
     const next = current instanceof Set
       ? new Set<string | number | boolean>(current as Set<string | number | boolean>)
       : new Set<string | number | boolean>();
-    next.has(value) ? next.delete(value) : next.add(value);
+    if (next.has(value)) next.delete(value); else next.add(value);
     onChange?.(fieldKey, next);
   }
 

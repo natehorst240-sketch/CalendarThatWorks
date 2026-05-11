@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * csvParser — parse CSV files and map columns to CalendarEventV1 objects.
  *

@@ -108,7 +108,7 @@ export function useCalendarSetup({
     _setFilters(f => {
       const current = f[key];
       const next = current instanceof Set ? new Set<unknown>(current) : new Set<unknown>();
-      next.has(value) ? next.delete(value) : next.add(value);
+      if (next.has(value)) next.delete(value); else next.add(value);
       return { ...f, [key]: next };
     });
   }, []);

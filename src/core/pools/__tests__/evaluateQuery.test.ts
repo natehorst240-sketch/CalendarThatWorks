@@ -202,3 +202,78 @@ describe('evaluateQuery — within (distance, #386 v2)', () => {
     expect(evaluateQuery(q, fleetMixed).matched).toEqual(['reefer-slc'])
   })
 })
+
+// ── Additional leaf operators ─────────────────────────────────────────────────
+
+describe('evaluateQuery — lt / lte operators', () => {
+  const resources = [
+    r('light',  { weight_lbs: 5_000  }),
+    r('medium', { weight_lbs: 15_000 }),
+    r('heavy',  { weight_lbs: 30_000 }),
+  ]
+
+  it('lt matches resources strictly below the threshold', () => {
+    const q: ResourceQuery = { op: 'lt', path: 'weight_lbs', value: 15_000 }
+    expect(evaluateQuery(q, resources).matched).toEqual(['light'])
+  })
+
+  it('lte matches resources at or below the threshold', () => {
+    const q: ResourceQuery = { op: 'lte', path: 'weight_lbs', value: 15_000 }
+    expect(evaluateQuery(q, resources).matched).toEqual(['light', 'medium'])
+  })
+
+  it('gt matches resources strictly above the threshold', () => {
+    const q: ResourceQuery = { op: 'gt', path: 'weight_lbs', value: 15_000 }
+    expect(evaluateQuery(q, resources).matched).toEqual(['heavy'])
+  })
+})
+
+// ── describe() called with composite queries (via not wrapper) ────────────────
+
+describe('evaluateQuery — describe() with composite inner clauses', () => {
+  const vehicles = [
+    r('truck-1', { type: 'vehicle' }),
+    r('driver-1', { type: 'person' }),
+  ]
+
+  it('produces not(and(...)) reason when not wraps a passing and clause', () => {
+    const q: ResourceQuery = {
+      op: 'not',
+      clause: { op: 'and', clauses: [{ op: 'eq', path: 'type', value: 'vehicle' }] },
+    }
+    const e = evaluateQuery(q, vehicles)
+    // truck-1 passes the inner `and` (it IS a vehicle) so `not(and)` fails for it
+    expect(e.excluded.find(x => x.id === 'truck-1')?.reason).toBe('not(and(...))')
+    // driver-1 does NOT pass the inner `and`, so not(and) passes for it
+    expect(e.matched).toContain('driver-1')
+  })
+
+  it('produces not(or(...)) reason when not wraps a passing or clause', () => {
+    const q: ResourceQuery = {
+      op: 'not',
+      clause: {
+        op: 'or',
+        clauses: [
+          { op: 'eq', path: 'type', value: 'vehicle' },
+          { op: 'eq', path: 'type', value: 'aircraft' },
+        ],
+      },
+    }
+    const e = evaluateQuery(q, vehicles)
+    expect(e.excluded.find(x => x.id === 'truck-1')?.reason).toBe('not(or(...))')
+    expect(e.matched).toContain('driver-1')
+  })
+
+  it('produces not(not(...)) reason when not wraps a passing inner not', () => {
+    // not(not(eq(type, aircraft))): truck-1 is not aircraft, so inner eq fails,
+    // inner not passes (correctly inverted), outer not then fails → describe(inner_not)
+    const q: ResourceQuery = {
+      op: 'not',
+      clause: { op: 'not', clause: { op: 'eq', path: 'type', value: 'aircraft' } },
+    }
+    const e = evaluateQuery(q, vehicles)
+    // both are not aircraft → inner not passes → outer not fails for both
+    expect(e.excluded.find(x => x.id === 'truck-1')?.reason).toBe('not(not(eq(type)))')
+    expect(e.matched).toEqual([])
+  })
+})

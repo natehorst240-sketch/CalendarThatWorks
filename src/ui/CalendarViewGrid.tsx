@@ -96,7 +96,7 @@ export interface CalendarViewGridProps {
 }
 
 export default function CalendarViewGrid({
-  cal, ownerCfg, perms, schema, filterBarSchema,
+  cal, ownerCfg, perms, schema, filterBarSchema: _filterBarSchema,
   sidebarOpen, setSidebarOpen, sidebarGroupLevels,
   hasAddButton, hasScheduleTemplates, hasImport, profileLabels,
   visibleScheduleTemplates, onScheduleTemplateAnalytics,

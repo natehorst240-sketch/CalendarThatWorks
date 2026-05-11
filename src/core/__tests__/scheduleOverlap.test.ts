@@ -220,4 +220,93 @@ describe('buildOpenShiftEvent', () => {
     });
     expect(ev['meta'].sourceShiftId).toBe('occurrence-99');
   });
+
+  it('uses "shift" as fallback sourceShiftId when both id and _eventId are absent', () => {
+    const ev = buildOpenShiftEvent({
+      shiftEvent: { title: 'Anon Shift', start: d('2026-04-15T20:00'), end: d('2026-04-16T08:00') },
+      reason: 'pto',
+    });
+    expect(ev['meta'].sourceShiftId).toBe('shift');
+  });
+
+  it('falls back to "Open: Shift" title when shiftEvent.title is absent', () => {
+    const ev = buildOpenShiftEvent({
+      shiftEvent: { id: 'shift-x', start: d('2026-04-15T20:00'), end: d('2026-04-16T08:00') },
+      reason: 'pto',
+    });
+    expect(ev['title']).toBe('Open: Shift');
+  });
+});
+
+describe('detectShiftConflicts — additional branch coverage', () => {
+  const d = (iso: string) => new Date(iso);
+  const empId = 'emp-1';
+
+  function makeShift(overrides = {}) {
+    return {
+      id:       'shift-1',
+      title:    'Shift',
+      start:    d('2026-04-15T08:00'),
+      end:      d('2026-04-15T20:00'),
+      category: 'shift',
+      resource: empId,
+      meta:     { kind: 'shift' },
+      ...overrides,
+    };
+  }
+
+  it('returns empty result when allEvents is not an array', () => {
+    const result = detectShiftConflicts({
+      employeeId: empId,
+      requestStart: d('2026-04-15T09:00'),
+      requestEnd: d('2026-04-15T11:00'),
+      allEvents: 'not-an-array' as any,
+    });
+    expect(result.hasConflict).toBe(false);
+    expect(result.conflictingEvents).toHaveLength(0);
+  });
+
+  it('uses employeeId field as fallback when resource is absent', () => {
+    const shift = { ...makeShift(), resource: undefined, employeeId: empId };
+    const result = detectShiftConflicts({
+      employeeId: empId,
+      requestStart: d('2026-04-15T09:00'),
+      requestEnd: d('2026-04-15T11:00'),
+      allEvents: [shift],
+    });
+    expect(result.hasConflict).toBe(true);
+  });
+
+  it('uses _eventId when available instead of id for dedup key', () => {
+    const shift = makeShift({ id: undefined, _eventId: 'occ-1' });
+    const result = detectShiftConflicts({
+      employeeId: empId,
+      requestStart: d('2026-04-15T09:00'),
+      requestEnd: d('2026-04-15T11:00'),
+      allEvents: [shift, shift],
+    });
+    expect(result.conflictingEvents).toHaveLength(1);
+  });
+
+  it('skips events with NaN start/end times', () => {
+    const badEv = makeShift({ start: 'not-a-date', end: 'not-a-date' });
+    const result = detectShiftConflicts({
+      employeeId: empId,
+      requestStart: d('2026-04-15T09:00'),
+      requestEnd: d('2026-04-15T11:00'),
+      allEvents: [badEv],
+    });
+    expect(result.hasConflict).toBe(false);
+  });
+
+  it('skips events with no eventId (empty string after coercion)', () => {
+    const noId = makeShift({ id: undefined, _eventId: undefined });
+    const result = detectShiftConflicts({
+      employeeId: empId,
+      requestStart: d('2026-04-15T09:00'),
+      requestEnd: d('2026-04-15T11:00'),
+      allEvents: [noId],
+    });
+    expect(result.hasConflict).toBe(false);
+  });
 });

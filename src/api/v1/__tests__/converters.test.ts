@@ -432,6 +432,94 @@ describe('legacyToV1 → v1ToLegacy round-trip', () => {
   });
 });
 
+// ─── coerceDate / coerceExdates edge cases ───────────────────────────────────
+
+describe('eventV1ToEngine: coerceDate edge cases', () => {
+  it('uses new Date() when start is an invalid Date object', () => {
+    const before = Date.now();
+    const ev = eventV1ToEngine(baseV1({ start: new Date('bad') }));
+    expect(ev.start.getTime()).toBeGreaterThanOrEqual(before);
+  });
+
+  it('uses addHours(start, 1) when end is an invalid Date', () => {
+    const ev = eventV1ToEngine(baseV1({ end: new Date('bad') }));
+    expect(ev.end.getTime() - ev.start.getTime()).toBe(3_600_000); // 1 hour
+  });
+
+  it('parses start from a numeric millisecond timestamp', () => {
+    const ev = eventV1ToEngine(baseV1({ start: S.getTime(), end: E.getTime() }));
+    expect(ev.start.getTime()).toBe(S.getTime());
+    expect(ev.end.getTime()).toBe(E.getTime());
+  });
+
+  it('treats empty rrule string as no recurrence (hasRrule = false)', () => {
+    const ev = eventV1ToEngine(baseV1({ rrule: '' }));
+    expect(ev.rrule).toBeNull();
+    expect(ev.seriesId).toBeNull();
+  });
+
+  it('treats empty timezone string as null', () => {
+    const ev = eventV1ToEngine(baseV1({ timezone: '' }));
+    expect(ev.timezone).toBeNull();
+  });
+});
+
+describe('eventV1ToEngine: coerceExdates with string items', () => {
+  it('parses string exdates and filters out invalid ones', () => {
+    const ev = eventV1ToEngine(baseV1({
+      exdates: ['2026-04-17T09:00:00.000Z', 'not-a-date'] as any,
+    }));
+    expect(ev.exdates).toHaveLength(1);
+    expect(ev.exdates[0].toISOString()).toBe('2026-04-17T09:00:00.000Z');
+  });
+});
+
+// ─── extractSync edge cases ───────────────────────────────────────────────────
+
+describe('engineToV1: extractSync edge cases', () => {
+  it('returns no sync when SYNC_META_KEY value is not an object', () => {
+    const engine = baseEngine({ meta: { [SYNC_META_KEY]: 'not-an-object' } });
+    const out = engineToV1(engine);
+    expect(out.sync).toBeUndefined();
+  });
+
+  it('returns no sync when externalId or syncSource are missing', () => {
+    const engine = baseEngine({ meta: { [SYNC_META_KEY]: { externalId: 'x' } } }); // no syncSource
+    const out = engineToV1(engine);
+    expect(out.sync).toBeUndefined();
+  });
+
+  it('includes syncToken in sync when present as string', () => {
+    const sync = { externalId: 'e1', syncSource: 's1', syncToken: 'tok-abc' };
+    const engine = baseEngine({ meta: { [SYNC_META_KEY]: sync } });
+    const out = engineToV1(engine);
+    expect(out.sync!.syncToken).toBe('tok-abc');
+  });
+
+  it('includes lastSyncedAt in sync when present as Date', () => {
+    const lastSyncedAt = new Date('2026-04-09T12:00:00.000Z');
+    const sync = { externalId: 'e1', syncSource: 's1', lastSyncedAt };
+    const engine = baseEngine({ meta: { [SYNC_META_KEY]: sync } });
+    const out = engineToV1(engine);
+    expect(out.sync!.lastSyncedAt).toBe(lastSyncedAt);
+  });
+});
+
+// ─── occurrenceToV1: constraints ─────────────────────────────────────────────
+
+describe('occurrenceToV1: constraints field', () => {
+  it('maps non-empty constraints array', () => {
+    const occ = makeOccurrence({ constraints: [{ type: 'asap' as const }] });
+    const out = occurrenceToV1(occ);
+    expect(out.constraints).toHaveLength(1);
+  });
+
+  it('omits constraints when empty', () => {
+    const out = occurrenceToV1(makeOccurrence());
+    expect(out.constraints).toBeUndefined();
+  });
+});
+
 // ─── normalizeInputEvent: constraints regression ──────────────────────────────
 
 describe('normalizeInputEvent: constraints field (regression)', () => {

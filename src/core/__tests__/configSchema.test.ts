@@ -105,3 +105,85 @@ describe('configSchema — v3 → v4 migration', () => {
     expect(loaded['approvals'].labels.approve).toBe('Okay');
   });
 });
+
+describe('configSchema — loadConfig edge cases', () => {
+  it('returns DEFAULT_CONFIG when localStorage is empty', () => {
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
+    expect(loaded['title']).toBe('My WorksCalendar');
+  });
+
+  it('returns DEFAULT_CONFIG when JSON is malformed', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, 'NOT_JSON{{{');
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
+  });
+
+  it('migrates wizardData.calendarName to title when title is absent', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      wizardData: { calendarName: 'Migrated Title' },
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['title']).toBe('Migrated Title');
+  });
+
+  it('does NOT override title from wizardData when title is already set', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      title: 'Explicit Title',
+      wizardData: { calendarName: 'Should Not Override' },
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['title']).toBe('Explicit Title');
+  });
+
+  it('migrates wizardData.preferredTheme when setup.preferredTheme is absent', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      wizardData: { preferredTheme: 'pastel' },
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['setup']['preferredTheme']).toBe('pastel');
+  });
+
+  it('migrates wizardData.teamMembers when team.members is empty', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      wizardData: { teamMembers: [{ id: 'm1', name: 'Alice' }] },
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['team']['members']).toEqual([{ id: 'm1', name: 'Alice' }]);
+  });
+
+  it('migrates setupCompleted flag to setup.completed', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      setupCompleted: true,
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['setup']['completed']).toBe(true);
+  });
+
+  it('treats schemaVersion as 3 when field is not a number', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      schemaVersion: 'old',
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
+  });
+
+  it('does not override schemaVersion when already at current version', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      schemaVersion: CONFIG_SCHEMA_VERSION,
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['schemaVersion']).toBe(CONFIG_SCHEMA_VERSION);
+  });
+});
+
+describe('configSchema — mergeDeep array handling', () => {
+  it('replaces arrays rather than deep-merging them', () => {
+    localStorage.setItem(`wc-config-${CAL_ID}`, JSON.stringify({
+      team: { members: [{ id: 'a', name: 'Alice' }, { id: 'b', name: 'Bob' }] },
+    }));
+    const loaded = loadConfig(CAL_ID);
+    expect(loaded['team']['members']).toEqual([{ id: 'a', name: 'Alice' }, { id: 'b', name: 'Bob' }]);
+    expect(loaded['team']['members']).toHaveLength(2);
+  });
+});

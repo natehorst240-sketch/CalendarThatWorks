@@ -393,7 +393,7 @@ export default function BaseGanttView({
 
   const timelineW = spanDays * pxPerDay;
 
-  const renderBars = (evs: BaseGanttEvent[], rowH: number) => {
+  const renderBars = (evs: BaseGanttEvent[], _rowH: number) => {
     const { events: laned } = assignLanes(evs, rangeStart, rangeEnd);
     return laned.map((ev, idx) => {
       const left   = ev._dayStart * pxPerDay;

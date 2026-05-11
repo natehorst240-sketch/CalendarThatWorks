@@ -375,3 +375,210 @@ describe('metaSelectField', () => {
     expect(opts.map(o => o.value)).toEqual(['Design', 'Engineering']);
   });
 });
+
+// ── _matchSearch branch coverage ──────────────────────────────────────────────
+
+describe('applyFilters — search (additional branches)', () => {
+  const events = [
+    ev({ id: '1', title: 'Team standup', category: 'Standup', resource: 'Alice', meta: { notes: 'daily' } }),
+    ev({ id: '2', title: 'Quarterly review', resource: 'Bob' }),
+    ev({ id: '3', title: 'Deep work', meta: { project: 'apollo' } }),
+    ev({ id: '4', title: 'No match event', resource: 'Zara', category: 'Other' }),
+  ];
+
+  it('returns all when search is null', () => {
+    const result = applyFilters(events, { search: null });
+    expect(result).toHaveLength(4);
+  });
+
+  it('returns all when search is whitespace only', () => {
+    const result = applyFilters(events, { search: '   ' });
+    expect(result).toHaveLength(4);
+  });
+
+  it('matches by category', () => {
+    const result = applyFilters(events, { search: 'standup' });
+    expect(result.some(e => e.id === '1')).toBe(true);
+  });
+
+  it('matches by meta value', () => {
+    const result = applyFilters(events, { search: 'apollo' });
+    expect(result.map(e => e.id)).toEqual(['3']);
+  });
+
+  it('returns empty when no field matches', () => {
+    const result = applyFilters(events, { search: 'zzz-no-match' });
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ── _matchDateRange branch coverage ───────────────────────────────────────────
+
+describe('applyFilters — dateRange (built-in type dispatch)', () => {
+  const schema = [{ key: 'dateRange', type: 'date-range' }];
+
+  const before = ev({ id: 'before', start: new Date('2026-04-01T10:00Z'), end: new Date('2026-04-01T11:00Z') });
+  const inside = ev({ id: 'inside', start: new Date('2026-04-10T10:00Z'), end: new Date('2026-04-10T11:00Z') });
+  const after  = ev({ id: 'after',  start: new Date('2026-04-20T10:00Z'), end: new Date('2026-04-20T11:00Z') });
+  const spanning = ev({
+    id: 'spanning',
+    start: new Date('2026-04-01T00:00Z'),
+    end:   new Date('2026-04-30T00:00Z'),
+  });
+  const events = [before, inside, after, spanning];
+
+  it('returns all when dateRange is null', () => {
+    expect(applyFilters(events, { dateRange: null }, schema)).toHaveLength(4);
+  });
+
+  it('returns all when dateRange is an empty object (no start/end)', () => {
+    expect(applyFilters(events, { dateRange: {} }, schema)).toHaveLength(4);
+  });
+
+  it('filters with start-only range (no end)', () => {
+    const result = applyFilters(events, { dateRange: { start: new Date('2026-04-05T00:00Z') } }, schema);
+    const ids = result.map(e => e.id).sort();
+    expect(ids).toContain('inside');
+    expect(ids).toContain('spanning');
+    expect(ids).not.toContain('before');
+  });
+
+  it('filters with end-only range (no start)', () => {
+    const result = applyFilters(events, { dateRange: { end: new Date('2026-04-15T00:00Z') } }, schema);
+    const ids = result.map(e => e.id).sort();
+    expect(ids).toContain('before');
+    expect(ids).toContain('inside');
+    expect(ids).toContain('spanning');
+    expect(ids).not.toContain('after');
+  });
+
+  it('includes spanning events that fully contain the range', () => {
+    const range = { start: new Date('2026-04-08T00:00Z'), end: new Date('2026-04-12T00:00Z') };
+    const result = applyFilters([spanning], { dateRange: range }, schema);
+    expect(result.map(e => e.id)).toContain('spanning');
+  });
+
+  it('dispatches via field.type=date-range (not key)', () => {
+    const schemaByType = [{ key: 'customRange', type: 'date-range' }];
+    const result = applyFilters(
+      [inside],
+      { customRange: { start: new Date('2026-04-09T00:00Z'), end: new Date('2026-04-11T00:00Z') } },
+      schemaByType,
+    );
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ── _defaultMatch branch coverage ─────────────────────────────────────────────
+
+describe('applyFilters — _defaultMatch additional branches', () => {
+  const boolSchema = [{ key: 'allDay', type: 'boolean' }];
+  const textSchema = [{ key: 'title', type: 'text' }];
+  const msSchema   = [{ key: 'tags',  type: 'multi-select' }];
+
+  it('boolean: matches true events', () => {
+    const events = [ev({ id: '1', allDay: true }), ev({ id: '2', allDay: false })];
+    const result = applyFilters(events, { allDay: true }, boolSchema);
+    expect(result.map(e => e.id)).toEqual(['1']);
+  });
+
+  it('boolean: matches false events', () => {
+    const events = [ev({ id: '1', allDay: true }), ev({ id: '2', allDay: false })];
+    const result = applyFilters(events, { allDay: false }, boolSchema);
+    expect(result.map(e => e.id)).toEqual(['2']);
+  });
+
+  it('text (in-field): matches substring case-insensitively', () => {
+    const events = [ev({ id: '1', title: 'Sprint Review' }), ev({ id: '2', title: 'Daily Standup' })];
+    const result = applyFilters(events, { title: 'sprint' }, textSchema);
+    expect(result.map(e => e.id)).toEqual(['1']);
+  });
+
+  it('multi-select with Array (not Set) converts and matches', () => {
+    const events = [ev({ id: '1', tags: 'react' }), ev({ id: '2', tags: 'vue' })];
+    const result = applyFilters(events, { tags: ['react'] }, msSchema);
+    expect(result.map(e => e.id)).toEqual(['1']);
+  });
+});
+
+// ── getSources fallback label ─────────────────────────────────────────────────
+
+describe('getSources — label fallback', () => {
+  it('falls back to id when _sourceLabel is absent', () => {
+    const e = ev({ id: 'x', _sourceId: 'feed-1' });
+    const sources = getSources([e]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]!.label).toBe('feed-1');
+    expect(sources[0]!.id).toBe('feed-1');
+  });
+
+  it('deduplicates by _sourceId (keeps first occurrence label)', () => {
+    const e1 = ev({ id: 'a', _sourceId: 'src', _sourceLabel: 'First' });
+    const e2 = ev({ id: 'b', _sourceId: 'src', _sourceLabel: 'Second' });
+    const sources = getSources([e1, e2]);
+    expect(sources).toHaveLength(1);
+    expect(sources[0]!.label).toBe('First');
+  });
+});
+
+// ── getResources edge cases ───────────────────────────────────────────────────
+
+describe('getResources — edge cases', () => {
+  it('returns empty array for empty input', () => {
+    expect(getResources([])).toEqual([]);
+  });
+
+  it('excludes undefined resources', () => {
+    expect(getResources([ev({})])).toEqual([]);
+  });
+});
+
+// ── _matchSearch title-undefined branch ───────────────────────────────────────
+
+describe('applyFilters — search with no title field', () => {
+  it('skips title?.toLowerCase() when title is absent and matches via resource', () => {
+    const noTitle = { id: 'nt', start: new Date(), end: new Date(), resource: 'Bob' };
+    const result = applyFilters([noTitle as any], { search: 'bob' });
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns false when item has no matching fields and title is absent', () => {
+    const noTitle = { id: 'nt', start: new Date(), end: new Date() };
+    const result = applyFilters([noTitle as any], { search: 'anything' });
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ── _matchDateRange evEnd fallback ────────────────────────────────────────────
+
+describe('applyFilters — dateRange evEnd fallback', () => {
+  it('uses event start as end when end property is absent', () => {
+    const schema = [{ key: 'dateRange', type: 'date-range' }];
+    const pointEv = { id: 'pt', start: new Date('2026-04-10T10:00Z') }; // no end
+    const range = { start: new Date('2026-04-10T09:00Z'), end: new Date('2026-04-10T11:00Z') };
+    const result = applyFilters([pointEv as any], { dateRange: range }, schema);
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ── applyFilters — || short-circuit second branch ─────────────────────────────
+
+describe('applyFilters — type dispatch second branch of ||', () => {
+  it('dispatches to text search when key=search but type is not text', () => {
+    const schema = [{ key: 'search', type: 'custom' }];
+    const result = applyFilters(
+      [ev({ id: '1', title: 'Hello world' })],
+      { search: 'hello' },
+      schema,
+    );
+    expect(result).toHaveLength(1);
+  });
+
+  it('dispatches to dateRange when key=dateRange but type is not date-range', () => {
+    const schema = [{ key: 'dateRange', type: 'custom' }];
+    const inside = ev({ id: 'in', start: new Date('2026-04-10T10:00Z'), end: new Date('2026-04-10T11:00Z') });
+    const range = { start: new Date('2026-04-10T09:00Z'), end: new Date('2026-04-10T11:30Z') };
+    const result = applyFilters([inside], { dateRange: range }, schema);
+    expect(result).toHaveLength(1);
+  });
+});

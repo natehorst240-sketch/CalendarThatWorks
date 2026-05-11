@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * conditionEngine — schema-driven conversion between visual conditions and filter state.
  *

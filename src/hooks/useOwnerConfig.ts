@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useOwnerConfig.js — Owner authentication + config state.
  */
 import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
-import { loadConfig, saveConfig, DEFAULT_CONFIG } from '../core/configSchema';
+import { loadConfig, saveConfig } from '../core/configSchema';
 
 type OwnerConfig = Record<string, any>;
 

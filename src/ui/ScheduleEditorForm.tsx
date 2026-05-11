@@ -161,7 +161,7 @@ export default function ScheduleEditorForm({
       customRrule: '',
       templateId: defaultTemplate.id,
     }),
-    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+    [],
   );
   const dirty = initialSnapshot !== JSON.stringify({ mode, start, end, title, rrulePreset, customRrule, templateId });
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =

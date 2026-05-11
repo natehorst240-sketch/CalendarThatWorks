@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ProfileBar — Saved-view header with quick-view chip strip and organizing controls.
  *
@@ -34,7 +35,7 @@ export default function ProfileBar({
   views,
   activeId,
   isDirty,
-  schema = DEFAULT_FILTER_SCHEMA,
+  schema: _schema = DEFAULT_FILTER_SCHEMA,
   currentView,
   viewOrder = DEFAULT_VIEW_ORDER,
   enabledViews,

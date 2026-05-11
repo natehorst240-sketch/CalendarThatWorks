@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 export const DEFAULT_CUSTOM_THEME = {
   colors: {
     accent: '#3b82f6',

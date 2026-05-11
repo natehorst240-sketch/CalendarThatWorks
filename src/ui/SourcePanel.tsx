@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * SourcePanel — unified source management UI for the ConfigPanel "Feeds" tab.
  *

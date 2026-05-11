@@ -163,7 +163,7 @@ export function useCalendarEngine({
   // ── Expanded events for current visible range ─────────────────────────────
   const expandedEvents: AnyValue[] = useMemo(
     () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
-    [engine, engineVer, range], // eslint-disable-line react-hooks/exhaustive-deps
+    [engine, engineVer, range],
   );
 
   // ── Approval queue — unwindowed master-record scan ───────────────────────
@@ -174,7 +174,7 @@ export function useCalendarEngine({
       if (typeof stage === 'string') out.push(toLegacyEvent(ev));
     }
     return out;
-  }, [engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [engine, engineVer]);
 
   // ── Pending validation alert (soft/hard violation dialog) ────────────────
   const [pendingAlert, setPendingAlert] = useState<PendingAlert | null>(null);

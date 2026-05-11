@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useCalendar.js — Central state hook: current date, view, filters.
  *
@@ -96,7 +97,7 @@ export function useCalendar(
   const toggleCategory = useCallback((cat: string) => {
     setFilters((f: CalendarFilters) => {
       const next = new Set<string>(f['categories']);
-      next.has(cat) ? next.delete(cat) : next.add(cat);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
       return { ...f, categories: next };
     });
   }, []);
@@ -104,7 +105,7 @@ export function useCalendar(
   const toggleResource = useCallback((res: string) => {
     setFilters((f: CalendarFilters) => {
       const next = new Set<string>(f['resources']);
-      next.has(res) ? next.delete(res) : next.add(res);
+      if (next.has(res)) next.delete(res); else next.add(res);
       return { ...f, resources: next };
     });
   }, []);
@@ -112,7 +113,7 @@ export function useCalendar(
   const toggleSourceFilter = useCallback((id: string) => {
     setFilters((f: CalendarFilters) => {
       const next = new Set<string>(f['sources']);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return { ...f, sources: next };
     });
   }, []);
@@ -132,7 +133,7 @@ export function useCalendar(
     setFilters((f: CalendarFilters) => {
       const current = f[key];
       const next = current instanceof Set ? new Set(current) : new Set();
-      next.has(value) ? next.delete(value) : next.add(value);
+      if (next.has(value)) next.delete(value); else next.add(value);
       return { ...f, [key]: next };
     });
   }, []);

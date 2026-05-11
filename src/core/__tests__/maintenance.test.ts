@@ -235,4 +235,73 @@ describe('completeMaintenance', () => {
     });
     expect((event.meta as any).billing).toEqual({ customer: 'Internal' });
   });
+
+  it('handles event with no meta at all (meta is undefined)', () => {
+    const noMeta: WorksCalendarEvent = { id: 'e', title: 'T', start: '2026-04-10' };
+    const { event } = completeMaintenance(noMeta, oilChange, {
+      assetId: 'truck-12', type: 'miles', value: 100_000,
+    });
+    expect((event.meta as any).maintenance.lifecycle).toBe('complete');
+  });
+
+  it('uses current timestamp when asOf is omitted', () => {
+    const before = Date.now();
+    const { reading } = completeMaintenance(baseEvent, oilChange, {
+      assetId: 'truck-12', type: 'miles', value: 100_000,
+      // no asOf
+    });
+    const readingTime = new Date(reading.asOf).getTime();
+    expect(readingTime).toBeGreaterThanOrEqual(before);
+  });
+});
+
+// ── computeDueStatus — additional branches ────────────────────────────────────
+
+describe('computeDueStatus — additional branches', () => {
+  it('returns unknown when completedAt is an invalid date string', () => {
+    const rule: MaintenanceRule = { id: 'x', assetType: 't', title: '?', interval: { days: 365 } };
+    const r = computeDueStatus(rule, {}, { completedAt: 'not-a-date' });
+    expect(r.status).toBe('unknown');
+  });
+
+  it('handles a rule with no warningWindow (uses ?? {} default)', () => {
+    const noWarn: MaintenanceRule = {
+      id: 'no-warn', assetType: 'truck', title: 'Basic',
+      interval: { miles: 5_000 },
+      // no warningWindow
+    };
+    const r = computeDueStatus(
+      noWarn,
+      { meter: { type: 'miles', value: 102_000 } },
+      { meterAtService: 100_000 },
+    );
+    // No warning window → promote 'ok' directly (remaining=3000, warning is undefined)
+    expect(r.status).toBe('ok');
+  });
+
+  it('promotes ok directly when interval.days has no warningWindow.days', () => {
+    const noWarnDays: MaintenanceRule = {
+      id: 'days-no-warn', assetType: 'truck', title: 'Days only',
+      interval: { days: 365 },
+      // no warningWindow.days
+    };
+    const r = computeDueStatus(
+      noWarnDays, {},
+      { completedAt: '2026-01-01T00:00:00Z' },
+      new Date('2026-04-01T00:00:00Z'),
+    );
+    expect(r.status).toBe('ok');
+  });
+});
+
+// ── projectNextDue — additional branches ─────────────────────────────────────
+
+describe('projectNextDue — additional branches', () => {
+  it('skips nextDueDate when completedAt is an invalid date string', () => {
+    const rule: MaintenanceRule = {
+      id: 'x', assetType: 't', title: '?', interval: { days: 365 },
+    };
+    const out = projectNextDue(rule, { completedAt: 'bad-date' });
+    expect(out.nextDueDate).toBeUndefined();
+  });
 });

@@ -128,7 +128,7 @@ export default function WeekView({
     moved: boolean;
   };
   const spanDragRef  = useRef<SpanDrag | null>(null);
-  const swallowNextSpanClickRef = useRef(false);
+  const _swallowNextSpanClickRef = useRef(false);
   const [spanGhost, setSpanGhost] = useState<{ ev: WeekViewEvent; startCol: number; endCol: number } | null>(null);
   const spansRef     = useRef<HTMLDivElement | null>(null);
 

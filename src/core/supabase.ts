@@ -20,7 +20,8 @@ let _client: SupabaseClientLike | null = null;
 export function getSupabaseClient(url: string, anonKey: string): SupabaseClientLike | null {
   if (_client) return _client;
   try {
-    // Dynamic import so the entire library doesn't hard-depend on Supabase
+    // Dynamic require so the library doesn't hard-depend on the optional peer dep.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@supabase/supabase-js');
     _client = createClient(url, anonKey) as SupabaseClientLike;
   } catch {

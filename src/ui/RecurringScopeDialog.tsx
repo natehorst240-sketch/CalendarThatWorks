@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './RecurringScopeDialog.module.css';

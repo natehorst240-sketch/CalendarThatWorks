@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * RequestForm — schema-driven, owner-configurable event request form
  * (ticket #134-12).

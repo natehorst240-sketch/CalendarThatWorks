@@ -13,7 +13,6 @@
  * Callers: CalendarEngine.dispatch() wraps this with state management.
  */
 
-import { addHours } from 'date-fns';
 import type { EngineEvent } from '../schema/eventSchema';
 import { makeEvent } from '../schema/eventSchema';
 import type { EngineOperation } from '../schema/operationSchema';
@@ -156,7 +155,7 @@ function applyUpdate(
   // copy as-is.  Explicit time changes to the whole series must come from a
   // move/resize op (which uses newStart/newEnd), not from a form update.
   if (op.scope === 'series' && op.occurrenceDate && existing.rrule) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
     const { start: _s, end: _e, ...safePatch } = op.patch as Record<string, unknown>;
     const after: EngineEvent = { ...existing, ...safePatch, id: op.id };
     return [{ type: 'updated', id: op.id, before: existing, after }];

@@ -80,12 +80,11 @@ export default function AdvancedFilterBuilder({
 
   // Pre-process unknown initial conditions into typed Condition[] for the hook.
   // Computed once on mount — the parent remounts via key={editingId} on switch.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only initializer
   const safeInitialConditions = useMemo<Condition[] | null>(() => {
     if (!initialConditions || initialConditions.length === 0) return null;
     const firstKey = schema.filter(f => f.type !== 'date-range')[0]?.key ?? 'categories';
     return initialConditions.map(c => toCondition(c, firstKey));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const {
     conditions, fieldOptions, operatorMap,
@@ -114,7 +113,6 @@ export default function AdvancedFilterBuilder({
     rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     nameInputRef.current?.focus();
     nameInputRef.current?.select();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only on edit open
   }, []);
 
   // ── Save ────────────────────────────────────────────────────────────────

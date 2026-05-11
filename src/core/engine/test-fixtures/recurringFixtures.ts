@@ -11,7 +11,7 @@ import type { EngineEvent } from '../schema/eventSchema';
 // ─── Base dates ───────────────────────────────────────────────────────────────
 // Use a fixed date so tests are deterministic.
 
-const BASE = new Date('2026-01-05T09:00:00'); // Monday
+const _BASE = new Date('2026-01-05T09:00:00'); // Monday
 
 function d(y: number, mo: number, day: number, h = 9, m = 0): Date {
   return new Date(y, mo - 1, day, h, m, 0, 0);

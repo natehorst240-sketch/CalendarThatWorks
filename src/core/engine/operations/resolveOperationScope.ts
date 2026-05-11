@@ -38,7 +38,7 @@ export interface ScopeResolutionResult {
 export function resolveOperationScope(
   op: Extract<EngineOperation, { scope?: RecurringEditScope | undefined; occurrenceDate?: Date | undefined }>,
   master: EngineEvent,
-  allEvents: readonly EngineEvent[],
+  _allEvents: readonly EngineEvent[],
 ): ScopeResolutionResult {
   // Not a recurring series → no scope resolution needed
   if (!isRecurringSeries(master)) {

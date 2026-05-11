@@ -83,7 +83,7 @@ export default function AssetRequestForm({
       notes: '',
       requirements: {},
     }),
-    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+    [],
   );
   const dirty = initialSnapshot !== JSON.stringify({ assetId, category, title, startStr, endStr, notes, requirements });
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =

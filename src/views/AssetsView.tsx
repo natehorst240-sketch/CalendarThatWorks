@@ -476,7 +476,6 @@ export default function AssetsView({
     const visibleDaysWidth = Math.max(wrap.clientWidth - NAME_W, 0);
     const targetLeft = Math.max(dayCenter - NAME_W - visibleDaysWidth / 2, 0);
     wrap.scrollLeft = targetLeft;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate, monthStartKey, totalDays, pxPerDay]);
 
   // ── Row source ──

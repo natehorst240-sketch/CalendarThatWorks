@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * FilterGroupSidebar — slide-out panel with tab navigation.
  *
@@ -11,7 +12,7 @@
  * the cascade UI; otherwise it falls back to the legacy condition
  * builder (`FiltersPanel`) so non-cascade hosts keep working.
  */
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, SlidersHorizontal, Filter, Bookmark } from 'lucide-react';
 import type { GroupLevel } from './GroupsPanel';
 import FiltersPanel from './FiltersPanel';

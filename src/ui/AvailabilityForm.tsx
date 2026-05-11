@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
@@ -113,7 +114,7 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   // route through `requestClose`.
   const initialSnapshot = useMemo(
     () => JSON.stringify({ allDay: initialAllDay, title: initialTitle, start: toDateInput(startDefault, initialAllDay), end: toDateInput(endDefault, initialAllDay), notes: initialEvent?.meta?.notes ?? '' }),
-    [], // eslint-disable-line react-hooks/exhaustive-deps -- mount-only
+    [],
   );
   const dirty = initialSnapshot !== JSON.stringify({ allDay, title, start, end, notes });
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =

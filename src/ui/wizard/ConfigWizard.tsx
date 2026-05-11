@@ -37,7 +37,6 @@ import {
   type CalendarConfig, type ConfigResource, type ConfigResourceType, type ConfigRole,
   type ConfigSettings,
 } from '../../core/config/calendarConfig'
-import type { ResourcePool } from '../../core/pools/resourcePoolSchema'
 import type { EngineResource } from '../../core/engine/schema/resourceSchema'
 import PoolCard from '../pools/PoolCard'
 import PoolBuilder from '../pools/PoolBuilder'
@@ -782,7 +781,7 @@ function downloadJson(content: string, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(href), 0)
 }
 
-function cleanSettings(s: ConfigSettings): ConfigSettings {
+function _cleanSettings(s: ConfigSettings): ConfigSettings {
   const out: { -readonly [K in keyof ConfigSettings]: ConfigSettings[K] } = {}
   if (s.conflictMode) out.conflictMode = s.conflictMode
   if (s.timezone)     out.timezone     = s.timezone

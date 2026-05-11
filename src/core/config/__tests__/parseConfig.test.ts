@@ -281,4 +281,185 @@ describe('parseConfig — settings', () => {
     const r = parseConfig({ settings: { timezone: 'America/Denver' } })
     expect(r.config.settings).toEqual({ timezone: 'America/Denver' })
   })
+
+  it('rejects a non-object settings block', () => {
+    const r = parseConfig({ settings: 'bad' })
+    expect(r.config.settings).toBeUndefined()
+    expect(r.errors).toContain('settings: expected object, ignoring')
+  })
+})
+
+// ── parseList — non-array section ────────────────────────────────────────────
+
+describe('parseConfig — non-array list sections', () => {
+  it('logs an error and yields an empty array when resources is not an array', () => {
+    const r = parseConfig({ resources: { id: 'r1', name: 'R1' } })
+    expect(r.config.resources).toEqual([])
+    expect(r.errors).toContain('resources: expected array, ignoring')
+  })
+
+  it('logs an error and yields an empty array when pools is not an array', () => {
+    const r = parseConfig({ pools: 'all-trucks' })
+    expect(r.config.pools).toEqual([])
+    expect(r.errors).toContain('pools: expected array, ignoring')
+  })
+
+  it('logs an error and yields an empty array when requirements is not an array', () => {
+    const r = parseConfig({ requirements: { eventType: 'load' } })
+    expect(r.config.requirements).toEqual([])
+    expect(r.errors).toContain('requirements: expected array, ignoring')
+  })
+
+  it('logs an error and yields an empty array when events is not an array', () => {
+    const r = parseConfig({ events: 42 })
+    expect(r.config.events).toEqual([])
+    expect(r.errors).toContain('events: expected array, ignoring')
+  })
+})
+
+// ── parsePool — additional branches ──────────────────────────────────────────
+
+describe('parseConfig — pools (additional branches)', () => {
+  const basePool = { id: 'p', name: 'P', memberIds: ['a'], strategy: 'first-available' }
+
+  it('drops a non-object pool entry', () => {
+    const r = parseConfig({ pools: ['not-an-object'] })
+    expect(r.config.pools).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('expected object'))).toBe(true)
+  })
+
+  it('drops a pool missing id or name', () => {
+    const r = parseConfig({ pools: [{ name: 'NoId', memberIds: [], strategy: 'first-available' }] })
+    expect(r.config.pools).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('missing id or name'))).toBe(true)
+  })
+
+  it('drops a pool when memberIds is not an array', () => {
+    const r = parseConfig({ pools: [{ ...basePool, memberIds: 'everyone' }] })
+    expect(r.config.pools).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('memberIds'))).toBe(true)
+  })
+
+  it('drops a pool when memberIds contains non-string elements', () => {
+    const r = parseConfig({ pools: [{ ...basePool, memberIds: ['a', 42] }] })
+    expect(r.config.pools).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('memberIds'))).toBe(true)
+  })
+
+  it('ignores query when it is not an object and keeps the pool', () => {
+    const r = parseConfig({ pools: [{ ...basePool, query: 'bad-query' }] })
+    expect(r.config.pools).toHaveLength(1)
+    expect(r.config.pools![0]).not.toHaveProperty('query')
+    expect(r.errors.some(e => e.includes('.query: expected object'))).toBe(true)
+  })
+
+  it('sets rrCursor when provided as a number', () => {
+    const r = parseConfig({ pools: [{ ...basePool, rrCursor: 3 }] })
+    expect(r.config.pools![0]!.rrCursor).toBe(3)
+  })
+
+  it('sets disabled when provided as a boolean', () => {
+    const r = parseConfig({ pools: [{ ...basePool, disabled: true }] })
+    expect(r.config.pools![0]!.disabled).toBe(true)
+  })
+
+  it('keeps a pool that has no type field (type stays unset)', () => {
+    const r = parseConfig({ pools: [basePool] })
+    expect(r.config.pools![0]!.type).toBeUndefined()
+    expect(r.errors).toEqual([])
+  })
+})
+
+// ── parseResource — non-object entry ─────────────────────────────────────────
+
+describe('parseConfig — resources (non-object entries)', () => {
+  it('drops a non-object entry in the resources array', () => {
+    const r = parseConfig({ resources: [42, { id: 'r1', name: 'R1' }] })
+    expect(r.config.resources!.map(x => x.id)).toEqual(['r1'])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('expected object'))).toBe(true)
+  })
+})
+
+// ── parseRequirement — additional branches ────────────────────────────────────
+
+describe('parseConfig — requirements (additional branches)', () => {
+  it('drops a non-object requirement entry', () => {
+    const r = parseConfig({ requirements: ['not-an-object'] })
+    expect(r.config.requirements).toEqual([])
+    expect(r.dropped).toBe(1)
+  })
+
+  it('drops a requirement missing eventType', () => {
+    const r = parseConfig({ requirements: [{ requires: [{ role: 'driver', count: 1 }] }] })
+    expect(r.config.requirements).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('missing eventType'))).toBe(true)
+  })
+
+  it('drops a requirement when requires is not an array', () => {
+    const r = parseConfig({ requirements: [{ eventType: 'load', requires: 'one-driver' }] })
+    expect(r.config.requirements).toEqual([])
+    expect(r.dropped).toBe(1)
+    expect(r.errors.some(e => e.includes('requires must be an array'))).toBe(true)
+  })
+
+  it('keeps a requirement with an empty requires array (not dropped)', () => {
+    const r = parseConfig({ requirements: [{ eventType: 'load', requires: [] }] })
+    expect(r.config.requirements).toEqual([{ eventType: 'load', requires: [] }])
+    expect(r.dropped).toBe(0)
+  })
+
+  it('drops a slot with valid count but neither role nor pool', () => {
+    const r = parseConfig({
+      requirements: [{ eventType: 'load', requires: [{ count: 2 }] }],
+    })
+    expect(r.config.requirements).toEqual([])
+    expect(r.errors.some(e => e.includes('requires[0]'))).toBe(true)
+  })
+
+  it('drops a non-object slot item', () => {
+    const r = parseConfig({
+      requirements: [{ eventType: 'load', requires: ['bad-slot'] }],
+    })
+    expect(r.config.requirements).toEqual([])
+    expect(r.errors.some(e => e.includes('requires[0]'))).toBe(true)
+  })
+
+  it('drops a slot with a negative count', () => {
+    const r = parseConfig({
+      requirements: [{ eventType: 'load', requires: [{ role: 'driver', count: -1 }] }],
+    })
+    expect(r.config.requirements).toEqual([])
+    expect(r.errors.some(e => e.includes('requires[0]'))).toBe(true)
+  })
+})
+
+// ── parseSeedEvent — additional branches ─────────────────────────────────────
+
+describe('parseConfig — events/seed (additional branches)', () => {
+  it('drops a non-object seed event entry', () => {
+    const r = parseConfig({ events: ['not-an-object'] })
+    expect(r.config.events).toEqual([])
+    expect(r.dropped).toBe(1)
+  })
+
+  it('sets optional eventType, resourceId, and meta on a seed event', () => {
+    const r = parseConfig({
+      events: [{
+        id: 'e1', title: 'Run', start: '2026-04-20T09:00Z', end: '2026-04-20T10:00Z',
+        eventType: 'delivery',
+        resourceId: 'truck-1',
+        meta: { priority: 'high' },
+      }],
+    })
+    const ev = r.config.events![0]!
+    expect(ev.eventType).toBe('delivery')
+    expect(ev.resourceId).toBe('truck-1')
+    expect(ev.meta).toEqual({ priority: 'high' })
+  })
 })

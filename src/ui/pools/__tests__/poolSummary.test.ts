@@ -128,4 +128,64 @@ describe('summarizeQuery — leaf operators', () => {
     }
     expect(summarizeQuery(q)).toEqual(['not (refrigerated)'])
   })
+
+  it('renders eq with value null as "<field> is empty"', () => {
+    expect(summarizeQuery({ op: 'eq', path: 'meta.dept', value: null }))
+      .toEqual(['dept is empty'])
+  })
+
+  it('renders neq as "≠ <value>"', () => {
+    expect(summarizeQuery({ op: 'neq', path: 'meta.status', value: 'inactive' }))
+      .toEqual(['status ≠ inactive'])
+  })
+
+  it('renders neq with null value using formatValue null path', () => {
+    // Covers formatValue(null) returning 'null'
+    expect(summarizeQuery({ op: 'neq', path: 'meta.dept', value: null }))
+      .toEqual(['dept ≠ null'])
+  })
+
+  it('renders in as "<field> in {…}"', () => {
+    expect(summarizeQuery({ op: 'in', path: 'meta.dept', values: ['hr', 'eng'] }))
+      .toEqual(['dept in {hr, eng}'])
+  })
+
+  it('renders gt as "<field> > <value>"', () => {
+    expect(summarizeQuery({ op: 'gt', path: 'capabilities.capacity_lbs', value: 50000 }))
+      .toEqual(['capacity lbs > 50,000'])
+  })
+
+  it('renders lt as "<field> < <value>"', () => {
+    expect(summarizeQuery({ op: 'lt', path: 'meta.weight', value: 100 }))
+      .toEqual(['weight < 100'])
+  })
+
+  it('renders lte as "<field> ≤ <value>"', () => {
+    expect(summarizeQuery({ op: 'lte', path: 'meta.weight', value: 100 }))
+      .toEqual(['weight ≤ 100'])
+  })
+
+  it('renders exists as "has <field>"', () => {
+    expect(summarizeQuery({ op: 'exists', path: 'meta.refrigerated' }))
+      .toEqual(['has refrigerated'])
+  })
+
+  it('renders within with neither miles nor km as "distance"', () => {
+    expect(summarizeQuery({
+      op: 'within', path: 'meta.location',
+      from: { kind: 'proposed' },
+    } as any)).toEqual(['within distance of event'])
+  })
+
+  it('OR with no inner phrases produces no output', () => {
+    // Covers if (inner.length > 0) false branch
+    const q: ResourceQuery = { op: 'or', clauses: [{ op: 'and', clauses: [] }] }
+    expect(summarizeQuery(q)).toEqual([])
+  })
+
+  it('NOT with empty inner phrase produces no output', () => {
+    // Covers if (inner) false branch in not case
+    const q: ResourceQuery = { op: 'not', clause: { op: 'and', clauses: [] } }
+    expect(summarizeQuery(q)).toEqual([])
+  })
 })

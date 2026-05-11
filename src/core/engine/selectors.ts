@@ -5,7 +5,7 @@
  * They are safe to memoize with useMemo / reselect.
  */
 
-import { isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 import type { CalendarState, EngineEvent } from './types';
 
 // ─── Basic event accessors ────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export function selectVisibleRange(state: CalendarState): [Date, Date] {
 
   // month — show entire calendar grid (up to 6 weeks)
   const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+  const _monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
   const dow = monthStart.getDay();
   const gridStart = new Date(monthStart);
   gridStart.setDate(gridStart.getDate() - ((dow - weekStartsOn + 7) % 7));

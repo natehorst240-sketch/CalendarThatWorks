@@ -197,3 +197,37 @@ describe('createWebhookChannel', () => {
     expect(send).toHaveBeenCalledWith(payload)
   })
 })
+
+// ── Additional branch coverage ────────────────────────────────────────────────
+
+describe('dispatchWorkflowEvents — non-Error throw', () => {
+  it('stringifies a non-Error thrown value as the reason', async () => {
+    const r = createChannelRegistry()
+    r.register({
+      id: 'slack',
+      dispatch: () => { throw 'string error' },
+    })
+    const report = await dispatchWorkflowEvents([notify('slack')], r)
+    expect(report.failed).toBe(1)
+    const outcome = report.outcomes[0] as { ok: false; reason: string }
+    expect(outcome.reason).toBe('string error')
+  })
+})
+
+describe('createSlackChannel — empty payload fallback', () => {
+  it('uses empty string when neither message nor template is present', async () => {
+    const send = vi.fn()
+    const adapter = createSlackChannel({ send })
+    await adapter.dispatch({ nodeId: 'n', channel: 'slack', at: 't' })
+    expect(send.mock.calls[0][0].text).toBe('')
+  })
+})
+
+describe('createEmailChannel — empty payload fallback', () => {
+  it('uses empty string for body when neither message nor template is present', async () => {
+    const send = vi.fn()
+    const adapter = createEmailChannel({ send })
+    await adapter.dispatch({ nodeId: 'n', channel: 'email', at: 't' })
+    expect(send.mock.calls[0][0].body).toBe('')
+  })
+})

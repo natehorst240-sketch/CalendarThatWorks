@@ -82,6 +82,53 @@ describe('serializeConfig — section shapes', () => {
   })
 })
 
+describe('serializeConfig — branch coverage', () => {
+  it('filters non-string values from labels (serializeLabels FALSE branch)', () => {
+    const out = serializeConfig({ labels: { resource: 'Truck', badKey: 42 as any } })
+    expect(out['labels']).toEqual({ resource: 'Truck' })
+    expect((out['labels'] as any)['badKey']).toBeUndefined()
+  })
+
+  it('serializes pool with rrCursor and disabled fields', () => {
+    const out = serializeConfig({
+      pools: [{
+        id: 'p', name: 'Pool', memberIds: ['a', 'b'],
+        strategy: 'round-robin', rrCursor: 1, disabled: true,
+      }],
+    })
+    const pool = (out['pools'] as any[])[0]
+    expect(pool.rrCursor).toBe(1)
+    expect(pool.disabled).toBe(true)
+  })
+
+  it('includes severity on requirement slots that specify one', () => {
+    const out = serializeConfig({
+      requirements: [{
+        eventType: 'load',
+        requires: [{ role: 'driver', count: 1, severity: 'soft' }],
+      }],
+    })
+    const slot = (out['requirements'] as any[])[0].requires[0]
+    expect(slot.severity).toBe('soft')
+  })
+
+  it('serializes seed events: eventType absent, resourceId present, meta present', () => {
+    const out = serializeConfig({
+      events: [
+        { id: 'e1', title: 'Run', start: '2026-04-20T09:00Z', end: '2026-04-20T10:00Z',
+          resourceId: 'truck-1', meta: { priority: 'high' } },
+        { id: 'e2', title: 'Idle', start: '2026-04-21T09:00Z', end: '2026-04-21T10:00Z' },
+      ],
+    })
+    const events = out['events'] as any[]
+    expect(events[0].resourceId).toBe('truck-1')
+    expect(events[0].meta).toEqual({ priority: 'high' })
+    expect(events[0].eventType).toBeUndefined()
+    expect(events[1].resourceId).toBeUndefined()
+    expect(events[1].meta).toBeUndefined()
+  })
+})
+
 describe('serializeConfig + parseConfig — round-trip', () => {
   it('round-trips a fully populated config losslessly', () => {
     const config: CalendarConfig = {

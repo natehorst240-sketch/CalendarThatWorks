@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useSourceAggregator — merge multiple calendar sources into one event stream.
  *
@@ -40,13 +41,11 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
   // arrays do not trigger unnecessary re-fetches.
   const allIcsFeedsKey = useMemo(
     () => JSON.stringify([...(icalFeedsProp ?? []), ...sourceStore.activeIcsSources]),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(icalFeedsProp), JSON.stringify(sourceStore.activeIcsSources)],
   );
 
   const allIcsFeeds = useMemo(
     () => [...(icalFeedsProp ?? []), ...sourceStore.activeIcsSources].filter((f): f is FeedLike & { url: string } => typeof f.url === 'string'),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [allIcsFeedsKey],
   );
 
@@ -73,7 +72,6 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
           _sourceLabel: src.label,
         })),
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [JSON.stringify(sourceStore.activeCsvSources.map((s) => ({ id: s.id, enabled: s.enabled, count: s.events?.length })))],
   );
 

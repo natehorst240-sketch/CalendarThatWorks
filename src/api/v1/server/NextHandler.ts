@@ -83,10 +83,6 @@ interface NextRequest {
   headers: { get(name: string): string | null };
 }
 
-interface NextResponse {
-  json(body: unknown, init?: { status?: number }): unknown;
-}
-
 type NextResponseConstructor = {
   json(body: unknown, init?: { status?: number }): unknown;
 };

@@ -1,10 +1,11 @@
 /**
  * maintenanceExport — pure transform + CSV serialization.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   toMaintenanceLog,
   maintenanceLogToCSV,
+  downloadMaintenanceLogCSV,
 } from '../maintenanceExport';
 import type { NormalizedEvent } from '../../types/events';
 import type { MaintenanceRule } from '../../types/maintenance';
@@ -102,6 +103,24 @@ describe('toMaintenanceLog', () => {
     const ev = makeEvent({ meta: { maintenance: 'oops' as unknown as object } });
     expect(toMaintenanceLog([ev])).toEqual([]);
   });
+
+  it('uses ruleId as label when rule registry provided but ruleId not found', () => {
+    const ev = makeEvent({ meta: { maintenance: { ruleId: 'unregistered-rule', lifecycle: 'scheduled' } } });
+    const [entry] = toMaintenanceLog([ev], { rules: [oilChange] });
+    expect(entry!.rule).toBe('unregistered-rule');
+  });
+
+  it('includes event with null lifecycle when no lifecycle filter provided', () => {
+    const ev = makeEvent({ meta: { maintenance: { ruleId: 'r' } } });
+    const [entry] = toMaintenanceLog([ev]);
+    expect(entry).toBeDefined();
+    expect(entry!.lifecycle).toBeNull();
+  });
+
+  it('skips events where lifecycle is null and lifecycles filter requires a value', () => {
+    const ev = makeEvent({ meta: { maintenance: { ruleId: 'r' } } });
+    expect(toMaintenanceLog([ev], { lifecycles: ['due'] })).toEqual([]);
+  });
 });
 
 // ── maintenanceLogToCSV ──────────────────────────────────────────────────────
@@ -130,5 +149,61 @@ describe('maintenanceLogToCSV', () => {
     expect(csv).toBe(
       '"Event ID","Date","Asset","Rule","Rule ID","Lifecycle","Meter at service","Next due (miles)","Next due (hours)","Next due (cycles)","Next due (date)","Notes"',
     );
+  });
+
+  it('escapes double-quotes in values', () => {
+    const ev = makeEvent({
+      meta: { maintenance: { ruleId: 'r', lifecycle: 'complete', notes: 'He said "hello"' } },
+    });
+    const csv = maintenanceLogToCSV(toMaintenanceLog([ev]));
+    expect(csv).toContain('"He said ""hello"""');
+  });
+
+  it('formats NaN date as empty string', () => {
+    const ev = makeEvent({
+      start: new Date('invalid') as any,
+      meta: { maintenance: { ruleId: 'r', lifecycle: 'complete' } },
+    });
+    const entries = toMaintenanceLog([ev]);
+    const csv = maintenanceLogToCSV(entries);
+    // The date column should be empty
+    const row = csv.split('\n')[1]!;
+    const cols = row.split(',');
+    expect(cols[1]).toBe('""'); // date column is empty
+  });
+});
+
+// ── downloadMaintenanceLogCSV ─────────────────────────────────────────────────
+
+describe('downloadMaintenanceLogCSV', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('creates and clicks an anchor element to trigger download', () => {
+    const ev = makeEvent({ meta: { maintenance: { ruleId: 'oil-10k', lifecycle: 'complete' } } });
+    const clickSpy = vi.fn();
+    const mockAnchor = { href: '', download: '', click: clickSpy };
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as unknown as HTMLElement);
+    vi.spyOn(document.body, 'appendChild').mockReturnValue(mockAnchor as unknown as Node);
+    vi.spyOn(document.body, 'removeChild').mockReturnValue(mockAnchor as unknown as Node);
+
+    downloadMaintenanceLogCSV([ev], { rules: [oilChange] });
+
+    expect(clickSpy).toHaveBeenCalled();
+    expect(mockAnchor.download).toBe('maintenance-log.csv');
+  });
+
+  it('uses custom filename when provided', () => {
+    const ev = makeEvent({ meta: { maintenance: { lifecycle: 'complete' } } });
+    const clickSpy = vi.fn();
+    const mockAnchor = { href: '', download: '', click: clickSpy };
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as unknown as HTMLElement);
+    vi.spyOn(document.body, 'appendChild').mockReturnValue(mockAnchor as unknown as Node);
+    vi.spyOn(document.body, 'removeChild').mockReturnValue(mockAnchor as unknown as Node);
+
+    downloadMaintenanceLogCSV([ev], {}, 'custom-report');
+
+    expect(mockAnchor.download).toBe('custom-report.csv');
   });
 });

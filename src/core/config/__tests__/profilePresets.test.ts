@@ -286,3 +286,58 @@ describe('equipment_rental preset', () => {
     expect(template?.requires.every(s => s.severity === 'soft')).toBe(true)
   })
 })
+
+// ─── Branch-coverage supplements ────────────────────────────────────────────
+
+describe('mergeById — branch coverage', () => {
+  it('returns base copy when preset has no catalog for that section (bid=19 TRUE)', () => {
+    // custom preset has no resourceTypes or roles → mergeById(defined, undefined)
+    // exercises the `if (!preset) return [...base!]` branch (line 448 TRUE).
+    const base: CalendarConfig = {
+      resourceTypes: [{ id: 'custom-type', label: 'Custom Type' }],
+      roles:         [{ id: 'custom-role', label: 'Custom Role' }],
+    }
+    const out = applyProfilePreset('custom', base)
+    expect(out.resourceTypes).toEqual(base.resourceTypes)
+    expect(out.roles).toEqual(base.roles)
+  })
+
+  it('returns base copy when all preset items already exist in base (bid=21 FALSE)', () => {
+    // trucking adds 'driver' + 'dispatcher'; pass a base that already has both →
+    // additions=[] → cond-expr FALSE path `[...base]` (line 452 alternate).
+    const base: CalendarConfig = {
+      roles: [
+        { id: 'driver',     label: 'My Driver'     },
+        { id: 'dispatcher', label: 'My Dispatcher' },
+      ],
+    }
+    const out = applyProfilePreset('trucking', base)
+    // Role count stays the same (no duplicates appended)
+    expect(out.roles!.length).toBe(2)
+    expect(out.roles!.map(r => r.id)).toEqual(['driver', 'dispatcher'])
+  })
+})
+
+describe('cleanUndefined — branch coverage', () => {
+  it('drops keys that are explicitly undefined in the merged output (bid=22 FALSE)', () => {
+    // Passing a base with an explicitly-undefined key forces cleanUndefined to
+    // visit a key where o[k] === undefined and skip it (the FALSE branch).
+    const base = Object.assign({} as CalendarConfig, { resourceTypes: undefined })
+    const out = applyProfilePreset('custom', base)
+    expect(out).not.toHaveProperty('resourceTypes')
+    expect(out.profile).toBe('custom')
+  })
+})
+
+describe('applyProfileSampleData — newPools empty branch (bid=15 FALSE)', () => {
+  it('does not re-add pools when base already contains every sample pool', () => {
+    // Pre-populate base with all sample pools for trucking so newPools=[].
+    const sample = getProfileSampleData('trucking')!
+    const base: CalendarConfig = {
+      pools: sample.pools.map(p => ({ ...p })),
+    }
+    const out = applyProfileSampleData('trucking', base)
+    // Pool list should equal the original (no duplicates added)
+    expect(out.pools?.length).toBe(sample.pools.length)
+  })
+})

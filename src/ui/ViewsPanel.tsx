@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ViewsPanel — Save/load complete configurations (filters + groups + sort + view type).
  *

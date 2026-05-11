@@ -55,7 +55,6 @@ export function normalizeGroupConfig(input: GroupByInput): GroupConfig[] {
  * memoize the value themselves to avoid unnecessary re-groupings.
  */
 export function useNormalizedConfig(groupBy: GroupByInput): GroupConfig[] {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => normalizeGroupConfig(groupBy), [
     typeof groupBy === 'string' ? groupBy : JSON.stringify(groupBy),
   ])

@@ -131,6 +131,25 @@ describe('groupRows', () => {
       expect(flatRows.filter(r => !r['_type'] && r['emp'].role === 'Nurse' && r['emp'].shift === 'Night')).toHaveLength(1);
     });
 
+    it('returns ungrouped rows when fieldAccessor is an empty array', () => {
+      // Covers the `if (accessors.length === 0)` early-exit branch
+      const { flatRows, groupOrder } = groupRows(rows, {
+        groupBy: 'role',
+        fieldAccessor: [] as any,
+      });
+      expect(flatRows).toBe(rows);
+      expect(groupOrder).toEqual([]);
+    });
+
+    it('returns ungrouped rows when fieldAccessor contains a null accessor', () => {
+      // Covers the `if (!accessor)` defensive branch inside emitLevel
+      const { flatRows } = groupRows(rows, {
+        groupBy: 'role',
+        fieldAccessor: [null] as any,
+      });
+      expect(flatRows).toEqual(rows);
+    });
+
     it('parent header count reports leaf-row totals, not direct children', () => {
       const { flatRows } = groupRows(nestedRows, {
         groupBy: ['role', 'shift'],

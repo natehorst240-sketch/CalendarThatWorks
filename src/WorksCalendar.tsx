@@ -6,7 +6,7 @@ import {
 } from 'react';
 import type { ForwardedRef } from 'react';
 
-import type { WorksCalendarProps, CalendarApi, CalendarView } from './WorksCalendar.types';
+import type { WorksCalendarProps, CalendarApi } from './WorksCalendar.types';
 export type { WorksCalendarEvent, CalendarView, CalendarRole, ScheduleInstantiationLimits, CalendarApi, WorksCalendarProps, DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator } from './WorksCalendar.types';
 import { DEFAULT_SCHEDULE_INSTANTIATION_LIMITS } from './core/calendarViewConfig';
 
@@ -76,7 +76,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     onViewChange,
     onMapWidgetOpenChange,
     showMapWidget = true,
-    enableApprovalFlowsTab = true,
+    enableApprovalFlowsTab: _enableApprovalFlowsTab = true,
 
     // ── Supabase realtime ──
     supabaseUrl,
@@ -144,13 +144,13 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     assets,
     strictAssetFiltering,
     assetRequestCategories,
-    onConflictCheck,
+    onConflictCheck: _onConflictCheck,
     onApprovalAction,
     renderAssetLocation,
     renderPoolLocation,
     renderAssetBadges,
     maintenanceRules,
-    renderConflictBody,
+    renderConflictBody: _renderConflictBody,
 
     // ── Resource pools ──
     pools: rawPools,
@@ -237,7 +237,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     templateError, visibleScheduleTemplates, mergedScheduleTemplates,
     buildSchedulePreview, handleScheduleInstantiate,
     handleCreateScheduleTemplate, handleDeleteScheduleTemplate,
-    emitEventSave, checkEventConflicts,
+    emitEventSave: _emitEventSave, checkEventConflicts,
     handleEventSave, handleEventMove, handleEventResize,
     handleEventGroupChange, handleEventDelete, handleInlineSave, handleInlineDelete,
     handleEventClick, handleEditFromHoverCard, handleImport,

@@ -56,6 +56,73 @@ describe('instantiateScheduleTemplate', () => {
       'Schedule template entry 1 is missing a valid title.',
     );
   });
+
+  it('accepts string anchor', () => {
+    const result = instantiateScheduleTemplate(
+      { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 60 }] },
+      { anchor: '2026-04-20T08:00:00.000Z' },
+    );
+    expect(result.generated[0].start).toBeInstanceOf(Date);
+  });
+
+  it('accepts numeric anchor (Unix timestamp)', () => {
+    const ts = new Date('2026-04-20T08:00:00.000Z').getTime();
+    const result = instantiateScheduleTemplate(
+      { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 60 }] },
+      { anchor: ts },
+    );
+    expect(result.generated[0].start).toBeInstanceOf(Date);
+  });
+
+  it('clamps durationMinutes to 1 when 0 or negative', () => {
+    const result = instantiateScheduleTemplate(
+      { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 0 }] },
+      { anchor: new Date('2026-04-20T08:00:00.000Z') },
+    );
+    const diff = result.generated[0].end!.getTime() - result.generated[0].start!.getTime();
+    expect(diff).toBe(60_000);
+  });
+
+  it('falls back to entry resource/category when request fields absent', () => {
+    const result = instantiateScheduleTemplate(
+      { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 60, category: 'Cat', resource: 'Res' }] },
+      { anchor: new Date('2026-04-20T08:00:00.000Z') },
+    );
+    expect(result.generated[0].category).toBe('Cat');
+    expect(result.generated[0].resource).toBe('Res');
+  });
+
+  it('generates fallback entry id when entry has no id', () => {
+    const result = instantiateScheduleTemplate(
+      { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 60 }] },
+      { anchor: new Date('2026-04-20T08:00:00.000Z') },
+    );
+    expect((result.generated[0].meta as any).scheduleTemplateEntryId).toBe('sched-team-oncall:0');
+  });
+
+  it('throws when template has no entries', () => {
+    expect(() =>
+      instantiateScheduleTemplate({ ...template, entries: [] }, { anchor: new Date() })
+    ).toThrow('at least one entry');
+  });
+
+  it('throws when entry has invalid startOffsetMinutes', () => {
+    expect(() =>
+      instantiateScheduleTemplate(
+        { ...template, entries: [{ title: 'T', startOffsetMinutes: NaN, durationMinutes: 60 }] },
+        { anchor: new Date() },
+      )
+    ).toThrow('invalid start offset');
+  });
+
+  it('throws when entry has invalid durationMinutes', () => {
+    expect(() =>
+      instantiateScheduleTemplate(
+        { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: NaN }] },
+        { anchor: new Date() },
+      )
+    ).toThrow('invalid duration');
+  });
 });
 
 describe('canViewScheduleTemplate', () => {
@@ -65,5 +132,24 @@ describe('canViewScheduleTemplate', () => {
     expect(canViewScheduleTemplate({ ...template, visibility: 'team' }, { role: 'readonly' })).toBe(false);
     expect(canViewScheduleTemplate({ ...template, visibility: 'private' }, { role: 'user' })).toBe(false);
     expect(canViewScheduleTemplate({ ...template, visibility: 'private' }, { role: 'admin' })).toBe(true);
+  });
+
+  it('org visibility allows any viewer including empty context', () => {
+    expect(canViewScheduleTemplate({ ...template, visibility: 'org' }, {})).toBe(true);
+    expect(canViewScheduleTemplate({ ...template, visibility: 'org' })).toBe(true);
+  });
+
+  it('team visibility allows isOwner', () => {
+    expect(canViewScheduleTemplate({ ...template, visibility: 'team' }, { isOwner: true })).toBe(true);
+  });
+
+  it('private visibility allows isOwner', () => {
+    expect(canViewScheduleTemplate({ ...template, visibility: 'private' }, { isOwner: true })).toBe(true);
+  });
+
+  it('defaults to org visibility when absent', () => {
+    const t2 = { ...template } as any;
+    delete t2.visibility;
+    expect(canViewScheduleTemplate(t2, { role: 'readonly' })).toBe(true);
   });
 });

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { deserializeFilters } from './useSavedViews';
 import { captureSavedViewFields } from '../core/viewScope';
@@ -89,7 +90,7 @@ export function useSavedViewsManager({
   useEffect(() => {
     if (skipDirtyRef.current) { skipDirtyRef.current = false; return; }
     if (savedViewActiveId) setSavedViewDirty(true);
-  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cal.filters, cal.view, activeGroupBy, activeSort, activeShowAllGroups, activeAssetsZoom, activeAssetsCollapsed, selectedBaseIds]);
 
   const handleApplyView = useCallback((savedView: LooseValue) => {
     if (savedView.id === savedViewActiveId) {

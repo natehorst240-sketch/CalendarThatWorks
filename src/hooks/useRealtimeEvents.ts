@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useRealtimeEvents — subscribe to Supabase Realtime postgres_changes.
  * Returns live events and connection status.

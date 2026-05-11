@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * filterSchema — core types and default schema for the schema-driven filter engine.
  *

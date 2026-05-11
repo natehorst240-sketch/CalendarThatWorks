@@ -200,6 +200,41 @@ describe('mapToEvents', () => {
     expect(events[0]!.start.getFullYear()).toBe(2026);
   });
 
+  it('auto-detect: M/D/YYYY format (non-ISO-looking, direct Date parse succeeds)', () => {
+    // Hits the auto-detect block (lines 333-334 TRUE): new Date('4/10/2026')
+    // is valid so it returns at the iso branch before MDY fallback.
+    const { events } = mapToEvents(
+      [{ T: 'Meeting', S: '4/10/2026' }],
+      { title: 'T', start: 'S' },
+      'auto',
+    );
+    expect(events[0]!.start.getFullYear()).toBe(2026);
+  });
+
+  it('auto-detect: falls through to MDY parser when direct parse gives Invalid Date', () => {
+    // 'Spring 2026': new Date('SpringT2026') is Invalid so iso parse fails (line
+    // 334 FALSE). _parseMDY returns new Date('Spring 2026') which Node.js parses
+    // as a valid date, so line 337 TRUE is reached.
+    const { events, errors } = mapToEvents(
+      [{ T: 'Meeting', S: 'Spring 2026' }],
+      { title: 'T', start: 'S' },
+      'auto',
+    );
+    // Node.js accepts 'Spring 2026' → events has the row; errors is empty
+    expect(events.length + errors.length).toBe(1);
+  });
+
+  it('auto-detect: falls through to native Date fallback when both ISO and MDY fail', () => {
+    // '13/32/2026': new Date is Invalid, _parseMDY produces '2026-13-32' = Invalid,
+    // so line 337 FALSE and line 339 (return new Date(v)) are hit.
+    const { errors } = mapToEvents(
+      [{ T: 'Meeting', S: '13/32/2026' }],
+      { title: 'T', start: 'S' },
+      'auto',
+    );
+    expect(errors[0]!.message).toMatch(/Cannot parse start date/);
+  });
+
   it('row error includes 1-based spreadsheet row number', () => {
     const { errors } = mapToEvents(
       [{ Title: 'OK', Start: '2026-04-10' }, { Title: '', Start: '2026-04-11' }],

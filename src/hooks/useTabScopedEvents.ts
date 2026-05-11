@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useTabScopedEvents — single, memoized source of the per-tab event feed.
  *
@@ -6,7 +7,7 @@
  * each view lives in src/core/viewScope.ts.
  */
 import { useMemo } from 'react';
-import { getViewScope, type ViewId, type ViewScopeContext } from '../core/viewScope';
+import { getViewScope, type ViewScopeContext } from '../core/viewScope';
 
 export function useTabScopedEvents<E = any>(
   view: string,

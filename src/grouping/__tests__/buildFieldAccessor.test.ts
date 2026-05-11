@@ -21,6 +21,16 @@ describe('buildFieldAccessor — employee mode', () => {
   });
 });
 
+describe('buildFieldAccessor — array overload', () => {
+  it('returns an array of accessors when fieldName is an array (line-37 TRUE branch)', () => {
+    const accessors = buildFieldAccessor(['role', 'department'], 'employee');
+    expect(Array.isArray(accessors)).toBe(true);
+    expect(accessors).toHaveLength(2);
+    expect(accessors[0]!({ emp: { role: 'Nurse' } })).toBe('Nurse');
+    expect(accessors[1]!({ emp: { department: 'ICU' } })).toBe('ICU');
+  });
+});
+
 describe('buildFieldAccessor — resource mode', () => {
   const accessor = buildFieldAccessor('department', 'resource');
 

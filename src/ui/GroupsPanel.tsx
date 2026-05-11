@@ -109,7 +109,7 @@ export default function GroupsPanel({
       )}
 
       {levels.map((level, index) => {
-        const fieldDef = groupableFields.find(f => f.key === level.field);
+        const _fieldDef = groupableFields.find(f => f.key === level.field);
         return (
           <div key={index} className={styles['levelCard']}>
             <div className={styles['levelHeader']}>

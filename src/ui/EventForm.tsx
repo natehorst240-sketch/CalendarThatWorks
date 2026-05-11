@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * EventForm.jsx — Modal for adding / editing events.
  * Layout and orchestration only; business logic lives in useEventDraftState
@@ -23,7 +24,7 @@ import ConflictModal from './ConflictModal';
 import styles from './EventForm.module.css';
 
 export default function EventForm({
-  event, config, categories, onSave, onDelete, onClose, permissions, onAddCategory,
+  event, config, categories, onSave, onDelete, onClose, permissions: _permissions, onAddCategory,
   maintenanceRules,
   /**
    * Optional pre-save conflict check. When provided, the form runs it on

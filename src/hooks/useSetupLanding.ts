@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useCallback } from 'react';
 import type { SetupLandingResult } from '../ui/SetupLanding';
 import { buildRecipeSavedView } from '../core/setupRecipes';

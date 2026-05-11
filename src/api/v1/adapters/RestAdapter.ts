@@ -178,7 +178,7 @@ export class RestAdapter implements CalendarAdapter {
     const end   = opts?.rangeEnd   ?? new Date(Date.now() + 30 * 24 * 3600_000);
 
     let active = true;
-    let controller = new AbortController();
+    const controller = new AbortController();
 
     const poll = async () => {
       if (!active) return;

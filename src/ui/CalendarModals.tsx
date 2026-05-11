@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import type { RefObject } from 'react';
 import HoverCard from './HoverCard';
 import EventForm from './EventForm';
@@ -151,7 +152,7 @@ export default function CalendarModals({
   recurringPrompt, pendingAlert, setPendingAlert,
   configOpen, calendarId, categories, resources, schema, expandedEvents, configInitialTab,
   smartViewEditId, updateConfig, closeConfig, showSetupLanding, handleReopenSetup,
-  savedViews, handleDeleteView, isOwner, openConfigToTab, sourceStore, feedErrors,
+  savedViews, handleDeleteView, isOwner, openConfigToTab: _openConfigToTab, sourceStore, feedErrors,
   isFetchingFeeds, mergedScheduleTemplates, handleCreateScheduleTemplate,
   handleDeleteScheduleTemplate, templateError, onEmployeeAdd, onEmployeeDelete, canManagePeople,
   helpOpen, setHelpOpen, assetsLabel,

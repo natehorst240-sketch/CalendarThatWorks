@@ -154,6 +154,58 @@ describe('transitionApproval — approve/deny drive the interpreter', () => {
   })
 })
 
+describe('transitionApproval — mapToWorkflowAction branch coverage', () => {
+  it('approve without actor omits actor from the workflow action', () => {
+    // Covers mapToWorkflowAction line 163 FALSE (actor is undefined).
+    const start = transitionApproval(null, {
+      action: 'submit', at: AT, workflow: singleApprover, workflowInstance: null,
+    })
+    if (!start.ok) throw new Error('precondition')
+    const r = transitionApproval({ stage: 'requested', updatedAt: AT, history: [] }, {
+      action: 'approve',  // no actor field → FALSE branch of `actor !== undefined`
+      at: AT,
+      workflow: singleApprover,
+      workflowInstance: start.workflowInstance,
+    })
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.workflowInstance?.status).toBe('completed')
+  })
+
+  it('approve with reason forwards reason to the workflow action', () => {
+    // Covers mapToWorkflowAction line 164 TRUE (reason is defined).
+    const start = transitionApproval(null, {
+      action: 'submit', at: AT, workflow: singleApprover, workflowInstance: null,
+    })
+    if (!start.ok) throw new Error('precondition')
+    const r = transitionApproval({ stage: 'requested', updatedAt: AT, history: [] }, {
+      action: 'approve',
+      reason: 'looks good',  // TRUE branch of `reason !== undefined`
+      at: AT,
+      workflow: singleApprover,
+      workflowInstance: start.workflowInstance,
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it('deny without actor omits actor from the workflow action', () => {
+    // Covers mapToWorkflowAction line 169 FALSE (actor is undefined on deny).
+    const start = transitionApproval(null, {
+      action: 'submit', at: AT, workflow: singleApprover, workflowInstance: null,
+    })
+    if (!start.ok) throw new Error('precondition')
+    const r = transitionApproval({ stage: 'requested', updatedAt: AT, history: [] }, {
+      action: 'deny',
+      reason: 'rejected',   // reason required
+      // no actor → FALSE branch
+      at: AT,
+      workflow: singleApprover,
+      workflowInstance: start.workflowInstance,
+    })
+    expect(r.ok).toBe(true)
+  })
+})
+
 describe('transitionApproval — non-workflow actions pass through', () => {
   it('revoke with a workflow present skips the interpreter', () => {
     const completed: WorkflowInstance = {

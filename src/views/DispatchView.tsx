@@ -22,7 +22,7 @@
  */
 import { Fragment, useMemo, useState } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
-import { Wrench, Users, Plane, AlertTriangle, Clock, MapPin, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { Users, Plane, AlertTriangle, Clock, MapPin, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import { isLifecycleState, type EventLifecycleState } from '../types/events';
 import styles from './DispatchView.module.css';

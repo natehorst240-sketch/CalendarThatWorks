@@ -80,7 +80,6 @@ export function WorkflowBuilderModal(
 
   // Dirty guard. Compare the draft to the initial input via a stable
   // mount-time snapshot — workflows are tree-shaped but JSON-serializable.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
   const initialSnapshot = useMemo(() => JSON.stringify({ workflow: initialWorkflow, layout: initialLayout }), [])
   const dirty = initialSnapshot !== JSON.stringify({ workflow: draftWorkflow, layout: draftLayout })
   const { requestClose, pendingClose, confirmDiscard, cancelDiscard } =

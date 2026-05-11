@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useSavedViews — per-calendar saved filter views with localStorage persistence.
  *

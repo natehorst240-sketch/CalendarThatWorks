@@ -119,4 +119,25 @@ describe('verifyAuditChain', () => {
       ok: false, failedIndex: 1, reason: 'MISSING_HASH_AFTER_CHAIN_STARTED',
     })
   })
+
+  it('skips undefined holes in the history array', () => {
+    const h = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
+    const sparse: ApprovalHistoryEntry[] = [undefined as any, ...h]
+    expect(verifyAuditChain(sparse)).toEqual({ ok: true })
+  })
+
+  it('uses empty string for prevHash when entry.prevHash is absent', () => {
+    const entryNoPrev: ApprovalHistoryEntry = { action: 'submit', at: '2026-04-20T10:00:00Z', hash: 'fake-hash' } as any
+    const result = verifyAuditChain([entryNoPrev])
+    expect(result.ok).toBe(false)
+    expect((result as any).reason).toBe('HASH_MISMATCH')
+  })
+})
+
+describe('appendAuditEntry — canonicalize skips undefined fields', () => {
+  it('produces the same hash whether an optional field is absent or explicitly undefined', () => {
+    const base = appendAuditEntry([], submit('2026-04-20T10:00:00Z'))
+    const withUndef = appendAuditEntry([], { ...submit('2026-04-20T10:00:00Z'), tier: undefined } as any)
+    expect(base[0]!.hash).toBe(withUndef[0]!.hash)
+  })
 })

@@ -12,7 +12,6 @@
  */
 
 import { wallClockToUtc, hoursInTimezone, partsInTimezone, utcOffsetMinutes } from './timezone';
-import { buildOccurrenceDateKey } from '../recurrence/recurrenceMath';
 
 // ─── Wall-clock anchor ────────────────────────────────────────────────────────
 

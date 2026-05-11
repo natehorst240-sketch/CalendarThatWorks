@@ -75,6 +75,23 @@ describe('scheduledEventToCalendarEvent', () => {
   })
 })
 
+describe('calendarEventToScheduledEvent — toDate string paths', () => {
+  it('accepts ISO string start (parseISO succeeds → isValid true)', () => {
+    const ev = calendarEventToScheduledEvent({
+      title: 'Meeting', start: '2026-06-01T09:00:00Z',
+    })
+    expect(ev.start.getFullYear()).toBe(2026)
+  })
+
+  it('falls back to new Date(v) when parseISO produces an invalid date', () => {
+    // A non-ISO string like '6/1/2026': parseISO fails → isValid false → new Date(v)
+    const ev = calendarEventToScheduledEvent({
+      title: 'Meeting', start: '6/1/2026',
+    })
+    expect(ev.start).toBeInstanceOf(Date)
+  })
+})
+
 describe('calendarEventToScheduledEvent', () => {
   it('round-trips status', () => {
     const rt = calendarEventToScheduledEvent(scheduledEventToCalendarEvent(BASE))

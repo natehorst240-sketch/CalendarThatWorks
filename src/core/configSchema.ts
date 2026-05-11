@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * configSchema.js — Owner config schema, defaults, and localStorage persistence.
  */

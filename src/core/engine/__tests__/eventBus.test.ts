@@ -184,4 +184,34 @@ describe('channelForApprovalTransition', () => {
     expect(channelForApprovalTransition('requested', 'pending_higher')).toBeNull()
     expect(channelForApprovalTransition('approved', 'weird_stage')).toBeNull()
   })
+
+  it('non-null from stage → requested returns null (already in-flight)', () => {
+    expect(channelForApprovalTransition('pending_higher', 'requested')).toBeNull()
+  })
+})
+
+describe('EventBus — unsubscribe edge cases', () => {
+  it('calling unsubscribe twice is safe (second call is a no-op)', async () => {
+    const bus = new EventBus()
+    const handler = vi.fn()
+    const unsub = bus.subscribe('booking.requested', handler)
+    unsub()
+    expect(() => unsub()).not.toThrow()
+    bus.emit('booking.requested', makeBooking())
+    await flushMicrotasks()
+    expect(handler).not.toHaveBeenCalled()
+  })
+
+  it('default onError handler fires via console.error when no onError option given', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const bus = new EventBus()
+    bus.subscribe('booking.requested', () => { throw new Error('boom') })
+    bus.emit('booking.requested', makeBooking())
+    await flushMicrotasks()
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('booking.requested'),
+      expect.any(Error),
+    )
+    spy.mockRestore()
+  })
 })

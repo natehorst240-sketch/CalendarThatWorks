@@ -104,4 +104,22 @@ describe('resolveLabels', () => {
     expect(out.event).toBe('Mission');
     expect(out.resource).toBe('Aircraft');
   });
+
+  it('pluralizes words ending in s/x/z/ch/sh with -es suffix', () => {
+    const out = resolveLabels({ labels: { resource: 'Box' } });
+    expect(out.resources).toBe('Boxes');
+  });
+
+  it('pluralizes words ending in consonant-y with -ies suffix', () => {
+    const out = resolveLabels({ labels: { resource: 'Facility' } });
+    expect(out.resources).toBe('Facilities');
+  });
+
+  it('returns {} preset labels for an unknown profile string', () => {
+    // presetLabels('unknown') → PROFILE_PRESETS['unknown'] is undefined
+    // → preset?.config.labels ?? {} hits the ?? fallback branch.
+    const out = resolveLabels({ profile: 'unknown_profile_xyz' });
+    expect(out.resource).toBe('Resource');  // FALLBACK.resource
+    expect(out.event).toBe('Event');
+  });
 });

@@ -166,7 +166,6 @@ function ConditionFields({
     }
     setDraftExpr(node.expr)
     setError(validateExpressionSyntax(node.expr))
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above
   }, [node.id])
 
   // Safety net: cancel any pending validation on unmount.

@@ -88,7 +88,7 @@ function MonthWireframe({ ink, soft, pill }: { ink: string; soft: string; pill: 
   );
 }
 
-function WeekWireframe({ ink, soft, pill }: { ink: string; soft: string; pill: string }) {
+function WeekWireframe({ ink: _ink, soft, pill }: { ink: string; soft: string; pill: string }) {
   const days = [] as JSX.Element[];
   for (let c = 0; c < 7; c++) {
     const x = 6 + c * 18.5;

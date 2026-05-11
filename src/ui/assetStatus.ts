@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 const NON_ACTIVE_APPROVAL_STAGES = new Set(['requested', 'pending_higher', 'denied']);
 
 function overlapsInstant(ev: any, at: Date) {

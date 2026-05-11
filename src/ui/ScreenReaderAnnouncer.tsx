@@ -49,9 +49,9 @@ export type AnnouncerRef = { announce: (message: string, politeness?: AnnouncePo
 
 const ScreenReaderAnnouncer = forwardRef<AnnouncerRef, object>(function ScreenReaderAnnouncer(_, ref) {
   // Separate state for polite and assertive regions.
-  const [politeSlot,    setPoliteSlot]    = useState(0);
+  const [_politeSlot,    setPoliteSlot]    = useState(0);
   const [politeMsgs,    setPoliteMsgs]    = useState(['', '']);
-  const [assertiveSlot, setAssertiveSlot] = useState(0);
+  const [_assertiveSlot, setAssertiveSlot] = useState(0);
   const [assertiveMsgs, setAssertiveMsgs] = useState(['', '']);
 
   const politeTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);

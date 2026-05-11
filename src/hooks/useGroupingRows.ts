@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useMemo, useCallback } from 'react';
 import { groupRows } from '../grouping/groupRows';
 

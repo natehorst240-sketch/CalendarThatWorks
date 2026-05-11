@@ -28,7 +28,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type {
   Hold,
-  HoldRegistry,
   AcquireHoldError,
   AcquireHoldInput,
   AcquireHoldResult,
@@ -192,7 +191,7 @@ export function useBookingHold(
     return () => {
       cancelled = true;
     };
-  }, [provider, enabled, resourceId, windowKey(start, end), holderId, ttlMs, holdId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [provider, enabled, resourceId, windowKey(start, end), holderId, ttlMs, holdId]);
 
   // Release on unmount only — separate from the transitional effect above
   // so cleanup doesn't race with the acquiring effect's ref writes.

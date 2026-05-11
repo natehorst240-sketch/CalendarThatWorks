@@ -62,4 +62,29 @@ describe('derivePathSuggestions', () => {
   it('returns [] for undefined input', () => {
     expect(derivePathSuggestions(undefined)).toEqual([])
   })
+
+  it('skips walkInto when resource has no meta', () => {
+    // Covers the if (r.meta) false branch
+    const noMeta = { id: 'r1', name: 'R1', meta: null } as unknown as EngineResource
+    const out = derivePathSuggestions([noMeta])
+    expect(out).toEqual(['capacity', 'color', 'id', 'name', 'tenantId', 'timezone'])
+  })
+
+  it('stops recursing at MAX_DEPTH (depth=5)', () => {
+    // 5 levels of nesting: meta → a → b → c → d → e triggers the depth guard
+    const fleet = [r('t1', { a: { b: { c: { d: { e: { f: 'too deep' } } } } } })]
+    const out = derivePathSuggestions(fleet)
+    expect(out).toContain('meta.a.b.c.d.e')
+    expect(out.find(p => p.startsWith('meta.a.b.c.d.e.'))).toBeUndefined()
+  })
+
+  it('caps the suggestion set at MAX_SUGGESTIONS (200) and stops early', () => {
+    // Create a resource with enough meta keys to hit the 200-path cap
+    const bigMeta: Record<string, unknown> = {}
+    for (let i = 0; i < 210; i++) bigMeta[`key_${i}`] = i
+    const fleet = [r('r1', bigMeta), r('r2', { extra: 1 })]
+    const out = derivePathSuggestions(fleet)
+    // Result must be capped at 200
+    expect(out.length).toBeLessThanOrEqual(200)
+  })
 })

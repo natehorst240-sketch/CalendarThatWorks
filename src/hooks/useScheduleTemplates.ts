@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from '../api/v1/templates';
 import type { CalendarEventV1 } from '../api/v1/types';

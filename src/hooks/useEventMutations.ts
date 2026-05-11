@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { evaluateConflicts } from '../core/conflictEngine';
 import type { ConflictEvent, ConflictRule } from '../core/conflictEngine';
 import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLegacyEvents';
-import type { OperationContext } from '../core/engine/validation/validationTypes';
 import { createId } from '../core/createId';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,7 +35,7 @@ export function useEventMutations({
   applyWithRecurringCheck,
   getSavedEventPayload,
   engine,
-  engineVer, // eslint-disable-line @typescript-eslint/no-unused-vars
+  engineVer,  
   expandedEvents,
   onEventSave,
   onEventMove,
@@ -92,7 +91,7 @@ export function useEventMutations({
       rules,
       enabled,
     });
-  }, [ownerConfig, engine, engineVer]); // eslint-disable-line react-hooks/exhaustive-deps -- engineVer cues mutation count
+  }, [ownerConfig, engine, engineVer]);
 
   const handleEventSave = useCallback((rawEv: LooseValue) => {
     const newStart = rawEv.start instanceof Date ? rawEv.start : new Date(rawEv.start);

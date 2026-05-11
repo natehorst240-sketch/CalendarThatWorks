@@ -141,7 +141,7 @@ export function useResourceLocations(
         try { provider.dispose(); } catch { /* ignore */ }
       }
     };
-  }, [provider, idsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [provider, idsKey]);
 
   return locations;
 }

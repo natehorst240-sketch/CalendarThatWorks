@@ -18,7 +18,7 @@ export default function ImportPreview({ events, onImport, onClose }: ImportPrevi
   function toggle(i: number) {
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) next.delete(i); else next.add(i);
       return next;
     });
   }

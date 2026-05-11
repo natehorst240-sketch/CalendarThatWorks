@@ -80,7 +80,22 @@ describe('createStaticLocationAdapter', () => {
   })
 })
 
+describe('attachLocations — resource with no meta property', () => {
+  it('attaches location when resource.meta is undefined', () => {
+    const bare = { id: 'x', name: 'X' } as unknown as import('../../engine/schema/resourceSchema').EngineResource
+    const adapter: ResourceLocationAdapter = { id: 'static', resolve: () => ({ lat: 10, lon: 20 }) }
+    const result = attachLocations([bare], [adapter])
+    expect((result[0]!.meta as any).location).toEqual({ lat: 10, lon: 20 })
+  })
+})
+
 describe('createMetaPathLocationAdapter', () => {
+  it('reads coordinates from a path that does not start with meta.', () => {
+    const adapter = createMetaPathLocationAdapter('depot')
+    const resolved = adapter.resolve(r('truck-1', { depot: { lat: 40, lon: -111 } }))
+    expect(resolved).toEqual({ lat: 40, lon: -111 })
+  })
+
   it('reads coordinates from a non-default meta path', () => {
     const adapter = createMetaPathLocationAdapter('meta.depot')
     const resolved = adapter.resolve(r('truck-1', { depot: { lat: 40, lon: -111 } }))

@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isEmptyFilterValue,
   clearFilterValue,
+  hasActiveFilters,
   createInitialFilters,
   buildActiveFilterPills,
   buildFilterSummary,
@@ -59,6 +60,33 @@ describe('clearFilterValue', () => {
 
   it('handles undefined field gracefully', () => {
     expect(clearFilterValue(undefined)).toBeUndefined();
+  });
+
+  it('custom type → default case returns null', () => {
+    // Covers the default: return null branch in clearFilterValue
+    expect(clearFilterValue({ type: 'custom' })).toBeNull();
+  });
+});
+
+// ── hasActiveFilters ───────────────────────────────────────────────────────────
+
+describe('hasActiveFilters', () => {
+  it('returns false when filters is null', () => {
+    expect(hasActiveFilters(null)).toBe(false);
+  });
+
+  it('returns false when filters is undefined', () => {
+    expect(hasActiveFilters(undefined)).toBe(false);
+  });
+
+  it('returns false when all filter values are empty', () => {
+    const schema = [{ key: 'categories', type: 'multi-select' }];
+    expect(hasActiveFilters({ categories: new Set() }, schema)).toBe(false);
+  });
+
+  it('returns true when at least one filter has a non-empty value', () => {
+    const schema = [{ key: 'categories', type: 'multi-select' }];
+    expect(hasActiveFilters({ categories: new Set(['PTO']) }, schema)).toBe(true);
   });
 });
 
@@ -395,5 +423,21 @@ describe('buildFilterSummary', () => {
       dateRange: { start: null, end: null },
     }, schema);
     expect(result).toEqual([]);
+  });
+
+  it('date-range with a raw Date value (not an object) formats it as a single date', () => {
+    // Covers lines 254-255 — the "single date value (unusual)" path
+    const schema = [{ key: 'dateRange', label: 'Date', type: 'date-range' }];
+    const result = buildFilterSummary({ dateRange: new Date('2026-04-15') }, schema);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.displayValues[0]).toMatch(/Apr/);
+  });
+
+  it('custom field type falls through to String(value) in formatFieldValue', () => {
+    // Covers the default case in the formatFieldValue switch
+    const schema = [{ key: 'rating', label: 'Rating', type: 'custom' }];
+    const result = buildFilterSummary({ rating: 42 }, schema);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.displayValues).toEqual(['42']);
   });
 });

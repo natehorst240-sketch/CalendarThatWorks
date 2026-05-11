@@ -4,7 +4,7 @@
  *
  * Uses the shared useConditionBuilder hook for condition state management.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Plus, X, Filter } from 'lucide-react';
 import type { UseConditionBuilderResult } from '../hooks/useConditionBuilder';
 import type { FilterField } from '../filters/filterSchema';
@@ -43,7 +43,7 @@ export default function FiltersPanel({
     if (!onFiltersChange) return;
     const filters = builder.toFilters();
     onFiltersChange(filters);
-  }, [conditions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [conditions]);
 
   if (fieldOptions.length === 0) {
     return (

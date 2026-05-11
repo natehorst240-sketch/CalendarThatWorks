@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styles from './EmployeeActionCard.module.css';
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ScheduleView.tsx — Horizontal employee / resource timeline.
  *
@@ -186,7 +187,7 @@ export default function ScheduleView({
   onCoverageAssign,
   onEmployeeAction,
   groupBy,
-  sort,
+  sort: _sort,
   roles = [],
   bases = [],
   dayWindow,
@@ -484,7 +485,7 @@ export default function ScheduleView({
     });
   }, []);
 
-  const { flatRows, groupOrder } = useMemo(() => {
+  const { flatRows, groupOrder: _groupOrder } = useMemo(() => {
     if (!isGrouped || rows.length === 0 || groupTree.length === 0) {
       return { flatRows: rows, groupOrder: [] };
     }
