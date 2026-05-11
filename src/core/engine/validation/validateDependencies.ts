@@ -19,6 +19,7 @@ import {
   isDependencyViolated,
   successorsOf,
   predecessorsOf,
+  wouldCreateCycle,
 } from '../schema/dependencySchema';
 
 export function validateDependencies(
@@ -96,8 +97,6 @@ export function validateNoCycle(
   existingDeps: OperationContext['dependencies'],
 ): Violation | null {
   if (!existingDeps) return null;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { wouldCreateCycle } = require('../schema/dependencySchema.js');
   if (wouldCreateCycle(existingDeps, fromEventId, toEventId)) {
     return {
       rule:     'dependency-cycle',

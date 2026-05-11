@@ -390,18 +390,34 @@ describe('validateDependencies', () => {
 });
 
 // ─── validateNoCycle ──────────────────────────────────────────────────────────
-// Note: lines 100-108 use require('../schema/dependencySchema.js') which does
-// not resolve in the vitest ESM environment. Only the early-exit guards are
-// tested here.
 
 describe('validateNoCycle', () => {
   it('returns null immediately when existingDeps is undefined', () => {
-    // Covers the if (!existingDeps) return null guard (line 98)
     expect(validateNoCycle('a', 'b', undefined)).toBeNull();
   });
 
   it('returns null immediately when existingDeps is null', () => {
     expect(validateNoCycle('a', 'b', null as any)).toBeNull();
   });
-});
 
+  it('returns null when no cycle would be created', () => {
+    // a→b, b→c already. Adding c→d creates no cycle.
+    const deps = depsMap(
+      makeDep('d1', 'a', 'b'),
+      makeDep('d2', 'b', 'c'),
+    );
+    expect(validateNoCycle('c', 'd', deps)).toBeNull();
+  });
+
+  it('returns a hard dependency-cycle violation when adding would create a cycle', () => {
+    // a→b, b→c already. Adding c→a would close the loop (a→b→c→a).
+    const deps = depsMap(
+      makeDep('d1', 'a', 'b'),
+      makeDep('d2', 'b', 'c'),
+    );
+    const result = validateNoCycle('c', 'a', deps);
+    expect(result).not.toBeNull();
+    expect(result!.rule).toBe('dependency-cycle');
+    expect(result!.severity).toBe('hard');
+  });
+});
