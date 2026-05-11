@@ -88,7 +88,7 @@ describe('useSavedWorkflows — save / update / delete', () => {
     // (i.e. must not contain the name "for A") — asserting no
     // cross-contamination even in the intermediate render pass.
     const bWrites = setSpy.mock.calls.filter(
-      ([key]: [string]) => key === 'wc-saved-workflows-cal-b',
+      ([key]) => key === 'wc-saved-workflows-cal-b',
     )
     for (const [, value] of bWrites) {
       expect(value as string).not.toContain('for A')

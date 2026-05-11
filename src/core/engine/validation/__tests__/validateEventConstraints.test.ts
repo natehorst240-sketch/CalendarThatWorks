@@ -58,7 +58,7 @@ describe('validateEventConstraints', () => {
     expect(result!.rule).toBe('event-constraint');
     expect(result!.severity).toBe('hard');
     expect(result!.message).toMatch(/Event constraint violated/i);
-    expect(result!.details?.constraintType).toBe('must-start-on');
+    expect(result!.details?.['constraintType']).toBe('must-start-on');
   });
 
   it('returns null for must-start-on when start matches exactly', () => {
@@ -73,7 +73,7 @@ describe('validateEventConstraints', () => {
     const ctx: OperationContext = { events: [ev] };
     const result = validateEventConstraints({ ...base, event: ev }, ctx);
     expect(result!.severity).toBe('soft');
-    expect(result!.details?.constraintType).toBe('snet');
+    expect(result!.details?.['constraintType']).toBe('snet');
   });
 
   it('looks up event from ctx.events using event id (canonical)', () => {
@@ -101,6 +101,6 @@ describe('validateEventConstraints', () => {
     ]);
     const ctx: OperationContext = { events: [ev] };
     const result = validateEventConstraints({ ...base, event: ev }, ctx);
-    expect(result!.details?.constraintType).toBe('snet');
+    expect(result!.details?.['constraintType']).toBe('snet');
   });
 });

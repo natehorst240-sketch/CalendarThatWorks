@@ -140,7 +140,7 @@ describe('WorksCalendar recurring-event cluster (issues #149, #146, #150)', () =
       expect(onEventSave.mock.calls.length).toBeGreaterThanOrEqual(2);
     }, { timeout: 30000 });
 
-    const savedPayloads = onEventSave.mock.calls.map(([p]: [unknown]) => p);
+    const savedPayloads = onEventSave.mock.calls.map(([p]) => p);
     const masterUpdate = savedPayloads.find((p) => p.id === 'rec-master-1');
     const detached     = savedPayloads.find((p) => p.id !== 'rec-master-1');
 

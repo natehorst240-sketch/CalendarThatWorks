@@ -114,7 +114,7 @@ describe('WorksCalendar — pool booking (end-to-end, #212)', () => {
 
     // Every call carries (pools, { sequence }); sequences must be
     // strictly increasing across the run.
-    const sequences = onPoolsChange.mock.calls.map(([, meta]: [unknown, { sequence?: number }]) => meta?.sequence as number);
+    const sequences = onPoolsChange.mock.calls.map(([, meta]) => (meta as { sequence?: number })?.sequence as number);
     expect(sequences.length).toBeGreaterThan(0);
     for (let i = 1; i < sequences.length; i++) {
       expect(sequences[i]).toBeGreaterThan(sequences[i - 1]!);

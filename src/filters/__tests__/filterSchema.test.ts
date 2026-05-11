@@ -452,7 +452,7 @@ describe('viewScopedSchema', () => {
     // when a categories field already has static options set
     const schemaWithOptions = baseSchema.map(f =>
       f.key === 'categories'
-        ? { ...f, options: [{ value: 'PTO', label: 'PTO' }], getOptions: undefined }
+        ? { ...f, options: [{ value: 'PTO', label: 'PTO' }] }
         : f,
     );
     const result = viewScopedSchema(schemaWithOptions, 'schedule');

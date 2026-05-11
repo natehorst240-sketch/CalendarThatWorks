@@ -85,7 +85,7 @@ describe('scheduleMutations helpers', () => {
   });
 
   it('findLinkedOpenShifts returns empty when shiftEvent has no id', () => {
-    const found = findLinkedOpenShifts([openShift], { id: undefined, _eventId: undefined });
+    const found = findLinkedOpenShifts([openShift], {});
     expect(found).toHaveLength(0);
   });
 
@@ -160,7 +160,7 @@ describe('scheduleMutations helpers', () => {
 
   it('findLinkedMirroredCoverage returns empty when shiftEvent has no id', () => {
     // Covers the if (!shiftId) return [] branch in findLinkedMirroredCoverage
-    const found = findLinkedMirroredCoverage([mirror], { id: undefined, _eventId: undefined });
+    const found = findLinkedMirroredCoverage([mirror], {});
     expect(found).toHaveLength(0);
   });
 
@@ -179,7 +179,7 @@ describe('scheduleMutations helpers', () => {
 
   it('buildOpenShiftPatch uses "Shift" fallback when title is absent', () => {
     // Covers shiftEvent?.title ?? 'Shift' fallback
-    const noTitle = { ...shift, title: undefined };
+    const { title: _title, ...noTitle } = shift;
     const patch = buildOpenShiftPatch(openShift, noTitle, 'pto');
     expect(patch.title).toBe('Open: Shift');
   });

@@ -21,16 +21,16 @@ function emptyFilter(): FilterState {
 
 function makeState(overrides: Partial<CalendarState> = {}): CalendarState {
   return {
-    events:       new Map(),
-    assignments:  new Map(),
-    dependencies: new Map(),
-    exceptions:   new Map(),
-    pools:        new Map(),
-    selection:    new Set(),
-    cursor:       d(2026, 1, 5),
-    view:         'month' as CalendarView,
-    filter:       emptyFilter(),
-    config:       {},
+    events:            new Map(),
+    assignments:       new Map(),
+    dependencies:      new Map(),
+    resourceCalendars: new Map(),
+    pools:             new Map(),
+    selection:         new Set(),
+    cursor:            d(2026, 1, 5),
+    view:              'month' as CalendarView,
+    filter:            emptyFilter(),
+    config:            {},
     ...overrides,
   };
 }

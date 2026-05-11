@@ -49,25 +49,25 @@ describe('mergeTheme', () => {
     const base = { colors: { accent: '#000', bg: '#fff' } };
     const patch = { colors: { accent: '#f00' } };
     const result = mergeTheme(base, patch);
-    expect(result.colors.accent).toBe('#f00');
-    expect(result.colors.bg).toBe('#fff');
+    expect(result['colors'].accent).toBe('#f00');
+    expect(result['colors'].bg).toBe('#fff');
   });
 
   it('does not merge arrays — replaces them', () => {
     const base = { items: [1, 2, 3] };
     const patch = { items: [4, 5] };
     const result = mergeTheme(base, patch);
-    expect(result.items).toEqual([4, 5]);
+    expect(result['items']).toEqual([4, 5]);
   });
 
   it('skips patch keys with undefined value', () => {
     const result = mergeTheme({ a: 1 }, { a: undefined });
-    expect(result.a).toBe(1);
+    expect(result['a']).toBe(1);
   });
 
   it('adds new keys from patch', () => {
     const result = mergeTheme({ a: 1 }, { b: 2 });
-    expect(result.b).toBe(2);
+    expect(result['b']).toBe(2);
   });
 
   it('handles patch key whose base value is missing (nested)', () => {
@@ -81,7 +81,7 @@ describe('mergeTheme', () => {
 describe('normalizeCustomTheme', () => {
   it('returns defaults when called with null', () => {
     const result = normalizeCustomTheme(null);
-    expect(result.colors).toBeDefined();
+    expect(result['colors']).toBeDefined();
     expect((result as any).typography.baseSize).toBe(14);
   });
 

@@ -92,7 +92,8 @@ describe('asset-tracker integration subpath', () => {
 
   it('omits optional fields when position has no altitude/heading/speed', () => {
     const minimal: AssetTrackerPosition = {
-      id: 'bus-1', lat: 37.77, lon: -122.42, timestamp: 1714329600, source: 'gps',
+      id: 'bus-1', lat: 37.77, lon: -122.42, altitude: null, heading: null, speed: null,
+      timestamp: 1714329600, source: 'gps', label: 'Bus 1',
     }
     const registry: AssetTrackerLikeRegistry = { getById: () => minimal }
     const integration = createAssetTrackerIntegration(registry, { nowSeconds: () => 1714329660 })
@@ -105,7 +106,8 @@ describe('asset-tracker integration subpath', () => {
 
   it('omits upstream meta when position.meta is absent', () => {
     const noMeta: AssetTrackerPosition = {
-      id: 'van-1', lat: 37.77, lon: -122.42, timestamp: 1714329600, source: 'gps',
+      id: 'van-1', lat: 37.77, lon: -122.42, altitude: null, heading: null, speed: null,
+      timestamp: 1714329600, source: 'gps', label: 'Van 1',
     }
     const registry: AssetTrackerLikeRegistry = { getById: () => noMeta }
     const integration = createAssetTrackerIntegration(registry, { nowSeconds: () => 1714329660 })

@@ -82,7 +82,7 @@ describe('CalendarEngine.dispatch — same-state no-notify', () => {
     // An unknown operation type falls through to the default case in applyOperation,
     // which returns the original state reference unchanged — so dispatch skips _notify().
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    engine.dispatch({ type: 'UNKNOWN_NO_OP' } as Parameters<typeof engine.dispatch>[0]);
+    engine.dispatch({ type: 'UNKNOWN_NO_OP' } as unknown as Parameters<typeof engine.dispatch>[0]);
     consoleSpy.mockRestore();
     expect(listener).not.toHaveBeenCalled();
   });
@@ -362,7 +362,7 @@ describe('CalendarEngine._emitBookingLifecycle — actor / reason on create/dele
     const stage: ApprovalStage = {
       stage: 'requested',
       updatedAt: new Date().toISOString(),
-      history: [{ action: 'request', at: new Date().toISOString(), actor: 'alice' }],
+      history: [{ action: 'submit', at: new Date().toISOString(), actor: 'alice' }],
     };
 
     engine.applyMutation({
@@ -372,7 +372,7 @@ describe('CalendarEngine._emitBookingLifecycle — actor / reason on create/dele
         start: new Date(2026, 3, 21, 9, 0),
         end:   new Date(2026, 3, 21, 10, 0),
         meta: { approvalStage: stage },
-      } as Omit<EngineEvent, 'id'>,
+      } as unknown as Omit<EngineEvent, 'id'>,
     });
 
     await flush();

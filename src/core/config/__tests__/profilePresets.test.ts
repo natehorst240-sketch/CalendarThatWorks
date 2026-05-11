@@ -322,7 +322,7 @@ describe('cleanUndefined — branch coverage', () => {
   it('drops keys that are explicitly undefined in the merged output (bid=22 FALSE)', () => {
     // Passing a base with an explicitly-undefined key forces cleanUndefined to
     // visit a key where o[k] === undefined and skip it (the FALSE branch).
-    const base = Object.assign({} as CalendarConfig, { resourceTypes: undefined })
+    const base = { resourceTypes: undefined } as unknown as CalendarConfig
     const out = applyProfilePreset('custom', base)
     expect(out).not.toHaveProperty('resourceTypes')
     expect(out.profile).toBe('custom')

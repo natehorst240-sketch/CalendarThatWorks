@@ -79,7 +79,7 @@ describe('instantiateScheduleTemplate', () => {
       { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 0 }] },
       { anchor: new Date('2026-04-20T08:00:00.000Z') },
     );
-    const diff = result.generated[0].end!.getTime() - result.generated[0].start!.getTime();
+    const diff = new Date(result.generated[0].end!).getTime() - new Date(result.generated[0].start!).getTime();
     expect(diff).toBe(60_000);
   });
 

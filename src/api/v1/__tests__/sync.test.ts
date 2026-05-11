@@ -568,7 +568,7 @@ describe('SyncManager', () => {
     const localEv = await manager.createEvent(ev({ id: undefined }));
     await flushPromises();
     // The temp id should still have the event since server.id was undefined
-    expect(manager.events.has(localEv.id)).toBe(true);
+    expect(manager.events.has(localEv.id!)).toBe(true);
   });
 
   it('_dispatchDelete does not rollback when rollback is null', async () => {

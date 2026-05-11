@@ -73,9 +73,14 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<EngineRuntimeConfig> = {
   features: DEFAULT_FEATURE_FLAGS,
 };
 
-/** Merge a partial config override onto the defaults. */
+/**
+ * Merge a partial config override onto the defaults. `features` may itself
+ * be partial — supplied flags are layered onto {@link DEFAULT_FEATURE_FLAGS}.
+ */
 export function mergeRuntimeConfig(
-  override: Partial<EngineRuntimeConfig> = {},
+  override: Partial<Omit<EngineRuntimeConfig, 'features'>> & {
+    readonly features?: Partial<EngineFeatureFlags>;
+  } = {},
 ): EngineRuntimeConfig {
   return {
     ...DEFAULT_RUNTIME_CONFIG,

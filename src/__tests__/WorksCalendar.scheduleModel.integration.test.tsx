@@ -218,7 +218,7 @@ describe('WorksCalendar schedule model integration', () => {
       expect(onEventSave.mock.calls.length).toBeGreaterThan(0);
       expect(onEventDelete.mock.calls.length).toBeGreaterThan(0);
       const savedShiftWithCoverage = onEventSave.mock.calls
-        .map(([payload]: [unknown]) => payload)
+        .map(([payload]) => payload)
         .find(
           (payload) => String(payload?.id ?? '') === 'shift-1'
             && String(payload?.meta?.coveredBy ?? '') === 'emp-2'

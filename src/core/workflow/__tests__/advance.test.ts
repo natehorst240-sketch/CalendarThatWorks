@@ -893,7 +893,7 @@ describe('advance — walkBranchForward notify node paths', () => {
       id: 'notify-to-join', version: 1, trigger: 'on_submit', startNodeId: 'par',
       nodes: [
         { id: 'par',     type: 'parallel', mode: 'requireAll', branches: ['b1_ntf'] },
-        { id: 'b1_ntf',  type: 'notify', message: 'branch alert', channel: 'slack' },
+        { id: 'b1_ntf',  type: 'notify', channel: 'slack' },
         { id: 'join',    type: 'join', pairedWith: 'par' },
         { id: 'done',    type: 'terminal', outcome: 'finalized' },
       ],
@@ -916,7 +916,7 @@ describe('advance — walkBranchForward notify node paths', () => {
       id: 'notify-then-approval', version: 1, trigger: 'on_submit', startNodeId: 'par',
       nodes: [
         { id: 'par',    type: 'parallel', mode: 'requireAll', branches: ['b1_ntf'] },
-        { id: 'b1_ntf', type: 'notify', message: 'heads-up', channel: 'slack' },
+        { id: 'b1_ntf', type: 'notify', channel: 'slack' },
         { id: 'b1_apv', type: 'approval', assignTo: 'role:x' },
         { id: 'join',   type: 'join', pairedWith: 'par' },
         { id: 'done',   type: 'terminal', outcome: 'finalized' },
@@ -1032,7 +1032,7 @@ describe('advance — applyBranchAction: intermediate node after branch approval
       nodes: [
         { id: 'par',   type: 'parallel', mode: 'requireAll', branches: ['b1'] },
         { id: 'b1',    type: 'approval', assignTo: 'role:x' },
-        { id: 'b1_ntf', type: 'notify', message: 'step', channel: 'slack' },
+        { id: 'b1_ntf', type: 'notify', channel: 'slack' },
         { id: 'join',  type: 'join', pairedWith: 'par' },
         { id: 'done',  type: 'terminal', outcome: 'finalized' },
       ],

@@ -12,8 +12,9 @@ import { makeEvent } from '../../schema/eventSchema'
 const rangeStart = new Date('2026-06-10T00:00:00Z')
 const rangeEnd   = new Date('2026-06-11T00:00:00Z')
 
-function singleEv(overrides: Parameters<typeof makeEvent>[1] = {}) {
+function singleEv(overrides: Partial<Parameters<typeof makeEvent>[1]> = {}) {
   return makeEvent('ev-test', {
+    title: 'Test event',
     start: new Date('2026-06-10T09:00:00Z'),
     end:   new Date('2026-06-10T10:00:00Z'),
     ...overrides,
