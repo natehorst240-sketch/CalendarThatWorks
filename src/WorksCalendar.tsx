@@ -233,6 +233,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     editModeRef,
   } = useModalState();
 
+  const rootRef = useRef<HTMLDivElement>(null);
+
   const {
     templateError, visibleScheduleTemplates, mergedScheduleTemplates,
     buildSchedulePreview, handleScheduleInstantiate,
@@ -249,7 +251,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     scheduleTemplates, scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
     role, ownerCfg, businessHours, blockedWindows,
     applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, engine, engineVer,
-    expandedEvents, visibleEvents, undoManager, announcerRef, sourceStore,
+    expandedEvents, visibleEvents, undoManager, announcerRef, rootRef, sourceStore,
     onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
     onAvailabilitySave, onScheduleSave, onEmployeeAction,
     onEventClickProp, onDateSelect, onImport,
@@ -323,7 +325,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
+        <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
           <div className={styles['transientToast']} aria-hidden={!importFlash.flash}>
             <SavedFlash visible={importFlash.flash} label={importMsg} />
           </div>

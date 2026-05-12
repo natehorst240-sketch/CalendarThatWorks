@@ -1,9 +1,13 @@
+// @vitest-environment happy-dom
 /**
  * useCalendarMutations — `handleUndoRedoShortcut` (the global Cmd/Ctrl+Z handler).
  *
  * Regression for the "global shortcut hijacking" bug: Ctrl+Z must not steal
  * text-undo from an input/textarea/contentEditable, must not fire while a modal
  * is up, and must not act on an already-handled event.
+ *
+ * Also covers issue #603 focus-scoping: only acts when the focused element is
+ * inside the calendar root (or nothing is focused).
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleUndoRedoShortcut } from '../useCalendarMutations';
@@ -95,5 +99,53 @@ describe('handleUndoRedoShortcut', () => {
     const um = makeUndoManager();
     handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um);
     expect(um.undo).not.toHaveBeenCalled();
+  });
+
+  describe('root-scoping (issue #603)', () => {
+    it('fires when activeElement is inside the calendar root', () => {
+      const root = document.createElement('div');
+      const inner = document.createElement('button');
+      root.appendChild(inner);
+      document.body.appendChild(root);
+      inner.focus();
+
+      const um = makeUndoManager();
+      handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um, undefined, root);
+      expect(um.undo).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires when activeElement is document.body (nothing focused)', () => {
+      const root = document.createElement('div');
+      document.body.appendChild(root);
+      (document.activeElement as HTMLElement | null)?.blur?.();
+
+      const um = makeUndoManager();
+      handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um, undefined, root);
+      expect(um.undo).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips when activeElement is outside the calendar root', () => {
+      const root = document.createElement('div');
+      const outside = document.createElement('button');
+      document.body.appendChild(root);
+      document.body.appendChild(outside);
+      outside.focus();
+
+      const um = makeUndoManager();
+      handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um, undefined, root);
+      expect(um.undo).not.toHaveBeenCalled();
+    });
+
+    it('fires without a root arg (backward compat — no host constraint)', () => {
+      const um = makeUndoManager();
+      handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um);
+      expect(um.undo).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires when root is null (calendar not yet mounted)', () => {
+      const um = makeUndoManager();
+      handleUndoRedoShortcut(keyEvent('z', { ctrlKey: true }), um, undefined, null);
+      expect(um.undo).toHaveBeenCalledTimes(1);
+    });
   });
 });

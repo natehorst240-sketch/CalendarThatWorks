@@ -16,17 +16,29 @@ import type { ScheduleTemplateV1 } from '../api/v1/templates';
 
 /**
  * Handle a global Cmd/Ctrl+Z (undo) / Cmd/Ctrl+Shift+Z / Ctrl+Y (redo)
- * keydown. Skips when the event was already handled, when no Cmd/Ctrl is held,
- * when focus is in a text field (let the browser do text-undo), or when a
- * modal is open (it owns the keyboard). Exported for unit testing.
+ * keydown event. Guards (in order):
+ *   1. Event already handled (`defaultPrevented`) or no Cmd/Ctrl held.
+ *   2. Focus is in a text-entry field — let the browser do text-undo.
+ *   3. An aria-modal dialog is open — it owns the keyboard.
+ *   4. Focus is on an element *outside* the calendar root — only act when the
+ *      calendar is "active" (focus is inside it, or nothing is focused).
+ * Exported for unit testing.
  */
 export function handleUndoRedoShortcut(
   e: KeyboardEvent,
   undoManager: { undo(): boolean; redo(): boolean },
   announce?: ((message: string) => void) | undefined,
+  root?: HTMLElement | null,
 ): void {
   if (e.defaultPrevented || !(e.metaKey || e.ctrlKey)) return;
   if (isTypingTarget(e.target) || hasOpenModal()) return;
+  if (
+    root &&
+    document.activeElement &&
+    document.activeElement !== document.body &&
+    document.activeElement !== document.documentElement &&
+    !root.contains(document.activeElement)
+  ) return;
   if (e.key === 'z' && !e.shiftKey) {
     e.preventDefault();
     if (undoManager.undo()) announce?.('Undo.');
@@ -56,6 +68,7 @@ export interface UseCalendarMutationsInput {
   visibleEvents: NormalizedEvent[];
   undoManager: UseCalendarEngineResult['undoManager'];
   announcerRef: React.RefObject<AnnouncerRef | null>;
+  rootRef: React.RefObject<HTMLElement | null>;
   sourceStore: ReturnType<typeof useSourceStore>;
   // Event callbacks
   onEventSave: WorksCalendarProps['onEventSave'];
@@ -93,7 +106,7 @@ export function useCalendarMutations({
   scheduleTemplates, scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
   role, ownerCfg, businessHours, blockedWindows,
   applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, engine, engineVer,
-  expandedEvents, visibleEvents, undoManager, announcerRef, sourceStore,
+  expandedEvents, visibleEvents, undoManager, announcerRef, rootRef, sourceStore,
   onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
   onAvailabilitySave, onScheduleSave, onEmployeeAction, onEventClickProp, onDateSelect, onImport,
   configuredEmployees, devMode, showAddButton, perms,
@@ -120,10 +133,10 @@ export function useCalendarMutations({
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const onKeyDown = (e: KeyboardEvent) =>
-      handleUndoRedoShortcut(e, undoManager, (msg) => announcerRef.current?.announce(msg));
+      handleUndoRedoShortcut(e, undoManager, (msg) => announcerRef.current?.announce(msg), rootRef.current);
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [undoManager, announcerRef]);
+  }, [undoManager, announcerRef, rootRef]);
 
   const {
     emitEventSave, checkEventConflicts,
