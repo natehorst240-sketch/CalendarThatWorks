@@ -10,6 +10,7 @@ import { layoutOverlaps } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
 import type { NormalizedEvent } from '../types/events';
 import type { CalendarViewEvent } from '../types/ui';
+import type { OwnerConfig } from '../WorksCalendar.types';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './DayView.module.css';
@@ -23,15 +24,15 @@ type DayViewProps = {
   onEventMove?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (event: CalendarViewEvent, newStart: Date, newEnd: Date) => void;
   onDateSelect?: (start: Date, end: Date) => void;
-  config?: { display?: { dayStart?: number; dayEnd?: number } };
+  config?: OwnerConfig | undefined;
 };
 
 export default function DayView({
   currentDate, events, onEventClick, onEventMove, onEventResize, onDateSelect, config,
 }: DayViewProps) {
   const ctx = useCalendarContext();
-  const dayStart  = config?.display?.dayStart ?? 6;
-  const dayEnd    = config?.display?.dayEnd   ?? 22;
+  const dayStart  = (config?.display?.['dayStart'] as number | undefined) ?? 6;
+  const dayEnd    = (config?.display?.['dayEnd']   as number | undefined) ?? 22;
   const pxPerHour = 64;
   const bizHours  = ctx?.businessHours ?? null;
 

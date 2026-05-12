@@ -15,7 +15,7 @@ import { createInitialFilters, clearFilterValue } from '../filters/filterState';
 
 type CalendarView = 'month' | 'agenda' | 'schedule' | 'timeline' | 'base' | 'assets' | 'week' | 'day' | string;
 type CalendarFilters = Record<string, any>;
-type CalendarState = {
+export type CalendarState = {
   view: CalendarView;
   setView: (value: CalendarView) => void;
   currentDate: Date;

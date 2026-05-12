@@ -450,7 +450,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
             handleScheduleEditorSave={handleScheduleEditorSave}
             importOpen={importOpen}
             setImportOpen={setImportOpen}
-            handleImport={handleImport}
+            handleImport={handleImport as (imported: unknown, meta: unknown) => void}
             scheduleOpen={scheduleOpen}
             setScheduleOpen={setScheduleOpen}
             visibleScheduleTemplates={visibleScheduleTemplates}

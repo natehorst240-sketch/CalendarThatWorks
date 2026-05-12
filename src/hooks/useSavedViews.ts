@@ -17,7 +17,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createId } from '../core/createId';
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 type GroupByInput = any;
-type SavedView = {
+export type SavedView = {
   id: string;
   name: string;
   createdAt: string;
