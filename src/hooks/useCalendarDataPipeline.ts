@@ -17,7 +17,6 @@ import { SCHEDULE_WORKFLOW_CATEGORIES } from '../core/scheduleModel';
 import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
 import type { CalendarView, WorksCalendarProps } from '../WorksCalendar.types';
 import type { WorksCalendarEvent } from '../types/events';
-import type { ViewId } from '../core/viewScope';
 import type { FilterField } from '../filters/filterSchema';
 import type { SortConfig } from '../types/grouping.ts';
 import type { CalObject } from './useCalendarSetup';
@@ -46,6 +45,44 @@ export interface UseCalendarDataPipelineInput {
   categoriesConfig: WorksCalendarProps['categoriesConfig'];
   schema: FilterField[];
   activeSort: SortConfig[] | null;
+  initialView: string | undefined;
+}
+
+/**
+ * Resolve the active calendar view from a priority-ordered list of candidates.
+ * Called from the consolidated view-resolution effect; exported for unit testing.
+ *
+ * Priority (first match wins):
+ *   1. `initialView` — if set and present in `enabledIds`
+ *   2. `configDefault` — if set, enabled, and this is the first resolution for the current
+ *      calendarId (`isNewCalendar`); prevents re-applying on every user navigation.
+ *   3. The current `calView` — if still enabled (no change needed).
+ *   4. `configDefault` as a general invalid-view fallback (even after initial application).
+ *   5. `'month'` (always-on view, guaranteed to exist).
+ *
+ * When `isNewCalendar` is false the caller has already done the initial
+ * resolution: we only need to recover from an invalid current view, so we
+ * skip priority #1 and #3 and jump straight to the fallback path.
+ */
+export function resolveActiveView({
+  enabledIds,
+  calView,
+  initialView,
+  configDefault,
+  isNewCalendar,
+}: {
+  enabledIds: Set<string>;
+  calView: string;
+  initialView: string | undefined;
+  configDefault: string | undefined;
+  isNewCalendar: boolean;
+}): string {
+  if (isNewCalendar) {
+    if (initialView && enabledIds.has(initialView)) return initialView;
+    if (configDefault && enabledIds.has(configDefault)) return configDefault;
+    if (enabledIds.has(calView)) return calView;
+  }
+  return configDefault && enabledIds.has(configDefault) ? configDefault : 'month';
 }
 
 export function useCalendarDataPipeline({
@@ -54,7 +91,7 @@ export function useCalendarDataPipeline({
   supabaseUrl, supabaseKey, supabaseTable, supabaseFilter,
   rawPools, businessHours, blockedWindows, onPoolsChange,
   configuredEmployees, effectiveAssets, selectedBaseIds,
-  assetRequestCategories, categoriesConfig, schema, activeSort,
+  assetRequestCategories, categoriesConfig, schema, activeSort, initialView,
 }: UseCalendarDataPipelineInput) {
   const range = useMemo(
     () => viewRange(cal.view, cal.currentDate, weekStartDay),
@@ -149,12 +186,25 @@ export function useCalendarDataPipeline({
       });
   }, [ownerCfg.config?.['display']?.enabledViews, locationLabel, assetsLabel]);
 
+  // Tracks the calendarId for which the initial view was last resolved.
+  // Using the calendarId (not a boolean) means a switch to a different
+  // calendar automatically re-arms without a separate effect.
+  const defaultViewAppliedForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (VIEWS.some(v => v.id === cal.view)) return;
-    const fallback = (ownerCfg.config?.['display']?.defaultView as ViewId) ?? 'month';
-    const target = VIEWS.some(v => v.id === fallback) ? fallback : 'month';
+    const enabledIds = new Set<string>(VIEWS.map(v => v.id));
+    const configDefault = ownerCfg.config?.['display']?.defaultView as string | undefined;
+    const isNewCalendar = defaultViewAppliedForRef.current !== calendarId;
+
+    // Nothing to do: current view is valid and we have already done the
+    // initial resolution for this calendarId.
+    if (enabledIds.has(cal.view) && !isNewCalendar) return;
+
+    const target = resolveActiveView({
+      enabledIds, calView: cal.view, initialView, configDefault, isNewCalendar,
+    });
+    if (isNewCalendar) defaultViewAppliedForRef.current = calendarId;
     if (cal.view !== target) cal.setView(target);
-  }, [VIEWS, cal.view, ownerCfg.config?.['display']?.defaultView]);
+  }, [VIEWS, cal.view, initialView, calendarId, ownerCfg.config?.['display']?.defaultView]);
 
   const scopedEvents = useTabScopedEvents(cal.view, engineResult.expandedEvents, {
     employees: (configuredEmployees ?? []) as { id: string; base?: string | null }[],

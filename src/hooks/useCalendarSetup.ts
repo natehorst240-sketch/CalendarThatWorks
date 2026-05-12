@@ -151,20 +151,6 @@ export function useCalendarSetup({
     onEmployeeDelete?.(id);
   }, [ownerCfg.updateConfig, onEmployeeDelete]);
 
-  const defaultViewApplied = useRef(false);
-  // Re-arm the one-shot default-view application when the host switches calendars
-  // (otherwise the new calendar's `display.defaultView` is never applied). Declared
-  // before the apply effect so it runs first on a `calendarId` change.
-  useEffect(() => { defaultViewApplied.current = false; }, [calendarId]);
-  useEffect(() => {
-    if (initialView) return;
-    const defaultView = ownerCfg.config?.['display']?.defaultView;
-    if (defaultView && !defaultViewApplied.current) {
-      defaultViewApplied.current = true;
-      setView(defaultView);
-    }
-  }, [ownerCfg.config?.['display']?.defaultView, initialView, setView]);
-
   return {
     ownerCfg, weekStartDay, rootStyle, rawTheme,
     effectiveTheme, themeFamily, themeMode, calendarTitle,

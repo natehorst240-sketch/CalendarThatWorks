@@ -211,7 +211,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     supabaseUrl, supabaseKey, supabaseTable, supabaseFilter,
     rawPools, businessHours, blockedWindows, onPoolsChange,
     configuredEmployees, effectiveAssets, selectedBaseIds,
-    assetRequestCategories, categoriesConfig, schema, activeSort,
+    assetRequestCategories, categoriesConfig, schema, activeSort, initialView,
   });
 
   const {
