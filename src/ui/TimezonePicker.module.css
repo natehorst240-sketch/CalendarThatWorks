@@ -1,0 +1,105 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--wc-text);
+  transition: border-color 0.1s;
+}
+.trigger:hover { border-color: var(--wc-accent); }
+
+.label {
+  font-weight: 500;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offset {
+  color: var(--wc-text-muted);
+  flex-shrink: 0;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  width: 260px;
+  background: var(--wc-bg);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search {
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--wc-border);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.search::placeholder { color: var(--wc-text-muted); }
+
+.list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--wc-text);
+  transition: background 0.1s;
+}
+.item:hover { background: var(--wc-surface); }
+.itemActive { background: color-mix(in srgb, var(--wc-accent) 10%, transparent); font-weight: 600; }
+
+.itemName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemOffset {
+  color: var(--wc-text-muted);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--wc-text-muted);
+  text-align: center;
+  margin: 0;
+}

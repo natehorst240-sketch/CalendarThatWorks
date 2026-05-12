@@ -12,7 +12,7 @@
  * the cascade UI; otherwise it falls back to the legacy condition
  * builder (`FiltersPanel`) so non-cascade hosts keep working.
  */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, SlidersHorizontal, Filter, Bookmark } from 'lucide-react';
 import type { GroupLevel } from './GroupsPanel';
 import FiltersPanel from './FiltersPanel';
@@ -95,6 +95,8 @@ export type FilterGroupSidebarProps = {
   /** Owner-customizable label for "Asset" — forwarded to ViewsPanel for the
    *  view-type tooltip. */
   assetsLabel?: string;
+  /** Optional content rendered above the tab strip (e.g. MiniCalendar). */
+  headerSlot?: React.ReactNode;
 };
 
 export default function FilterGroupSidebar({
@@ -128,6 +130,7 @@ export default function FilterGroupSidebar({
   onToggleViewVisibility,
   locationLabel,
   assetsLabel,
+  headerSlot,
 }: FilterGroupSidebarProps) {
   // Default to Focus — it's the primary surface now that View is gone.
   const [activeTab, setActiveTab] = useState<SidebarTab>(initialTab ?? 'focus');
@@ -233,6 +236,11 @@ export default function FilterGroupSidebar({
             <X size={16} />
           </button>
         </div>
+
+        {/* Optional header slot (e.g. MiniCalendar) */}
+        {headerSlot && (
+          <div className={styles['headerSlot']}>{headerSlot}</div>
+        )}
 
         {/* Tab strip */}
         <div className={styles['tabs']} role="tablist" aria-label="Sidebar tabs">

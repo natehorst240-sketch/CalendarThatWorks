@@ -1,14 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
-import { useState, useEffect, type ChangeEvent, type MouseEvent } from 'react';
-import { format, isSameDay } from 'date-fns';
-import { X, Clock, Tag, Anchor, StickyNote, Pencil } from 'lucide-react';
+import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { isSameDay } from 'date-fns';
+import { X, Clock, Tag, Anchor, StickyNote, Pencil, MessageSquare, Send } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import EventStatusBadge from './EventStatusBadge';
+import { createId } from '../core/createId';
+import { useCalendarContext } from '../core/CalendarContext';
+import { formatInTimezone, tzOffsetLabel } from '../core/engine/time/timezone';
+import type { EventComment } from '../types/events';
 import styles from './HoverCard.module.css';
 
-export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, anchor: _anchor, resolveResourceLabel }: any) {
+export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, onCommentAdd, currentUserName, anchor: _anchor, resolveResourceLabel }: any) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const ctx = useCalendarContext();
+  const displayTz = ctx?.displayTimezone ?? null;
+
+  const comments: EventComment[] = event?.comments ?? [];
+
+  function handleCommentSubmit() {
+    const text = commentText.trim();
+    if (!text || !onCommentAdd) return;
+    const newComment: EventComment = {
+      id: createId(),
+      author: currentUserName ?? 'You',
+      text,
+      timestamp: new Date().toISOString(),
+    };
+    onCommentAdd(event, newComment);
+    setCommentText('');
+  }
+
+  function handleCommentKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommentSubmit(); }
+  }
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const hc = config?.hoverCard ?? {};
 
@@ -26,11 +53,13 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
     setEditing(false);
   }
 
+  const fmt = (d: Date, pattern: string) => formatInTimezone(d, pattern, displayTz);
+  const tzLabel = displayTz ? ` (${tzOffsetLabel(event.start, displayTz)})` : '';
   const timeRangeText = event.allDay
     ? 'All day'
     : isSameDay(event.start, event.end)
-      ? `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'h:mm a')}`
-      : `${format(event.start, 'MMM d, h:mm a')} – ${format(event.end, 'MMM d, h:mm a')}`;
+      ? `${fmt(event.start, 'MMM d, h:mm a')} – ${fmt(event.end, 'h:mm a')}${tzLabel}`
+      : `${fmt(event.start, 'MMM d, h:mm a')} – ${fmt(event.end, 'MMM d, h:mm a')}${tzLabel}`;
 
   return (
     <div ref={trapRef} className={styles['card']} role="dialog" aria-modal="true" aria-label={`Event details: ${event.title}`}>
@@ -129,6 +158,50 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
             ) : (
               note?.body && <p className={styles['noteText']}>{note.body}</p>
             )}
+          </div>
+        )}
+        {/* Comment thread */}
+        {onCommentAdd && (
+          <div className={styles['commentsSection']}>
+            <div className={styles['commentsHeader']}>
+              <MessageSquare size={13} className={styles['icon']} />
+              <span>Comments{comments.length > 0 ? ` (${comments.length})` : ''}</span>
+            </div>
+            {comments.length > 0 && (
+              <div className={styles['commentList']}>
+                {comments.map(c => (
+                  <div key={c.id} className={styles['comment']}>
+                    <span className={styles['commentAuthor']}>{c.author}</span>
+                    <span className={styles['commentTime']}>
+                      {fmt(new Date(c.timestamp), 'MMM d, h:mm a')}
+                    </span>
+                    <p className={styles['commentText']}>{c.text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={styles['commentInput']}>
+              <input
+                ref={commentInputRef}
+                type="text"
+                className={styles['commentField']}
+                value={commentText}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCommentText(e.target.value)}
+                onKeyDown={handleCommentKeyDown}
+                placeholder="Add a comment… (Enter to send)"
+                aria-label="Add comment"
+              />
+              <button
+                type="button"
+                className={styles['commentSendBtn']}
+                onClick={handleCommentSubmit}
+                disabled={!commentText.trim()}
+                aria-label="Send comment"
+                title="Send"
+              >
+                <Send size={13} aria-hidden="true" />
+              </button>
+            </div>
           </div>
         )}
       </div>

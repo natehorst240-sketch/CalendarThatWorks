@@ -22,6 +22,9 @@ import type { CalendarContextValue } from './types/ui';
 import { captureSavedViewFields } from './core/viewScope';
 import { AppShell }              from './ui/AppShell';
 import FilterGroupSidebar        from './ui/FilterGroupSidebar';
+import MiniCalendar               from './ui/MiniCalendar';
+import BulkActionBar              from './ui/BulkActionBar';
+import { useBulkSelect }          from './hooks/useBulkSelect';
 import CalendarModals            from './ui/CalendarModals';
 import CalendarToolbar           from './ui/CalendarToolbar';
 import CalendarViewGrid          from './ui/CalendarViewGrid';
@@ -46,6 +49,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     events:     rawEvents   = [],
     fetchEvents,
     icalFeeds,
+    icsSubscriptions,
     onImport,
     scheduleTemplates = [],
     scheduleTemplateAdapter,
@@ -73,6 +77,9 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     onEventResize,
     onEventDelete,
     onEventGroupChange,
+    onEventChange,
+    onCommentAdd,
+    currentUserName,
     onDateSelect,
     onViewChange,
     onMapWidgetOpenChange,
@@ -100,6 +107,9 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     blockedWindows,
 
     // ── Appearance ──
+    timezone: timezoneProp,
+    showTimezonePicker = false,
+    onTimezoneChange,
     theme,
     colorRules,
     businessHours,
@@ -124,7 +134,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
 
     // ── UI toggles ──
     showAddButton           = false,
+    showSearch              = false,
+    showMiniCalendar        = false,
     hideEventTemplates       = false,
+    eventTemplates,
     eventResourceSuggestions,
     showSetupLanding        = false,
 
@@ -196,6 +209,13 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     locationProvider, showSetupLanding, weekStartDay, role,
   });
 
+  const { selectedIds: selectedEventIds, selectEvent, selectAll: selectAllEvents, clearSelection } = useBulkSelect();
+
+  const mergedIcalFeeds = useMemo(() => {
+    const subFeeds = (icsSubscriptions ?? []).map(url => ({ url }));
+    return [...(icalFeeds ?? []), ...subFeeds];
+  }, [icalFeeds, icsSubscriptions]);
+
   const {
     engine, undoManager, engineVer,
     expandedEvents, approvalRequestEvents,
@@ -208,7 +228,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     resources, filterBarSchema, visibleEvents, onShiftIds,
   } = useCalendarDataPipeline({
     cal, ownerCfg, weekStartDay,
-    rawEvents, fetchEvents, icalFeeds, calendarId,
+    rawEvents, fetchEvents, icalFeeds: mergedIcalFeeds, calendarId,
     supabaseUrl, supabaseKey, supabaseTable, supabaseFilter,
     rawPools, businessHours, blockedWindows, onPoolsChange,
     configuredEmployees, effectiveAssets, selectedBaseIds,
@@ -236,6 +256,10 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
 
   const rootRef = useRef<HTMLDivElement>(null);
 
+  const [internalTimezone, setInternalTimezone] = useState<string | undefined>(timezoneProp);
+  const timezone = internalTimezone;
+  const handleTimezoneChange = (tz: string) => { setInternalTimezone(tz); onTimezoneChange?.(tz); };
+
   const {
     templateError, visibleScheduleTemplates, mergedScheduleTemplates,
     buildSchedulePreview, handleScheduleInstantiate,
@@ -253,7 +277,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     role, ownerCfg, businessHours, blockedWindows,
     applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, engine, engineVer,
     expandedEvents, visibleEvents, undoManager, announcerRef, rootRef, sourceStore,
-    onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
+    onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange, onEventChange,
     onAvailabilitySave, onScheduleSave, onEmployeeAction,
     onEventClickProp, onDateSelect, onImport,
     configuredEmployees, devMode, showAddButton, perms,
@@ -274,7 +298,12 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     redo:             ()      => undoManager.redo(),
     get canUndo()             { return undoManager.canUndo; },
     get canRedo()             { return undoManager.canRedo; },
-  }), [cal, expandedEvents, visibleEvents, undoManager, setSelectedEvent, setFormEvent]);
+    printView:        ()      => window.print(),
+    get selectedEventIds()  { return selectedEventIds; },
+    selectEvent,
+    selectAll:        ()      => selectAllEvents(visibleEvents),
+    clearSelection,
+  }), [cal, expandedEvents, visibleEvents, undoManager, setSelectedEvent, setFormEvent, selectedEventIds, selectEvent, selectAllEvents, clearSelection]);
 
   useImperativeHandle(ref, () => api, [api]);
 
@@ -282,7 +311,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     renderEvent: renderEvent as CalendarContextValue['renderEvent'],
     renderHoverCard: renderHoverCard as CalendarContextValue['renderHoverCard'],
     colorRules, businessHours, emptyState, permissions: perms, editMode, conflictingEventIds,
-  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode, conflictingEventIds]);
+    ...(timezone !== undefined ? { displayTimezone: timezone } : {}),
+  }), [renderEvent, renderHoverCard, colorRules, businessHours, emptyState, perms, editMode, conflictingEventIds, timezone]);
 
   const swipeAreaRef = useRef<HTMLDivElement | null>(null);
   useTouchSwipe({
@@ -328,7 +358,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} style={rootStyle}>
+        <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} data-print-root="" style={rootStyle}>
           {devMode && (
             <div role="alert" style={{ background: '#fef08a', color: '#713f12', fontWeight: 600, fontSize: 12, padding: '4px 12px', textAlign: 'center', zIndex: 9999 }}>
               ⚠ DEV MODE — all users have admin access. Do not use in production.
@@ -353,9 +383,16 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
                 VIEWS={VIEWS} setSidebarOpen={setSidebarOpen} setSidebarInitialTab={setSidebarInitialTab}
                 handleScopeClick={handleScopeClick} schema={schema} filterBarSchema={filterBarSchema}
                 scopedEvents={scopedEvents} locationLabel={locationLabel} assetsLabel={assetsLabel} weekStartDay={weekStartDay}
+                hasAddButton={hasAddButton} hideEventTemplates={hideEventTemplates} showSearch={showSearch}
+                {...(eventTemplates !== undefined ? { eventTemplates } : {})}
+                {...(showTimezonePicker ? {
+                  showTimezonePicker: true as const,
+                  onTimezoneChange: handleTimezoneChange,
+                  ...(timezone !== undefined ? { displayTimezone: timezone } : {}),
+                } : {})}
               />
             }
-            main={
+            main={<>
               <CalendarViewGrid cal={cal} ownerCfg={ownerCfg} perms={perms} schema={schema} filterBarSchema={filterBarSchema}
                 sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} sidebarGroupLevels={sidebarGroupLevels}
                 hasAddButton={hasAddButton} hasScheduleTemplates={hasScheduleTemplates} hasImport={hasImport}
@@ -384,7 +421,19 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
                 handleShiftStatusChange={handleShiftStatusChange} handleCoverageAssign={handleCoverageAssign}
                 handleEmployeeAction={handleEmployeeAction} handleEventClick={handleEventClick}
               />
-            }
+              {selectedEventIds.size > 0 && (
+                <BulkActionBar
+                  count={selectedEventIds.size}
+                  totalCount={visibleEvents.length}
+                  onSelectAll={() => selectAllEvents(visibleEvents)}
+                  onDelete={() => {
+                    selectedEventIds.forEach(id => handleEventDelete(id));
+                    clearSelection();
+                  }}
+                  onClear={clearSelection}
+                />
+              )}
+            </>}
           />
 
           <FilterGroupSidebar
@@ -414,6 +463,16 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
             onToggleViewVisibility={savedViews.toggleStripVisibility}
             locationLabel={locationLabel}
             assetsLabel={assetsLabel}
+            {...(showMiniCalendar ? {
+              headerSlot: (
+                <MiniCalendar
+                  currentDate={cal.currentDate}
+                  onDateSelect={(d) => { cal.setCurrentDate(d); }}
+                  weekStartDay={weekStartDay}
+                  eventDates={visibleEvents.map(e => e.start instanceof Date ? e.start : new Date(e.start))}
+                />
+              ),
+            } : {})}
           />
 
           <CalendarModals
@@ -503,6 +562,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
             setInlineEditTarget={setInlineEditTarget}
             handleInlineSave={handleInlineSave}
             handleInlineDelete={handleInlineDelete}
+            onCommentAdd={onCommentAdd}
+            currentUserName={currentUserName}
           />
         </div>
       </CalendarContext.Provider>

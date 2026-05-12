@@ -1,0 +1,119 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  width: 100%;
+  max-width: 220px;
+  user-select: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.monthLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wc-text);
+  flex: 1;
+  text-align: center;
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  border-radius: var(--wc-radius-sm);
+  padding: 0;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s;
+}
+.navBtn:hover {
+  background: var(--wc-surface);
+  color: var(--wc-text);
+}
+
+.weekRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  margin-bottom: 2px;
+}
+
+.weekLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--wc-text-muted);
+  text-align: center;
+  padding: 2px 0;
+  letter-spacing: 0.02em;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  background: transparent;
+  color: var(--wc-text);
+  font-size: 11px;
+  font-family: inherit;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+}
+.day:hover {
+  background: var(--wc-surface);
+}
+
+.outside {
+  color: var(--wc-text-muted);
+  opacity: 0.5;
+}
+
+.today {
+  font-weight: 700;
+  color: var(--wc-accent);
+}
+
+.selected {
+  background: var(--wc-accent) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+.dot {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.selected .dot {
+  background: rgba(255,255,255,0.8);
+}

@@ -7,6 +7,7 @@
  * Strategy: store and transmit dates as UTC (JS Date objects).
  * Convert to/from the display timezone only at the view boundary.
  */
+import { format } from 'date-fns';
 
 // ─── Detection ────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,35 @@ function matchesWallClock(
 export function hoursInTimezone(d: Date, tz: string): number {
   const p = partsInTimezone(d, tz);
   return p.hour + p.minute / 60 + p.second / 3600;
+}
+
+// ─── Display formatting ───────────────────────────────────────────────────────
+
+/**
+ * Format a Date using a date-fns format string, interpreted in the given
+ * IANA timezone. When no timezone is provided, delegates to plain `format`.
+ *
+ * Works by projecting the UTC instant to the target timezone wall-clock time,
+ * constructing an equivalent "fake local" Date, then formatting with date-fns.
+ */
+export function formatInTimezone(d: Date, formatStr: string, tz?: string | null): string {
+  if (!tz) return format(d, formatStr);
+  const p = partsInTimezone(d, tz);
+  const wallDate = new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return format(wallDate, formatStr);
+}
+
+/**
+ * Return a short UTC-offset label for the given timezone at a given instant.
+ * e.g. "UTC-5" or "UTC+5:30"
+ */
+export function tzOffsetLabel(d: Date, tz: string): string {
+  const offsetMin = utcOffsetMinutes(d, tz);
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const absMin = Math.abs(offsetMin);
+  const h = Math.floor(absMin / 60);
+  const m = absMin % 60;
+  return m === 0 ? `UTC${sign}${h}` : `UTC${sign}${h}:${String(m).padStart(2, '0')}`;
 }
 
 // ─── Event timezone handling ──────────────────────────────────────────────────

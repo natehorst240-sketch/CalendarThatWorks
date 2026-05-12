@@ -43,6 +43,7 @@ type UseEventMutationsParams = {
   onEventResize?: ((event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void) | undefined;
   onEventDelete?: ((eventId: string) => void) | undefined;
   onEventGroupChange?: ((event: WorksCalendarEvent, patch: Record<string, unknown>) => void) | undefined;
+  onEventChange?: ((event: WorksCalendarEvent, action: 'created' | 'updated' | 'deleted' | 'moved') => void) | undefined;
   ownerConfig: OwnerConfig;
   inlineEditTarget: InlineEditTarget | null;
   setFormEvent: (ev: FormEventDraft | null) => void;
@@ -61,6 +62,7 @@ export function useEventMutations({
   onEventResize,
   onEventDelete,
   onEventGroupChange,
+  onEventChange,
   ownerConfig,
   inlineEditTarget,
   setFormEvent,
@@ -159,7 +161,10 @@ export function useEventMutations({
         const createdChange = result.changes.find(isCreatedChange);
         const engineId = createdChange?.event.id ?? createdId;
         const savedPayload = getSavedEventPayload(engineId, rawEv, { id: engineId });
-        if (savedPayload) onEventSave?.(savedPayload);
+        if (savedPayload) {
+          onEventSave?.(savedPayload);
+          onEventChange?.(savedPayload, 'created');
+        }
         setFormEvent(null);
       });
       return;
@@ -187,14 +192,21 @@ export function useEventMutations({
         if (result.changes.length > 1) {
           result.changes.forEach((change) => {
             if (change.type === 'created') {
-              onEventSave?.(asSavedEvent(change.event));
+              const ev = asSavedEvent(change.event);
+              onEventSave?.(ev);
+              onEventChange?.(ev, 'created');
             } else if (change.type === 'updated') {
-              onEventSave?.(asSavedEvent(change.after));
+              const ev = asSavedEvent(change.after);
+              onEventSave?.(ev);
+              onEventChange?.(ev, 'updated');
             }
           });
         } else {
           const savedPayload = getSavedEventPayload(eventId, rawEv);
-          if (savedPayload) onEventSave?.(savedPayload);
+          if (savedPayload) {
+            onEventSave?.(savedPayload);
+            onEventChange?.(savedPayload, 'updated');
+          }
         }
         setFormEvent(null);
       },
@@ -211,14 +223,15 @@ export function useEventMutations({
       (result) => {
         if (onEventMove) {
           onEventMove(ev as unknown as WorksCalendarEvent, newStart, newEnd);
+          onEventChange?.(ev as unknown as WorksCalendarEvent, 'moved');
         } else if (result.changes.length > 1) {
           result.changes.forEach((change) => {
-            if (change.type === 'created') onEventSave?.(asSavedEvent(change.event));
-            else if (change.type === 'updated') onEventSave?.(asSavedEvent(change.after));
+            if (change.type === 'created') { onEventSave?.(asSavedEvent(change.event)); onEventChange?.(asSavedEvent(change.event), 'created'); }
+            else if (change.type === 'updated') { onEventSave?.(asSavedEvent(change.after)); onEventChange?.(asSavedEvent(change.after), 'moved'); }
           });
         } else {
           const savedPayload = getSavedEventPayload(id, raw, { start: newStart, end: newEnd });
-          if (savedPayload) onEventSave?.(savedPayload);
+          if (savedPayload) { onEventSave?.(savedPayload); onEventChange?.(savedPayload, 'moved'); }
         }
       },
       'Move',
@@ -277,10 +290,14 @@ export function useEventMutations({
     applyWithRecurringCheck(
       found ?? { id: eventId },
       (_scope) => ({ type: 'delete', id: eventId, source: 'form' }),
-      () => { onEventDelete?.(id); setFormEvent(null); },
+      () => {
+        onEventDelete?.(id);
+        if (found) onEventChange?.(found as unknown as WorksCalendarEvent, 'deleted');
+        setFormEvent(null);
+      },
       'Delete',
     );
-  }, [applyWithRecurringCheck, engine, expandedEvents, onEventDelete, setFormEvent]);
+  }, [applyWithRecurringCheck, engine, expandedEvents, onEventDelete, onEventChange, setFormEvent]);
 
   const handleInlineSave = useCallback((patch: InlineEventPatch) => {
     const ev = inlineEditTarget?.event;

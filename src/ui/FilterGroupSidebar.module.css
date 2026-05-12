@@ -86,6 +86,15 @@
   color: var(--wc-text);
 }
 
+/* Optional top slot (MiniCalendar, etc.) */
+.headerSlot {
+  border-bottom: 1px solid var(--wc-border);
+  padding: 8px 0;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 /* Tab strip */
 .tabs {
   display: flex;

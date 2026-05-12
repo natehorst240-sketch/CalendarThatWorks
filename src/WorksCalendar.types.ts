@@ -103,12 +103,24 @@ export type CalendarApi = {
   redo: () => boolean;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
+  /** Trigger the browser's print dialog, styled via @media print. */
+  printView: () => void;
+  /** Currently selected event IDs (bulk-select mode). */
+  readonly selectedEventIds: ReadonlySet<string>;
+  /** Toggle/add/clear an event from the bulk selection. */
+  selectEvent: (id: string, mode?: 'toggle' | 'add' | 'clear' | 'set') => void;
+  /** Select all currently visible events. */
+  selectAll: () => void;
+  /** Clear all bulk selections. */
+  clearSelection: () => void;
 };
 
 export type WorksCalendarProps = {
   events?: WorksCalendarEvent[];
   fetchEvents?: (...args: unknown[]) => Promise<WorksCalendarEvent[]>;
   icalFeeds?: UnknownRecord[];
+  /** Convenience shorthand: plain webcal/https ICS URLs auto-converted to feed objects. */
+  icsSubscriptions?: string[];
   onImport?: (events: WorksCalendarEvent[]) => void;
   scheduleTemplates?: UnknownRecord[];
   scheduleTemplateAdapter?: ScheduleTemplateAdapter;
@@ -133,6 +145,11 @@ export type WorksCalendarProps = {
   onEventResize?: (event: WorksCalendarEvent, newStart: Date, newEnd: Date) => void;
   onEventDelete?: (eventId: string) => void;
   onEventGroupChange?: (event: WorksCalendarEvent, patch: EventGroupPatch) => void;
+  /** Unified change callback fired on every create, update, move, or delete. */
+  onEventChange?: (event: WorksCalendarEvent, action: 'created' | 'updated' | 'deleted' | 'moved') => void;
+  onCommentAdd?: (event: WorksCalendarEvent, comment: import('./types/events').EventComment) => void;
+  /** Display name shown as the author of new comments added by the current user. */
+  currentUserName?: string;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   onViewChange?: (view: CalendarView) => void;
   onMapWidgetOpenChange?: (open: boolean) => void;
@@ -150,6 +167,15 @@ export type WorksCalendarProps = {
   onAvailabilitySave?: (payload: AvailabilitySavePayload) => void;
   onScheduleSave?: (payload: WorksCalendarEvent) => void;
   blockedWindows?: UnknownRecord[];
+  /**
+   * IANA timezone identifier (e.g. "America/New_York") used to display all
+   * event times. Defaults to the browser's local timezone when omitted.
+   */
+  timezone?: string;
+  /** Show a timezone selector in the toolbar that lets users change the display timezone. */
+  showTimezonePicker?: boolean;
+  /** Fired when the user changes the display timezone via the toolbar picker. */
+  onTimezoneChange?: (timezone: string) => void;
   theme?: string;
   colorRules?: UnknownRecord[];
   /**
@@ -197,6 +223,15 @@ export type WorksCalendarProps = {
    */
   cascadeConfig?: CascadeConfig;
   showAddButton?: boolean;
+  /** Show the full-text search bar in the toolbar. */
+  showSearch?: boolean;
+  /** Show a mini month calendar at the top of the sidebar for date navigation. */
+  showMiniCalendar?: boolean;
+  /**
+   * Host-defined quick-create event templates surfaced in the toolbar "New from template" dropdown.
+   * Each template pre-fills the EventForm via api.addEvent(defaults).
+   */
+  eventTemplates?: import('./api/v1/templates').EventTemplateV1[];
   /**
    * Hide the event-template dropdown in the Add/Edit Event form.
    */

@@ -107,11 +107,11 @@
       "optional": true
     }
   },
-  "dependencies": {},
+  "dependencies": {
+    "fuse.js": "^7.3.0"
+  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
-    "date-fns": "^3.6.0",
-    "lucide-react": "^0.378.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -120,11 +120,13 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "date-fns": "^3.6.0",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "happy-dom": "^20.8.9",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.4",
+    "lucide-react": "^0.378.0",
     "maplibre-gl": "^4.7.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
