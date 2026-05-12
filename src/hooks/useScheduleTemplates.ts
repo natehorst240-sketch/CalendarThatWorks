@@ -1,20 +1,43 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { canViewScheduleTemplate, instantiateScheduleTemplate } from '../api/v1/templates';
+import type {
+  ScheduleTemplateV1,
+  ScheduleInstantiationRequestV1,
+  ScheduleInstantiationResultV1,
+} from '../api/v1/templates';
 import type { CalendarEventV1 } from '../api/v1/types';
 import { fromLegacyEvents } from '../core/engine/adapters/fromLegacyEvents';
 import type { LegacyEvent } from '../core/engine/adapters/fromLegacyEvents';
 import { validateOperation } from '../core/engine/validation/validateOperation';
-import type { OperationContext } from '../core/engine/validation/validationTypes';
+import type { OperationContext, ValidationResult } from '../core/engine/validation/validationTypes';
+import type { EngineEvent } from '../core/engine/schema/eventSchema';
 import { createId } from '../core/createId';
+import type { WorksCalendarEvent } from '../types/events';
+import type { CalendarRole } from '../WorksCalendar.types';
 import type { EngineOpRunner, GetSavedEventPayload } from '../types/engineOps';
-
-type LooseValue = any;
 
 const DEFAULT_LIMITS = { previewMax: 200, createMax: 200 };
 
+/** A schedule entry that would violate engine rules at the chosen anchor. */
+export interface SchedulePreviewConflict {
+  index: number;
+  title: string;
+  severity: ValidationResult['severity'];
+  violations: ReadonlyArray<{ rule?: string | undefined; message?: string | undefined }>;
+}
+
+/** Result of `buildSchedulePreview`: the events the template would create, the
+ *  ones that would conflict, and a user-facing error string (empty on success). */
+export interface SchedulePreviewResult {
+  generated: readonly CalendarEventV1[];
+  conflicts: readonly SchedulePreviewConflict[];
+  error: string;
+}
+
 export interface UseScheduleTemplatesParams {
-  scheduleTemplates: LooseValue[];
+  /** Host-supplied static schedule templates (validated by `canViewScheduleTemplate`
+   *  / `instantiateScheduleTemplate` before use). */
+  scheduleTemplates: readonly ScheduleTemplateV1[];
   scheduleInstantiationLimits?: { previewMax?: number; createMax?: number } | undefined;
   scheduleTemplateAdapter?: {
     listScheduleTemplates?: () => Promise<unknown>;
@@ -23,26 +46,26 @@ export interface UseScheduleTemplatesParams {
     [key: string]: unknown;
   } | undefined;
   onScheduleTemplateAnalytics?: ((payload: Record<string, unknown>) => void) | undefined;
-  role?: string | undefined;
+  role?: CalendarRole | undefined;
   isOwner: boolean;
-  engine: { state: { events: Map<string, LooseValue> } };
+  engine: { state: { events: ReadonlyMap<string, EngineEvent> } };
   ownerBusinessHours: unknown;
   businessHours?: unknown;
-  blockedWindows?: LooseValue[] | undefined;
+  blockedWindows?: readonly unknown[] | undefined;
   applyEngineOp: EngineOpRunner;
   getSavedEventPayload: GetSavedEventPayload;
-  onEventSave?: ((event: LooseValue) => void) | undefined;
+  onEventSave?: ((event: WorksCalendarEvent) => void) | undefined;
   onInstantiateSuccess: () => void;
 }
 
 export interface UseScheduleTemplatesReturn {
   templateError: string;
-  visibleScheduleTemplates: LooseValue[];
-  mergedScheduleTemplates: LooseValue[];
-  buildSchedulePreview: (request: LooseValue) => LooseValue;
-  handleScheduleInstantiate: (request: LooseValue) => void;
-  handleCreateScheduleTemplate: (template: LooseValue) => Promise<void>;
-  handleDeleteScheduleTemplate: (templateId: LooseValue) => Promise<void>;
+  visibleScheduleTemplates: ScheduleTemplateV1[];
+  mergedScheduleTemplates: ScheduleTemplateV1[];
+  buildSchedulePreview: (request: ScheduleInstantiationRequestV1) => SchedulePreviewResult;
+  handleScheduleInstantiate: (request: ScheduleInstantiationRequestV1) => void;
+  handleCreateScheduleTemplate: (template: Record<string, unknown>) => Promise<void>;
+  handleDeleteScheduleTemplate: (templateId: string) => Promise<void>;
 }
 
 export function useScheduleTemplates({
@@ -61,7 +84,7 @@ export function useScheduleTemplates({
   onEventSave,
   onInstantiateSuccess,
 }: UseScheduleTemplatesParams): UseScheduleTemplatesReturn {
-  const [remoteTemplates, setRemoteTemplates] = useState<LooseValue[]>([]);
+  const [remoteTemplates, setRemoteTemplates] = useState<ScheduleTemplateV1[]>([]);
   const [templateError, setTemplateError] = useState('');
 
   const resolvedLimits = useMemo(() => ({
@@ -81,7 +104,8 @@ export function useScheduleTemplates({
     if (!scheduleTemplateAdapter?.listScheduleTemplates) return;
     try {
       const templates = await scheduleTemplateAdapter.listScheduleTemplates();
-      setRemoteTemplates(Array.isArray(templates) ? templates : []);
+      // Host-supplied template blobs from the adapter; shape-validated downstream.
+      setRemoteTemplates(Array.isArray(templates) ? (templates as ScheduleTemplateV1[]) : []);
       setTemplateError('');
     } catch {
       setTemplateError('Unable to load schedule templates from adapter.');
@@ -90,15 +114,15 @@ export function useScheduleTemplates({
 
   useEffect(() => { reloadRemoteTemplates(); }, [reloadRemoteTemplates]);
 
-  const mergedScheduleTemplates = useMemo(() => {
+  const mergedScheduleTemplates = useMemo<ScheduleTemplateV1[]>(() => {
     const combined = [...scheduleTemplates, ...remoteTemplates];
-    const byId = new Map();
-    combined.forEach(t => { if (t?.id) byId.set(t.id, t); });
+    const byId = new Map<string, ScheduleTemplateV1>();
+    combined.forEach(t => { if (t.id) byId.set(t.id, t); });
     return Array.from(byId.values());
   }, [scheduleTemplates, remoteTemplates]);
 
-  const visibleScheduleTemplates = useMemo(
-    () => mergedScheduleTemplates.filter(t => canViewScheduleTemplate(t, { role: role as LooseValue, isOwner })),
+  const visibleScheduleTemplates = useMemo<ScheduleTemplateV1[]>(
+    () => mergedScheduleTemplates.filter(t => canViewScheduleTemplate(t, role !== undefined ? { role, isOwner } : { isOwner })),
     [mergedScheduleTemplates, isOwner, role],
   );
 
@@ -107,16 +131,16 @@ export function useScheduleTemplates({
   const previewCtxRef = useRef({ engine, ownerBusinessHours, businessHours, blockedWindows });
   previewCtxRef.current = { engine, ownerBusinessHours, businessHours, blockedWindows };
 
-  const buildSchedulePreview = useCallback((request: LooseValue): LooseValue => {
+  const buildSchedulePreview = useCallback((request: ScheduleInstantiationRequestV1): SchedulePreviewResult => {
     const { engine: eng, ownerBusinessHours: ownerBH, businessHours: bh, blockedWindows: bw } = previewCtxRef.current;
     const startedAt = Date.now();
-    const template = visibleScheduleTemplates.find((t: LooseValue) => t.id === request.templateId);
+    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template) return { generated: [], conflicts: [], error: 'Selected template was not found.' };
     if (!Array.isArray(template.entries) || template.entries.length === 0) {
       return { generated: [], conflicts: [], error: 'Selected template does not have valid entries.' };
     }
 
-    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
+    const anchor = request.anchor instanceof Date ? request.anchor : new Date(request.anchor);
     if (Number.isNaN(anchor.getTime())) {
       return { generated: [], conflicts: [], error: 'Enter a valid anchor date/time.' };
     }
@@ -145,12 +169,12 @@ export function useScheduleTemplates({
       blockedWindows: bw ?? [],
     } as unknown as OperationContext;
     const seededEvents = [...eng.state.events.values()];
-    const conflicts: LooseValue[] = [];
+    const conflicts: SchedulePreviewConflict[] = [];
 
     generated.forEach((ev, index) => {
-      const start = ev.start instanceof Date || typeof ev.start === 'string'
-        ? ev.start : new Date(ev.start as number);
-      const end = ev.end instanceof Date || typeof ev.end === 'string'
+      const start: Date | string = ev.start instanceof Date || typeof ev.start === 'string'
+        ? ev.start : new Date(ev.start);
+      const end: Date | string = ev.end instanceof Date || typeof ev.end === 'string'
         ? ev.end : new Date(ev.end as number);
       const legacy: LegacyEvent[] = [{
         id: `preview:${template.id}:${index}`,
@@ -163,7 +187,7 @@ export function useScheduleTemplates({
         status: typeof ev.status === 'string' ? ev.status : 'confirmed',
         rrule: typeof ev.rrule === 'string' ? ev.rrule : null,
         exdates: Array.isArray(ev.exdates) ? ev.exdates : [],
-        meta: typeof ev.meta === 'object' && ev.meta ? ev.meta as Record<string, unknown> : {},
+        meta: typeof ev.meta === 'object' && ev.meta ? ev.meta : {},
       }];
       const previewEvent = fromLegacyEvents(legacy)[0];
       if (previewEvent === undefined) return;
@@ -172,9 +196,9 @@ export function useScheduleTemplates({
       if (validation.violations.length > 0) {
         conflicts.push({
           index,
-          title: ev.title ?? '(untitled)',
+          title: ev.title,
           severity: validation.severity,
-          violations: validation.violations.map((v: LooseValue) => ({
+          violations: validation.violations.map(v => ({
             rule: typeof v.rule === 'string' ? v.rule : undefined,
             message: typeof v.message === 'string' ? v.message : undefined,
           })),
@@ -196,22 +220,22 @@ export function useScheduleTemplates({
     return { generated: normalizedPreview, conflicts, error: '' };
   }, [resolvedLimits.previewMax, trackAnalytics, visibleScheduleTemplates]);
 
-  const handleScheduleInstantiate = useCallback((request: LooseValue) => {
+  const handleScheduleInstantiate = useCallback((request: ScheduleInstantiationRequestV1) => {
     const startedAt = Date.now();
-    const template = visibleScheduleTemplates.find((t: LooseValue) => t.id === request.templateId);
+    const template = visibleScheduleTemplates.find(t => t.id === request.templateId);
     if (!template || !Array.isArray(template.entries) || template.entries.length === 0) {
       trackAnalytics('schedule_instantiate_failed', {
         reason: 'template-missing-or-invalid',
-        templateId: request?.templateId ?? null,
+        templateId: request.templateId ?? null,
       });
       return;
     }
-    const anchor = request?.anchor instanceof Date ? request.anchor : new Date(request?.anchor);
+    const anchor = request.anchor instanceof Date ? request.anchor : new Date(request.anchor);
     if (Number.isNaN(anchor.getTime())) {
       trackAnalytics('schedule_instantiate_failed', { reason: 'invalid-anchor', templateId: template.id });
       return;
     }
-    let result;
+    let result: ScheduleInstantiationResultV1;
     try {
       result = instantiateScheduleTemplate(template, request);
     } catch {
@@ -225,7 +249,7 @@ export function useScheduleTemplates({
       });
       return;
     }
-    result.generated.forEach((ev: LooseValue, index: number) => {
+    result.generated.forEach((ev, index) => {
       if (ev.start == null || ev.end == null) return;
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start);
       const end   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
@@ -235,7 +259,7 @@ export function useScheduleTemplates({
           type: 'create',
           event: {
             id: templateEventId,
-            title: ev.title ?? '(untitled)',
+            title: ev.title,
             start, end,
             allDay: ev.allDay ?? false,
             resourceId: ev.resource ?? null,
@@ -262,7 +286,7 @@ export function useScheduleTemplates({
     onInstantiateSuccess();
   }, [applyEngineOp, getSavedEventPayload, onEventSave, resolvedLimits.createMax, trackAnalytics, visibleScheduleTemplates, onInstantiateSuccess]);
 
-  const handleCreateScheduleTemplate = useCallback(async (template: LooseValue) => {
+  const handleCreateScheduleTemplate = useCallback(async (template: Record<string, unknown>) => {
     if (!scheduleTemplateAdapter?.createScheduleTemplate) return;
     try {
       await scheduleTemplateAdapter.createScheduleTemplate(template);
@@ -273,7 +297,7 @@ export function useScheduleTemplates({
     }
   }, [reloadRemoteTemplates, scheduleTemplateAdapter]);
 
-  const handleDeleteScheduleTemplate = useCallback(async (templateId: LooseValue) => {
+  const handleDeleteScheduleTemplate = useCallback(async (templateId: string) => {
     if (!scheduleTemplateAdapter?.deleteScheduleTemplate) return;
     try {
       await scheduleTemplateAdapter.deleteScheduleTemplate(templateId);

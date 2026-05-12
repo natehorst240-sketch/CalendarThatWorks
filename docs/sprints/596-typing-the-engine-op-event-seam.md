@@ -74,18 +74,28 @@ the engine-op/result/event types and adds:
   `PendingAlert.violations`, …) — not `LooseValue`, not in #596's literal scope;
   it gets cleaned up alongside the views (Sprints 4–5).
 
-### Sprint 3 — event-shape unification in the three hooks + tighten `EngineOpInput`
+### Sprint 3a — `useScheduleTemplates.ts` ✅
 
-- Replace the remaining `LooseValue` in `useEventMutations.ts`,
-  `useScheduleMutations.ts`, `useScheduleTemplates.ts` with `MutationEventInput`,
-  `NormalizedEvent`, `EmployeeRecord`, `OwnerConfig`, etc.
+- Type the template surface: `scheduleTemplates: readonly ScheduleTemplateV1[]`,
+  `engine: { state: { events: ReadonlyMap<string, EngineEvent> } }`, `role:
+  CalendarRole`, the request/result via `ScheduleInstantiationRequestV1` /
+  `ScheduleInstantiationResultV1` / `CalendarEventV1`; new exported
+  `SchedulePreviewResult` / `SchedulePreviewConflict`. One boundary cast in
+  `useCalendarMutations` (`scheduleTemplates as ScheduleTemplateV1[]` — host-supplied
+  blobs, shape-validated downstream) and one in the adapter-reload path. **`LooseValue`
+  + the `eslint-disable` removed from `useScheduleTemplates.ts`.**
+
+### Sprint 3b — `useEventMutations.ts` + `useScheduleMutations.ts` + tighten `EngineOpInput`
+
+- Replace the remaining `LooseValue` in `useEventMutations.ts` /
+  `useScheduleMutations.ts` with `MutationEventInput`, `NormalizedEvent`,
+  `EmployeeRecord`, `OwnerConfig`, etc.
 - Tighten `EngineOpInput` toward `EngineOperation` (reconcile `resource` vs
   `resourceId` in patches, the extra op sources, `Date | string` starts) — either
   widen the target types or fix the literal. No new `any`.
 - Where the public/engine types are genuinely too strict for what callers pass,
   loosen them (`?: T | undefined`) rather than scattering `as`.
-- **Remove `type LooseValue = any` + the `eslint-disable` from these three
-  files.**
+- **Remove `type LooseValue = any` + the `eslint-disable` from these two files.**
 
 ### Sprint 4 — `CalendarViewGrid.tsx`
 

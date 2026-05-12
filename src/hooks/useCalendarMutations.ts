@@ -11,6 +11,7 @@ import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import type { WorksCalendarProps, CalendarRole, EmployeeRecord } from '../WorksCalendar.types';
 import type { UseModalStateReturn } from './useModalState';
+import type { ScheduleTemplateV1 } from '../api/v1/templates';
 
 export interface UseCalendarMutationsInput {
   // Templates
@@ -82,9 +83,11 @@ export function useCalendarMutations({
     buildSchedulePreview, handleScheduleInstantiate,
     handleCreateScheduleTemplate, handleDeleteScheduleTemplate,
   } = useScheduleTemplates({
-    scheduleTemplates: scheduleTemplates ?? [], scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
+    // Host-supplied template blobs; shape-validated by canViewScheduleTemplate / instantiateScheduleTemplate.
+    scheduleTemplates: (scheduleTemplates ?? []) as unknown as ScheduleTemplateV1[],
+    scheduleInstantiationLimits, scheduleTemplateAdapter, onScheduleTemplateAnalytics,
     role, isOwner: ownerCfg.isOwner,
-    engine: engine as unknown as { state: { events: Map<string, unknown> } },
+    engine,
     ownerBusinessHours: ownerCfg.config?.['businessHours'],
     businessHours, blockedWindows: blockedWindows ?? [],
     applyEngineOp, getSavedEventPayload, onEventSave,
