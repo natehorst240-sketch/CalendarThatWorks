@@ -135,6 +135,11 @@ export function useCalendarEngine({
 
   // Counts how many onEventSave-triggered prop updates to suppress clear() for.
   const engineMutationPendingRef = useRef(0);
+  // Timestamp of the last committed mutation; used as a secondary guard to
+  // prevent a fetchEvents poll that arrives between the mutation commit and its
+  // onEventSave-triggered prop re-render from clearing the undo history.
+  const lastMutationAtRef = useRef<number>(0);
+  const UNDO_CLEAR_GRACE_MS = 3_000;
 
   // ── engineVer: monotonic counter, increments on each engine state change ──
   const [engineVer, tickEngine] = useReducer((n: number) => n + 1, 0);
@@ -161,6 +166,10 @@ export function useCalendarEngine({
     engine.setEvents(fromLegacyEvents(allNormalized as AnyValue));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
+    } else if (Date.now() - lastMutationAtRef.current < UNDO_CLEAR_GRACE_MS) {
+      // External prop update (e.g. fetchEvents poll) arrived within the grace
+      // window after the last mutation commit.  The onEventSave-triggered
+      // re-render is still in flight; preserve undo to avoid the race.
     } else {
       undoManager.clear();
     }
@@ -225,6 +234,7 @@ export function useCalendarEngine({
       if (result.status === 'accepted' || result.status === 'accepted-with-warnings') {
         undoManager.record(preSnap, op.type);
         announcerRef.current?.announce(opAnnouncement(op));
+        lastMutationAtRef.current = Date.now();
         engineMutationPendingRef.current = Math.max(1, result.changes.length);
         onAccepted?.(result);
 
@@ -237,6 +247,7 @@ export function useCalendarEngine({
             if (confirmed.status === 'accepted' || confirmed.status === 'accepted-with-warnings') {
               undoManager.record(preSnap, op.type);
               announcerRef.current?.announce(opAnnouncement(op));
+              lastMutationAtRef.current = Date.now();
               engineMutationPendingRef.current = Math.max(1, confirmed.changes.length);
               onAccepted?.(confirmed);
             }

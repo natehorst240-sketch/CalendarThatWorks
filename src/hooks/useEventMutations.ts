@@ -264,13 +264,23 @@ export function useEventMutations({
   const handleEventDelete = useCallback((id: string) => {
     const found   = expandedEvents.find(e => String(e.id) === String(id));
     const eventId = found?._eventId ?? String(id);
+    // Guard: reject ghost deletes — an id that exists in neither the visible
+    // occurrence list nor the engine's master map is a stale reference.
+    // Passing the minimal fallback shape to applyWithRecurringCheck could crash
+    // on recurring-scope detection when _recurring/start are missing.
+    if (!found && !engine.state.events.has(eventId)) {
+      if (typeof console !== 'undefined') {
+        console.warn('[WorksCalendar] handleEventDelete: event not found — skipping.', { id });
+      }
+      return;
+    }
     applyWithRecurringCheck(
-      found ?? { id },
+      found ?? { id: eventId },
       (_scope) => ({ type: 'delete', id: eventId, source: 'form' }),
       () => { onEventDelete?.(id); setFormEvent(null); },
       'Delete',
     );
-  }, [applyWithRecurringCheck, expandedEvents, onEventDelete, setFormEvent]);
+  }, [applyWithRecurringCheck, engine, expandedEvents, onEventDelete, setFormEvent]);
 
   const handleInlineSave = useCallback((patch: InlineEventPatch) => {
     const ev = inlineEditTarget?.event;

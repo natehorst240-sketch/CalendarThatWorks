@@ -1,14 +1,15 @@
 /**
  * useEventMutations — runtime-guard regression tests.
  *
- * Covers the invalid-date guard in `handleEventSave`: an unparseable
- * start/end must be rejected before it reaches the engine (where it would
- * propagate into `date-fns` formatting and throw `RangeError`).
+ * Covers:
+ * - Invalid-date guard in `handleEventSave` (issue #599 P0-5)
+ * - Ghost-delete guard in `handleEventDelete` (issue #599 P0-6)
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { useEventMutations } from '../useEventMutations';
 import { CalendarEngine } from '../../core/engine/CalendarEngine';
+import { fromLegacyEvents } from '../../core/engine/adapters/fromLegacyEvents';
 import type { MutationEventInput } from '../../types/engineOps';
 
 afterEach(() => cleanup());
@@ -39,6 +40,47 @@ function setup() {
   );
   return { result, applyEngineOp, applyWithRecurringCheck };
 }
+
+describe('useEventMutations — handleEventDelete ghost-delete guard (issue #599 P0-6)', () => {
+  it('skips and warns when event id not found in engine or expandedEvents', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result, applyWithRecurringCheck } = setup();
+
+    act(() => result.current.handleEventDelete('ghost-id'));
+
+    expect(applyWithRecurringCheck).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('event not found'),
+      expect.objectContaining({ id: 'ghost-id' }),
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('proceeds when event exists in engine state even if not in expandedEvents', () => {
+    // Seed the engine with a real event so engine.state.events.has() returns true.
+    const engine = new CalendarEngine();
+    engine.setEvents(fromLegacyEvents([{ id: 'e1', title: 'Test', start: new Date(2026, 0, 1), end: new Date(2026, 0, 1, 1), allDay: false }]));
+    const applyWithRecurringCheck2 = vi.fn();
+    const { result: r2 } = renderHook(() =>
+      useEventMutations({
+        applyEngineOp: vi.fn(),
+        applyWithRecurringCheck: applyWithRecurringCheck2,
+        getSavedEventPayload: vi.fn(() => null),
+        engine,
+        engineVer: 0,
+        expandedEvents: [], // NOT in expandedEvents
+        ownerConfig: OWNER_CFG,
+        inlineEditTarget: null,
+        setFormEvent: vi.fn(),
+        setInlineEditTarget: vi.fn(),
+      }),
+    );
+
+    act(() => r2.current.handleEventDelete('e1'));
+
+    expect(applyWithRecurringCheck2).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('useEventMutations — handleEventSave invalid-date guard', () => {
   it('drops a save with an unparseable start date (no engine op, logs an error)', () => {
