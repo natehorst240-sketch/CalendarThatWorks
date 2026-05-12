@@ -450,6 +450,146 @@
 }
 .addBtn:hover { opacity: 0.85; }
 
+/* Search bar */
+.searchBarWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.searchBarIcon {
+  position: absolute;
+  left: 8px;
+  color: var(--wc-text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.searchBarInput {
+  width: 100%;
+  padding: 5px 28px 5px 28px;
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  /* Remove browser-native search X button */
+  -webkit-appearance: none;
+  appearance: none;
+}
+.searchBarInput::-webkit-search-cancel-button { display: none; }
+.searchBarInput:focus {
+  border-color: var(--wc-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wc-accent) 15%, transparent);
+}
+.searchBarInput::placeholder { color: var(--wc-text-muted); }
+
+.searchBarClear {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--wc-text-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 0;
+  font-family: inherit;
+}
+.searchBarClear:hover { color: var(--wc-text); background: var(--wc-surface-elevated, var(--wc-border)); }
+
+/* Quick-add dropdown (New from template) */
+.newBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: calc(6px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
+  background: var(--wc-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--wc-radius-sm) 0 0 var(--wc-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.newBtn:hover { opacity: 0.85; }
+
+.newBtnChevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  padding: calc(6px * var(--wc-density, 1)) 0;
+  background: var(--wc-accent);
+  color: rgba(255,255,255,0.85);
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0 var(--wc-radius-sm) var(--wc-radius-sm) 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.newBtnChevron:hover { opacity: 0.85; }
+
+.quickAddWrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.quickAddDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 200px;
+  background: var(--wc-surface-elevated, var(--wc-surface));
+  border: var(--wc-border-width, 1px) solid var(--wc-border);
+  border-radius: var(--wc-radius-md, var(--wc-radius-sm));
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 200;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.quickAddItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--wc-radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.quickAddItem:hover { background: var(--wc-surface); }
+
+.quickAddItemLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wc-text);
+}
+
+.quickAddItemDesc {
+  font-size: 11px;
+  color: var(--wc-text-muted);
+  margin-top: 1px;
+}
+
 .exportBtn {
   display: flex;
   align-items: center;
@@ -683,5 +823,61 @@
   .todayBtn {
     font-size: 12px;
     padding: 0 calc(8px * var(--wc-density, 1));
+  }
+}
+
+/* ── Print styles ─────────────────────────────────────────────────────────── */
+@media print {
+  /* Expand calendar to full page; remove shadows and transitions */
+  [data-print-root] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Hide interactive chrome */
+  [data-print-root] .toolbar,
+  [data-print-root] .leftRail,
+  [data-print-root] .rightPanel,
+  [data-print-root] .actions,
+  [data-print-root] .navGroup button,
+  [data-print-root] .wandBtn,
+  [data-print-root] .exportBtn,
+  [data-print-root] .newBtn,
+  [data-print-root] .newBtnChevron,
+  [data-print-root] .quickAddWrap,
+  [data-print-root] .searchBarWrap,
+  [data-print-root] [data-wc-sidebar],
+  [data-print-root] [role="complementary"] {
+    display: none !important;
+  }
+
+  /* Ensure the view grid fills the page */
+  [data-print-root] [data-wc-view-grid] {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
+  /* Remove hover/focus outlines */
+  [data-print-root] * {
+    outline: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* Show current date range as page header */
+  [data-print-root] .dateLabel {
+    display: block !important;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 8px;
   }
 }

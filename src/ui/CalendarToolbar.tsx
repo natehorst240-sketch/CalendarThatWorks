@@ -1,6 +1,11 @@
 import type { Dispatch, SetStateAction } from 'react';
+import SearchBar from './SearchBar';
+import TimezonePicker from './TimezonePicker';
+import { useEffect, useRef, useState } from 'react';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, ChevronDown, Plus } from 'lucide-react';
+import type { EventTemplateV1 } from '../api/v1/templates';
+import { BUILT_IN_EVENT_TEMPLATES } from '../core/engine/recurrence/templates';
 import { AppHeader } from './AppHeader';
 import ProfileBar from './ProfileBar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './FocusChips';
@@ -68,6 +73,13 @@ export interface CalendarToolbarProps {
   locationLabel: string;
   assetsLabel: string;
   weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  hasAddButton?: boolean;
+  hideEventTemplates?: boolean;
+  eventTemplates?: EventTemplateV1[];
+  showSearch?: boolean;
+  showTimezonePicker?: boolean;
+  displayTimezone?: string;
+  onTimezoneChange?: (tz: string) => void;
 }
 
 function getDateLabel(view: string, currentDate: Date, weekStartDay: 0 | 1 | 2 | 3 | 4 | 5 | 6) {
@@ -88,6 +100,110 @@ function getDateLabel(view: string, currentDate: Date, weekStartDay: 0 | 1 | 2 |
   }
 }
 
+function QuickAddDropdown({ api, eventTemplates, hideEventTemplates }: {
+  api: CalendarToolbarProps['api'];
+  eventTemplates?: EventTemplateV1[];
+  hideEventTemplates?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open]);
+
+  const templates: EventTemplateV1[] = eventTemplates && eventTemplates.length > 0
+    ? eventTemplates
+    : BUILT_IN_EVENT_TEMPLATES.map(t => ({
+        id: t.id,
+        name: t.label,
+        defaults: t.defaults ?? {},
+        ...(t.description ? { description: t.description } : {}),
+      } as EventTemplateV1));
+
+  if (hideEventTemplates || templates.length === 0) {
+    return (
+      <button
+        type="button"
+        className={styles['newBtn']}
+        onClick={() => api.addEvent()}
+        aria-label="New event"
+        title="New event"
+      >
+        <Plus size={14} aria-hidden="true" />
+        <span>New</span>
+      </button>
+    );
+  }
+
+  return (
+    <div ref={ref} className={styles['quickAddWrap']}>
+      <button
+        type="button"
+        className={styles['newBtn']}
+        onClick={() => { api.addEvent(); }}
+        aria-label="New blank event"
+        title="New blank event"
+      >
+        <Plus size={14} aria-hidden="true" />
+        <span>New</span>
+      </button>
+      <button
+        type="button"
+        className={styles['newBtnChevron']}
+        onClick={() => setOpen(v => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="New event from template"
+        title="New from template"
+      >
+        <ChevronDown size={12} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className={styles['quickAddDropdown']} role="menu" aria-label="Event templates">
+          {templates.map(tpl => (
+            <button
+              key={tpl.id}
+              type="button"
+              role="menuitem"
+              className={styles['quickAddItem']}
+              onClick={() => {
+                setOpen(false);
+                const d = tpl.defaults ?? {};
+                const patch: Parameters<typeof api.addEvent>[0] = {};
+                if (d.title)    patch.title    = d.title;
+                if (d.allDay)   patch.allDay   = d.allDay;
+                if (d.category) patch.category = d.category;
+                if (d.color)    patch.color    = d.color;
+                if (d.meta)     patch.meta     = d.meta;
+                if (d.rrule)    patch.rrule    = d.rrule;
+                api.addEvent(patch);
+              }}
+            >
+              <span className={styles['quickAddItemLabel']}>{tpl.name}</span>
+              {tpl.description && (
+                <span className={styles['quickAddItemDesc']}>{tpl.description}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CalendarToolbar({
   cal, ownerCfg, api,
   renderToolbar, renderSavedViewsBar, renderFilterBar, focusChips,
@@ -98,6 +214,8 @@ export default function CalendarToolbar({
   savedViewCaptureCtx, activeGroupBy,
   VIEWS, setSidebarOpen, setSidebarInitialTab, handleScopeClick,
   schema, filterBarSchema, scopedEvents, locationLabel, assetsLabel, weekStartDay,
+  hasAddButton, hideEventTemplates, eventTemplates, showSearch,
+  showTimezonePicker, displayTimezone, onTimezoneChange,
 }: CalendarToolbarProps) {
   return (
     <>
@@ -170,6 +288,25 @@ export default function CalendarToolbar({
           })()}
           rightSlot={
             <div className={styles['actions']}>
+              {showTimezonePicker && onTimezoneChange && (
+                <TimezonePicker
+                  {...(displayTimezone !== undefined ? { value: displayTimezone } : {})}
+                  onChange={onTimezoneChange}
+                />
+              )}
+              {showSearch && (
+                <SearchBar
+                  value={String(cal.filters?.['search'] ?? '')}
+                  onChange={(q) => cal.setFilter('search', q || null)}
+                />
+              )}
+              {hasAddButton && (
+                <QuickAddDropdown
+                  api={api}
+                  {...(eventTemplates !== undefined ? { eventTemplates } : {})}
+                  {...(hideEventTemplates !== undefined ? { hideEventTemplates } : {})}
+                />
+              )}
               {devMode && <span className={styles['devBadge']}>Dev</span>}
               {(ownerCfg.isOwner || devMode) && (
                 <button

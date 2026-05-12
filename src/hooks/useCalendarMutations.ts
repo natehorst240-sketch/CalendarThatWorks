@@ -76,6 +76,7 @@ export interface UseCalendarMutationsInput {
   onEventResize: WorksCalendarProps['onEventResize'];
   onEventDelete: WorksCalendarProps['onEventDelete'];
   onEventGroupChange: WorksCalendarProps['onEventGroupChange'];
+  onEventChange: WorksCalendarProps['onEventChange'];
   onAvailabilitySave: WorksCalendarProps['onAvailabilitySave'];
   onScheduleSave: WorksCalendarProps['onScheduleSave'];
   onEmployeeAction: WorksCalendarProps['onEmployeeAction'];
@@ -107,7 +108,7 @@ export function useCalendarMutations({
   role, ownerCfg, businessHours, blockedWindows,
   applyEngineOp, applyWithRecurringCheck, getSavedEventPayload, engine, engineVer,
   expandedEvents, visibleEvents, undoManager, announcerRef, rootRef, sourceStore,
-  onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
+  onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange, onEventChange,
   onAvailabilitySave, onScheduleSave, onEmployeeAction, onEventClickProp, onDateSelect, onImport,
   configuredEmployees, devMode, showAddButton, perms,
   inlineEditTarget, setFormEvent, setInlineEditTarget, setSelectedEvent,
@@ -145,7 +146,7 @@ export function useCalendarMutations({
   } = useEventMutations({
     applyEngineOp, applyWithRecurringCheck, getSavedEventPayload,
     engine, engineVer, expandedEvents,
-    onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange,
+    onEventSave, onEventMove, onEventResize, onEventDelete, onEventGroupChange, onEventChange,
     ownerConfig: ownerCfg.config,
     inlineEditTarget, setFormEvent, setInlineEditTarget,
   });

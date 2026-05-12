@@ -1,0 +1,68 @@
+.bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--wc-accent);
+  color: #fff;
+  border-top: 2px solid rgba(255,255,255,0.15);
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+  animation: slideUp 0.18s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.count {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--wc-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.action:hover { background: rgba(255,255,255,0.25); }
+
+.danger {
+  background: rgba(220,38,38,0.6);
+  border-color: rgba(220,38,38,0.8);
+}
+.danger:hover { background: rgba(220,38,38,0.8); }
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.clearBtn:hover { background: rgba(255,255,255,0.3); }

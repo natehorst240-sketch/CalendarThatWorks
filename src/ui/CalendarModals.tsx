@@ -16,7 +16,7 @@ const AvailabilityForm     = lazy(() => import('./AvailabilityForm'));
 const ScheduleEditorForm   = lazy(() => import('./ScheduleEditorForm'));
 const ScheduleTemplateDialog = lazy(() => import('./ScheduleTemplateDialog'));
 import type { AnnouncerRef } from './ScreenReaderAnnouncer';
-import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
+import type { NormalizedEvent, WorksCalendarEvent, EventComment } from '../types/events';
 import type { OwnerConfig, EmployeeRecord, EmployeeId } from '../WorksCalendar.types';
 import type {
   FormEventDraft,
@@ -51,6 +51,8 @@ export interface CalendarModalsProps {
   canEditEvent: boolean;
   handleEditFromHoverCard: (ev: NormalizedEvent) => void;
   resolveResourceLabel?: ((resourceId: string) => string) | undefined;
+  onCommentAdd?: ((event: WorksCalendarEvent, comment: EventComment) => void) | undefined;
+  currentUserName?: string | undefined;
 
   // ── EventForm ──
   formEvent: FormEventDraft | null;
@@ -160,6 +162,7 @@ export interface CalendarModalsProps {
 export default function CalendarModals({
   selectedEvent, setSelectedEvent, renderHoverCard, ownerConfig, notes,
   onNoteSave, onNoteDelete, canEditEvent, handleEditFromHoverCard, resolveResourceLabel,
+  onCommentAdd, currentUserName,
   formEvent, setFormEvent, canAddEvent, eventFormCats, eventOptions, handleEventSave,
   handleEventDelete, onEventDelete, canDeleteEvent, permissions, canManageOptions,
   maintenanceRules, checkEventConflicts, handleLiveConflicts, resolvedAssetRequestCategories,
@@ -196,6 +199,8 @@ export default function CalendarModals({
             onEdit={(isOwner || canEditEvent) ? handleEditFromHoverCard : null}
             anchor={null}
             resolveResourceLabel={resolveResourceLabel}
+            onCommentAdd={onCommentAdd}
+            currentUserName={currentUserName}
           />
         )
       )}

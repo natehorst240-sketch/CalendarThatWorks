@@ -39,12 +39,21 @@ export function isLifecycleState(v: unknown): v is EventLifecycleState {
     && (EVENT_LIFECYCLE_STATES as readonly string[]).includes(v);
 }
 
+export interface EventComment {
+  id: string;
+  author: string;
+  text: string;
+  /** ISO timestamp string */
+  timestamp: string;
+}
+
 export interface WorksCalendarEvent {
   id?: string | undefined;
   title: string;
   start: Date | string;
   end?: Date | string | undefined;
   allDay?: boolean | undefined;
+  comments?: EventComment[] | undefined;
   category?: string | undefined;
   color?: string | undefined;
   resource?: string | undefined;
