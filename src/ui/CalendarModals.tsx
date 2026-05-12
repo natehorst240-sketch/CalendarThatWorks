@@ -1,18 +1,20 @@
+import { lazy, Suspense } from 'react';
 import type { RefObject, ReactNode, ComponentProps } from 'react';
 import { useSourceStore } from '../hooks/useSourceStore';
 import HoverCard from './HoverCard';
-import EventForm from './EventForm';
-import AssetRequestForm from './AssetRequestForm';
-import AvailabilityForm from './AvailabilityForm';
-import ScheduleEditorForm from './ScheduleEditorForm';
-import ImportZone from './ImportZone';
-import ScheduleTemplateDialog from './ScheduleTemplateDialog';
 import RecurringScopeDialog from '../ui/RecurringScopeDialog';
 import ValidationAlert from './ValidationAlert';
-import ConfigPanel from './ConfigPanel';
 import KeyboardHelpOverlay from './KeyboardHelpOverlay';
 import ScreenReaderAnnouncer from './ScreenReaderAnnouncer';
 import InlineEventEditor from './InlineEventEditor';
+
+const ConfigPanel          = lazy(() => import('./ConfigPanel'));
+const ImportZone           = lazy(() => import('./ImportZone'));
+const EventForm            = lazy(() => import('./EventForm'));
+const AssetRequestForm     = lazy(() => import('./AssetRequestForm'));
+const AvailabilityForm     = lazy(() => import('./AvailabilityForm'));
+const ScheduleEditorForm   = lazy(() => import('./ScheduleEditorForm'));
+const ScheduleTemplateDialog = lazy(() => import('./ScheduleTemplateDialog'));
 import type { AnnouncerRef } from './ScreenReaderAnnouncer';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import type { OwnerConfig, EmployeeRecord, EmployeeId } from '../WorksCalendar.types';
@@ -200,78 +202,90 @@ export default function CalendarModals({
 
       {/* ── Event form ── */}
       {formEvent !== null && canAddEvent && (
-        <EventForm
-          event={formEvent.id || formEvent.resourcePoolId ? formEvent : null}
-          config={ownerConfig}
-          categories={[...eventFormCats, ...eventOptions.categories]}
-          onSave={handleEventSave}
-          onDelete={(onEventDelete && canDeleteEvent) ? handleEventDelete : null}
-          onClose={() => { setFormEvent(null); handleLiveConflicts(null); }}
-          permissions={permissions}
-          onAddCategory={canManageOptions ? eventOptions.addCategory : undefined}
-          maintenanceRules={maintenanceRules}
-          onCheckConflicts={checkEventConflicts}
-          onLiveConflictsChange={handleLiveConflicts}
-          approvalCategories={resolvedAssetRequestCategories}
-          pools={rawPools}
-          hideTemplates={hideEventTemplates}
-          resourceSuggestions={eventResourceSuggestions}
-        />
+        <Suspense fallback={null}>
+          <EventForm
+            event={formEvent.id || formEvent.resourcePoolId ? formEvent : null}
+            config={ownerConfig}
+            categories={[...eventFormCats, ...eventOptions.categories]}
+            onSave={handleEventSave}
+            onDelete={(onEventDelete && canDeleteEvent) ? handleEventDelete : null}
+            onClose={() => { setFormEvent(null); handleLiveConflicts(null); }}
+            permissions={permissions}
+            onAddCategory={canManageOptions ? eventOptions.addCategory : undefined}
+            maintenanceRules={maintenanceRules}
+            onCheckConflicts={checkEventConflicts}
+            onLiveConflictsChange={handleLiveConflicts}
+            approvalCategories={resolvedAssetRequestCategories}
+            pools={rawPools}
+            hideTemplates={hideEventTemplates}
+            resourceSuggestions={eventResourceSuggestions}
+          />
+        </Suspense>
       )}
 
       {/* ── Asset request form ── */}
       {assetRequestOpen && canRequestAsset && canAddEvent && (
-        <AssetRequestForm
-          assets={effectiveAssets ?? []}
-          categories={resolvedAssetRequestCategories}
-          initialStart={currentDate}
-          initialAssetId={undefined}
-          requirementTemplates={requirementTemplates as ComponentProps<typeof AssetRequestForm>['requirementTemplates']}
-          onSubmit={(payload) => {
-            handleEventSave(payload as MutationEventInput);
-            setAssetRequestOpen(false);
-          }}
-          onClose={() => setAssetRequestOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <AssetRequestForm
+            assets={effectiveAssets ?? []}
+            categories={resolvedAssetRequestCategories}
+            initialStart={currentDate}
+            initialAssetId={undefined}
+            requirementTemplates={requirementTemplates as ComponentProps<typeof AssetRequestForm>['requirementTemplates']}
+            onSubmit={(payload) => {
+              handleEventSave(payload as MutationEventInput);
+              setAssetRequestOpen(false);
+            }}
+            onClose={() => setAssetRequestOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* ── Availability / PTO form ── */}
       {availabilityState && (
-        <AvailabilityForm
-          emp={availabilityState.emp}
-          kind={availabilityState.kind}
-          initialStart={availabilityState.start}
-          initialEvent={availabilityState.initialEvent}
-          onSave={handleAvailabilitySave}
-          onClose={() => setAvailabilityState(null)}
-        />
+        <Suspense fallback={null}>
+          <AvailabilityForm
+            emp={availabilityState.emp}
+            kind={availabilityState.kind}
+            initialStart={availabilityState.start}
+            initialEvent={availabilityState.initialEvent}
+            onSave={handleAvailabilitySave}
+            onClose={() => setAvailabilityState(null)}
+          />
+        </Suspense>
       )}
 
       {/* ── Schedule editor form ── */}
       {scheduleEditorState && (
-        <ScheduleEditorForm {...({
-          emp: scheduleEditorState.emp,
-          initialStart: scheduleEditorState.start,
-          initialEnd: scheduleEditorState.end,
-          onCallCategory,
-          onSave: handleScheduleEditorSave,
-          onClose: () => setScheduleEditorState(null),
-        } as unknown as ComponentProps<typeof ScheduleEditorForm>)} />
+        <Suspense fallback={null}>
+          <ScheduleEditorForm {...({
+            emp: scheduleEditorState.emp,
+            initialStart: scheduleEditorState.start,
+            initialEnd: scheduleEditorState.end,
+            onCallCategory,
+            onSave: handleScheduleEditorSave,
+            onClose: () => setScheduleEditorState(null),
+          } as unknown as ComponentProps<typeof ScheduleEditorForm>)} />
+        </Suspense>
       )}
 
       {/* ── Import zone ── */}
       {importOpen && (
-        <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
+        <Suspense fallback={null}>
+          <ImportZone onImport={handleImport} onClose={() => setImportOpen(false)} />
+        </Suspense>
       )}
 
       {/* ── Schedule templates ── */}
       {scheduleOpen && (
-        <ScheduleTemplateDialog
-          templates={visibleScheduleTemplates as unknown as ComponentProps<typeof ScheduleTemplateDialog>['templates']}
-          onPreview={buildSchedulePreview as unknown as ComponentProps<typeof ScheduleTemplateDialog>['onPreview']}
-          onInstantiate={handleScheduleInstantiate}
-          onClose={() => setScheduleOpen(false)}
-        />
+        <Suspense fallback={null}>
+          <ScheduleTemplateDialog
+            templates={visibleScheduleTemplates as unknown as ComponentProps<typeof ScheduleTemplateDialog>['templates']}
+            onPreview={buildSchedulePreview as unknown as ComponentProps<typeof ScheduleTemplateDialog>['onPreview']}
+            onInstantiate={handleScheduleInstantiate}
+            onClose={() => setScheduleOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* ── Recurring scope picker ── */}
@@ -299,36 +313,38 @@ export default function CalendarModals({
 
       {/* ── Owner config panel ── */}
       {configOpen && (
-        <ConfigPanel
-          config={ownerConfig}
-          calendarId={calendarId}
-          categories={categories}
-          resources={resources}
-          schema={schema}
-          items={expandedEvents}
-          initialTab={configInitialTab}
-          initialSmartViewEditId={smartViewEditId}
-          onUpdate={updateConfig}
-          onClose={closeConfig}
-          onReopenSetup={showSetupLanding ? handleReopenSetup : undefined}
-          onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
-          savedViews={savedViews.views}
-          onUpdateView={savedViews.updateView}
-          onDeleteView={handleDeleteView}
-          onEmployeeAdd={canManagePeople ? onEmployeeAdd : undefined}
-          onEmployeeDelete={canManagePeople ? onEmployeeDelete : undefined}
-          sources={sourceStore.sources}
-          feedErrors={[...feedErrors]}
-          isFetchingFeeds={isFetchingFeeds}
-          onAddSource={sourceStore.addSource}
-          onRemoveSource={sourceStore.removeSource}
-          onToggleSource={sourceStore.toggleSource}
-          onUpdateSource={sourceStore.updateSource}
-          scheduleTemplates={mergedScheduleTemplates}
-          onCreateScheduleTemplate={isOwner && !!handleCreateScheduleTemplate ? handleCreateScheduleTemplate : undefined}
-          onDeleteScheduleTemplate={isOwner && !!handleDeleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
-          scheduleTemplateError={templateError}
-        />
+        <Suspense fallback={null}>
+          <ConfigPanel
+            config={ownerConfig}
+            calendarId={calendarId}
+            categories={categories}
+            resources={resources}
+            schema={schema}
+            items={expandedEvents}
+            initialTab={configInitialTab}
+            initialSmartViewEditId={smartViewEditId}
+            onUpdate={updateConfig}
+            onClose={closeConfig}
+            onReopenSetup={showSetupLanding ? handleReopenSetup : undefined}
+            onSaveView={(name, filters, opts) => savedViews.saveView(name, filters, opts)}
+            savedViews={savedViews.views}
+            onUpdateView={savedViews.updateView}
+            onDeleteView={handleDeleteView}
+            onEmployeeAdd={canManagePeople ? onEmployeeAdd : undefined}
+            onEmployeeDelete={canManagePeople ? onEmployeeDelete : undefined}
+            sources={sourceStore.sources}
+            feedErrors={[...feedErrors]}
+            isFetchingFeeds={isFetchingFeeds}
+            onAddSource={sourceStore.addSource}
+            onRemoveSource={sourceStore.removeSource}
+            onToggleSource={sourceStore.toggleSource}
+            onUpdateSource={sourceStore.updateSource}
+            scheduleTemplates={mergedScheduleTemplates}
+            onCreateScheduleTemplate={isOwner && !!handleCreateScheduleTemplate ? handleCreateScheduleTemplate : undefined}
+            onDeleteScheduleTemplate={isOwner && !!handleDeleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
+            scheduleTemplateError={templateError}
+          />
+        </Suspense>
       )}
 
       {/* ── Keyboard shortcuts cheat sheet ── */}

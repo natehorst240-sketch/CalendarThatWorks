@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import type { ReactNode, MutableRefObject, ComponentProps } from 'react';
 import { Plus, Upload, Download } from 'lucide-react';
 import { SubToolbar } from './SubToolbar';
@@ -6,13 +7,14 @@ import { SidebarToggleButton } from './FilterGroupSidebar';
 import ActiveFilterStrip from './ActiveFilterStrip';
 import MonthView from '../views/MonthView';
 import WeekView from '../views/WeekView';
-import DayView from '../views/DayView';
-import AgendaView from '../views/AgendaView';
 import ScheduleView from '../views/ScheduleView';
-import AssetsView from '../views/AssetsView';
-import BaseGanttView from '../views/BaseGanttView';
-import DispatchView from '../views/DispatchView';
-import RequestQueueView from '../views/RequestQueueView';
+
+const DayView         = lazy(() => import('../views/DayView'));
+const AgendaView      = lazy(() => import('../views/AgendaView'));
+const AssetsView      = lazy(() => import('../views/AssetsView'));
+const BaseGanttView   = lazy(() => import('../views/BaseGanttView'));
+const DispatchView    = lazy(() => import('../views/DispatchView'));
+const RequestQueueView = lazy(() => import('../views/RequestQueueView'));
 import { exportVisibleEvents } from '../core/calendarViewConfig';
 import { hasActiveFilters } from '../filters/filterState';
 import styles from '../WorksCalendar.module.css';
@@ -226,7 +228,7 @@ export default function CalendarViewGrid({
           {isEmpty && emptyState ? (
             <div className={styles['emptyStateWrap']}>{emptyState}</div>
           ) : (
-            <>
+            <Suspense fallback={null}>
               {/* Cast: SharedViewProps uses NormalizedEvent callbacks; the time-grid views use their own internal event aliases */}
               {cal.view === 'month'    && <MonthView    {...(sharedViewProps as unknown as ComponentProps<typeof MonthView>)} />}
               {cal.view === 'week'     && <WeekView     {...(sharedViewProps as unknown as ComponentProps<typeof WeekView>)} />}
@@ -330,7 +332,7 @@ export default function CalendarViewGrid({
                   onEventClick={handleEventClick as unknown as ComponentProps<typeof RequestQueueView>['onEventClick']}
                 />
               )}
-            </>
+            </Suspense>
           )}
         </div>
       </div>

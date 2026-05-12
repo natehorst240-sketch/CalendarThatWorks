@@ -73,6 +73,7 @@ export default defineConfig({
         'react', 'react-dom', '@supabase/supabase-js',
         'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css',
         'react-map-gl', 'react-map-gl/maplibre',
+        'date-fns', 'lucide-react',
         // Don't inline anything from the main library — consumers
         // import the bridge alongside the main entry, so types from
         // `../core/pools/locationAdapters` should resolve through

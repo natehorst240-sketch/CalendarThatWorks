@@ -2,7 +2,7 @@
  * WorksCalendar — main component.
  */
 import {
-  useImperativeHandle, forwardRef, useMemo, useRef, useState, useEffect,
+  useImperativeHandle, forwardRef, lazy, Suspense, useMemo, useRef, useState, useEffect,
 } from 'react';
 import type { ForwardedRef } from 'react';
 
@@ -25,7 +25,8 @@ import FilterGroupSidebar        from './ui/FilterGroupSidebar';
 import CalendarModals            from './ui/CalendarModals';
 import CalendarToolbar           from './ui/CalendarToolbar';
 import CalendarViewGrid          from './ui/CalendarViewGrid';
-import SetupLanding, { type AssetTypeDef, type RequirementTemplate } from './ui/SetupLanding';
+import type { AssetTypeDef, RequirementTemplate } from './ui/SetupLanding';
+const SetupLanding = lazy(() => import('./ui/SetupLanding'));
 import { CalendarLeftRail, CalendarRightPanel } from './ui/CalendarSideRails';
 import SavedFlash                from './ui/SavedFlash';
 import CalendarErrorBoundary     from './ui/CalendarErrorBoundary';
@@ -309,14 +310,16 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     return (
       <CalendarErrorBoundary>
         <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar-setup" style={rootStyle}>
-          <SetupLanding
-            onSkip={handleSetupSkip}
-            onFinish={handleSetupFinish}
-            initialName={ownerCfg.config?.['title']}
-            initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
-            initialAssetTypes={ownerCfg.config?.['assetTypes'] as AssetTypeDef[]}
-            initialRequirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, RequirementTemplate>}
-          />
+          <Suspense fallback={null}>
+            <SetupLanding
+              onSkip={handleSetupSkip}
+              onFinish={handleSetupFinish}
+              initialName={ownerCfg.config?.['title']}
+              initialTheme={ownerCfg.config?.['setup']?.preferredTheme ?? rawTheme}
+              initialAssetTypes={ownerCfg.config?.['assetTypes'] as AssetTypeDef[]}
+              initialRequirementTemplates={ownerCfg.config?.['requirementTemplates'] as Record<string, RequirementTemplate>}
+            />
+          </Suspense>
         </div>
       </CalendarErrorBoundary>
     );

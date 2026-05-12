@@ -52,12 +52,14 @@ export default defineConfig({
         'react', 'react-dom', '@supabase/supabase-js',
         'maplibre-gl', 'maplibre-gl/dist/maplibre-gl.css',
         'react-map-gl', 'react-map-gl/maplibre',
-        'exceljs',
+        'exceljs', 'date-fns', 'lucide-react',
       ],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
+          'date-fns': 'dateFns',
+          'lucide-react': 'LucideReact',
         },
         assetFileNames: (info) => info.name === 'works-calendar.css' ? 'style.css' : (info.name ?? '[name][extname]'),
       },
