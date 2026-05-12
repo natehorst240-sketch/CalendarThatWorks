@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, isSameMonth, isSameDay, isToday,
@@ -26,6 +26,18 @@ export default function MiniCalendar({
   eventDates = [],
 }: MiniCalendarProps) {
   const [viewMonth, setViewMonth] = useState(() => new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+
+  // Keep the visible month in sync when the host navigates the main calendar
+  // to a different month (e.g. "Today" button, keyboard shortcuts). Only
+  // snaps when currentDate leaves the currently shown month so the user can
+  // still browse ahead in the mini calendar without being interrupted.
+  useEffect(() => {
+    setViewMonth(prev =>
+      isSameMonth(prev, currentDate)
+        ? prev
+        : new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+    );
+  }, [currentDate]);
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(viewMonth);
