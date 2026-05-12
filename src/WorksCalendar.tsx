@@ -257,6 +257,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   const rootRef = useRef<HTMLDivElement>(null);
 
   const [internalTimezone, setInternalTimezone] = useState<string | undefined>(timezoneProp);
+  // Sync when the host changes the controlled prop (e.g. restoring a saved preference)
+  useEffect(() => { setInternalTimezone(timezoneProp); }, [timezoneProp]);
   const timezone = internalTimezone;
   const handleTimezoneChange = (tz: string) => { setInternalTimezone(tz); onTimezoneChange?.(tz); };
 
@@ -427,7 +429,16 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
                   totalCount={visibleEvents.length}
                   onSelectAll={() => selectAllEvents(visibleEvents)}
                   onDelete={() => {
-                    selectedEventIds.forEach(id => handleEventDelete(id));
+                    // Recurring events require a scope-confirmation dialog
+                    // (applyWithRecurringCheck stores a single prompt at a time),
+                    // so batching them overwrites earlier prompts. Only bulk-delete
+                    // non-recurring events; recurring ones must be deleted individually.
+                    const eventById = new Map(expandedEvents.map(e => [e.id, e]));
+                    for (const id of selectedEventIds) {
+                      const ev = eventById.get(id);
+                      if (!ev || ev._recurring || ev.rrule) continue;
+                      handleEventDelete(id);
+                    }
                     clearSelection();
                   }}
                   onClear={clearSelection}
