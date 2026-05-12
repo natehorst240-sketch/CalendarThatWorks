@@ -294,7 +294,9 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     setAvailabilityState, setScheduleEditorState, setScheduleOpen,
   });
 
-  useReminders(visibleEvents, onReminder);
+  // Use expandedEvents (pre-filter) so reminders fire even when the event is
+  // currently hidden by an active filter condition.
+  useReminders(expandedEvents, onReminder);
 
   const api = useMemo((): CalendarApi => ({
     navigateTo:       (date)  => cal.setCurrentDate(date),

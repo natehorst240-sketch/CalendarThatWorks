@@ -3,8 +3,8 @@ flowchart TD
     A["useSourceStore\nwc-sources-{calendarId} (localStorage)\nsources: CalendarSource[]\n{ id, label, color, enabled }"]:::g
     B["activeIcsSources\n→ useFeedEvents (fetch + parse ICS)"]:::g
     C["activeCsvSources\n→ pre-parsed WorksCalendarEvent[]"]:::g
-    D["useSourceAggregator\nbuilds sourceColorByLabel map\nfrom sourceStore.sources"]:::g
-    E["ICS events\ncolor = sourceColorByLabel[label]\n→ NormalizedEvent.color"]:::g
+    D["useSourceAggregator\nbuilds sourceColorById + labelToSourceId maps\nfrom sourceStore.sources"]:::g
+    E["ICS events\n_sourceId = labelToSourceId[label] ?? label\ncolor = sourceColorById[_sourceId]\n→ NormalizedEvent.color"]:::g
     F["CSV events\ncolor = source.color\n→ NormalizedEvent.color"]:::g
     G["allNormalized\nmerged + colour-tagged\nevent pool"]:::g
     H["useCalendarDataPipeline\nvisibleEvents: NormalizedEvent[]"]:::g

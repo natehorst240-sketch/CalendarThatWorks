@@ -52,30 +52,35 @@ export function useSourceAggregator({ icalFeedsProp = [], sourceStore }: {
 
   const { feedEvents, feedErrors, isFetching: isFetchingFeeds } = useFeedEvents(allIcsFeeds);
 
-  // Build label→color map from all managed sources so ICS events inherit the
-  // color the user assigned to that feed in the source panel.
-  const sourceColorByLabel = useMemo(() => {
-    const m = new Map<string, string>();
+  // Build lookup maps from store sources so ICS events can be identified by
+  // their actual store ID rather than the mutable label string.
+  const { sourceColorById, labelToSourceId } = useMemo(() => {
+    const colorById = new Map<string, string>();
+    const labelToId = new Map<string, string>();
     for (const s of sourceStore.sources) {
-      if (s.label && s.color) m.set(s.label, s.color);
+      if (s.color) colorById.set(s.id, s.color);
+      if (s.label) labelToId.set(s.label, s.id);
     }
-    return m;
+    return { sourceColorById: colorById, labelToSourceId: labelToId };
   }, [sourceStore.sources]);
 
-  // Tag ICS events with source metadata and source color (when available)
+  // Tag ICS events with source metadata and source color (when available).
+  // Resolve _sourceId to the actual store ID when the feed is store-managed
+  // (matched by label); prop-level feeds fall back to their label string.
   const taggedFeedEvents = useMemo(
     () =>
       feedEvents.map((ev) => {
         const label = ev._feedLabel as string | undefined;
-        const sourceColor = label ? sourceColorByLabel.get(label) : undefined;
+        const resolvedId = (label ? labelToSourceId.get(label) : undefined) ?? label ?? 'ics';
+        const sourceColor = sourceColorById.get(resolvedId);
         return {
           ...ev,
-          _sourceId:    label ?? 'ics',
+          _sourceId:    resolvedId,
           _sourceLabel: label,
           ...(sourceColor ? { color: sourceColor } : {}),
         };
       }),
-    [feedEvents, sourceColorByLabel],
+    [feedEvents, sourceColorById, labelToSourceId],
   );
 
   // CSV source events — already parsed, apply source color when present

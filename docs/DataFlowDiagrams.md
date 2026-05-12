@@ -201,9 +201,10 @@ Data flow from `useSourceStore` (localStorage) through `useSourceAggregator` (co
 ![3i — Multi-Calendar Source Colors and Legend](diagrams/level3i.png)
 
 **Key invariants**
-- Source colours are keyed by `label` for ICS feeds (since ICS events only carry the feed label, not an internal ID) and by direct `source.color` for CSV sources.
+- `useSourceAggregator` builds two maps from `sourceStore.sources`: `labelToSourceId` (label → store UUID) and `sourceColorById` (store UUID → colour). ICS events resolve their `_sourceId` via `labelToSourceId` so store-managed feeds carry their actual UUID — not the mutable label string. Prop-level `icalFeeds` have no store entry and fall back to the label string as `_sourceId`.
 - Toggling a source (`toggleSource`) flips `enabled` in the store; the next `useSourceAggregator` memo pass omits its events, which propagates through `useCalendarDataPipeline` to `visibleEvents` in a single render cycle.
 - Changing a colour (`updateSource`) persists to `localStorage` immediately; the legend updates on the same render that triggers re-aggregation.
+- Reminders are scheduled against `expandedEvents` (the pre-filter pool), not `visibleEvents`, so a reminder fires even when its event is currently hidden by an active filter condition.
 
 ---
 
