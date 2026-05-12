@@ -37,23 +37,41 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   const [configOpen,    setConfigOpen]    = useState(false);
   const [configInitialTab, setConfigInitialTab] = useState<string | null>(null);
   const [smartViewEditId, setSmartViewEditId] = useState<string | null>(null);
-  const pendingNotifyRef = useRef(false);
+  // When non-null, holds the `calendarId` to persist + notify for once the
+  // pending config change commits — captured at `updateConfig` time so a
+  // `calendarId` switch racing the edit can't redirect the save to the wrong
+  // namespace (or drop it).
+  const pendingSaveRef = useRef<string | null>(null);
+
+  // Reload from storage when the host points us at a different `calendarId`
+  // (it's the persistence namespace key). The ref skips the redundant reload
+  // on mount, since `useState` already seeded from `calendarId`. A pending save
+  // is deliberately *not* cleared here: it belongs to the previous calendar and
+  // the commit effect will still flush it to that calendar's namespace.
+  const calendarIdRef = useRef(calendarId);
+  useEffect(() => {
+    if (calendarIdRef.current === calendarId) return;
+    calendarIdRef.current = calendarId;
+    setConfig(loadConfig(calendarId));
+  }, [calendarId]);
 
   // Host app decides who can edit config — no client-side password.
   const isOwner = role === 'admin' || devMode;
 
   const updateConfig = useCallback((updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => {
-    setConfig(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      saveConfig(calendarId, next);
-      pendingNotifyRef.current = true;
-      return next;
-    });
+    // The state updater stays pure (it can be invoked more than once / for a
+    // render that is later discarded). Capture the *current* `calendarId` so the
+    // persist targets the calendar the edit was made against, even if the host
+    // switches calendars before the commit effect runs.
+    pendingSaveRef.current = calendarId;
+    setConfig(prev => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
   }, [calendarId]);
 
   useEffect(() => {
-    if (!pendingNotifyRef.current) return;
-    pendingNotifyRef.current = false;
+    const targetId = pendingSaveRef.current;
+    if (targetId === null) return;
+    pendingSaveRef.current = null;
+    saveConfig(targetId, config);
     onConfigSave?.(config);
   }, [config, onConfigSave]);
 

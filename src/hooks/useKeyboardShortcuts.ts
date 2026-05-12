@@ -29,15 +29,20 @@ export const VIEW_SHORTCUT_KEYS = {
   '5': 'schedule',
   '6': 'assets',
 } as const;
-function isTypingTarget(el: Element | null): boolean {
-  if (!el) return false;
+/** True when `el` is (or behaves like) a text-entry field — typing into it
+ *  should win over global shortcuts. Exported so other global keydown handlers
+ *  (e.g. the undo/redo shortcut) apply the same guard. */
+export function isTypingTarget(el: EventTarget | Element | null): boolean {
+  if (!(el instanceof Element)) return false;
   const tag = el.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
   if (el instanceof HTMLElement && el.isContentEditable) return true;
   return false;
 }
 
-function hasOpenModal() {
+/** True when an aria-modal dialog is up — it should own the keyboard. */
+export function hasOpenModal(): boolean {
+  if (typeof document === 'undefined') return false;
   return !!document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"]');
 }
 
