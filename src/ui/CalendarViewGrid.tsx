@@ -1,4 +1,4 @@
-import type { ReactNode, MutableRefObject, RefObject, ComponentProps } from 'react';
+import type { ReactNode, MutableRefObject, ComponentProps } from 'react';
 import { Plus, Upload, Download } from 'lucide-react';
 import { SubToolbar } from './SubToolbar';
 import { DayWindowPills } from './DayWindowPills';
@@ -16,13 +16,14 @@ import RequestQueueView from '../views/RequestQueueView';
 import { exportVisibleEvents } from '../core/calendarViewConfig';
 import { hasActiveFilters } from '../filters/filterState';
 import styles from '../WorksCalendar.module.css';
-import type { CalendarState } from '../hooks/useCalendar';
+import type { CalObject } from '../hooks/useCalendarSetup';
 import type { OwnerCfgHandle } from '../hooks/useOwnerConfig';
-import type { PermissionCaps, OnApprovalAction } from '../types/ui';
+import type { PermissionCaps } from '../types/ui';
 import type { FilterField } from '../filters/filterSchema';
 import type { NormalizedEvent } from '../types/events';
 import type {
   OwnerConfig,
+  WorksCalendarProps,
   EmployeeRecord,
   EmployeeId,
   EmployeeActionInput,
@@ -38,7 +39,6 @@ import type {
   AssetsZoomLevel,
   LocationProvider,
   LocationData,
-  CategoriesConfig,
 } from '../types/assets';
 import type { ResourcePool } from '../core/pools/resourcePoolSchema';
 import type { FormEventDraft } from '../hooks/useModalState';
@@ -60,7 +60,7 @@ interface SharedViewProps {
 }
 
 export interface CalendarViewGridProps {
-  cal: CalendarState;
+  cal: CalObject;
   ownerCfg: OwnerCfgHandle;
   perms: PermissionCaps;
   schema: FilterField[];
@@ -84,7 +84,7 @@ export interface CalendarViewGridProps {
   emptyState: ReactNode;
   sharedViewProps: SharedViewProps;
   // Swipe / edit
-  swipeAreaRef: RefObject<HTMLDivElement | null>;
+  swipeAreaRef: MutableRefObject<HTMLDivElement | null>;
   lastClickCoordsRef: MutableRefObject<{ x: number; y: number }>;
   editMode: boolean;
   // Groups
@@ -101,8 +101,8 @@ export interface CalendarViewGridProps {
   assetsLabel: string;
   selectedBaseIds: string[];
   setSelectedBaseIds: (ids: string[]) => void;
-  categoriesConfig: CategoriesConfig | undefined;
-  rawPools: ResourcePool[];
+  categoriesConfig: WorksCalendarProps['categoriesConfig'];
+  rawPools: ResourcePool[] | undefined;
   strictAssetFiltering: boolean | undefined;
   resolveResourceLabel: ((resourceId: string) => string) | undefined;
   activeAssetsZoom: AssetsZoomLevel;
@@ -116,7 +116,7 @@ export interface CalendarViewGridProps {
   dispatchMissions: DispatchMissionCandidate[] | undefined;
   dispatchEvaluator: DispatchEvaluator | undefined;
   onDispatchAssign: ((assetId: string, missionId: string | null, asOf: Date) => void) | undefined;
-  onApprovalAction: OnApprovalAction | undefined;
+  onApprovalAction: WorksCalendarProps['onApprovalAction'];
   canRequestAsset: boolean;
   // Handlers
   setFormEvent: (ev: FormEventDraft | null) => void;
@@ -227,20 +227,20 @@ export default function CalendarViewGrid({
             <div className={styles['emptyStateWrap']}>{emptyState}</div>
           ) : (
             <>
-              {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
-              {/* Cast: SharedViewProps uses NormalizedEvent callbacks; WeekView/DayView use their own internal event aliases */}
+              {/* Cast: SharedViewProps uses NormalizedEvent callbacks; the time-grid views use their own internal event aliases */}
+              {cal.view === 'month'    && <MonthView    {...(sharedViewProps as unknown as ComponentProps<typeof MonthView>)} />}
               {cal.view === 'week'     && <WeekView     {...(sharedViewProps as unknown as ComponentProps<typeof WeekView>)} />}
               {cal.view === 'day'      && <DayView      {...(sharedViewProps as unknown as ComponentProps<typeof DayView>)} />}
-              {cal.view === 'agenda'   && <AgendaView
-                currentDate={cal.currentDate}
-                events={visibleEvents}
-                onEventClick={handleEventClick as unknown as (ev: unknown) => void}
-                onEventGroupChange={sharedViewProps.onEventGroupChange as unknown as ComponentProps<typeof AgendaView>['onEventGroupChange']}
-                groupBy={activeGroupBy}
-                sort={activeSort}
-                showAllGroups={activeShowAllGroups}
-                employees={configuredEmployees as unknown as ComponentProps<typeof AgendaView>['employees']}
-              />}
+              {cal.view === 'agenda'   && <AgendaView {...({
+                currentDate: cal.currentDate,
+                events: visibleEvents,
+                onEventClick: handleEventClick,
+                onEventGroupChange: sharedViewProps.onEventGroupChange,
+                groupBy: activeGroupBy,
+                sort: activeSort,
+                showAllGroups: activeShowAllGroups,
+                employees: configuredEmployees,
+              } as unknown as ComponentProps<typeof AgendaView>)} />}
               {cal.view === 'schedule' && (
                 <ScheduleView
                   currentDate={cal.currentDate}
@@ -262,20 +262,20 @@ export default function CalendarViewGrid({
                 />
               )}
               {cal.view === 'base' && (
-                <BaseGanttView
-                  currentDate={cal.currentDate}
-                  events={visibleEvents}
-                  onEventClick={handleEventClick as unknown as (ev: unknown) => void}
-                  employees={configuredEmployees as unknown as ComponentProps<typeof BaseGanttView>['employees']}
-                  assets={(effectiveAssets ?? []) as unknown as ComponentProps<typeof BaseGanttView>['assets']}
-                  bases={configuredBases as unknown as ComponentProps<typeof BaseGanttView>['bases']}
-                  regions={configuredRegions as unknown as ComponentProps<typeof BaseGanttView>['regions']}
-                  locationLabel={locationLabel}
-                  assetsLabel={assetsLabel}
-                  selectedBaseIds={selectedBaseIds}
-                  onBaseSelectionChange={setSelectedBaseIds}
-                  dayWindow={cal.dayWindow}
-                />
+                <BaseGanttView {...({
+                  currentDate: cal.currentDate,
+                  events: visibleEvents,
+                  onEventClick: handleEventClick,
+                  employees: configuredEmployees,
+                  assets: effectiveAssets ?? [],
+                  bases: configuredBases,
+                  regions: configuredRegions,
+                  locationLabel,
+                  assetsLabel,
+                  selectedBaseIds,
+                  onBaseSelectionChange: setSelectedBaseIds,
+                  dayWindow: cal.dayWindow,
+                } as unknown as ComponentProps<typeof BaseGanttView>)} />
               )}
               {cal.view === 'assets' && (
                 <AssetsView
@@ -286,8 +286,8 @@ export default function CalendarViewGrid({
                   onPoolDateSelect={handlePoolDateSelect as unknown as ComponentProps<typeof AssetsView>['onPoolDateSelect']}
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
-                  categoriesConfig={categoriesConfig ?? (ownerCfg.config.categoriesConfig as CategoriesConfig | undefined)}
-                  assets={effectiveAssets}
+                  categoriesConfig={(categoriesConfig ?? ownerCfg.config.categoriesConfig) as unknown as ComponentProps<typeof AssetsView>['categoriesConfig']}
+                  assets={effectiveAssets as unknown as ComponentProps<typeof AssetsView>['assets']}
                   pools={rawPools ?? []}
                   strictAssetFiltering={strictAssetFiltering}
                   resolveResourceLabel={resolveResourceLabel}
@@ -308,19 +308,19 @@ export default function CalendarViewGrid({
                 />
               )}
               {cal.view === 'dispatch' && (
-                <DispatchView
-                  events={expandedEvents as unknown as ComponentProps<typeof DispatchView>['events']}
-                  employees={configuredEmployees as unknown as ComponentProps<typeof DispatchView>['employees']}
-                  assets={(effectiveAssets ?? []) as unknown as ComponentProps<typeof DispatchView>['assets']}
-                  bases={configuredBases as unknown as ComponentProps<typeof DispatchView>['bases']}
-                  locationLabel={locationLabel}
-                  label={assetsLabel}
-                  onEventClick={handleEventClick as unknown as ComponentProps<typeof DispatchView>['onEventClick']}
-                  missions={dispatchMissions}
-                  evaluateForMission={dispatchEvaluator}
-                  onAssign={onDispatchAssign}
-                  onAsOfChange={cal.setCurrentDate}
-                />
+                <DispatchView {...({
+                  events: expandedEvents,
+                  employees: configuredEmployees,
+                  assets: effectiveAssets ?? [],
+                  bases: configuredBases,
+                  locationLabel,
+                  label: assetsLabel,
+                  onEventClick: handleEventClick,
+                  missions: dispatchMissions,
+                  evaluateForMission: dispatchEvaluator,
+                  onAssign: onDispatchAssign,
+                  onAsOfChange: cal.setCurrentDate,
+                } as unknown as ComponentProps<typeof DispatchView>)} />
               )}
               {cal.view === 'requests' && (
                 <RequestQueueView

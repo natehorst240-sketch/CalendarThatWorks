@@ -32,18 +32,7 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   role?: CalendarRole | undefined;
   onConfigSave?: ((config: OwnerConfig) => void) | undefined;
   devMode?: boolean | undefined;
-}): {
-  config: OwnerConfig;
-  isOwner: boolean;
-  configOpen: boolean;
-  setConfigOpen: Dispatch<SetStateAction<boolean>>;
-  configInitialTab: string | null;
-  smartViewEditId: string | null;
-  updateConfig: (updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => void;
-  closeConfig: () => void;
-  openGear: () => void;
-  openConfigToTab: (tabId: string | null, opts?: { smartViewEditId?: string | null }) => void;
-} {
+}): OwnerCfgHandle {
   const [config,        setConfig]        = useState<OwnerConfig>(() => loadConfig(calendarId));
   const [configOpen,    setConfigOpen]    = useState(false);
   const [configInitialTab, setConfigInitialTab] = useState<string | null>(null);
@@ -81,7 +70,7 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   // Deep-link helper: open ConfigPanel focused on a specific tab id. Used by
   // view toolbars (e.g. AssetsView's "Edit assets") so owners can jump
   // straight to the relevant registry without hunting through tabs.
-  const openConfigToTab = useCallback((tabId: string | null, opts: { smartViewEditId?: string | null } = {}) => {
+  const openConfigToTab = useCallback((tabId: string | null, opts: { smartViewEditId?: string | null | undefined } = {}) => {
     setConfigInitialTab(tabId ?? null);
     setSmartViewEditId(opts.smartViewEditId ?? null);
     setConfigOpen(true);

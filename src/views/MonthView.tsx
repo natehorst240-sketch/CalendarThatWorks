@@ -297,7 +297,7 @@ export default function MonthView({
     return map;
   }, [singleDay]);
 
-  const showWeekNumbers = config?.display?.['showWeekNumbers'];
+  const showWeekNumbers = !!config?.display?.['showWeekNumbers'];
   const enlargeMonthRowOnHover = !!config?.display?.['enlargeMonthRowOnHover'];
   const layoutMetrics = useMemo(() => {
     if (viewportWidth <= 480) {

@@ -1,4 +1,5 @@
-import type { RefObject, ReactNode } from 'react';
+import type { RefObject, ReactNode, ComponentProps } from 'react';
+import { useSourceStore } from '../hooks/useSourceStore';
 import HoverCard from './HoverCard';
 import EventForm from './EventForm';
 import AssetRequestForm from './AssetRequestForm';
@@ -13,7 +14,7 @@ import KeyboardHelpOverlay from './KeyboardHelpOverlay';
 import ScreenReaderAnnouncer from './ScreenReaderAnnouncer';
 import InlineEventEditor from './InlineEventEditor';
 import type { AnnouncerRef } from './ScreenReaderAnnouncer';
-import type { NormalizedEvent } from '../types/events';
+import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import type { OwnerConfig, EmployeeRecord, EmployeeId } from '../WorksCalendar.types';
 import type {
   FormEventDraft,
@@ -40,7 +41,7 @@ export interface CalendarModalsProps {
   // ── HoverCard ──
   selectedEvent: NormalizedEvent | null;
   setSelectedEvent: (ev: NormalizedEvent | null) => void;
-  renderHoverCard?: ((event: NormalizedEvent, onClose: () => void) => ReactNode) | null | undefined;
+  renderHoverCard?: ((event: WorksCalendarEvent, onClose: () => void) => ReactNode) | null | undefined;
   ownerConfig: Record<string, unknown>;
   notes: Record<string, unknown>;
   onNoteSave?: ((note: Record<string, unknown>) => void) | null | undefined;
@@ -61,10 +62,10 @@ export interface CalendarModalsProps {
   canDeleteEvent: boolean;
   permissions: PermissionCaps;
   canManageOptions: boolean;
-  maintenanceRules?: MaintenanceRule[] | undefined;
+  maintenanceRules?: readonly MaintenanceRule[] | undefined;
   checkEventConflicts: (proposed: MutationEventInput) => ConflictEvaluationResult | null;
   handleLiveConflicts: (ids: readonly string[] | null) => void;
-  resolvedAssetRequestCategories: string[];
+  resolvedAssetRequestCategories: Array<{ id: string; label: string; color: string | undefined }>;
   rawPools: ResourcePool[];
   hideEventTemplates: boolean;
   eventResourceSuggestions?: unknown;
@@ -128,13 +129,7 @@ export interface CalendarModalsProps {
   handleDeleteView: (id: string) => void;
   isOwner: boolean;
   openConfigToTab: (tab: string | null, opts?: { smartViewEditId?: string | null | undefined }) => void;
-  sourceStore: {
-    sources: Array<{ id: string; type: string; label: string; color: string; enabled: boolean; [key: string]: unknown }>;
-    addSource: (partial: Record<string, unknown>) => unknown;
-    removeSource: (id: string) => void;
-    toggleSource: (id: string) => void;
-    updateSource: (id: string, patch: Record<string, unknown>) => void;
-  };
+  sourceStore: ReturnType<typeof useSourceStore>;
   feedErrors: ReadonlyArray<{ feed: Record<string, unknown>; err: unknown }>;
   isFetchingFeeds: boolean;
   mergedScheduleTemplates: ScheduleTemplateV1[];
@@ -188,7 +183,7 @@ export default function CalendarModals({
     <>
       {/* ── Hover card ── */}
       {selectedEvent && (
-        (renderHoverCard && renderHoverCard(selectedEvent, () => setSelectedEvent(null))) ?? (
+        (renderHoverCard && renderHoverCard(selectedEvent as unknown as WorksCalendarEvent, () => setSelectedEvent(null))) ?? (
           <HoverCard
             event={selectedEvent}
             config={ownerConfig}
@@ -227,11 +222,11 @@ export default function CalendarModals({
       {/* ── Asset request form ── */}
       {assetRequestOpen && canRequestAsset && canAddEvent && (
         <AssetRequestForm
-          assets={effectiveAssets}
+          assets={effectiveAssets ?? []}
           categories={resolvedAssetRequestCategories}
           initialStart={currentDate}
           initialAssetId={undefined}
-          requirementTemplates={requirementTemplates}
+          requirementTemplates={requirementTemplates as ComponentProps<typeof AssetRequestForm>['requirementTemplates']}
           onSubmit={(payload) => {
             handleEventSave(payload as MutationEventInput);
             setAssetRequestOpen(false);
@@ -254,14 +249,14 @@ export default function CalendarModals({
 
       {/* ── Schedule editor form ── */}
       {scheduleEditorState && (
-        <ScheduleEditorForm
-          emp={scheduleEditorState.emp}
-          initialStart={scheduleEditorState.start}
-          initialEnd={scheduleEditorState.end}
-          onCallCategory={onCallCategory}
-          onSave={handleScheduleEditorSave}
-          onClose={() => setScheduleEditorState(null)}
-        />
+        <ScheduleEditorForm {...({
+          emp: scheduleEditorState.emp,
+          initialStart: scheduleEditorState.start,
+          initialEnd: scheduleEditorState.end,
+          onCallCategory,
+          onSave: handleScheduleEditorSave,
+          onClose: () => setScheduleEditorState(null),
+        } as unknown as ComponentProps<typeof ScheduleEditorForm>)} />
       )}
 
       {/* ── Import zone ── */}
@@ -272,8 +267,8 @@ export default function CalendarModals({
       {/* ── Schedule templates ── */}
       {scheduleOpen && (
         <ScheduleTemplateDialog
-          templates={visibleScheduleTemplates}
-          onPreview={buildSchedulePreview}
+          templates={visibleScheduleTemplates as unknown as ComponentProps<typeof ScheduleTemplateDialog>['templates']}
+          onPreview={buildSchedulePreview as unknown as ComponentProps<typeof ScheduleTemplateDialog>['onPreview']}
           onInstantiate={handleScheduleInstantiate}
           onClose={() => setScheduleOpen(false)}
         />
@@ -323,7 +318,7 @@ export default function CalendarModals({
           onEmployeeAdd={canManagePeople ? onEmployeeAdd : undefined}
           onEmployeeDelete={canManagePeople ? onEmployeeDelete : undefined}
           sources={sourceStore.sources}
-          feedErrors={feedErrors}
+          feedErrors={[...feedErrors]}
           isFetchingFeeds={isFetchingFeeds}
           onAddSource={sourceStore.addSource}
           onRemoveSource={sourceStore.removeSource}
