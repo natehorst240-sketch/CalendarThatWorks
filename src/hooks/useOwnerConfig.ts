@@ -37,16 +37,21 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   const [configOpen,    setConfigOpen]    = useState(false);
   const [configInitialTab, setConfigInitialTab] = useState<string | null>(null);
   const [smartViewEditId, setSmartViewEditId] = useState<string | null>(null);
-  const pendingNotifyRef = useRef(false);
+  // When non-null, holds the `calendarId` to persist + notify for once the
+  // pending config change commits — captured at `updateConfig` time so a
+  // `calendarId` switch racing the edit can't redirect the save to the wrong
+  // namespace (or drop it).
+  const pendingSaveRef = useRef<string | null>(null);
 
   // Reload from storage when the host points us at a different `calendarId`
   // (it's the persistence namespace key). The ref skips the redundant reload
-  // on mount, since `useState` already seeded from `calendarId`.
+  // on mount, since `useState` already seeded from `calendarId`. A pending save
+  // is deliberately *not* cleared here: it belongs to the previous calendar and
+  // the commit effect will still flush it to that calendar's namespace.
   const calendarIdRef = useRef(calendarId);
   useEffect(() => {
     if (calendarIdRef.current === calendarId) return;
     calendarIdRef.current = calendarId;
-    pendingNotifyRef.current = false; // any pending notify was for the previous calendar
     setConfig(loadConfig(calendarId));
   }, [calendarId]);
 
@@ -54,19 +59,21 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   const isOwner = role === 'admin' || devMode;
 
   const updateConfig = useCallback((updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => {
-    // Keep the state updater pure — persistence + the host callback run from the
-    // commit effect below. (A state updater can be invoked more than once / for
-    // a render that is later discarded; localStorage writes don't belong there.)
-    pendingNotifyRef.current = true;
+    // The state updater stays pure (it can be invoked more than once / for a
+    // render that is later discarded). Capture the *current* `calendarId` so the
+    // persist targets the calendar the edit was made against, even if the host
+    // switches calendars before the commit effect runs.
+    pendingSaveRef.current = calendarId;
     setConfig(prev => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
-  }, []);
+  }, [calendarId]);
 
   useEffect(() => {
-    if (!pendingNotifyRef.current) return;
-    pendingNotifyRef.current = false;
-    saveConfig(calendarId, config);
+    const targetId = pendingSaveRef.current;
+    if (targetId === null) return;
+    pendingSaveRef.current = null;
+    saveConfig(targetId, config);
     onConfigSave?.(config);
-  }, [config, calendarId, onConfigSave]);
+  }, [config, onConfigSave]);
 
   const closeConfig = useCallback(() => {
     setConfigOpen(false);

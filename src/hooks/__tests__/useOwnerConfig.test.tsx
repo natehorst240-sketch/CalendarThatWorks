@@ -72,4 +72,27 @@ describe('useOwnerConfig', () => {
     act(() => result.current.updateConfig((prev) => ({ ...prev, count: (prev['count'] as number) + 1 })));
     expect(result.current.config['count']).toBe(2);
   });
+
+  it('persists an edit to the calendar that was active at edit time, even if the host switches calendars in the same render', () => {
+    saveConfig(A, { title: 'Calendar A' });
+    saveConfig(B, { title: 'Calendar B' });
+    const saved: Array<Record<string, unknown>> = [];
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) => useOwnerConfig({ calendarId: id, onConfigSave: (c) => saved.push(c as Record<string, unknown>) }),
+      { initialProps: { id: A } },
+    );
+
+    // Edit (against calendar A) and switch to B, batched in one act() — the race
+    // the reviewer flagged: the save must not redirect to B's namespace or vanish.
+    act(() => {
+      result.current.updateConfig({ title: 'Edited A' });
+      rerender({ id: B });
+    });
+
+    expect(loadConfig(A)['title']).toBe('Edited A');   // persisted to A
+    expect(loadConfig(B)['title']).toBe('Calendar B');  // B untouched
+    expect(result.current.config['title']).toBe('Calendar B'); // now showing B
+    expect(saved).toHaveLength(1);
+    expect(saved[0]!['title']).toBe('Edited A');        // onConfigSave got A's edited config
+  });
 });
