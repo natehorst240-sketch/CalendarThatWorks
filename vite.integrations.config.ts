@@ -43,7 +43,7 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/types/**/*.d.ts'],
+      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/types/**/*.d.ts', 'src/api/**/*.ts'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
       skipDiagnostics: true,
@@ -63,6 +63,7 @@ export default defineConfig({
       entry: {
         'integrations/asset-tracker':    resolve(__dirname, 'src/integrations/asset-tracker.ts'),
         'integrations/asset-map-widget': resolve(__dirname, 'src/integrations/asset-map-widget.tsx'),
+        'api/v1/server/index':           resolve(__dirname, 'src/api/v1/server/index.ts'),
       },
       formats: ['es'],
       fileName: (_format, entryName) => `${entryName}.es.js`,

@@ -103,18 +103,18 @@ const MAINTENANCE_HEADERS = [
 
 export function maintenanceLogToCSV(entries: readonly MaintenanceLogEntry[]): string {
   const rows = entries.map(e => [
-    e.eventId,
+    sanitizeFormula(e.eventId),
     formatDate(e.date),
-    e.asset ?? '',
-    e.rule  ?? '',
-    e.ruleId ?? '',
+    sanitizeFormula(e.asset ?? ''),
+    sanitizeFormula(e.rule  ?? ''),
+    sanitizeFormula(e.ruleId ?? ''),
     e.lifecycle ?? '',
     e.meterAtService != null ? String(e.meterAtService) : '',
     e.nextDueMiles   != null ? String(e.nextDueMiles)   : '',
     e.nextDueHours   != null ? String(e.nextDueHours)   : '',
     e.nextDueCycles  != null ? String(e.nextDueCycles)  : '',
     e.nextDueDate ? e.nextDueDate.slice(0, 10) : '',
-    e.notes,
+    sanitizeFormula(e.notes),
   ]);
   return toCSV([MAINTENANCE_HEADERS as readonly string[], ...rows]);
 }
@@ -132,6 +132,10 @@ export function downloadMaintenanceLogCSV(
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+function sanitizeFormula(v: string): string {
+  return /^[=+\-@|%]/.test(v) ? `\t${v}` : v;
+}
 
 function readMaintenance(ev: NormalizedEvent): MaintenanceMeta | null {
   const candidate = ev.meta?.['maintenance'];

@@ -23,7 +23,7 @@
     },
     "./api/v1/server": {
       "types": "./dist/api/v1/server/index.d.ts",
-      "import": "./dist/api/v1/server/index.js"
+      "import": "./dist/api/v1/server/index.es.js"
     },
     "./styles": "./dist/style.css",
     "./styles/aviation": "./dist/themes/aviation.css",
@@ -39,7 +39,11 @@
     "./styles/family/grid": "./dist/themes/family/grid.css",
     "./styles/family/ops": "./dist/themes/family/ops.css",
     "./styles/family/neon": "./dist/themes/family/neon.css",
-    "./themes": "./dist/works-calendar.es.js",
+    "./themes": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/works-calendar.es.js",
+      "require": "./dist/works-calendar.umd.js"
+    },
     "./lite": {
       "types": "./dist/index.lite.d.ts",
       "import": "./dist/works-calendar-lite.es.js",
@@ -47,10 +51,15 @@
     },
     "./dist/*": "./dist/*"
   },
+  "sideEffects": [
+    "dist/style.css",
+    "dist/themes/**/*.css"
+  ],
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "repository": {
     "type": "git",

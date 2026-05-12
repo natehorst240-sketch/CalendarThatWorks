@@ -90,14 +90,14 @@ const INVOICE_HEADERS = [
 
 export function invoiceLineItemsToCSV(items: readonly InvoiceLineItem[]): string {
   const rows = items.map(it => [
-    it.eventId,
+    sanitizeFormula(it.eventId),
     formatDate(it.date),
-    it.customer ?? '',
-    it.description,
+    sanitizeFormula(it.customer ?? ''),
+    sanitizeFormula(it.description),
     String(it.quantity),
     it.rate  != null ? String(it.rate)  : '',
     it.total != null ? String(it.total) : '',
-    it.currency ?? '',
+    sanitizeFormula(it.currency ?? ''),
     it.status,
   ]);
   return toCSV([INVOICE_HEADERS as readonly string[], ...rows]);
@@ -120,6 +120,10 @@ export function downloadInvoicesCSV(
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+function sanitizeFormula(v: string): string {
+  return /^[=+\-@|%]/.test(v) ? `\t${v}` : v;
+}
 
 function readBilling(ev: NormalizedEvent): BillableMeta | null {
   const candidate = ev.meta?.['billing'];

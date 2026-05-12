@@ -16,10 +16,10 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/index.lite.ts'],
+      include: ['src/index.lite.ts', 'src/types/**/*.ts', 'src/vite-env.d.ts'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*', 'src/test-setup.ts'],
-      rollupTypes: true,
       outDir: 'dist',
+      skipDiagnostics: true,
     }),
   ],
   build: {

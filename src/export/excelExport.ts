@@ -18,7 +18,14 @@ interface ExcelJSModule {
 }
 
 function sanitizeCell(v: string): string {
-  return /^[=+\-@]/.test(v) ? `\t${v}` : v;
+  return /^[=+\-@|%]/.test(v) ? `\t${v}` : v;
+}
+
+function sanitizeMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!meta) return {};
+  return Object.fromEntries(
+    Object.entries(meta).map(([k, v]) => [k, typeof v === 'string' ? sanitizeCell(v) : v]),
+  );
 }
 
 function eventsToRows(events: NormalizedEvent[]): Row[] {
@@ -29,7 +36,7 @@ function eventsToRows(events: NormalizedEvent[]): Row[] {
     AllDay:   ev.allDay ? 'Yes' : 'No',
     Category: sanitizeCell(ev.category || ''),
     Resource: sanitizeCell(ev.resource || ''),
-    ...ev.meta,
+    ...sanitizeMeta(ev.meta as Record<string, unknown>),
   }));
 }
 
