@@ -14,6 +14,19 @@ import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateA
 import { loadConfig, saveConfig } from '../core/configSchema';
 import type { CalendarRole, OwnerConfig } from '../WorksCalendar.types';
 
+export type OwnerCfgHandle = {
+  config: OwnerConfig;
+  isOwner: boolean;
+  configOpen: boolean;
+  setConfigOpen: Dispatch<SetStateAction<boolean>>;
+  configInitialTab: string | null;
+  smartViewEditId: string | null;
+  updateConfig: (updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => void;
+  closeConfig: () => void;
+  openGear: () => void;
+  openConfigToTab: (tabId: string | null, opts?: { smartViewEditId?: string | null | undefined }) => void;
+};
+
 export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMode = false }: {
   calendarId: string;
   role?: CalendarRole | undefined;

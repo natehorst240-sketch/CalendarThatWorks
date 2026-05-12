@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
-import type { RefObject } from 'react';
+import type { RefObject, ReactNode } from 'react';
 import HoverCard from './HoverCard';
 import EventForm from './EventForm';
 import AssetRequestForm from './AssetRequestForm';
@@ -14,110 +13,136 @@ import KeyboardHelpOverlay from './KeyboardHelpOverlay';
 import ScreenReaderAnnouncer from './ScreenReaderAnnouncer';
 import InlineEventEditor from './InlineEventEditor';
 import type { AnnouncerRef } from './ScreenReaderAnnouncer';
-
-type LooseValue = any;
+import type { NormalizedEvent } from '../types/events';
+import type { OwnerConfig, EmployeeRecord, EmployeeId } from '../WorksCalendar.types';
+import type {
+  FormEventDraft,
+  InlineEditTarget,
+  AvailabilityModalState,
+  ScheduleEditorModalState,
+} from '../hooks/useModalState';
+import type { MutationEventInput } from '../types/engineOps';
+import type { PendingAlert, RecurringPrompt } from '../hooks/useCalendarEngine';
+import type {
+  ScheduleTemplateV1,
+  ScheduleInstantiationRequestV1,
+} from '../api/v1/templates';
+import type { SchedulePreviewResult } from '../hooks/useScheduleTemplates';
+import type { PermissionCaps } from '../types/ui';
+import type { MaintenanceRule } from '../types/maintenance';
+import type { InlineEventPatch } from '../hooks/useEventMutations';
+import type { ConflictEvaluationResult } from '../core/conflictEngine';
+import type { ResourcePool } from '../core/pools/resourcePoolSchema';
+import type { FilterField } from '../filters/filterSchema';
+import type { SavedView } from '../hooks/useSavedViews';
 
 export interface CalendarModalsProps {
   // ── HoverCard ──
-  selectedEvent: LooseValue | null;
-  setSelectedEvent: (ev: LooseValue | null) => void;
-  renderHoverCard?: ((event: LooseValue, onClose: () => void) => LooseValue) | null | undefined;
+  selectedEvent: NormalizedEvent | null;
+  setSelectedEvent: (ev: NormalizedEvent | null) => void;
+  renderHoverCard?: ((event: NormalizedEvent, onClose: () => void) => ReactNode) | null | undefined;
   ownerConfig: Record<string, unknown>;
   notes: Record<string, unknown>;
   onNoteSave?: ((note: Record<string, unknown>) => void) | null | undefined;
   onNoteDelete?: ((noteId: string) => void) | null | undefined;
   canEditEvent: boolean;
-  handleEditFromHoverCard: (ev: LooseValue) => void;
-  resolveResourceLabel?: LooseValue;
+  handleEditFromHoverCard: (ev: NormalizedEvent) => void;
+  resolveResourceLabel?: ((resourceId: string) => string) | undefined;
 
   // ── EventForm ──
-  formEvent: LooseValue | null;
-  setFormEvent: (ev: LooseValue | null) => void;
+  formEvent: FormEventDraft | null;
+  setFormEvent: (ev: FormEventDraft | null) => void;
   canAddEvent: boolean;
   eventFormCats: string[];
-  eventOptions: { categories: LooseValue[]; addCategory: LooseValue };
-  handleEventSave: (ev: LooseValue) => void;
-  handleEventDelete: LooseValue | null;
-  onEventDelete?: LooseValue;
+  eventOptions: { categories: string[]; addCategory: (cat: string) => void };
+  handleEventSave: (ev: MutationEventInput) => void;
+  handleEventDelete: ((id: string) => void) | null;
+  onEventDelete?: ((eventId: string) => void) | undefined;
   canDeleteEvent: boolean;
-  permissions: LooseValue;
+  permissions: PermissionCaps;
   canManageOptions: boolean;
-  maintenanceRules?: LooseValue;
-  checkEventConflicts: LooseValue;
+  maintenanceRules?: MaintenanceRule[] | undefined;
+  checkEventConflicts: (proposed: MutationEventInput) => ConflictEvaluationResult | null;
   handleLiveConflicts: (ids: readonly string[] | null) => void;
-  resolvedAssetRequestCategories: LooseValue[];
-  rawPools: LooseValue[];
+  resolvedAssetRequestCategories: string[];
+  rawPools: ResourcePool[];
   hideEventTemplates: boolean;
-  eventResourceSuggestions?: LooseValue;
+  eventResourceSuggestions?: unknown;
 
   // ── AssetRequestForm ──
   assetRequestOpen: boolean;
   setAssetRequestOpen: (v: boolean) => void;
   canRequestAsset: boolean;
-  effectiveAssets: LooseValue;
+  effectiveAssets: Array<{ id: string; label: string; group?: string | undefined; meta?: Record<string, unknown> | undefined }> | undefined;
   currentDate: Date;
-  requirementTemplates?: LooseValue;
+  requirementTemplates?: unknown;
 
   // ── AvailabilityForm ──
-  availabilityState: LooseValue | null;
-  setAvailabilityState: (v: LooseValue | null) => void;
-  handleAvailabilitySave: LooseValue;
+  availabilityState: AvailabilityModalState | null;
+  setAvailabilityState: (v: AvailabilityModalState | null) => void;
+  handleAvailabilitySave: (ev: MutationEventInput) => void;
 
   // ── ScheduleEditorForm ──
-  scheduleEditorState: LooseValue | null;
-  setScheduleEditorState: (v: LooseValue | null) => void;
+  scheduleEditorState: ScheduleEditorModalState | null;
+  setScheduleEditorState: (v: ScheduleEditorModalState | null) => void;
   onCallCategory: string;
-  handleScheduleEditorSave: LooseValue;
+  handleScheduleEditorSave: (ev: MutationEventInput | MutationEventInput[]) => void;
 
   // ── ImportZone ──
   importOpen: boolean;
   setImportOpen: (v: boolean) => void;
-  handleImport: (imported: LooseValue, meta: LooseValue) => void;
+  handleImport: (imported: unknown, meta: unknown) => void;
 
   // ── ScheduleTemplateDialog ──
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
-  visibleScheduleTemplates: LooseValue[];
-  buildSchedulePreview: (request: LooseValue) => LooseValue;
-  handleScheduleInstantiate: (request: LooseValue) => void;
+  visibleScheduleTemplates: ScheduleTemplateV1[];
+  buildSchedulePreview: (request: ScheduleInstantiationRequestV1) => SchedulePreviewResult;
+  handleScheduleInstantiate: (request: ScheduleInstantiationRequestV1) => void;
 
   // ── RecurringScopeDialog / ValidationAlert ──
-  recurringPrompt: LooseValue | null;
-  pendingAlert: LooseValue | null;
-  setPendingAlert: (v: LooseValue | null) => void;
+  recurringPrompt: RecurringPrompt | null;
+  pendingAlert: PendingAlert | null;
+  setPendingAlert: (v: PendingAlert | null) => void;
 
   // ── ConfigPanel ──
   configOpen: boolean;
   calendarId: string;
   categories: string[];
   resources: string[];
-  schema: LooseValue[];
-  expandedEvents: LooseValue[];
+  schema: FilterField[];
+  expandedEvents: NormalizedEvent[];
   configInitialTab?: string | undefined;
   smartViewEditId?: string | undefined;
-  updateConfig: LooseValue;
+  updateConfig: (updater: OwnerConfig | ((prev: OwnerConfig) => OwnerConfig)) => void;
   closeConfig: () => void;
   showSetupLanding: boolean;
   handleReopenSetup: () => void;
   savedViews: {
-    views: LooseValue[];
-    updateView: LooseValue;
-    deleteView: LooseValue;
-    toggleStripVisibility: LooseValue;
-    saveView: LooseValue;
+    views: SavedView[];
+    updateView: (id: string, patch: Partial<SavedView>) => void;
+    deleteView: (id: string) => void;
+    toggleStripVisibility: (id: string) => void;
+    saveView: (name: string, filters: Record<string, unknown>, opts?: Record<string, unknown>) => SavedView;
   };
-  handleDeleteView: (id: LooseValue) => void;
+  handleDeleteView: (id: string) => void;
   isOwner: boolean;
-  openConfigToTab: (tab: string, opts?: LooseValue) => void;
-  sourceStore: { sources: LooseValue[]; addSource: LooseValue; removeSource: LooseValue; toggleSource: LooseValue; updateSource: LooseValue };
-  feedErrors: LooseValue;
+  openConfigToTab: (tab: string | null, opts?: { smartViewEditId?: string | null | undefined }) => void;
+  sourceStore: {
+    sources: Array<{ id: string; type: string; label: string; color: string; enabled: boolean; [key: string]: unknown }>;
+    addSource: (partial: Record<string, unknown>) => unknown;
+    removeSource: (id: string) => void;
+    toggleSource: (id: string) => void;
+    updateSource: (id: string, patch: Record<string, unknown>) => void;
+  };
+  feedErrors: ReadonlyArray<{ feed: Record<string, unknown>; err: unknown }>;
   isFetchingFeeds: boolean;
-  mergedScheduleTemplates: LooseValue[];
-  handleCreateScheduleTemplate?: LooseValue;
-  handleDeleteScheduleTemplate?: LooseValue;
+  mergedScheduleTemplates: ScheduleTemplateV1[];
+  handleCreateScheduleTemplate?: ((template: Record<string, unknown>) => Promise<void>) | undefined;
+  handleDeleteScheduleTemplate?: ((templateId: string) => Promise<void>) | undefined;
   templateError: string;
-  onEmployeeAdd?: LooseValue;
-  onEmployeeDelete?: LooseValue;
+  onEmployeeAdd?: ((member: EmployeeRecord) => void) | undefined;
+  onEmployeeDelete?: ((id: EmployeeId) => void) | undefined;
   canManagePeople: boolean;
 
   // ── KeyboardHelpOverlay ──
@@ -129,10 +154,10 @@ export interface CalendarModalsProps {
   announcerRef: RefObject<AnnouncerRef | null>;
 
   // ── InlineEventEditor ──
-  inlineEditTarget: LooseValue | null;
-  setInlineEditTarget: (v: LooseValue | null) => void;
-  handleInlineSave: LooseValue;
-  handleInlineDelete?: LooseValue;
+  inlineEditTarget: InlineEditTarget | null;
+  setInlineEditTarget: (v: InlineEditTarget | null) => void;
+  handleInlineSave: (patch: InlineEventPatch) => void;
+  handleInlineDelete?: (() => void) | undefined;
 }
 
 export default function CalendarModals({
@@ -207,8 +232,8 @@ export default function CalendarModals({
           initialStart={currentDate}
           initialAssetId={undefined}
           requirementTemplates={requirementTemplates}
-          onSubmit={(payload: LooseValue) => {
-            handleEventSave(payload);
+          onSubmit={(payload) => {
+            handleEventSave(payload as MutationEventInput);
             setAssetRequestOpen(false);
           }}
           onClose={() => setAssetRequestOpen(false)}
@@ -317,7 +342,7 @@ export default function CalendarModals({
       )}
 
       {/* ── Screen reader live region ── */}
-      <ScreenReaderAnnouncer ref={announcerRef as LooseValue} />
+      <ScreenReaderAnnouncer ref={announcerRef as RefObject<AnnouncerRef>} />
 
       {/* ── Inline event editor (edit mode) ── */}
       {inlineEditTarget && (

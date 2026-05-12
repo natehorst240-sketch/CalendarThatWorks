@@ -13,6 +13,7 @@ import EventStatusBadge from '../ui/EventStatusBadge';
 import styles from './WeekView.module.css';
 import type { CalendarViewEvent } from '../types/ui';
 import type { NormalizedEvent } from '../types/events';
+import type { OwnerConfig } from '../WorksCalendar.types';
 
 const SPAN_H            = 28;
 const SPAN_GAP          = 3;
@@ -28,7 +29,7 @@ interface WeekViewProps {
   onEventMove?: (ev: WeekViewEvent, newStart: Date, newEnd: Date) => void;
   onEventResize?: (ev: WeekViewEvent, newStart: Date, newEnd: Date) => void;
   onDateSelect?: (start: Date, end: Date) => void;
-  config?: { display?: { dayStart?: number; dayEnd?: number } };
+  config?: OwnerConfig | undefined;
   weekStartDay?: Day;
 }
 

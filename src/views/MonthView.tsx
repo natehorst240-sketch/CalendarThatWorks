@@ -10,6 +10,7 @@ import { useCalendarContext, resolveColor } from '../core/CalendarContext';
 import { displayEndDay, layoutSpans } from '../core/layout';
 import type { LayoutSpanItem } from '../core/layout';
 import type { NormalizedEvent } from '../types/events';
+import type { OwnerConfig } from '../WorksCalendar.types';
 import ApprovalDot from '../ui/ApprovalDot';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import { DayCellPillList } from '../ui/DayCellPillList';
@@ -33,12 +34,7 @@ type MonthViewProps = {
   onEventClick?: (event: NormalizedEvent) => void;
   onEventMove?: (event: NormalizedEvent, newStart: Date, newEnd: Date) => void;
   onDateSelect?: (start: Date, end: Date) => void;
-  config?: {
-    display?: {
-      showWeekNumbers?: boolean;
-      enlargeMonthRowOnHover?: boolean;
-    };
-  };
+  config?: OwnerConfig | undefined;
   weekStartDay?: Day;
   pillHoverTitle?: boolean;
 } & Record<string, unknown>;
@@ -301,8 +297,8 @@ export default function MonthView({
     return map;
   }, [singleDay]);
 
-  const showWeekNumbers = config?.display?.showWeekNumbers;
-  const enlargeMonthRowOnHover = !!config?.display?.enlargeMonthRowOnHover;
+  const showWeekNumbers = config?.display?.['showWeekNumbers'];
+  const enlargeMonthRowOnHover = !!config?.display?.['enlargeMonthRowOnHover'];
   const layoutMetrics = useMemo(() => {
     if (viewportWidth <= 480) {
       return { dayNumTrackH: 24, weekRowMinH: 80, weekRowHoverMinH: 120 };

@@ -1,3 +1,4 @@
+import type { ReactNode, MutableRefObject, RefObject, ComponentProps } from 'react';
 import { Plus, Upload, Download } from 'lucide-react';
 import { SubToolbar } from './SubToolbar';
 import { DayWindowPills } from './DayWindowPills';
@@ -15,84 +16,123 @@ import RequestQueueView from '../views/RequestQueueView';
 import { exportVisibleEvents } from '../core/calendarViewConfig';
 import { hasActiveFilters } from '../filters/filterState';
 import styles from '../WorksCalendar.module.css';
+import type { CalendarState } from '../hooks/useCalendar';
+import type { OwnerCfgHandle } from '../hooks/useOwnerConfig';
+import type { PermissionCaps, OnApprovalAction } from '../types/ui';
+import type { FilterField } from '../filters/filterSchema';
+import type { NormalizedEvent } from '../types/events';
+import type {
+  OwnerConfig,
+  EmployeeRecord,
+  EmployeeId,
+  EmployeeActionInput,
+  DispatchMissionCandidate,
+  DispatchEvaluator,
+} from '../WorksCalendar.types';
+import type { GroupLevel } from './GroupsPanel';
+import type { ResolvedLabels } from '../core/config/resolveLabels';
+import type { ScheduleTemplateV1 } from '../api/v1/templates';
+import type { GroupByInput } from '../hooks/useNormalizedConfig';
+import type { SortConfig } from '../types/grouping';
+import type {
+  AssetsZoomLevel,
+  LocationProvider,
+  LocationData,
+  CategoriesConfig,
+} from '../types/assets';
+import type { ResourcePool } from '../core/pools/resourcePoolSchema';
+import type { FormEventDraft } from '../hooks/useModalState';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+interface SharedViewProps {
+  currentDate: Date;
+  events: NormalizedEvent[];
+  onEventClick?: ((event: NormalizedEvent) => void) | undefined;
+  onEventMove?: ((event: NormalizedEvent, newStart: Date, newEnd: Date) => void) | undefined;
+  onEventResize?: ((event: NormalizedEvent, newStart: Date, newEnd: Date) => void) | undefined;
+  onEventGroupChange?: ((event: NormalizedEvent, patch: Record<string, unknown>) => void) | undefined;
+  onDateSelect?: ((start: Date, end: Date, resourceId?: string) => void) | undefined;
+  config?: OwnerConfig | undefined;
+  weekStartDay?: number | undefined;
+  pillHoverTitle?: boolean | undefined;
+  groupBy?: GroupByInput | undefined;
+  sort?: SortConfig[] | null | undefined;
+  showAllGroups?: boolean | undefined;
+}
 
 export interface CalendarViewGridProps {
-  cal: LooseValue;
-  ownerCfg: LooseValue;
-  perms: LooseValue;
-  schema: LooseValue;
-  filterBarSchema: LooseValue;
+  cal: CalendarState;
+  ownerCfg: OwnerCfgHandle;
+  perms: PermissionCaps;
+  schema: FilterField[];
+  filterBarSchema: FilterField[];
   // Sidebar
   sidebarOpen: boolean;
   setSidebarOpen: (v: boolean) => void;
-  sidebarGroupLevels: LooseValue;
+  sidebarGroupLevels: GroupLevel[];
   // Add buttons
   hasAddButton: boolean;
   hasScheduleTemplates: boolean;
   hasImport: boolean;
-  profileLabels: LooseValue;
-  visibleScheduleTemplates: LooseValue[];
-  onScheduleTemplateAnalytics: LooseValue;
+  profileLabels: ResolvedLabels;
+  visibleScheduleTemplates: ScheduleTemplateV1[];
+  onScheduleTemplateAnalytics: ((payload: Record<string, unknown>) => void) | undefined;
   // Events
-  visibleEvents: LooseValue[];
-  expandedEvents: LooseValue[];
-  approvalRequestEvents: LooseValue;
+  visibleEvents: NormalizedEvent[];
+  expandedEvents: NormalizedEvent[];
+  approvalRequestEvents: NormalizedEvent[];
   isEmpty: boolean;
-  emptyState: LooseValue;
-  sharedViewProps: LooseValue;
+  emptyState: ReactNode;
+  sharedViewProps: SharedViewProps;
   // Swipe / edit
-  swipeAreaRef: LooseValue;
-  lastClickCoordsRef: LooseValue;
+  swipeAreaRef: RefObject<HTMLDivElement | null>;
+  lastClickCoordsRef: MutableRefObject<{ x: number; y: number }>;
   editMode: boolean;
   // Groups
-  activeGroupBy: LooseValue;
-  activeSort: LooseValue;
-  activeShowAllGroups: LooseValue;
+  activeGroupBy: GroupByInput;
+  activeSort: SortConfig[] | null;
+  activeShowAllGroups: boolean;
   // People
-  configuredEmployees: LooseValue[];
+  configuredEmployees: EmployeeRecord[];
   // Assets / dispatch
-  effectiveAssets: LooseValue;
-  configuredBases: LooseValue;
-  configuredRegions: LooseValue;
+  effectiveAssets: Array<{ id: string; label: string; group?: string | undefined; meta?: Record<string, unknown> | undefined }> | undefined;
+  configuredBases: Record<string, unknown>[];
+  configuredRegions: Record<string, unknown>[];
   locationLabel: string;
   assetsLabel: string;
   selectedBaseIds: string[];
-  setSelectedBaseIds: LooseValue;
-  categoriesConfig: LooseValue;
-  rawPools: LooseValue;
-  strictAssetFiltering: LooseValue;
-  resolveResourceLabel: LooseValue;
-  activeAssetsZoom: LooseValue;
-  setActiveAssetsZoom: LooseValue;
-  activeAssetsCollapsed: LooseValue;
-  setActiveAssetsCollapsed: LooseValue;
-  effectiveLocationProvider: LooseValue;
-  renderAssetLocation: LooseValue;
-  renderPoolLocation: LooseValue;
-  renderAssetBadges: LooseValue;
-  dispatchMissions: LooseValue;
-  dispatchEvaluator: LooseValue;
-  onDispatchAssign: LooseValue;
-  onApprovalAction: LooseValue;
+  setSelectedBaseIds: (ids: string[]) => void;
+  categoriesConfig: CategoriesConfig | undefined;
+  rawPools: ResourcePool[];
+  strictAssetFiltering: boolean | undefined;
+  resolveResourceLabel: ((resourceId: string) => string) | undefined;
+  activeAssetsZoom: AssetsZoomLevel;
+  setActiveAssetsZoom: (zoom: AssetsZoomLevel) => void;
+  activeAssetsCollapsed: Set<string>;
+  setActiveAssetsCollapsed: (v: Set<string>) => void;
+  effectiveLocationProvider: LocationProvider | undefined;
+  renderAssetLocation: ((locationData: LocationData | null, asset: { id: string }) => ReactNode) | undefined;
+  renderPoolLocation: ((pool: { id: string; memberIds: readonly string[] }) => ReactNode) | undefined;
+  renderAssetBadges: ((asset: { id: string }) => ReactNode) | undefined;
+  dispatchMissions: DispatchMissionCandidate[] | undefined;
+  dispatchEvaluator: DispatchEvaluator | undefined;
+  onDispatchAssign: ((assetId: string, missionId: string | null, asOf: Date) => void) | undefined;
+  onApprovalAction: OnApprovalAction | undefined;
   canRequestAsset: boolean;
   // Handlers
-  setFormEvent: LooseValue;
-  setScheduleOpen: LooseValue;
-  setImportOpen: LooseValue;
-  setAssetRequestOpen: LooseValue;
-  setActiveGroupBy: LooseValue;
-  handleClearFilters: LooseValue;
-  handleScheduleDateSelect: LooseValue;
-  handlePoolDateSelect: LooseValue;
-  handleEmployeeAddInternal: LooseValue;
-  handleEmployeeDeleteInternal: LooseValue;
-  handleShiftStatusChange: LooseValue;
-  handleCoverageAssign: LooseValue;
-  handleEmployeeAction: LooseValue;
-  handleEventClick: LooseValue;
+  setFormEvent: (ev: FormEventDraft | null) => void;
+  setScheduleOpen: (v: boolean) => void;
+  setImportOpen: (v: boolean) => void;
+  setAssetRequestOpen: (v: boolean) => void;
+  setActiveGroupBy: (v: GroupByInput) => void;
+  handleClearFilters: () => void;
+  handleScheduleDateSelect: (start: Date, end: Date, resourceId: string) => void;
+  handlePoolDateSelect: (start: Date, end: Date, poolId: string) => void;
+  handleEmployeeAddInternal: (member: EmployeeRecord) => void;
+  handleEmployeeDeleteInternal: (id: EmployeeId) => void;
+  handleShiftStatusChange: (ev: NormalizedEvent, status: string | null | undefined) => void;
+  handleCoverageAssign: (ev: NormalizedEvent, coveringEmployeeId: string | number | null | undefined) => void;
+  handleEmployeeAction: (empId: EmployeeId, actionInput: string | EmployeeActionInput) => void;
+  handleEventClick: (ev: NormalizedEvent) => void;
 }
 
 export default function CalendarViewGrid({
@@ -122,7 +162,7 @@ export default function CalendarViewGrid({
             <SidebarToggleButton
               isOpen={sidebarOpen}
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              filterCount={hasActiveFilters(cal.filters, schema) ? 1 : 0}
+              filterCount={hasActiveFilters(cal.filters as Record<string, unknown>, schema) ? 1 : 0}
               groupCount={sidebarGroupLevels.length}
             />
             {hasAddButton && cal.view !== 'schedule' && (
@@ -188,26 +228,36 @@ export default function CalendarViewGrid({
           ) : (
             <>
               {cal.view === 'month'    && <MonthView    {...sharedViewProps} />}
-              {cal.view === 'week'     && <WeekView     {...sharedViewProps} />}
-              {cal.view === 'day'      && <DayView      {...sharedViewProps} />}
-              {cal.view === 'agenda'   && <AgendaView   currentDate={cal.currentDate} events={visibleEvents} onEventClick={handleEventClick} onEventGroupChange={sharedViewProps.onEventGroupChange} groupBy={activeGroupBy} sort={activeSort} showAllGroups={activeShowAllGroups} employees={configuredEmployees} />}
+              {/* Cast: SharedViewProps uses NormalizedEvent callbacks; WeekView/DayView use their own internal event aliases */}
+              {cal.view === 'week'     && <WeekView     {...(sharedViewProps as unknown as ComponentProps<typeof WeekView>)} />}
+              {cal.view === 'day'      && <DayView      {...(sharedViewProps as unknown as ComponentProps<typeof DayView>)} />}
+              {cal.view === 'agenda'   && <AgendaView
+                currentDate={cal.currentDate}
+                events={visibleEvents}
+                onEventClick={handleEventClick as unknown as (ev: unknown) => void}
+                onEventGroupChange={sharedViewProps.onEventGroupChange as unknown as ComponentProps<typeof AgendaView>['onEventGroupChange']}
+                groupBy={activeGroupBy}
+                sort={activeSort}
+                showAllGroups={activeShowAllGroups}
+                employees={configuredEmployees as unknown as ComponentProps<typeof AgendaView>['employees']}
+              />}
               {cal.view === 'schedule' && (
                 <ScheduleView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  onEventGroupChange={sharedViewProps.onEventGroupChange}
-                  onDateSelect={handleScheduleDateSelect}
-                  employees={configuredEmployees}
+                  onEventClick={handleEventClick as unknown as (ev: unknown) => void}
+                  onEventGroupChange={sharedViewProps.onEventGroupChange as unknown as ComponentProps<typeof ScheduleView>['onEventGroupChange']}
+                  onDateSelect={handleScheduleDateSelect as unknown as ComponentProps<typeof ScheduleView>['onDateSelect']}
+                  employees={configuredEmployees as unknown as ComponentProps<typeof ScheduleView>['employees']}
                   onEmployeeAdd={perms.canManagePeople ? handleEmployeeAddInternal : undefined}
-                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal : undefined}
-                  onShiftStatusChange={handleShiftStatusChange}
-                  onCoverageAssign={handleCoverageAssign}
-                  onEmployeeAction={handleEmployeeAction}
+                  onEmployeeDelete={perms.canManagePeople ? handleEmployeeDeleteInternal as unknown as ComponentProps<typeof ScheduleView>['onEmployeeDelete'] : undefined}
+                  onShiftStatusChange={handleShiftStatusChange as unknown as ComponentProps<typeof ScheduleView>['onShiftStatusChange']}
+                  onCoverageAssign={handleCoverageAssign as unknown as ComponentProps<typeof ScheduleView>['onCoverageAssign']}
+                  onEmployeeAction={handleEmployeeAction as unknown as ComponentProps<typeof ScheduleView>['onEmployeeAction']}
                   groupBy={activeGroupBy}
                   sort={activeSort}
-                  roles={ownerCfg.config?.['team']?.roles ?? []}
-                  bases={ownerCfg.config?.['team']?.bases ?? []}
+                  roles={(ownerCfg.config.team?.roles as unknown as string[] | undefined) ?? []}
+                  bases={(ownerCfg.config.team?.bases as unknown as Array<{ id: string; name: string }> | undefined) ?? []}
                   dayWindow={cal.dayWindow}
                 />
               )}
@@ -215,11 +265,11 @@ export default function CalendarViewGrid({
                 <BaseGanttView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  employees={configuredEmployees}
-                  assets={effectiveAssets ?? []}
-                  bases={configuredBases}
-                  regions={configuredRegions}
+                  onEventClick={handleEventClick as unknown as (ev: unknown) => void}
+                  employees={configuredEmployees as unknown as ComponentProps<typeof BaseGanttView>['employees']}
+                  assets={(effectiveAssets ?? []) as unknown as ComponentProps<typeof BaseGanttView>['assets']}
+                  bases={configuredBases as unknown as ComponentProps<typeof BaseGanttView>['bases']}
+                  regions={configuredRegions as unknown as ComponentProps<typeof BaseGanttView>['regions']}
                   locationLabel={locationLabel}
                   assetsLabel={assetsLabel}
                   selectedBaseIds={selectedBaseIds}
@@ -231,12 +281,12 @@ export default function CalendarViewGrid({
                 <AssetsView
                   currentDate={cal.currentDate}
                   events={visibleEvents}
-                  onEventClick={handleEventClick}
-                  onDateSelect={handleScheduleDateSelect}
-                  onPoolDateSelect={handlePoolDateSelect}
+                  onEventClick={handleEventClick as unknown as (ev: unknown) => void}
+                  onDateSelect={handleScheduleDateSelect as unknown as ComponentProps<typeof AssetsView>['onDateSelect']}
+                  onPoolDateSelect={handlePoolDateSelect as unknown as ComponentProps<typeof AssetsView>['onPoolDateSelect']}
                   groupBy={activeGroupBy}
                   onGroupByChange={setActiveGroupBy}
-                  categoriesConfig={categoriesConfig ?? ownerCfg.config?.['categoriesConfig']}
+                  categoriesConfig={categoriesConfig ?? (ownerCfg.config.categoriesConfig as CategoriesConfig | undefined)}
                   assets={effectiveAssets}
                   pools={rawPools ?? []}
                   strictAssetFiltering={strictAssetFiltering}
@@ -251,21 +301,21 @@ export default function CalendarViewGrid({
                   renderAssetBadges={renderAssetBadges}
                   onEditAssets={ownerCfg.isOwner ? () => ownerCfg.openConfigToTab('assets') : undefined}
                   onRequestAsset={canRequestAsset ? () => setAssetRequestOpen(true) : undefined}
-                  approvalsConfig={ownerCfg.config?.['approvals']}
-                  onApprovalAction={onApprovalAction}
+                  approvalsConfig={ownerCfg.config.approvals}
+                  onApprovalAction={onApprovalAction as unknown as ComponentProps<typeof AssetsView>['onApprovalAction']}
                   label={assetsLabel}
                   dayWindow={cal.dayWindow}
                 />
               )}
               {cal.view === 'dispatch' && (
                 <DispatchView
-                  events={expandedEvents}
-                  employees={configuredEmployees}
-                  assets={effectiveAssets ?? []}
-                  bases={configuredBases}
+                  events={expandedEvents as unknown as ComponentProps<typeof DispatchView>['events']}
+                  employees={configuredEmployees as unknown as ComponentProps<typeof DispatchView>['employees']}
+                  assets={(effectiveAssets ?? []) as unknown as ComponentProps<typeof DispatchView>['assets']}
+                  bases={configuredBases as unknown as ComponentProps<typeof DispatchView>['bases']}
                   locationLabel={locationLabel}
                   label={assetsLabel}
-                  onEventClick={handleEventClick}
+                  onEventClick={handleEventClick as unknown as ComponentProps<typeof DispatchView>['onEventClick']}
                   missions={dispatchMissions}
                   evaluateForMission={dispatchEvaluator}
                   onAssign={onDispatchAssign}
@@ -274,10 +324,10 @@ export default function CalendarViewGrid({
               )}
               {cal.view === 'requests' && (
                 <RequestQueueView
-                  events={approvalRequestEvents as never}
-                  approvalsConfig={ownerCfg.config?.['approvals'] as Record<string, unknown> | undefined}
-                  onApprovalAction={onApprovalAction}
-                  onEventClick={handleEventClick}
+                  events={approvalRequestEvents as unknown as ComponentProps<typeof RequestQueueView>['events']}
+                  approvalsConfig={ownerCfg.config.approvals}
+                  onApprovalAction={onApprovalAction as unknown as ComponentProps<typeof RequestQueueView>['onApprovalAction']}
+                  onEventClick={handleEventClick as unknown as ComponentProps<typeof RequestQueueView>['onEventClick']}
                 />
               )}
             </>
