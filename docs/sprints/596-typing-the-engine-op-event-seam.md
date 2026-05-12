@@ -99,14 +99,25 @@ the engine-op/result/event types and adds:
   `WorksCalendarEvent` — it uses `null` where the public type uses `undefined`).
   **`LooseValue` removed from `useEventMutations.ts`.**
 
-### Sprint 3c — `useScheduleMutations.ts`
+### Sprint 3c — `useScheduleMutations.ts` ✅
 
-- Replace the remaining `LooseValue` in `useScheduleMutations.ts` with
-  `MutationEventInput`, `NormalizedEvent`, `EmployeeRecord`, `EmployeeId`,
-  `EmployeeActionInput`, `OwnerConfig`, etc.
-- Where the public/engine types are genuinely too strict for what callers pass,
-  loosen them (`?: T | undefined`) rather than scattering `as`.
-- **Remove `type LooseValue = any` + the `eslint-disable` from this file.**
+- `useScheduleMutations` types its event params with `NormalizedEvent` (the
+  shift-status / coverage-assign handlers) and `MutationEventInput` (the
+  availability / schedule-editor save handlers), `expandedEvents` with
+  `NormalizedEvent[]`, `configuredEmployees` with `EmployeeRecord[]`, the
+  callbacks with `EmployeeId` / `EmployeeActionInput` / `AvailabilitySavePayload`
+  / `WorksCalendarEvent`, `ownerConfig` with `OwnerConfig`, and the modal-state
+  setters with `Record<string, unknown> | null`.
+- `ShiftEventLike` / `OverlapEventLike` (the "loose event" types in
+  `core/scheduleMutations.ts` / `core/scheduleOverlap.ts`) get `_eventId?: string
+  | undefined` so a `NormalizedEvent` assigns to them under
+  `exactOptionalPropertyTypes` — a small loosening of "...Like" types that are
+  meant to accept normalised events.
+- `Date > Date` comparisons replaced with `.getTime()`; a couple of boundary
+  casts (the `actionPayload.sourceShift` bag, the saved payload → host
+  availability bag, `meta` index reads).
+- **`LooseValue` + the `eslint-disable` removed from `useScheduleMutations.ts`.**
+  All three mutation hooks are now `LooseValue`-free.
 
 > `EngineOpInput` keeps `event` / `patch` as `unknown` (not tightened toward
 > `EngineOperation`) — that's not required by the "done when" and the loose op

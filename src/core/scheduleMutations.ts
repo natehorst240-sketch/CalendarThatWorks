@@ -4,7 +4,8 @@ type MutableMeta = Record<string, unknown>;
 
 type ShiftEventLike = {
   id?: string;
-  _eventId?: string;
+  // `| undefined` so NormalizedEvent (whose `_eventId?: string | undefined`) assigns under exactOptionalPropertyTypes.
+  _eventId?: string | undefined;
   title?: string;
   start?: unknown;
   end?: unknown;

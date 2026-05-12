@@ -33,7 +33,8 @@ export function intervalsOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: D
 
 type OverlapEventLike = {
   id?: string;
-  _eventId?: string;
+  // `| undefined` so NormalizedEvent (whose `_eventId?: string | undefined`) assigns under exactOptionalPropertyTypes.
+  _eventId?: string | undefined;
   resource?: unknown;
   employeeId?: unknown;
   start?: unknown;

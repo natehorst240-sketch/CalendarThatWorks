@@ -10,24 +10,29 @@ import {
 import { detectShiftConflicts, buildOpenShiftEvent } from '../core/scheduleOverlap';
 import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
 import { createId } from '../core/createId';
-import type { EngineOpInput, EngineOpRunner, EmitEventSave, GetSavedEventPayload } from '../types/engineOps';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseValue = any;
+import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
+import type {
+  EmployeeRecord,
+  EmployeeId,
+  EmployeeActionInput,
+  AvailabilitySavePayload,
+  OwnerConfig,
+} from '../WorksCalendar.types';
+import type { EngineOpInput, EngineOpRunner, EmitEventSave, GetSavedEventPayload, MutationEventInput } from '../types/engineOps';
 
 type UseScheduleMutationsParams = {
   applyEngineOp: EngineOpRunner;
   emitEventSave: EmitEventSave;
   getSavedEventPayload: GetSavedEventPayload;
-  expandedEvents: LooseValue[];
-  configuredEmployees: LooseValue[];
+  expandedEvents: NormalizedEvent[];
+  configuredEmployees: EmployeeRecord[];
   onEventDelete?: ((eventId: string) => void) | undefined;
-  onAvailabilitySave?: ((payload: LooseValue) => void) | undefined;
-  onScheduleSave?: ((payload: LooseValue) => void) | undefined;
-  onEmployeeAction?: ((employeeId: LooseValue, action: LooseValue) => void) | undefined;
-  ownerConfig: LooseValue;
-  setAvailabilityState: (state: LooseValue) => void;
-  setScheduleEditorState: (state: LooseValue) => void;
+  onAvailabilitySave?: ((payload: AvailabilitySavePayload) => void) | undefined;
+  onScheduleSave?: ((payload: WorksCalendarEvent) => void) | undefined;
+  onEmployeeAction?: ((employeeId: EmployeeId, action: EmployeeActionInput) => void) | undefined;
+  ownerConfig: OwnerConfig;
+  setAvailabilityState: (state: Record<string, unknown> | null) => void;
+  setScheduleEditorState: (state: Record<string, unknown> | null) => void;
 };
 
 export function useScheduleMutations({
@@ -44,7 +49,7 @@ export function useScheduleMutations({
   setAvailabilityState,
   setScheduleEditorState,
 }: UseScheduleMutationsParams) {
-  const handleShiftStatusChange = useCallback((ev: LooseValue, status: LooseValue) => {
+  const handleShiftStatusChange = useCallback((ev: NormalizedEvent, status: string | null | undefined) => {
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const linkedOpenShifts = findLinkedOpenShifts(expandedEvents, ev);
@@ -72,7 +77,7 @@ export function useScheduleMutations({
     }
   }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete]);
 
-  const handleCoverageAssign = useCallback((ev: LooseValue, coveringEmployeeId: LooseValue) => {
+  const handleCoverageAssign = useCallback((ev: NormalizedEvent, coveringEmployeeId: string | number | null | undefined) => {
     const eventId = resolveEventId(ev);
     if (!eventId) return;
     const normalizedCoveringEmployeeId = String(coveringEmployeeId ?? '');
@@ -82,7 +87,7 @@ export function useScheduleMutations({
     const mirroredCoverage = findLinkedMirroredCoverage(expandedEvents, ev);
 
     if (!normalizedCoveringEmployeeId) {
-      const clearedMeta = { ...(ev.meta ?? {}), coveredBy: null as LooseValue };
+      const clearedMeta = { ...ev.meta, coveredBy: null };
       applyEngineOp(
         { type: 'update', id: eventId, patch: { meta: clearedMeta }, source: 'api' },
         () => emitEventSave(eventId, ev, { meta: clearedMeta }),
@@ -93,7 +98,7 @@ export function useScheduleMutations({
         if (openId) {
           const openMeta = {
             ...(primaryOpenShift.meta ?? {}),
-            coveredBy: null as LooseValue,
+            coveredBy: null,
             status: 'open',
           };
           applyEngineOp(
@@ -150,15 +155,15 @@ export function useScheduleMutations({
     // 3. Create or update the mirrored on-call event on the covering employee's row.
     //    Clamp to the PTO request window (meta.requestStart/End) when available so
     //    the coverage bar only spans the days actually needing coverage.
-    const onCallCat = ownerConfig?.['onCallCategory'] ?? 'on-call';
+    const onCallCat = ownerConfig.onCallCategory ?? 'on-call';
     const shiftStart = ev.start instanceof Date ? ev.start : new Date(ev.start);
     const shiftEnd   = ev.end   instanceof Date ? ev.end   : new Date(ev.end);
-    const requestStart = ev.meta?.requestStart ? new Date(ev.meta.requestStart) : shiftStart;
-    const requestEnd   = ev.meta?.requestEnd   ? new Date(ev.meta.requestEnd)   : shiftEnd;
-    const mirrorStart = requestStart > shiftStart ? requestStart : shiftStart;
-    const mirrorEnd   = requestEnd   < shiftEnd   ? requestEnd   : shiftEnd;
+    const requestStart = ev.meta['requestStart'] ? new Date(ev.meta['requestStart'] as string | number | Date) : shiftStart;
+    const requestEnd   = ev.meta['requestEnd']   ? new Date(ev.meta['requestEnd']   as string | number | Date) : shiftEnd;
+    const mirrorStart = requestStart.getTime() > shiftStart.getTime() ? requestStart : shiftStart;
+    const mirrorEnd   = requestEnd.getTime()   < shiftEnd.getTime()   ? requestEnd   : shiftEnd;
     const mirroredPatch = {
-      title:    `Covering: ${ev.title ?? 'Shift'}`,
+      title:    `Covering: ${ev.title}`,
       start:    mirrorStart,
       end:      mirrorEnd,
       category: onCallCat,
@@ -166,7 +171,7 @@ export function useScheduleMutations({
       meta: {
         kind:              SCHEDULE_KINDS.COVERING,
         sourceShiftId:     eventId,
-        coveredEmployeeId: String(ev.resource ?? ev.employeeId ?? ''),
+        coveredEmployeeId: String((ev.resource ?? (ev as { employeeId?: unknown }).employeeId) ?? ''),
       },
     };
     const existingMirror = mirroredCoverage[0];
@@ -187,54 +192,58 @@ export function useScheduleMutations({
     }
   }, [applyEngineOp, emitEventSave, expandedEvents, onEventDelete, ownerConfig]);
 
-  const handleEmployeeAction = useCallback((empId: LooseValue, actionInput: LooseValue) => {
-    const emp = configuredEmployees.find((e: LooseValue) => String(e.id) === String(empId)) ?? { id: empId, name: empId };
-    const actionPayload = typeof actionInput === 'string'
+  const handleEmployeeAction = useCallback((empId: EmployeeId, actionInput: string | EmployeeActionInput) => {
+    const emp = configuredEmployees.find(e => String(e.id) === String(empId)) ?? { id: empId, name: String(empId) };
+    const actionPayload: EmployeeActionInput = typeof actionInput === 'string'
       ? { type: actionInput }
       : (actionInput ?? {});
     const action = actionPayload.type;
     if (!action) return;
+    const sourceShift = actionPayload['sourceShift'] as { start?: unknown; end?: unknown; allDay?: unknown; meta?: Record<string, unknown> } | null | undefined;
     const AVAILABILITY_ACTIONS = new Set(['pto', 'unavailable', 'availability']);
     if (AVAILABILITY_ACTIONS.has(action)) {
       const initialEvent = action === 'availability'
         ? expandedEvents
-          .filter((ev: LooseValue) => {
-            const evKind = normalizeScheduleKind(ev?.kind ?? ev?.meta?.kind);
-            const evCat  = String(ev?.category ?? '').toLowerCase();
-            const resourceId = String(ev?.resource ?? ev?.resourceId ?? ev?.employeeId ?? '');
+          .filter((ev) => {
+            const e: { kind?: unknown; category?: unknown; resource?: unknown; resourceId?: unknown; employeeId?: unknown; meta?: Record<string, unknown> } = ev;
+            const evKind = normalizeScheduleKind(e.kind ?? e.meta?.['kind']);
+            const evCat  = String(e.category ?? '').toLowerCase();
+            const resourceId = String((e.resource ?? e.resourceId ?? e.employeeId) ?? '');
             return resourceId === String(empId) && (evKind === 'availability' || evCat === 'availability');
           })
-          .sort((a: LooseValue, b: LooseValue) => {
-            const aStart = a?.start ? new Date(a.start).getTime() : 0;
-            const bStart = b?.start ? new Date(b.start).getTime() : 0;
+          .sort((a, b) => {
+            const aStart = a.start ? a.start.getTime() : 0;
+            const bStart = b.start ? b.start.getTime() : 0;
             return bStart - aStart;
           })
-          .map((ev: LooseValue) => ({ ...ev, id: ev?._eventId ?? ev?.id }))[0] ?? null
-        : actionPayload.sourceShift
+          .map((ev) => ({ ...ev, id: ev._eventId ?? ev.id }))[0] ?? null
+        : sourceShift
           ? {
             title: action === 'pto' ? 'PTO' : 'Unavailable',
-            start: actionPayload.sourceShift.start,
-            end: actionPayload.sourceShift.end,
-            allDay: actionPayload.sourceShift.allDay ?? true,
-            meta: actionPayload.sourceShift.meta ?? {},
+            start: sourceShift.start,
+            end: sourceShift.end,
+            allDay: sourceShift.allDay ?? true,
+            meta: sourceShift.meta ?? {},
           }
           : null;
-      const initialStart = actionPayload.sourceShift?.start
-        ? new Date(actionPayload.sourceShift.start)
+      const initialStart = sourceShift?.start
+        ? new Date(sourceShift.start as string | number | Date)
         : new Date();
       setAvailabilityState({ emp, kind: action, start: initialStart, initialEvent });
     } else if (action === 'schedule') {
       setScheduleEditorState({ emp, start: new Date() });
     }
-    onEmployeeAction?.(empId, actionInput);
+    // The host callback contractually wants an object; passing the raw input through
+    // preserves legacy behaviour when a plain action string was supplied.
+    onEmployeeAction?.(empId, actionInput as EmployeeActionInput);
   }, [configuredEmployees, expandedEvents, onEmployeeAction, setAvailabilityState, setScheduleEditorState]);
 
   /** Save an availability/PTO event through the engine then notify the host.
    *  Also runs overlap detection: any uncovered shift overlapping the PTO/
    *  unavailable window automatically gets an open-shift event created. */
-  const handleAvailabilitySave = useCallback((availEv: LooseValue) => {
+  const handleAvailabilitySave = useCallback((availEv: MutationEventInput) => {
     const existingAvailability = expandedEvents.find(
-      (ev: LooseValue) => String(ev._eventId ?? ev.id) === String(availEv.id),
+      ev => String(ev._eventId ?? ev.id) === String(availEv.id),
     );
     const availabilityId = existingAvailability
       ? String(existingAvailability._eventId ?? existingAvailability.id)
@@ -260,16 +269,17 @@ export function useScheduleMutations({
 
     applyEngineOp(saveOp, () => {
       const savedPayload = getSavedEventPayload(availabilityId, availEv, { id: availabilityId });
-      if (savedPayload) onAvailabilitySave?.(savedPayload);
+      // The saved engine payload is forwarded to the host's looser availability-save bag.
+      if (savedPayload) onAvailabilitySave?.(savedPayload as unknown as AvailabilitySavePayload);
     });
 
-    const isLeave = availEv.kind === 'pto' || availEv.kind === 'unavailable';
-    if (isLeave) {
-      const onCallCat = ownerConfig?.['onCallCategory'] ?? 'on-call';
+    if (availEv.kind === 'pto' || availEv.kind === 'unavailable') {
+      const leaveKind = availEv.kind;
+      const onCallCat = ownerConfig.onCallCategory ?? 'on-call';
       const { conflictingEvents } = detectShiftConflicts({
-        employeeId:    String(availEv.employeeId ?? availEv.resource ?? ''),
-        requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start),
-        requestEnd:    availEv.end   instanceof Date ? availEv.end   : new Date(availEv.end),
+        employeeId:    String((availEv.employeeId ?? availEv.resource) ?? ''),
+        requestStart:  availEv.start instanceof Date ? availEv.start : new Date(availEv.start ?? ''),
+        requestEnd:    availEv.end   instanceof Date ? availEv.end   : new Date(availEv.end ?? ''),
         allEvents:     expandedEvents,
         onCallCategory: onCallCat,
       });
@@ -283,10 +293,10 @@ export function useScheduleMutations({
           applyEngineOp({ type: 'delete', id: duplicateId, source: 'api' }, () => onEventDelete?.(duplicateId));
         });
 
-        const openShiftPatch = buildOpenShiftPatch(existingOpenShifts[0], shiftEv, availEv.kind);
+        const openShiftPatch = buildOpenShiftPatch(existingOpenShifts[0], shiftEv, leaveKind);
         const openShift = existingOpenShifts[0]
           ? { ...existingOpenShifts[0], ...openShiftPatch }
-          : buildOpenShiftEvent({ shiftEvent: shiftEv, reason: availEv.kind });
+          : buildOpenShiftEvent({ shiftEvent: shiftEv, reason: leaveKind });
 
         if (existingOpenShifts[0]) {
           const openId = resolveEventId(existingOpenShifts[0]);
@@ -305,9 +315,9 @@ export function useScheduleMutations({
 
         const updatedMeta = {
           ...(shiftEv.meta ?? {}),
-          shiftStatus:  availEv.kind,
+          shiftStatus:  leaveKind,
           openShiftId:  openShift['id'],
-          coveredBy:    null as LooseValue,
+          coveredBy:    null,
           requestStart: availEv.start instanceof Date ? availEv.start.toISOString() : String(availEv.start),
           requestEnd:   availEv.end   instanceof Date ? availEv.end.toISOString()   : String(availEv.end),
         };
@@ -321,9 +331,9 @@ export function useScheduleMutations({
     setAvailabilityState(null);
   }, [applyEngineOp, emitEventSave, getSavedEventPayload, onAvailabilitySave, onEventDelete, expandedEvents, ownerConfig, setAvailabilityState]);
 
-  const handleScheduleEditorSave = useCallback((shiftEvOrArr: LooseValue) => {
+  const handleScheduleEditorSave = useCallback((shiftEvOrArr: MutationEventInput | MutationEventInput[]) => {
     const events = Array.isArray(shiftEvOrArr) ? shiftEvOrArr : [shiftEvOrArr];
-    events.forEach((ev: LooseValue, index: number) => {
+    events.forEach((ev, index) => {
       const scheduleId = String(ev.id ?? createId(`shift-${index}`));
       applyEngineOp(
         { type: 'create', event: { ...ev, id: scheduleId }, source: 'api' },
