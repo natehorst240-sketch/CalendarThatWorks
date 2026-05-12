@@ -39,6 +39,17 @@ export function useOwnerConfig({ calendarId, role = 'admin', onConfigSave, devMo
   const [smartViewEditId, setSmartViewEditId] = useState<string | null>(null);
   const pendingNotifyRef = useRef(false);
 
+  // Reload from storage when the host points us at a different `calendarId`
+  // (it's the persistence namespace key). The ref skips the redundant reload
+  // on mount, since `useState` already seeded from `calendarId`.
+  const calendarIdRef = useRef(calendarId);
+  useEffect(() => {
+    if (calendarIdRef.current === calendarId) return;
+    calendarIdRef.current = calendarId;
+    pendingNotifyRef.current = false; // any pending notify was for the previous calendar
+    setConfig(loadConfig(calendarId));
+  }, [calendarId]);
+
   // Host app decides who can edit config — no client-side password.
   const isOwner = role === 'admin' || devMode;
 

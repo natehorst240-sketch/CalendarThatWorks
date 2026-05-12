@@ -6,12 +6,35 @@ import { useScheduleTemplates } from './useScheduleTemplates';
 import { useOwnerConfig } from './useOwnerConfig';
 import { useSourceStore } from './useSourceStore';
 import { usePermissions } from './usePermissions';
+import { isTypingTarget, hasOpenModal } from './useKeyboardShortcuts';
 import type { UseCalendarEngineResult } from './useCalendarEngine';
 import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import type { WorksCalendarProps, CalendarRole, EmployeeRecord } from '../WorksCalendar.types';
 import type { UseModalStateReturn } from './useModalState';
 import type { ScheduleTemplateV1 } from '../api/v1/templates';
+
+/**
+ * Handle a global Cmd/Ctrl+Z (undo) / Cmd/Ctrl+Shift+Z / Ctrl+Y (redo)
+ * keydown. Skips when the event was already handled, when no Cmd/Ctrl is held,
+ * when focus is in a text field (let the browser do text-undo), or when a
+ * modal is open (it owns the keyboard). Exported for unit testing.
+ */
+export function handleUndoRedoShortcut(
+  e: KeyboardEvent,
+  undoManager: { undo(): boolean; redo(): boolean },
+  announce?: ((message: string) => void) | undefined,
+): void {
+  if (e.defaultPrevented || !(e.metaKey || e.ctrlKey)) return;
+  if (isTypingTarget(e.target) || hasOpenModal()) return;
+  if (e.key === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    if (undoManager.undo()) announce?.('Undo.');
+  } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+    e.preventDefault();
+    if (undoManager.redo()) announce?.('Redo.');
+  }
+}
 
 export interface UseCalendarMutationsInput {
   // Templates
@@ -96,21 +119,8 @@ export function useCalendarMutations({
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const onKeyDown = (e: KeyboardEvent) => {
-      const meta = e.metaKey || e.ctrlKey;
-      if (!meta) return;
-      if (e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        const did = undoManager.undo();
-        if (did) announcerRef.current?.announce('Undo.');
-        return;
-      }
-      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
-        e.preventDefault();
-        const did = undoManager.redo();
-        if (did) announcerRef.current?.announce('Redo.');
-      }
-    };
+    const onKeyDown = (e: KeyboardEvent) =>
+      handleUndoRedoShortcut(e, undoManager, (msg) => announcerRef.current?.announce(msg));
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [undoManager, announcerRef]);
