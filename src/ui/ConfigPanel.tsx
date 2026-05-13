@@ -1040,7 +1040,7 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
     const nextId = Math.max(0, ...teamMembers.map((member) => Number(member.id) || 0)) + 1;
     const newMember: TeamMemberDraft = { id: nextId, name: trimmed, color: '#8b5cf6', avatar: null };
     updateMembers([...teamMembers, newMember]);
-    onEmployeeAdd?.(newMember);
+    onEmployeeAdd?.({ id: nextId, name: trimmed, color: '#8b5cf6', avatar: null });
     setPendingName('');
     setIsAdding(false);
   };
@@ -1439,7 +1439,7 @@ function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps)
               {String(template['visibility'] ?? 'org')} · {(Array.isArray(template['entries']) ? template['entries'].length : 0)} entr{((Array.isArray(template['entries']) ? template['entries'].length : 0)) === 1 ? 'y' : 'ies'}
             </div>
           </div>
-          <button className={styles['removeBtn']} onClick={() => onDelete?.(template.id)} disabled={!onDelete}>
+          <button className={styles['removeBtn']} onClick={() => { if (template.id !== undefined) onDelete?.(template.id); }} disabled={!onDelete || template.id === undefined}>
             <Trash2 size={13} />
           </button>
         </div>
