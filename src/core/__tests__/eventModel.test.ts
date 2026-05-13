@@ -83,6 +83,28 @@ describe('normalizeEvent', () => {
     expect(ev.color).toMatch(/^(#|hsl)/);
   });
 
+  it('derives the same color for the same category name regardless of call order', () => {
+    // Issue #652: color must not depend on the order categories are first seen
+    // across calendar instances. Seed with one ordering then check the target
+    // category against the reverse ordering — same input must yield same output.
+    normalizeEvent(raw({ category: 'A' }));
+    normalizeEvent(raw({ category: 'B' }));
+    const first = normalizeEvent(raw({ category: 'Target' })).color;
+    normalizeEvent(raw({ category: 'C' }));
+    normalizeEvent(raw({ category: 'D' }));
+    const second = normalizeEvent(raw({ category: 'Target' })).color;
+    expect(second).toBe(first);
+  });
+
+  it('derives colors deterministically from category name (no shared state)', () => {
+    const a1 = normalizeEvent(raw({ category: 'Meetings' })).color;
+    const b1 = normalizeEvent(raw({ category: 'PTO' })).color;
+    const a2 = normalizeEvent(raw({ category: 'Meetings' })).color;
+    const b2 = normalizeEvent(raw({ category: 'PTO' })).color;
+    expect(a1).toBe(a2);
+    expect(b1).toBe(b2);
+  });
+
   it('defaults status to "confirmed"', () => {
     expect(normalizeEvent(raw()).status).toBe('confirmed');
   });

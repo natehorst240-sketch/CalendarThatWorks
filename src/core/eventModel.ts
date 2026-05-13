@@ -29,21 +29,22 @@ const CATEGORY_COLORS = [
   '#3b82f6','#f59e0b','#ef4444','#10b981',
   '#8b5cf6','#ec4899','#06b6d4','#f97316',
 ];
-const _catColorMap = new Map<string, string>();
-let _catColorIdx = 0;
+
+// FNV-1a 32-bit. Deterministic across instances and reloads — that's the whole
+// point of doing it this way instead of an insertion-order map.
+function hashCategory(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function categoryColor(cat: string | null | undefined): string {
   if (!cat) return CATEGORY_COLORS[0]!;
-  if (!_catColorMap.has(cat)) {
-    const idx = _catColorIdx++;
-    // Use the curated palette for the first 8 categories; beyond that derive
-    // colours via the golden-angle hue distribution so they stay visually
-    // distinct without ever repeating.
-    const color = idx < CATEGORY_COLORS.length
-      ? CATEGORY_COLORS[idx]!
-      : `hsl(${Math.round((idx * 137.508) % 360)}, 62%, 45%)`;
-    _catColorMap.set(cat, color);
-  }
-  return _catColorMap.get(cat)!;
+  const h = hashCategory(cat);
+  return CATEGORY_COLORS[h % CATEGORY_COLORS.length]!;
 }
 
 /**
