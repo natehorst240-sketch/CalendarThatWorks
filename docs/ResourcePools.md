@@ -569,6 +569,45 @@ const { headline, clauseLabels } = summarizePool(pool);
 // → "Query pool · refrigerated · within 50 mi of event"
 ```
 
+### `validateClausePaths`
+
+Soft pre-save check that flags query paths which resolve on zero
+resources in the live registry. The save is never blocked — paths
+may be intentionally forward-looking — but surfacing unknown paths
+early prevents silent typo-driven pool misses.
+
+```ts
+import { validateClausePaths } from 'works-calendar';
+import type { ValidateClausePathsResult, ClausePathIssue } from 'works-calendar';
+
+const result: ValidateClausePathsResult = validateClausePaths(pool.query!, resources);
+
+if (!result.ok) {
+  for (const issue of result.unresolved) {
+    console.warn(`Path "${issue.path}" resolves on 0 resources (${issue.count} clause(s))`);
+  }
+}
+```
+
+`AdvancedRulesEditor` calls this automatically when `resources` is
+provided and renders a warning chip on each row whose path is in
+`result.byPath`. You only need the standalone call when building a
+custom editor or running a pre-save lint outside the component.
+
+```ts
+// Quick membership test — O(1) after the initial walk:
+if (result.byPath.has('meta.capabilities.refrigerated')) {
+  // surface a targeted warning
+}
+```
+
+Path semantics mirror `evaluateQuery`:
+- `meta.x` and plain `x` both resolve against `resource.meta.x`.
+- Top-level fields (`id`, `name`, `capacity`, `color`, …) resolve
+  against the resource root.
+- Composite ops (`and` / `or` / `not`) are walked recursively; all
+  leaf `path` values are collected in the order they appear.
+
 ## Sequence counter on onPoolsChange
 
 `onPoolsChange(pools, meta)` receives a monotonic `meta.sequence`

@@ -188,3 +188,104 @@ The `CalendarConfig` shape is the wizard's output target. The
 wizard UI itself ships in a follow-up PR; the schema lands first so
 hosts who want to hand-author or generate configs from custom flows
 can do so today.
+
+## Working with Config Programmatically
+
+### Round-trip: parse → mutate → validate → serialize
+
+```ts
+import { parseConfig, validateConfig, serializeConfig } from 'works-calendar';
+
+// 1. Load from storage or API.
+const { config, errors, dropped } = parseConfig(JSON.parse(rawText));
+if (errors.length > 0) {
+  // Show which sections had bad entries. The rest of the config is usable.
+  console.warn(`Loaded with ${dropped} dropped entries:`, errors);
+}
+
+// 2. Mutate in place (e.g. add a resource the user just created).
+config.resources = [...(config.resources ?? []), newResource];
+
+// 3. Cross-check references before saving.
+const { ok, issues } = validateConfig(config);
+if (!ok) {
+  for (const issue of issues) {
+    // Each issue: { path: string; kind: string; detail?: string }
+    console.error(`${issue.path} — ${issue.kind}`);
+  }
+  return; // gate the save
+}
+
+// 4. Serialize and persist.
+const text = JSON.stringify(serializeConfig(config), null, 2);
+await saveConfigToServer(text);
+```
+
+`validateConfig` issue kinds and what they mean:
+
+| `kind`                    | What failed |
+|---------------------------|-------------|
+| `unknown-resource-type`   | `resource.type` not in `resourceTypes[].id` |
+| `unknown-pool-member`     | `pool.memberIds[*]` not in `resources[].id` |
+| `unknown-requirement-role`| `requirement.role` not in `roles[].id` |
+| `unknown-requirement-pool`| `requirement.pool` not in `pools[].id` |
+| `unknown-event-resource`  | `event.resourceId` not in `resources[].id` |
+| `unknown-event-pool`      | `event.resourcePoolId` not in `pools[].id` |
+| `duplicate-id`            | Two entries in the same catalog share an id |
+
+### `getProfileSampleData` / `applyProfileSampleData`
+
+Seed a demo or first-run calendar with profile-appropriate sample
+events and resources. The wizard uses this for its "Load sample data"
+button; hosts can call it from onboarding flows without re-implementing
+industry-specific fixtures.
+
+```ts
+import { getProfileSampleData, applyProfileSampleData } from 'works-calendar';
+
+// Inspect what a profile's sample data looks like:
+const sample = getProfileSampleData('trucking');
+// sample: { events: WorksCalendarEvent[], resources: EngineResource[] } | null
+// Returns null for 'custom' (no sample data ships for that profile).
+
+// Apply sample data onto an existing config (additive, never clears
+// resources or events the user already has):
+const seeded = applyProfileSampleData('aviation', config);
+```
+
+`getProfileSampleData` returns `null` for `'custom'` — that profile
+has no opinionated sample set. All other profiles ship fixtures.
+
+### `resolveLabels`
+
+`resolveLabels` is the single source-of-truth for the label
+abstraction layer. Views call it once with the active config and read
+the returned `ResolvedLabels` dict for every user-visible string
+(`resource`, `resources`, `event`, `events`, `location`, `locations`,
+plus any free-form extras the host defines).
+
+```ts
+import { resolveLabels } from 'works-calendar';
+import type { ResolvedLabels } from 'works-calendar';
+
+const labels: ResolvedLabels = resolveLabels(config);
+
+// Profile-aware: 'trucking' → 'Truck', 'aviation' → 'Aircraft', etc.
+console.log(labels.resource);    // e.g. "Truck"
+console.log(labels.resources);   // e.g. "Trucks"  (auto-pluralized)
+console.log(labels.event);       // e.g. "Load"
+console.log(labels.location);    // e.g. "Depot"
+
+// Free-form extras from config.labels carry through verbatim:
+// config.labels.aircraft → labels.aircraft
+```
+
+Resolution order per key:
+1. `config.labels[key]` — explicit host override.
+2. Profile preset default (derived from `config.profile`).
+3. Built-in fallback (`'Resource'`, `'Event'`, `'Location'`).
+
+Non-string values (numbers, nulls, booleans) from raw JSON are
+coerced out — the fallback ladder takes over rather than binding a
+stray `42` to a label slot. `resolveLabels` is pure and sync; the
+output object can be mutated freely.

@@ -177,6 +177,107 @@ Budget: p95 < 100ms at 1000ev × 3-level.  Regressions are caught by running
 
 ---
 
+## Using the `useGrouping` Hook
+
+`useGrouping` is the React layer on top of the pure `groupRows`
+utility. Use it when you want expand/collapse state managed for you,
+or when you're rendering a custom list outside `<WorksCalendar>`.
+
+### When to use `useGrouping` vs. the `groupBy` prop
+
+| Approach | When to use |
+|---|---|
+| `groupBy` prop on `<WorksCalendar>` | Grouping inside the built-in calendar views |
+| `useGrouping` hook | Custom virtualized lists, sidebars, or any UI outside the calendar |
+
+### Hook signature
+
+```ts
+import { useGrouping } from 'works-calendar';
+
+const {
+  flatRows,          // Array<T | GroupHeaderRow> — interleaved data + group headers
+  groupOrder,        // string[] — group keys in render order
+  collapsedGroups,   // Set<string> — currently collapsed group keys
+  toggleGroup,       // (key: string) => void — expand/collapse a group
+  expandAll,         // () => void
+  collapseAll,       // () => void
+  isGrouped,         // boolean — false when groupBy is undefined/null
+} = useGrouping(rows, {
+  groupBy,           // string | FieldAccessor — field to group on; omit to passthrough
+  fieldAccessor,     // optional override accessor
+  groupHeaderHeight, // number (px); default 36 — injected onto header rows for virtualization
+});
+```
+
+Group header rows have `__isGroupHeader: true` and a `__groupKey`
+string so they can be rendered differently from data rows.
+
+### Working example
+
+```tsx
+import React from 'react';
+import { useGrouping, buildFieldAccessor } from 'works-calendar';
+
+type Employee = { id: string; name: string; role: string; base: string };
+
+const employees: Employee[] = [
+  { id: 'alice', name: 'Alice Chen', role: 'Pilot',  base: 'LAX' },
+  { id: 'bob',   name: 'Bob Torres', role: 'Medic',  base: 'LAX' },
+  { id: 'carol', name: 'Carol Wu',   role: 'Pilot',  base: 'JFK' },
+  { id: 'dave',  name: 'Dave Kim',   role: 'Medic',  base: 'JFK' },
+];
+
+export default function GroupedRoster() {
+  const { flatRows, collapsedGroups, toggleGroup, expandAll, collapseAll } =
+    useGrouping(employees, { groupBy: 'base' });
+
+  return (
+    <div>
+      <div style={{ marginBottom: 8 }}>
+        <button onClick={expandAll}>Expand all</button>
+        <button onClick={collapseAll}>Collapse all</button>
+      </div>
+      {flatRows.map((row: any) =>
+        row.__isGroupHeader ? (
+          <div
+            key={row.__groupKey}
+            onClick={() => toggleGroup(row.__groupKey)}
+            style={{ fontWeight: 'bold', cursor: 'pointer', padding: '4px 0' }}
+          >
+            {collapsedGroups.has(row.__groupKey) ? '▶' : '▼'} {row.__groupKey}
+          </div>
+        ) : (
+          <div key={row.id} style={{ paddingLeft: 16 }}>
+            {row.name} — {row.role}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+```
+
+### How `groupRows` and `buildFieldAccessor` relate
+
+`useGrouping` calls `groupRows` internally on every render, passing
+`collapsedGroups` so collapsed children are omitted from `flatRows`.
+`buildFieldAccessor` turns a field path string into the accessor
+function that `groupRows` uses to read the group key from each row.
+
+You can compose them manually for non-React environments:
+
+```ts
+import { groupRows, buildFieldAccessor } from 'works-calendar';
+
+const accessor = buildFieldAccessor('base');  // (row) => row.base
+const { flatRows } = groupRows(employees, {
+  groupBy: 'base',
+  fieldAccessor: accessor,
+  collapsedGroups: new Set(['JFK']),
+});
+```
+
 ## Low-level exports
 
 For apps that want to drive grouping outside of `<WorksCalendar>`:

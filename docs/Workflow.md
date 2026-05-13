@@ -167,6 +167,168 @@ Import from `works-calendar/workflow`:
 import { WORKFLOW_TEMPLATES } from 'works-calendar'
 ```
 
+## Channels & Notifications
+
+`advance()` is intentionally pure: `notify` nodes produce a
+`{ type: 'notify' }` emit event but never call the network. The
+channel registry is the impure half — hosts assemble adapters, and
+`dispatchWorkflowEvents` fans the emit list out to whichever adapter
+matches each event's `channel` field.
+
+### `createChannelRegistry`
+
+```ts
+import { createChannelRegistry } from 'works-calendar';
+
+const registry = createChannelRegistry();
+```
+
+Returns a `WorkflowChannelRegistry` with `register`, `unregister`,
+`has`, `get`, and `ids` methods. Adapters are keyed by their `id`
+string (matching the `channel` field on workflow `notify` nodes).
+
+### `createSlackChannel`
+
+Wraps a caller-supplied `send` function in the Slack incoming-webhook
+contract (`{ text, nodeId, at }`).
+
+```ts
+import { createSlackChannel } from 'works-calendar';
+
+registry.register(
+  createSlackChannel({
+    id: 'slack',                        // default; override for multiple workspaces
+    send: async ({ text }) => {
+      await fetch('https://hooks.slack.com/...', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      });
+    },
+  })
+);
+```
+
+The `text` field is the rendered message from the `notify` node
+(`message` when the template was pre-rendered, `template` otherwise).
+
+### `createEmailChannel`
+
+Shapes the payload as `{ subject, body, nodeId, at }` for a host
+mailer (`nodemailer`, AWS SES, SendGrid, etc.).
+
+```ts
+import { createEmailChannel } from 'works-calendar';
+
+registry.register(
+  createEmailChannel({
+    id: 'email',                        // default
+    subjectPrefix: '[Approvals]',       // optional; prepended to generated subject
+    send: async ({ subject, body }) => {
+      await mailer.send({ to: 'ops@example.com', subject, text: body });
+    },
+  })
+);
+```
+
+### `createWebhookChannel`
+
+Forwards the raw `ChannelDispatchPayload` to a generic HTTP endpoint
+(or any async function). The full envelope — `nodeId`, `at`,
+`template`, `message` — is delivered so the receiver can audit or
+re-render itself.
+
+```ts
+import { createWebhookChannel } from 'works-calendar';
+
+registry.register(
+  createWebhookChannel({
+    id: 'webhook',
+    send: async (payload) => {
+      await fetch('https://api.example.com/hooks/calendar', {
+        method: 'POST',
+        headers: { 'X-API-Key': process.env.HOOK_KEY! },
+        body: JSON.stringify(payload),
+      });
+    },
+  })
+);
+```
+
+### `dispatchWorkflowEvents`
+
+After every successful `advance()` / `transitionApproval()` call,
+pass the returned `emit` list to `dispatchWorkflowEvents`:
+
+```ts
+import { dispatchWorkflowEvents } from 'works-calendar';
+import type { WorkflowDispatchReport, ChannelDispatchOutcome } from 'works-calendar';
+
+const report: WorkflowDispatchReport = await dispatchWorkflowEvents(result.emit, registry);
+
+console.log(`dispatched=${report.dispatched} skipped=${report.skipped} failed=${report.failed}`);
+
+for (const outcome of report.outcomes) {
+  if (!outcome.ok) {
+    if (outcome.unknown) {
+      console.error(`No adapter registered for channel "${outcome.channel}"`);
+    } else {
+      console.error(`Channel "${outcome.channel}" failed: ${outcome.reason}`);
+    }
+  }
+}
+```
+
+Only `{ type: 'notify' }` events are dispatched; lifecycle events
+(`node_entered`, `workflow_completed`, etc.) are skipped. Failures
+are captured in `report.outcomes` — a single bad adapter never drops
+the rest of the batch.
+
+### Full wiring example
+
+```ts
+import {
+  createChannelRegistry,
+  createSlackChannel,
+  createEmailChannel,
+  dispatchWorkflowEvents,
+  transitionApproval,
+} from 'works-calendar';
+
+const registry = createChannelRegistry();
+
+registry.register(createSlackChannel({
+  send: ({ text }) => postToSlack('#ops', text),
+}));
+registry.register(createEmailChannel({
+  subjectPrefix: '[WorksCalendar]',
+  send: ({ subject, body }) => sendEmail({ to: 'ops@acme.com', subject, body }),
+}));
+
+async function handleApprovalAction(event, action, actor) {
+  const result = transitionApproval(event.meta.approvalStage ?? null, {
+    action,
+    actor,
+    workflow: myFlow,
+    workflowInstance: event.meta.workflowInstance ?? null,
+    variables: { event: { cost: event.cost } },
+  });
+
+  if (!result.ok) return;
+
+  // 1. Persist the new approval + workflow state.
+  await persist({ ...event, meta: { ...event.meta,
+    approvalStage:    result.stage,
+    workflowInstance: result.workflowInstance,
+  }});
+
+  // 2. Fan notify events out to Slack + email.
+  const report = await dispatchWorkflowEvents(result.emit, registry);
+  if (report.failed > 0) {
+    console.error('Some notification channels failed:', report.outcomes.filter(o => !o.ok));
+  }
+}
+```
+
 ## Related
 
 - [#209](https://github.com/workscalendar/calendarthatworks/issues/209) —

@@ -155,6 +155,107 @@ shortfall still surfaces in `missing[]` (so hosts can render
 contract for existing templates. Engine integration (auto-reject
 gating) reads this to decide whether to block.
 
+## `gateEventRequirements`
+
+`gateEventRequirements` wraps `evaluateRequirements` in the engine's
+standard `ValidationResult` shape, making it drop-in compatible with
+conflict rule results and the `ConflictModal` gate.
+
+```ts
+import { gateEventRequirements } from 'works-calendar';
+
+const gate = gateEventRequirements({
+  event,
+  requirements,
+  resources,
+  assignments,
+  pools,
+});
+
+// Hard shortfall → gate.allowed === false. Soft → allowed stays true,
+// but gate.violations is non-empty so a warning can be shown.
+if (!gate.allowed) {
+  // block save
+  console.error('Cannot save — hard requirement shortfall:', gate.violations);
+} else if (gate.severity === 'soft') {
+  // warn but permit
+  console.warn('Saving with unmet soft requirements:', gate.violations);
+}
+```
+
+Each violation in `gate.violations` carries:
+
+```ts
+interface Violation {
+  rule: string;          // 'requirements.role' | 'requirements.pool' | 'requirements.pool-unknown'
+  severity: 'hard' | 'soft';
+  message: string;       // human-readable, e.g. "Missing 1 assignment for role 'driver' (have 0 of 1)."
+  details: {
+    kind: 'role' | 'pool';
+    role?: string;
+    pool?: string;
+    required: number;
+    assigned: number;
+    missing: number;
+    poolUnknown?: boolean;
+  };
+}
+```
+
+`gateEventRequirements` is pure and sync — it never mutates the
+engine. Call it in an `onConflictCheck`-style hook, a form's pre-save
+validator, or any custom gating middleware.
+
+## Working end-to-end example
+
+```ts
+import {
+  evaluateRequirements,
+  gateEventRequirements,
+} from 'works-calendar';
+
+// --- Data setup ---
+const event = { id: 'e1', category: 'load' };
+
+const resources = new Map([
+  ['alice', { id: 'alice', name: 'Alice', roles: ['driver'], meta: {} }],
+  ['t1',    { id: 't1',   name: 'Truck 101', roles: [],     meta: { capabilities: { refrigerated: true } } }],
+]);
+
+const assignments = new Map([
+  ['a1', { id: 'a1', eventId: 'e1', resourceId: 'alice', roleId: 'driver', units: 100 }],
+  // 't1' is NOT assigned — the pool slot is unmet.
+]);
+
+const pools = new Map([
+  ['nearby_reefers', {
+    id: 'nearby_reefers', name: 'Nearby Reefers', memberIds: ['t1'],
+    type: 'manual', strategy: 'first-available',
+  }],
+]);
+
+const requirements = [
+  {
+    eventType: 'load',
+    requires: [
+      { role: 'driver',         count: 1, severity: 'hard' },
+      { pool: 'nearby_reefers', count: 1, severity: 'soft' },
+    ],
+  },
+];
+
+// --- Evaluate (full shortfall detail) ---
+const result = evaluateRequirements({ event, requirements, resources, assignments, pools });
+// result.satisfied === false (soft slot unmet)
+// result.missing[0].kind === 'pool', result.missing[0].pool === 'nearby_reefers'
+
+// --- Gate (engine-compatible shape) ---
+const gate = gateEventRequirements({ event, requirements, resources, assignments, pools });
+// gate.allowed === true   (only soft shortfall)
+// gate.severity === 'soft'
+// gate.violations[0].message === 'Missing 1 assignment from pool "nearby_reefers" (have 0 of 1).'
+```
+
 ## Out of scope (future slices)
 
 - **Engine integration** — auto-rejecting submits with unmet hard

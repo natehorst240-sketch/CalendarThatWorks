@@ -186,6 +186,45 @@ Numeric cells tolerate `$`, `,`, and whitespace. Symbol-only cells
 (`"$"`, `","`) are reported as per-row errors instead of silently
 importing as 0.
 
+## Exporting Data
+
+### `exportToExcel`
+
+`exportToExcel` produces an `.xlsx` file when ExcelJS is available, and
+falls back to a `.csv` download when it isn't. Both paths use the same
+column layout derived from the event's fields plus any `meta.*` keys.
+
+```ts
+import { exportToExcel } from 'works-calendar';
+
+// Minimum call — triggers a browser download of "calendar-events.xlsx".
+await exportToExcel(normalizedEvents);
+
+// Custom filename:
+await exportToExcel(normalizedEvents, 'may-schedule');
+```
+
+Default columns produced for every event:
+
+| Column     | Source field                    |
+|------------|---------------------------------|
+| `Title`    | `event.title`                   |
+| `Start`    | `event.start` → `yyyy-MM-dd HH:mm` |
+| `End`      | `event.end`   → `yyyy-MM-dd HH:mm` |
+| `AllDay`   | `event.allDay` → `'Yes' / 'No'` |
+| `Category` | `event.category`                |
+| `Resource` | `event.resource`                |
+| …          | All `event.meta.*` keys, spread as additional columns |
+
+Formula injection (`=`, `+`, `-`, `@`, `|`, `%` prefixes) is
+sanitized with a leading tab so the output is safe to open directly
+in spreadsheet apps.
+
+`exportToExcel` accepts `NormalizedEvent[]` — the internal form
+produced by `useNormalizedEvents`. When working with raw
+`WorksCalendarEvent[]`, normalize first or pass the array the
+calendar hands to `onEventsChange` / `onExport`.
+
 ## CSV export
 
 Three layers of access — pick whichever fits:
