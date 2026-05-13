@@ -70,12 +70,33 @@ function isValidDate(value: unknown): boolean {
 }
 
 /**
- * Accept the three GroupByInput shapes (string | string[] | GroupConfig[]),
- * stripping any non-serialisable fields (e.g. getKey/getLabel functions) so
- * the value survives JSON.stringify/parse.
+ * Accept every `GroupByInput` shape that `useNormalizedConfig` consumes:
+ *   string | GroupConfig | Array<string | GroupConfig>
+ * and reduce it to one of the three persisted forms (`string`, `string[]`,
+ * `SerializedGroupConfig[]`), stripping non-serialisable fields (e.g.
+ * `getKey`/`getLabel`) so the value survives JSON.stringify/parse. A lone
+ * `GroupConfig` is promoted to a single-element array; mixed arrays promote
+ * bare strings to `{ field }` form so no grouping levels are silently dropped.
  */
 function sanitizeGroupBy(value: unknown): string | string[] | SerializedGroupConfig[] | null {
   if (typeof value === 'string' && value) return value;
+
+  const toConfig = (item: unknown): SerializedGroupConfig | null => {
+    if (!item || typeof item !== 'object') return null;
+    const rec = item as Record<string, unknown>;
+    const field = rec['field'];
+    if (typeof field !== 'string' || !field) return null;
+    const out: SerializedGroupConfig = { field };
+    if (typeof rec['label'] === 'string') out.label = rec['label'];
+    if (typeof rec['showEmpty'] === 'boolean') out.showEmpty = rec['showEmpty'];
+    return out;
+  };
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const config = toConfig(value);
+    return config ? [config] : null;
+  }
+
   if (!Array.isArray(value) || value.length === 0) return null;
 
   if (value.every(item => typeof item === 'string' && item)) {
@@ -84,14 +105,12 @@ function sanitizeGroupBy(value: unknown): string | string[] | SerializedGroupCon
 
   const objects: SerializedGroupConfig[] = [];
   for (const item of value) {
-    if (!item || typeof item !== 'object') continue;
-    const rec = item as Record<string, unknown>;
-    const field = rec['field'];
-    if (typeof field !== 'string' || !field) continue;
-    const out: SerializedGroupConfig = { field };
-    if (typeof rec['label'] === 'string') out.label = rec['label'];
-    if (typeof rec['showEmpty'] === 'boolean') out.showEmpty = rec['showEmpty'];
-    objects.push(out);
+    if (typeof item === 'string' && item) {
+      objects.push({ field: item });
+      continue;
+    }
+    const config = toConfig(item);
+    if (config) objects.push(config);
   }
   return objects.length > 0 ? objects : null;
 }

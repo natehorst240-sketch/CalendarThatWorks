@@ -520,11 +520,23 @@ describe('useSavedViews — groupBy persistence', () => {
       });
     });
     const { result: result2 } = renderHook(() => useSavedViews(CAL_ID));
-    // Mixed string/object arrays get simplified to string[] when every entry is a string.
-    // The mixed case above preserves object form with strings stripped out — we expect
-    // only the valid objects to survive.
+    // Mixed string/object arrays preserve every grouping level by promoting
+    // bare strings to GroupConfig form.
     expect(result2.current.views[0].groupBy!).toEqual([
       { field: 'location', label: 'Site' },
+      { field: 'shift' },
+    ]);
+  });
+
+  it('saveView accepts a single GroupConfig and stores it as a one-element array', () => {
+    const { result } = renderHook(() => useSavedViews(CAL_ID));
+    act(() => {
+      result.current.saveView('Solo', EMPTY_FILTERS, {
+        groupBy: { field: 'resource', label: 'Resource' },
+      });
+    });
+    expect(result.current.views[0].groupBy!).toEqual([
+      { field: 'resource', label: 'Resource' },
     ]);
   });
 });
