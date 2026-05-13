@@ -6,7 +6,7 @@ import type { SortConfig } from '../types/grouping';
 import type { AssetsZoomLevel } from '../types/assets';
 
 /** Persisted saved view as read by `handleApplyView`. */
-interface SavedViewRecord {
+export interface SavedViewRecord {
   id: string;
   filters?: Record<string, unknown> | null;
   view?: string;
