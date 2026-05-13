@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useOccurrences — expand recurring events for a visible date range.
  *
@@ -10,6 +9,7 @@
 import { useMemo } from 'react';
 import { addDays } from 'date-fns';
 import { expandRRule } from '../core/icalParser';
+import type { NormalizedEvent } from '../types/events';
 
 /**
  * @param {import('../index.d.ts').NormalizedEvent[]} events
@@ -17,9 +17,9 @@ import { expandRRule } from '../core/icalParser';
  * @param {Date} rangeEnd
  * @returns {import('../index.d.ts').NormalizedEvent[]}
  */
-export function useOccurrences(events: any[], rangeStart: Date, rangeEnd: Date): any[] {
+export function useOccurrences(events: NormalizedEvent[], rangeStart: Date, rangeEnd: Date): NormalizedEvent[] {
   return useMemo(() => {
-    const result: any[] = [];
+    const result: NormalizedEvent[] = [];
     // Expand the range by 1 week on each side so events that start just
     // before or end just after the visible range are still shown correctly.
     const expStart = addDays(rangeStart, -7);

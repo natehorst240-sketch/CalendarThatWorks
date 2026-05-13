@@ -467,7 +467,7 @@ describe('eventV1ToEngine: coerceDate edge cases', () => {
 describe('eventV1ToEngine: coerceExdates with string items', () => {
   it('parses string exdates and filters out invalid ones', () => {
     const ev = eventV1ToEngine(baseV1({
-      exdates: ['2026-04-17T09:00:00.000Z', 'not-a-date'] as any,
+      exdates: ['2026-04-17T09:00:00.000Z', 'not-a-date'] as Record<string, unknown>,
     }));
     expect(ev.exdates).toHaveLength(1);
     expect(ev.exdates[0].toISOString()).toBe('2026-04-17T09:00:00.000Z');

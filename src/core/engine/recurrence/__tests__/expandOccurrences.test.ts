@@ -50,7 +50,7 @@ describe('expandOccurrences — single events', () => {
 
 describe('expandOccurrences — resourceIds propagation', () => {
   it('populates resourceIds with [resourceId] when resourceId is set', () => {
-    const ev = singleEv({ resourceId: 'room-101' } as any)
+    const ev = singleEv({ resourceId: 'room-101' } as Record<string, unknown>)
     const result = expandOccurrences([ev], rangeStart, rangeEnd)
     expect(result[0]!.resourceIds).toEqual(['room-101'])
   })
@@ -64,7 +64,7 @@ describe('expandOccurrences — resourceIds propagation', () => {
 
 describe('expandOccurrences — isRecurring derivation', () => {
   it('marks isRecurring true when seriesId is set even without rrule', () => {
-    const ev = singleEv({ seriesId: 'master-id' } as any)
+    const ev = singleEv({ seriesId: 'master-id' } as Record<string, unknown>)
     const result = expandOccurrences([ev], rangeStart, rangeEnd)
     expect(result[0]!.isRecurring).toBe(true)
   })

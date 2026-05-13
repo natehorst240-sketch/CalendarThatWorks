@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './RecurringScopeDialog.module.css';
@@ -33,7 +32,13 @@ const SCOPE_OPTIONS = [
  *   onConfirm(scope: 'single' | 'following' | 'series') → void
  *   onCancel()  → void
  */
-export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }: any) {
+type RecurringScopeDialogProps = {
+  actionLabel?: string;
+  onConfirm: (scope: string) => void;
+  onCancel: () => void;
+};
+
+export default function RecurringScopeDialog({ actionLabel = 'Edit', onConfirm, onCancel }: RecurringScopeDialogProps) {
   const [scope, setScope] = useState('single');
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
 

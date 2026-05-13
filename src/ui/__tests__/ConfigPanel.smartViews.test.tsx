@@ -18,7 +18,7 @@ const savedViews = [
   { id: 'v3', name: 'Charlie', color: '#333', conditions: [{ field: 'title',    operator: 'contains', value: 'zzz', logic: 'AND' }] },
 ];
 
-function renderTab(overrides: any = {}) {
+function renderTab(overrides: Record<string, unknown> = {}) {
   return render(
     <SmartViewsTab
       categories={['Cat-A', 'Cat-B']}

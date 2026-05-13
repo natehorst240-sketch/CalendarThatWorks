@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import type { MouseEvent } from 'react';
 import styles from './ValidationAlert.module.css';
@@ -9,7 +8,14 @@ import styles from './ValidationAlert.module.css';
  * Hard  → one "Dismiss" button (commit is blocked).
  * Soft  → "Cancel" + "Save anyway" (user can override the warning).
  */
-export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }: any) {
+type ValidationAlertProps = {
+  violations: readonly unknown[];
+  isHard: boolean;
+  onConfirm?: (() => void) | null | undefined;
+  onCancel: () => void;
+};
+
+export default function ValidationAlert({ violations, isHard, onConfirm, onCancel }: ValidationAlertProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
   return (
     <div
@@ -31,9 +37,12 @@ export default function ValidationAlert({ violations, isHard, onConfirm, onCance
         </div>
 
         <ul className={styles['list']}>
-          {violations.map((v: any, i: number) => (
-            <li key={i} className={styles['item']}>{v.message}</li>
-          ))}
+          {violations.map((v, i: number) => {
+            const message = (v != null && typeof v === 'object' && 'message' in v)
+              ? String((v as { message?: unknown }).message ?? '')
+              : '';
+            return <li key={i} className={styles['item']}>{message}</li>;
+          })}
         </ul>
 
         <div className={styles['actions']}>

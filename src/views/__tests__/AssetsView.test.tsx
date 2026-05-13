@@ -197,7 +197,7 @@ describe('AssetsView — renderAssetLocation render prop', () => {
     const renderAssetLocation = vi.fn(() => <span data-testid="custom-loc">Custom</span>);
     renderAssets({ renderAssetLocation });
     expect(renderAssetLocation).toHaveBeenCalled();
-    const [, resource] = renderAssetLocation.mock.calls[0] as any;
+    const [, resource] = renderAssetLocation.mock.calls[0] as Record<string, unknown>;
     expect(resource).toMatchObject({ id: 'N121AB' });
     expect(screen.getAllByTestId('custom-loc').length).toBeGreaterThan(0);
   });

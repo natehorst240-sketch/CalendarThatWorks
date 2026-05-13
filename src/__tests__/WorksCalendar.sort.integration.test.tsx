@@ -38,7 +38,7 @@ const events = [
 
 describe('WorksCalendar sort prop', () => {
   it('orders visibleEvents by a single string field ascending', async () => {
-    const apiRef = createRef<any>();
+    const apiRef = createRef<unknown>();
     render(
       <WorksCalendar
         ref={apiRef}
@@ -53,7 +53,7 @@ describe('WorksCalendar sort prop', () => {
   });
 
   it('supports multi-field sort with tiebreakers', async () => {
-    const apiRef = createRef<any>();
+    const apiRef = createRef<unknown>();
     render(
       <WorksCalendar
         ref={apiRef}
@@ -72,7 +72,7 @@ describe('WorksCalendar sort prop', () => {
   });
 
   it('defaults to start-date order when sort is omitted (baseline preserved)', async () => {
-    const apiRef = createRef<any>();
+    const apiRef = createRef<unknown>();
     render(<WorksCalendar ref={apiRef} events={events} />);
     await waitFor(() => {
       const ids = apiRef.current.getVisibleEvents().map((e: { id: string }) => e.id);

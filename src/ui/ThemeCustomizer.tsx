@@ -311,13 +311,13 @@ export default function ThemeCustomizer({ theme, onChange }: ThemeCustomizerProp
 
         {TOKEN_SLIDERS.map(([group, key, label, min, max, step, suffix]) => (
           <label key={`${group}.${key}`} className={styles['control']}>
-            <span>{label} ({valueLabel(merged[group][key], suffix)})</span>
+            <span>{label} ({valueLabel((merged[group] as Record<string, number>)[key], suffix)})</span>
             <input
               type="range"
               min={min}
               max={max}
               step={step}
-              value={merged[group][key]}
+              value={(merged[group] as Record<string, number>)[key]}
               onChange={(e) => update([group, key], Number(e.target.value))}
             />
           </label>

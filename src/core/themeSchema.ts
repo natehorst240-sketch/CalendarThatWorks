@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 export const DEFAULT_CUSTOM_THEME = {
   colors: {
     accent: '#3b82f6',
@@ -30,14 +29,26 @@ export const DEFAULT_CUSTOM_THEME = {
   },
 };
 
-type ThemeObject = Record<string, any>;
+// Theme shape: nested object whose leaves may be primitives or nested
+// objects. Indexed permissively so ThemeCustomizer / customThemeToCssVars
+// can access by string key.
+type ThemeObject = Record<string, unknown> & {
+  colors?: Record<string, string>;
+  typography?: Record<string, string | number | undefined>;
+  spacing?: Record<string, number | undefined>;
+  borders?: Record<string, number | undefined>;
+  shadows?: Record<string, number | undefined>;
+};
 
 export function mergeTheme(base: ThemeObject, patch: ThemeObject | null | undefined): ThemeObject {
   const next: ThemeObject = { ...base };
   for (const key of Object.keys(patch || {})) {
     const value = (patch as ThemeObject)[key];
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      next[key] = mergeTheme((base[key] as ThemeObject) ?? {}, value as ThemeObject);
+      const baseChild = (base[key] && typeof base[key] === 'object' && !Array.isArray(base[key]))
+        ? (base[key] as ThemeObject)
+        : {};
+      next[key] = mergeTheme(baseChild, value as ThemeObject);
     } else if (value !== undefined) {
       next[key] = value;
     }
@@ -45,8 +56,10 @@ export function mergeTheme(base: ThemeObject, patch: ThemeObject | null | undefi
   return next;
 }
 
-export function normalizeCustomTheme(theme: ThemeObject | null | undefined): ThemeObject {
-  return mergeTheme(DEFAULT_CUSTOM_THEME as ThemeObject, theme || {});
+type DefaultTheme = typeof DEFAULT_CUSTOM_THEME;
+
+export function normalizeCustomTheme(theme: ThemeObject | null | undefined): DefaultTheme {
+  return mergeTheme(DEFAULT_CUSTOM_THEME as ThemeObject, theme || {}) as unknown as DefaultTheme;
 }
 
 const SAFE_COLOR = /^(#[0-9a-fA-F]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|transparent|currentColor|inherit|initial)$/;

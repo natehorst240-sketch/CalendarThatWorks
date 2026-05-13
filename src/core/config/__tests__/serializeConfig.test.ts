@@ -84,9 +84,9 @@ describe('serializeConfig — section shapes', () => {
 
 describe('serializeConfig — branch coverage', () => {
   it('filters non-string values from labels (serializeLabels FALSE branch)', () => {
-    const out = serializeConfig({ labels: { resource: 'Truck', badKey: 42 as any } })
+    const out = serializeConfig({ labels: { resource: 'Truck', badKey: 42 as unknown as string } })
     expect(out['labels']).toEqual({ resource: 'Truck' })
-    expect((out['labels'] as any)['badKey']).toBeUndefined()
+    expect((out['labels'] as Record<string, unknown>)['badKey']).toBeUndefined()
   })
 
   it('serializes pool with rrCursor and disabled fields', () => {
@@ -96,7 +96,7 @@ describe('serializeConfig — branch coverage', () => {
         strategy: 'round-robin', rrCursor: 1, disabled: true,
       }],
     })
-    const pool = (out['pools'] as any[])[0]
+    const pool = (out['pools'] as Record<string, unknown>[])[0]
     expect(pool.rrCursor).toBe(1)
     expect(pool.disabled).toBe(true)
   })
@@ -108,7 +108,7 @@ describe('serializeConfig — branch coverage', () => {
         requires: [{ role: 'driver', count: 1, severity: 'soft' }],
       }],
     })
-    const slot = (out['requirements'] as any[])[0].requires[0]
+    const slot = (out['requirements'] as Record<string, unknown>[])[0].requires[0]
     expect(slot.severity).toBe('soft')
   })
 
@@ -120,7 +120,7 @@ describe('serializeConfig — branch coverage', () => {
         { id: 'e2', title: 'Idle', start: '2026-04-21T09:00Z', end: '2026-04-21T10:00Z' },
       ],
     })
-    const events = out['events'] as any[]
+    const events = out['events'] as Record<string, unknown>[]
     expect(events[0].resourceId).toBe('truck-1')
     expect(events[0].meta).toEqual({ priority: 'high' })
     expect(events[0].eventType).toBeUndefined()

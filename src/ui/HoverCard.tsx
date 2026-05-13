@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useEffect, useRef, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, StickyNote, Pencil, MessageSquare, Send } from 'lucide-react';
@@ -10,7 +9,37 @@ import { formatInTimezone, tzOffsetLabel } from '../core/engine/time/timezone';
 import type { EventComment } from '../types/events';
 import styles from './HoverCard.module.css';
 
-export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, onCommentAdd, currentUserName, anchor: _anchor, resolveResourceLabel }: any) {
+type HoverCardEvent = {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  color?: string | undefined;
+  status?: unknown;
+  lifecycle?: unknown;
+  category?: string | null | undefined;
+  resource?: string | null | undefined;
+  meta?: Record<string, unknown> | undefined;
+  comments?: readonly EventComment[] | undefined;
+  allDay?: boolean | undefined;
+  [key: string]: unknown;
+};
+
+type HoverCardProps = {
+  event: HoverCardEvent;
+  config?: { hoverCard?: { showTime?: boolean; showCategory?: boolean; showResource?: boolean; showMeta?: boolean; showNotes?: boolean } } | null | undefined;
+  note?: { id?: string; body?: string; [key: string]: unknown } | null | undefined;
+  onClose: () => void;
+  onNoteSave?: ((payload: Record<string, unknown>) => void) | null | undefined;
+  onNoteDelete?: ((id: string) => void) | null | undefined;
+  onEdit?: ((event: HoverCardEvent) => void) | null | undefined;
+  onCommentAdd?: ((event: HoverCardEvent, comment: EventComment) => void) | null | undefined;
+  currentUserName?: string | undefined;
+  anchor?: unknown;
+  resolveResourceLabel?: ((resource: string) => string) | undefined;
+};
+
+export default function HoverCard({ event, config, note, onClose, onNoteSave, onNoteDelete, onEdit, onCommentAdd, currentUserName, anchor: _anchor, resolveResourceLabel }: HoverCardProps) {
   const [noteText, setNoteText] = useState(note?.body || '');
   const [editing, setEditing] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -18,7 +47,7 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
   const ctx = useCalendarContext();
   const displayTz = ctx?.displayTimezone ?? null;
 
-  const comments: EventComment[] = event?.comments ?? [];
+  const comments: readonly EventComment[] = event?.comments ?? [];
 
   function handleCommentSubmit() {
     const text = commentText.trim();
@@ -78,14 +107,14 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
             <X size={16} />
           </button>
         </div>
-        {event.status && event.status !== 'confirmed' && (
+        {typeof event.status === 'string' && event.status && event.status !== 'confirmed' && (
           <div className={styles['statusBadge']} data-status={event.status}>
             {event.status === 'tentative' ? 'Tentative' : 'Cancelled'}
           </div>
         )}
-        {event.lifecycle && (
+        {event.lifecycle != null && (
           <div className={styles['lifecycleRow']}>
-            <EventStatusBadge lifecycle={event.lifecycle} size="md" />
+            <EventStatusBadge lifecycle={event.lifecycle as Parameters<typeof EventStatusBadge>[0]['lifecycle']} size="md" />
           </div>
         )}
 
@@ -150,8 +179,8 @@ export default function HoverCard({ event, config, note, onClose, onNoteSave, on
                 <div className={styles['noteActions']}>
                   <button className={styles['btnSave']} onClick={handleNoteSave}>Save</button>
                   <button className={styles['btnCancel']} onClick={() => { setEditing(false); setNoteText(note?.body || ''); }}>Cancel</button>
-                  {note && (
-                    <button className={styles['btnDelete']} onClick={() => { onNoteDelete?.(note.id); onClose(); }}>Delete</button>
+                  {note && note.id && (
+                    <button className={styles['btnDelete']} onClick={() => { onNoteDelete?.(note.id as string); onClose(); }}>Delete</button>
                   )}
                 </div>
               </div>

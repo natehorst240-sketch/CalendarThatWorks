@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * MapView — geographic plot of events that carry coordinates.
  *
@@ -168,7 +167,7 @@ export default function MapView({
     for (const ev of events) {
       const pos = readCoords(ev);
       if (!pos) continue;
-      const color = resolveColor(ev as any, ctx?.colorRules);
+      const color = resolveColor(ev as unknown as Parameters<typeof resolveColor>[0], ctx?.colorRules);
       out.push({ ev, pos, color });
     }
     return out;

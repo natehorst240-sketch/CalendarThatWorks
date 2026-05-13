@@ -48,37 +48,37 @@ describe('latestWins', () => {
   });
 
   it('returns server when local has no timestamp', () => {
-    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as any);
+    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(local, srv)).toBe(srv);
   });
 
   it('returns local when server has no timestamp', () => {
-    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as any);
+    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(loc, server)).toBe(loc);
   });
 
   it('returns local when local updatedAt is newer', () => {
-    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T14:00:00Z') } } as any);
-    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as any);
+    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T14:00:00Z') } } as unknown as Partial<CalendarEventV1>);
+    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T12:00:00Z') } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(loc, srv)).toBe(loc);
   });
 
   it('returns server when server updatedAt is newer', () => {
-    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T10:00:00Z') } } as any);
-    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T14:00:00Z') } } as any);
+    const loc = makeEvent({ sync: { updatedAt: new Date('2026-01-10T10:00:00Z') } } as unknown as Partial<CalendarEventV1>);
+    const srv = makeEvent({ sync: { updatedAt: new Date('2026-01-10T14:00:00Z') } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(loc, srv)).toBe(srv);
   });
 
   it('returns local when timestamps are equal (local >= server)', () => {
     const ts  = new Date('2026-01-10T12:00:00Z');
-    const loc = makeEvent({ sync: { updatedAt: ts } } as any);
-    const srv = makeEvent({ sync: { updatedAt: ts } } as any);
+    const loc = makeEvent({ sync: { updatedAt: ts } } as unknown as Partial<CalendarEventV1>);
+    const srv = makeEvent({ sync: { updatedAt: ts } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(loc, srv)).toBe(loc);
   });
 
   it('falls back to lastSyncedAt when updatedAt is absent', () => {
-    const loc = makeEvent({ sync: { lastSyncedAt: new Date('2026-01-10T13:00:00Z') } } as any);
-    const srv = makeEvent({ sync: { lastSyncedAt: new Date('2026-01-10T11:00:00Z') } } as any);
+    const loc = makeEvent({ sync: { lastSyncedAt: new Date('2026-01-10T13:00:00Z') } } as unknown as Partial<CalendarEventV1>);
+    const srv = makeEvent({ sync: { lastSyncedAt: new Date('2026-01-10T11:00:00Z') } } as unknown as Partial<CalendarEventV1>);
     expect(latestWins(loc, srv)).toBe(loc);
   });
 });
@@ -146,6 +146,6 @@ describe('resolverFor', () => {
   });
 
   it('throws for unknown strategy string', () => {
-    expect(() => resolverFor('unknown' as any)).toThrow(/Unknown conflict strategy/);
+    expect(() => resolverFor('unknown' as Parameters<typeof resolverFor>[0])).toThrow(/Unknown conflict strategy/);
   });
 });

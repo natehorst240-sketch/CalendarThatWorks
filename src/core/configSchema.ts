@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * configSchema.js — Owner config schema, defaults, and localStorage persistence.
  */
@@ -45,7 +44,7 @@ function defaultApprovalRules(): Record<string, { allow: string[]; prefix: strin
   };
 }
 
-export const DEFAULT_CONFIG: Record<string, any> = {
+export const DEFAULT_CONFIG: Record<string, unknown> = {
   title: 'My WorksCalendar',
   schemaVersion: CONFIG_SCHEMA_VERSION,
 
@@ -188,14 +187,19 @@ export const DEFAULT_CONFIG: Record<string, any> = {
   },
 };
 
-type ConfigObject = Record<string, any>;
+type ConfigObject = Record<string, unknown>;
+
+function isPlainObject(value: unknown): value is ConfigObject {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
 
 function mergeDeep(target: ConfigObject, source: ConfigObject): ConfigObject {
   const out: ConfigObject = { ...target };
   for (const key of Object.keys(source)) {
     const sourceValue = source[key];
-    if (sourceValue && typeof sourceValue === 'object' && !Array.isArray(sourceValue)) {
-      out[key] = mergeDeep(target[key] ?? {}, sourceValue);
+    if (isPlainObject(sourceValue)) {
+      const targetValue = isPlainObject(out[key]) ? (out[key] as ConfigObject) : {};
+      out[key] = mergeDeep(targetValue, sourceValue);
     } else {
       out[key] = sourceValue;
     }
@@ -209,32 +213,42 @@ export function loadConfig(calendarId: string): ConfigObject {
     const raw = safeGetLocalStorage(key);
     if (!raw) return DEFAULT_CONFIG as ConfigObject;
 
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as ConfigObject;
     const merged = mergeDeep(DEFAULT_CONFIG as ConfigObject, parsed);
 
+    const wizardData = isPlainObject(parsed['wizardData']) ? parsed['wizardData'] : {};
+    const setupBlock = isPlainObject(parsed['setup']) ? parsed['setup'] : {};
+    const teamBlock = isPlainObject(parsed['team']) ? parsed['team'] : {};
+    const teamMembersRaw = isPlainObject(teamBlock) ? teamBlock['members'] : undefined;
+
     // Migrate older setup-only data into live config fields.
-    if (parsed?.wizardData?.calendarName && !parsed?.title) {
-      merged['title'] = parsed.wizardData.calendarName;
+    if (typeof wizardData['calendarName'] === 'string' && wizardData['calendarName'] && !parsed['title']) {
+      merged['title'] = wizardData['calendarName'];
     }
 
-    if (parsed?.wizardData?.preferredTheme && !parsed?.setup?.preferredTheme) {
-      merged['setup'].preferredTheme = parsed.wizardData.preferredTheme;
+    const mergedSetup = isPlainObject(merged['setup']) ? (merged['setup'] as ConfigObject) : {};
+    if (typeof wizardData['preferredTheme'] === 'string' && wizardData['preferredTheme'] && !(isPlainObject(setupBlock) && setupBlock['preferredTheme'])) {
+      mergedSetup['preferredTheme'] = wizardData['preferredTheme'];
+      merged['setup'] = mergedSetup;
     }
 
-    if (Array.isArray(parsed?.wizardData?.teamMembers) && !parsed?.team?.members?.length) {
-      merged['team'].members = parsed.wizardData.teamMembers;
+    const mergedTeam = isPlainObject(merged['team']) ? (merged['team'] as ConfigObject) : {};
+    if (Array.isArray(wizardData['teamMembers']) && !(Array.isArray(teamMembersRaw) && teamMembersRaw.length)) {
+      mergedTeam['members'] = wizardData['teamMembers'];
+      merged['team'] = mergedTeam;
     }
 
-    if (parsed?.setupCompleted && !parsed?.setup?.completed) {
-      merged['setup'].completed = true;
+    if (parsed['setupCompleted'] && !(isPlainObject(setupBlock) && setupBlock['completed'])) {
+      mergedSetup['completed'] = true;
+      merged['setup'] = mergedSetup;
     }
 
     // Schema-version migration. mergeDeep above already folds in any new
     // DEFAULT_CONFIG keys (e.g. the `approvals` block added in v4), so the
     // migration here is just stamping the current version so we can branch
     // on it in the future without re-scanning every field.
-    const storedVersion = typeof parsed.schemaVersion === 'number'
-      ? parsed.schemaVersion
+    const storedVersion = typeof parsed['schemaVersion'] === 'number'
+      ? parsed['schemaVersion']
       : 3;
     if (storedVersion < CONFIG_SCHEMA_VERSION) {
       merged['schemaVersion'] = CONFIG_SCHEMA_VERSION;

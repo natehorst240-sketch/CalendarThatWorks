@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * AuditDrawer — renders the approval-stage history for a single event.
  *
@@ -42,7 +41,14 @@ const ACTION_LABELS = {
  * Returns null when inapplicable (no instance, not awaiting, no SLA, or
  * the active node isn't in the workflow anymore).
  */
-function computeSlaPill(workflow: any, workflowInstance: any, nowMs: number) {
+type WorkflowLike = Parameters<typeof findNode>[0] | null | undefined;
+type WorkflowInstanceLike = {
+  status?: unknown;
+  currentNodeId?: string | null;
+  history?: Array<{ nodeId?: string; enteredAt?: string; exitedAt?: string | undefined }> | undefined;
+} | null | undefined;
+
+function computeSlaPill(workflow: WorkflowLike, workflowInstance: WorkflowInstanceLike, nowMs: number) {
   if (!workflow || !workflowInstance) return null;
   if (workflowInstance.status !== 'awaiting') return null;
   const nodeId = workflowInstance.currentNodeId;
@@ -78,7 +84,24 @@ function formatRemaining(ms: number) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: any) {
+type AuditEvent = {
+  title?: string;
+  meta?: {
+    approvalStage?: { stage?: string; history?: unknown[] } | null | undefined;
+    workflowInstance?: WorkflowInstanceLike;
+    [key: string]: unknown;
+  } | null;
+} | null | undefined;
+
+type AuditDrawerProps = {
+  event: AuditEvent;
+  onClose?: () => void;
+  approvalsConfig?: unknown;
+  onAction?: ((action: string) => void) | undefined;
+  workflow?: WorkflowLike;
+};
+
+export default function AuditDrawer({ event, onClose, approvalsConfig, onAction, workflow }: AuditDrawerProps) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -141,12 +164,9 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
             {stageData?.stage && typeof onAction === 'function' && (
               <ApprovalActionMenu
                 stage={stageData.stage}
-                approvalsConfig={approvalsConfig}
+                approvalsConfig={approvalsConfig as Parameters<typeof ApprovalActionMenu>[0]['approvalsConfig']}
                 onAction={onAction}
                 variant="inline"
-                onClose={undefined}
-                labelledBy={undefined}
-                anchorRect={undefined}
               />
             )}
           </div>
@@ -165,7 +185,7 @@ export default function AuditDrawer({ event, onClose, approvalsConfig, onAction,
             <p className={styles['empty']}>No history recorded for this request.</p>
           ) : (
             <ol className={styles['timeline']}>
-              {history.map((entry: any, i: number) => (
+              {(history as Array<{ at?: string; action?: string; tier?: number | string | null; actor?: string; reason?: string }>).map((entry, i: number) => (
                 <li
                   key={`${entry.at}-${entry.action}-${i}`}
                   className={styles['entry']}

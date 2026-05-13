@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useFeedEvents — fetch and poll live iCal feed URLs.
  *
@@ -18,7 +17,7 @@ type ICalFeedInput = {
   refreshInterval?: number | undefined;
 };
 
-type FeedEvent = Record<string, any> & { _feedLabel: string };
+type FeedEvent = Record<string, unknown> & { _feedLabel: string };
 type FeedError = { feed: ICalFeedInput; err: unknown };
 
 export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
@@ -53,7 +52,7 @@ export function useFeedEvents(icalFeeds: ICalFeedInput[] = []): {
       try {
         await Promise.allSettled(icalFeeds.map(async (feed: ICalFeedInput) => {
           try {
-            const evs = await fetchAndParseICS(feed.url) as Array<Record<string, any>>;
+            const evs = await fetchAndParseICS(feed.url) as Array<Record<string, unknown>>;
             const label = feed.label ?? feed.url;
             results.push(...evs.map((ev) => ({ ...ev, _feedLabel: label })));
           } catch (err: unknown) {

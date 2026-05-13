@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
@@ -13,7 +12,14 @@ import styles from '../EventForm.module.css';
  *   onAddCategory (name) => void | undefined  — omit to hide the + button
  *   onChange      (value) => void
  */
-export function CategorySection({ value, allCats, onAddCategory, onChange }: any) {
+type CategorySectionProps = {
+  value: string;
+  allCats: readonly string[];
+  onAddCategory?: ((name: string) => void) | undefined;
+  onChange: (value: string) => void;
+};
+
+export function CategorySection({ value, allCats, onAddCategory, onChange }: CategorySectionProps) {
   const [addCatOpen, setAddCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const newCatRef = useRef<HTMLInputElement | null>(null);
@@ -73,7 +79,7 @@ export function CategorySection({ value, allCats, onAddCategory, onChange }: any
         onChange={e => onChange(e.target.value)}
       >
         <option value="">— none —</option>
-        {allCats.map((c: string) => <option key={c} value={c}>{c}</option>)}
+        {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
       </select>
     </div>
   );

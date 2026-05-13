@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ConflictModal — surfaces conflict-engine violations for user override.
  *
@@ -17,19 +16,41 @@ import type { MouseEvent } from 'react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './ConflictModal.module.css';
 
+type ConflictViolation = {
+  severity?: string;
+  message?: string;
+  rule?: string;
+  conflictingEventId?: string | number | null;
+  details?: { evaluated?: readonly string[]; code?: string } | undefined;
+};
+
+type ConflictResult = {
+  severity?: string;
+  violations?: readonly ConflictViolation[];
+  allowed?: boolean;
+} | null | undefined;
+
+type ConflictModalProps = {
+  result: ConflictResult;
+  onProceed: () => void;
+  onCancel: () => void;
+  title?: string;
+};
+
 export default function ConflictModal({
   result,
   onProceed,
   onCancel,
   title = 'Conflict detected',
-}: any) {
+}: ConflictModalProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
 
-  if (!result || result.severity === 'none' || result.violations.length === 0) {
+  if (!result || result.severity === 'none' || !result.violations || result.violations.length === 0) {
     return null;
   }
 
-  const canProceed = result.allowed; // soft-only violations
+  const canProceed = result.allowed === true; // soft-only violations
+  const violations = result.violations;
 
   return (
     <div
@@ -60,7 +81,7 @@ export default function ConflictModal({
         </div>
 
         <ul className={styles['list']} aria-label="Conflict violations">
-          {result.violations.map((v: any, i: number) => {
+          {violations.map((v, i: number) => {
             // Pool-unresolvable rejections carry an `evaluated` trail
             // (the ordered list of members the resolver actually
             // tried) and a structured error `code`. Surface both so

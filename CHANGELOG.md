@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `npm run package:check` script using `@arethetypeswrong/cli` to verify the
+  `exports` map and catch type-resolution regressions before publish.
+
+### Verified
+
+- MapLibre carve-out: `maplibre-gl` and `react-map-gl` are optional peer
+  dependencies; `MapView` resolves them via dynamic `import()` so they stay
+  out of the core ESM bundle and core type declarations. Consumers that
+  don't render the map view pay zero bundle cost for the map runtime.
+
 ## [0.8.0] — 2026-05-13
 
 ### Added

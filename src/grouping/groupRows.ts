@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 const UNGROUPED = '(Ungrouped)';
 
-type Accessor = (item: any) => any;
-type Row = Record<string, any>;
+type Accessor = (item: Row) => unknown;
+type Row = Record<string, unknown>;
 type GroupBucketMap = Map<string, Row[]>;
 
 function getOrCreateBucket(map: GroupBucketMap, key: string): Row[] {

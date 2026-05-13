@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * filterSchema — core types and default schema for the schema-driven filter engine.
  *
@@ -118,6 +117,26 @@ export type FilterField = {
 /** Generic filter state — one key per FilterField, value shape depends on type. */
 export type FilterState = Record<string, unknown>
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+type ItemRecord = Record<string, unknown>
+
+function asRecord(item: unknown): ItemRecord {
+  return (item != null && typeof item === 'object') ? (item as ItemRecord) : {}
+}
+
+function getMeta(item: unknown): ItemRecord {
+  const rec = asRecord(item)
+  const meta = rec['meta']
+  return (meta != null && typeof meta === 'object') ? (meta as ItemRecord) : {}
+}
+
+function valueIncludes(value: unknown, target: unknown): boolean {
+  if (value instanceof Set) return value.has(target)
+  if (Array.isArray(value)) return (value as unknown[]).includes(target)
+  return false
+}
+
 // ── Common-field factories ────────────────────────────────────────────────────
 // Ready-made FilterField configs for fields that appear on many calendars.
 // Each factory accepts an optional overrides object so callers can tweak
@@ -142,8 +161,8 @@ export function statusField(overrides: Partial<FilterField> = {}): FilterField {
       { label: 'Cancelled', value: 'cancelled' },
     ],
     operators: defaultOperatorsForType('select'),
-    predicate: (item: any, value: any) =>
-      (item.status ?? 'confirmed') === value,
+    predicate: (item: unknown, value: unknown) =>
+      (asRecord(item)['status'] ?? 'confirmed') === value,
     ...overrides,
   }
 }
@@ -165,9 +184,8 @@ export function priorityField(overrides: Partial<FilterField> = {}): FilterField
       { label: 'Critical', value: 'critical', color: '#7c3aed' },
     ],
     operators: defaultOperatorsForType('select'),
-    predicate: (item: any, value: any) =>
-      ((item as { priority?: unknown; meta?: { priority?: unknown } }).priority
-        ?? (item as { priority?: unknown; meta?: { priority?: unknown } }).meta?.priority) === value,
+    predicate: (item: unknown, value: unknown) =>
+      (asRecord(item)['priority'] ?? getMeta(item)['priority']) === value,
     ...overrides,
   }
 }
@@ -182,16 +200,18 @@ export function ownerField(overrides: Partial<FilterField> = {}): FilterField {
     label: 'Owner',
     type:  'multi-select',
     operators: defaultOperatorsForType('multi-select'),
-    predicate: (item: any, value: any) => {
-      const owner = item.owner ?? item.meta?.owner ?? item.meta?.assignee
-      return value instanceof Set
-        ? value.has(owner)
-        : (value as string[]).includes(owner)
+    predicate: (item: unknown, value: unknown) => {
+      const rec = asRecord(item)
+      const meta = getMeta(item)
+      const owner = rec['owner'] ?? meta['owner'] ?? meta['assignee']
+      return valueIncludes(value, owner)
     },
-    getOptions: (items: any[]) => {
+    getOptions: (items: unknown[]) => {
       const seen = new Set<string>()
       items.forEach(e => {
-        const o = e.owner ?? e.meta?.owner ?? e.meta?.assignee
+        const rec = asRecord(e)
+        const meta = getMeta(e)
+        const o = rec['owner'] ?? meta['owner'] ?? meta['assignee']
         if (o) seen.add(String(o))
       })
       return [...seen].sort().map(o => ({ label: o, value: o }))
@@ -211,15 +231,21 @@ export function tagsField(overrides: Partial<FilterField> = {}): FilterField {
     label: 'Tag',
     type:  'multi-select',
     operators: defaultOperatorsForType('multi-select'),
-    predicate: (item: any, value: any) => {
-      const itemTags: string[] = item.tags ?? item.meta?.tags ?? []
-      const active = value instanceof Set ? value : new Set(value as string[])
+    predicate: (item: unknown, value: unknown) => {
+      const rec = asRecord(item)
+      const meta = getMeta(item)
+      const raw = rec['tags'] ?? meta['tags'] ?? []
+      const itemTags: string[] = Array.isArray(raw) ? raw.filter((t): t is string => typeof t === 'string') : []
+      const active = value instanceof Set ? value : new Set(Array.isArray(value) ? value : [])
       return itemTags.some((t: string) => active.has(t))
     },
-    getOptions: (items: any[]) => {
+    getOptions: (items: unknown[]) => {
       const seen = new Set<string>()
       items.forEach(e => {
-        const tags: string[] = e.tags ?? e.meta?.tags ?? []
+        const rec = asRecord(e)
+        const meta = getMeta(e)
+        const raw = rec['tags'] ?? meta['tags'] ?? []
+        const tags: string[] = Array.isArray(raw) ? raw.filter((t): t is string => typeof t === 'string') : []
         tags.forEach((t: string) => { if (t) seen.add(t) })
       })
       return [...seen].sort().map(t => ({ label: t, value: t }))
@@ -241,12 +267,12 @@ export function metaSelectField(
     label: metaKey.charAt(0).toUpperCase() + metaKey.slice(1),
     type:  'select',
     operators: defaultOperatorsForType('select'),
-    predicate: (item: any, value: any) =>
-      (item.meta?.[metaKey] ?? item[metaKey]) === value,
-    getOptions: (items: any[]) => {
+    predicate: (item: unknown, value: unknown) =>
+      (getMeta(item)[metaKey] ?? asRecord(item)[metaKey]) === value,
+    getOptions: (items: unknown[]) => {
       const seen = new Set<string>()
       items.forEach(e => {
-        const v = e.meta?.[metaKey] ?? e[metaKey]
+        const v = getMeta(e)[metaKey] ?? asRecord(e)[metaKey]
         if (v != null) seen.add(String(v))
       })
       return [...seen].sort().map(v => ({ label: v, value: v }))
@@ -312,13 +338,14 @@ export function buildDefaultFilterSchema(input: ResolverInput = {}): FilterField
       label:     'Category',
       type:      'multi-select',
       operators: defaultOperatorsForType('multi-select'),
-      predicate: (item: any, value: any) =>
-        value instanceof Set
-          ? value.has(item.category)
-          : (value as string[]).includes(item.category),
-      getOptions: (items: any[]) => {
+      predicate: (item: unknown, value: unknown) =>
+        valueIncludes(value, asRecord(item)['category']),
+      getOptions: (items: unknown[]) => {
         const seen = new Set<string>()
-        items.forEach(e => { if (e.category) seen.add(e.category) })
+        items.forEach(e => {
+          const c = asRecord(e)['category']
+          if (typeof c === 'string' && c) seen.add(c)
+        })
         return [...seen].sort().map(c => ({ label: c, value: c }))
       },
     },
@@ -327,13 +354,14 @@ export function buildDefaultFilterSchema(input: ResolverInput = {}): FilterField
       label:     'Resource',
       type:      'multi-select',
       operators: defaultOperatorsForType('multi-select'),
-      predicate: (item: any, value: any) =>
-        value instanceof Set
-          ? value.has(item.resource)
-          : (value as string[]).includes(item.resource),
-      getOptions: (items: any[]) => {
+      predicate: (item: unknown, value: unknown) =>
+        valueIncludes(value, asRecord(item)['resource']),
+      getOptions: (items: unknown[]) => {
         const seen = new Set<string>()
-        items.forEach(e => { if (e.resource) seen.add(e.resource) })
+        items.forEach(e => {
+          const r = asRecord(e)['resource']
+          if (typeof r === 'string' && r) seen.add(r)
+        })
         return [...seen]
           .map(r => ({ label: resolve(r), value: r }))
           .sort((a, b) => a.label.localeCompare(b.label))
@@ -344,18 +372,20 @@ export function buildDefaultFilterSchema(input: ResolverInput = {}): FilterField
       label:     'Source',
       type:      'multi-select',
       operators: defaultOperatorsForType('multi-select'),
-      predicate: (item: any, value: any) =>
-        !item._sourceId ||
-        (value instanceof Set
-          ? value.has(item._sourceId)
-          : (value as string[]).includes(item._sourceId)),
-      getOptions: (items: any[]) => {
+      predicate: (item: unknown, value: unknown) => {
+        const sourceId = asRecord(item)['_sourceId']
+        return !sourceId || valueIncludes(value, sourceId)
+      },
+      getOptions: (items: unknown[]) => {
         const seen = new Map<string, FilterOption>()
         items.forEach(e => {
-          if (e._sourceId && !seen.has(e._sourceId)) {
-            seen.set(e._sourceId, {
-              label: e._sourceLabel ?? e._sourceId,
-              value: e._sourceId,
+          const rec = asRecord(e)
+          const sourceId = rec['_sourceId']
+          if (typeof sourceId === 'string' && sourceId && !seen.has(sourceId)) {
+            const label = rec['_sourceLabel']
+            seen.set(sourceId, {
+              label: typeof label === 'string' ? label : sourceId,
+              value: sourceId,
             })
           }
         })
@@ -384,13 +414,14 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     label:     'Category',
     type:      'multi-select',
     operators: defaultOperatorsForType('multi-select'),
-    predicate: (item: any, value: any) =>
-      value instanceof Set
-        ? value.has(item.category)
-        : (value as string[]).includes(item.category),
-    getOptions: (items: any[]) => {
+    predicate: (item: unknown, value: unknown) =>
+      valueIncludes(value, asRecord(item)['category']),
+    getOptions: (items: unknown[]) => {
       const seen = new Set<string>()
-      items.forEach(e => { if (e.category) seen.add(e.category) })
+      items.forEach(e => {
+        const c = asRecord(e)['category']
+        if (typeof c === 'string' && c) seen.add(c)
+      })
       return [...seen].sort().map(c => ({ label: c, value: c }))
     },
   },
@@ -399,13 +430,14 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     label:     'Resource',
     type:      'multi-select',
     operators: defaultOperatorsForType('multi-select'),
-    predicate: (item: any, value: any) =>
-      value instanceof Set
-        ? value.has(item.resource)
-        : (value as string[]).includes(item.resource),
-    getOptions: (items: any[]) => {
+    predicate: (item: unknown, value: unknown) =>
+      valueIncludes(value, asRecord(item)['resource']),
+    getOptions: (items: unknown[]) => {
       const seen = new Set<string>()
-      items.forEach(e => { if (e.resource) seen.add(e.resource) })
+      items.forEach(e => {
+        const r = asRecord(e)['resource']
+        if (typeof r === 'string' && r) seen.add(r)
+      })
       return [...seen].sort().map(r => ({ label: r, value: r }))
     },
   },
@@ -415,19 +447,21 @@ export const DEFAULT_FILTER_SCHEMA: FilterField[] = [
     type:      'multi-select',
     operators: defaultOperatorsForType('multi-select'),
     // Events without _sourceId (passed via the events prop) are always visible.
-    predicate: (item: any, value: any) =>
-      !item._sourceId ||
-      (value instanceof Set
-        ? value.has(item._sourceId)
-        : (value as string[]).includes(item._sourceId)),
+    predicate: (item: unknown, value: unknown) => {
+      const sourceId = asRecord(item)['_sourceId']
+      return !sourceId || valueIncludes(value, sourceId)
+    },
     // Compute options from events that have a _sourceId tag.
-    getOptions: (items: any[]) => {
+    getOptions: (items: unknown[]) => {
       const seen = new Map<string, FilterOption>()
       items.forEach(e => {
-        if (e._sourceId && !seen.has(e._sourceId)) {
-          seen.set(e._sourceId, {
-            label: e._sourceLabel ?? e._sourceId,
-            value: e._sourceId,
+        const rec = asRecord(e)
+        const sourceId = rec['_sourceId']
+        if (typeof sourceId === 'string' && sourceId && !seen.has(sourceId)) {
+          const label = rec['_sourceLabel']
+          seen.set(sourceId, {
+            label: typeof label === 'string' ? label : sourceId,
+            value: sourceId,
           })
         }
       })
@@ -468,7 +502,7 @@ export function viewScopedSchema(schema: FilterField[], view: string): FilterFie
     const baseGetOptions = field.getOptions
     return {
       ...field,
-      getOptions: (items: any[]) => {
+      getOptions: (items: unknown[]) => {
         const derived = field.options ?? (baseGetOptions ? baseGetOptions(items) : [])
         const seen = new Set(derived.map(o => String(o.value).toLowerCase()))
         const out = derived.slice()

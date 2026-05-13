@@ -39,7 +39,7 @@ describe('asset-tracker integration subpath', () => {
     const integration = createAssetTrackerIntegration(registry, { nowSeconds: () => 1714329660 })
     const loc = integration.locationAdapter.resolve({ id: 'truck-101', name: 'Truck 101' })
     expect(loc).toMatchObject({ lat: 40.7608, lon: -111.891, altitude: 1300, speed: 65 })
-    expect((loc?.meta as any).tracking.stale).toBe(false)
+    expect((loc?.meta as Record<string, unknown>).tracking.stale).toBe(false)
   })
 
   it('supports positions() fallback', () => {
@@ -112,7 +112,7 @@ describe('asset-tracker integration subpath', () => {
     const registry: AssetTrackerLikeRegistry = { getById: () => noMeta }
     const integration = createAssetTrackerIntegration(registry, { nowSeconds: () => 1714329660 })
     const loc = integration.locationAdapter.resolve({ id: 'van-1', name: 'Van' })
-    expect((loc?.meta as any).upstream).toBeUndefined()
+    expect((loc?.meta as Record<string, unknown>).upstream).toBeUndefined()
   })
 
   it('includes upstream meta when position.meta is present', () => {
@@ -122,7 +122,7 @@ describe('asset-tracker integration subpath', () => {
     const registry: AssetTrackerLikeRegistry = { getById: () => withMeta }
     const integration = createAssetTrackerIntegration(registry, { nowSeconds: () => 1714329660 })
     const loc = integration.locationAdapter.resolve({ id: 'truck-101', name: 'Truck' })
-    expect((loc?.meta as any).upstream).toEqual({ fleet: 'logistics-A' })
+    expect((loc?.meta as Record<string, unknown>).upstream).toEqual({ fleet: 'logistics-A' })
   })
 
   it('uses default id "asset-tracker" when options.id is absent', () => {

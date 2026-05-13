@@ -102,7 +102,7 @@ const seededEvent = {
  * Small orchestrator that wires the three systems the way a host app would.
  * Not production code — exists only for the test pipeline.
  */
-function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config: Record<string, any>; initialEvents?: EventLike[]; onCommit?: (evt: EventLike) => void }) {
+function Pipeline({ config, initialEvents = [seededEvent], onCommit }: { config: Record<string, unknown>; initialEvents?: EventLike[]; onCommit?: (evt: EventLike) => void }) {
   const [events, setEvents]     = useState<EventLike[]>(initialEvents);
   const [proposed, setProposed] = useState<EventLike | null>(null);
   const [conflict, setConflict] = useState<{ allowed?: boolean; severity?: string } | null>(null);

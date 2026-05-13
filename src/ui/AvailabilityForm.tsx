@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useMemo, useState, type ChangeEvent, type FormEvent, type MouseEvent } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
 import { X } from 'lucide-react';
@@ -87,7 +86,33 @@ function fromInput(str: string, allDay: boolean): Date | null {
  *   onSave     (availabilityEvent) => void
  *   onClose    () => void
  */
-export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: any) {
+type AvailabilityFormEmployee = {
+  id: string;
+  name?: string | undefined;
+  role?: string | null | undefined;
+  [key: string]: unknown;
+};
+
+type AvailabilityFormEvent = {
+  id?: string | undefined;
+  start?: Date | string | null | undefined;
+  end?: Date | string | null | undefined;
+  allDay?: boolean | undefined;
+  title?: string | undefined;
+  meta?: { notes?: unknown; [key: string]: unknown } | null | undefined;
+  [key: string]: unknown;
+};
+
+type AvailabilityFormProps = {
+  emp: AvailabilityFormEmployee;
+  kind?: string | undefined;
+  initialStart?: Date | string | null | undefined;
+  initialEvent?: AvailabilityFormEvent | null | undefined;
+  onSave: (event: Record<string, unknown>) => void;
+  onClose: () => void;
+};
+
+export default function AvailabilityForm({ emp, kind: initialKind, initialStart, initialEvent = null, onSave, onClose }: AvailabilityFormProps) {
   const kind = (initialKind ?? 'pto') as string;
   const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.pto;
   const isEdit = Boolean(initialEvent?.id);
@@ -95,9 +120,20 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const isAllDayLocked = Boolean(intentMeta.allDayLocked);
   const heading = isEdit && kind === 'availability' ? 'Edit Availability' : intentMeta.heading;
 
-  const eventStart = initialEvent?.start ?? initialStart;
+  const toDate = (v: Date | string | null | undefined): Date | null => {
+    if (v instanceof Date) return v;
+    if (typeof v === 'string') {
+      // parseISO preserves local calendar date for date-only strings
+      // ('2026-05-01'); `new Date(v)` would treat them as UTC midnight and
+      // render as the previous day in negative offsets.
+      const d = parseISO(v);
+      return isValid(d) ? d : null;
+    }
+    return null;
+  };
+  const eventStart = toDate(initialEvent?.start) ?? toDate(initialStart);
   const startDefault = eventStart ?? new Date();
-  const endDefault   = initialEvent?.end ?? new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
+  const endDefault   = toDate(initialEvent?.end) ?? new Date(startDefault.getTime() + (meta.allDayDefault ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000));
   const initialAllDay = isAllDayLocked ? true : (initialEvent?.allDay ?? meta.allDayDefault);
   const initialTitle = kind === 'availability'
     ? (initialEvent?.title ?? meta.defaultTitle)
@@ -107,13 +143,14 @@ export default function AvailabilityForm({ emp, kind: initialKind, initialStart,
   const [title,  setTitle]  = useState(initialTitle);
   const [start,  setStart]  = useState(toDateInput(startDefault, initialAllDay));
   const [end,    setEnd]    = useState(toDateInput(endDefault, initialAllDay));
-  const [notes,  setNotes]  = useState(initialEvent?.meta?.notes ?? '');
+  const initialNotes = typeof initialEvent?.meta?.notes === 'string' ? initialEvent.meta.notes : '';
+  const [notes,  setNotes]  = useState<string>(initialNotes);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Dirty guard. Intentional Cancel stays bare; the X / overlay / Esc paths
   // route through `requestClose`.
   const initialSnapshot = useMemo(
-    () => JSON.stringify({ allDay: initialAllDay, title: initialTitle, start: toDateInput(startDefault, initialAllDay), end: toDateInput(endDefault, initialAllDay), notes: initialEvent?.meta?.notes ?? '' }),
+    () => JSON.stringify({ allDay: initialAllDay, title: initialTitle, start: toDateInput(startDefault, initialAllDay), end: toDateInput(endDefault, initialAllDay), notes: initialNotes }),
     [],
   );
   const dirty = initialSnapshot !== JSON.stringify({ allDay, title, start, end, notes });

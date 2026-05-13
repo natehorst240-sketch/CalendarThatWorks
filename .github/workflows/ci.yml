@@ -25,8 +25,6 @@ jobs:
       - name: Lint (no-explicit-any enforced)
         run: npm run lint -- --max-warnings=0
 
-      - name: Test
-        run: npm run test
       - name: Unit tests
         run: npm test
 

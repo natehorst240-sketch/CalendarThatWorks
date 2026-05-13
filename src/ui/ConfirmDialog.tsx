@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import styles from './ConfirmDialog.module.css';
 
@@ -14,7 +13,14 @@ import styles from './ConfirmDialog.module.css';
  *   onConfirm     () => void
  *   onCancel      () => void
  */
-export default function ConfirmDialog({ message, confirmLabel = 'Delete', onConfirm, onCancel }: any) {
+type ConfirmDialogProps = {
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+export default function ConfirmDialog({ message, confirmLabel = 'Delete', onConfirm, onCancel }: ConfirmDialogProps) {
   const trapRef = useFocusTrap<HTMLDivElement>(onCancel);
 
   return (

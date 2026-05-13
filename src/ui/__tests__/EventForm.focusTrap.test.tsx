@@ -17,7 +17,7 @@ function requireElement<T>(value: T | null | undefined, message: string): T {
   return value;
 }
 
-function renderForm(extra: any = {}) {
+function renderForm(extra: Record<string, unknown> = {}) {
   render(
     <EventForm
       event={{

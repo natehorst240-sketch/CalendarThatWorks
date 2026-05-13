@@ -97,7 +97,7 @@ describe('instantiateScheduleTemplate', () => {
       { ...template, entries: [{ title: 'T', startOffsetMinutes: 0, durationMinutes: 60 }] },
       { anchor: new Date('2026-04-20T08:00:00.000Z') },
     );
-    expect((result.generated[0].meta as any).scheduleTemplateEntryId).toBe('sched-team-oncall:0');
+    expect((result.generated[0].meta as Record<string, unknown>).scheduleTemplateEntryId).toBe('sched-team-oncall:0');
   });
 
   it('throws when template has no entries', () => {
@@ -148,7 +148,7 @@ describe('canViewScheduleTemplate', () => {
   });
 
   it('defaults to org visibility when absent', () => {
-    const t2 = { ...template } as any;
+    const t2 = { ...template } as Record<string, unknown>;
     delete t2.visibility;
     expect(canViewScheduleTemplate(t2, { role: 'readonly' })).toBe(true);
   });

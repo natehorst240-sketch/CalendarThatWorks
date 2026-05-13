@@ -14,7 +14,7 @@ import '@testing-library/jest-dom';
 import { AssetsTab } from '../ConfigPanel';
 import { getAssetStatus } from '../assetStatus';
 
-function renderTab({ initialConfig = {}, onUpdate, items = [] }: any = {}) {
+function renderTab({ initialConfig = {}, onUpdate, items = [] }: Record<string, unknown> = {}) {
   let currentConfig = { ...initialConfig };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function'

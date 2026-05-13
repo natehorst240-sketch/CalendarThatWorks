@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * CustomizeQuickViewsPanel — popover where saved views are organized.
  *
@@ -19,6 +18,23 @@ const PROFILE_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
 
+type SavedViewLike = {
+  id: string;
+  name: string;
+  color?: string | null | undefined;
+  hiddenFromStrip?: boolean | undefined;
+};
+
+type CustomizeQuickViewsPanelProps = {
+  views: SavedViewLike[];
+  onRename: (id: string, name: string) => void;
+  onColorChange: (id: string, color: string) => void;
+  onResave: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleVisibility: (id: string) => void;
+  onEditConditions?: ((id: string) => void) | undefined;
+};
+
 export default function CustomizeQuickViewsPanel({
   views,
   onRename,
@@ -27,7 +43,7 @@ export default function CustomizeQuickViewsPanel({
   onDelete,
   onToggleVisibility,
   onEditConditions,
-}: any) {
+}: CustomizeQuickViewsPanelProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +91,7 @@ export default function CustomizeQuickViewsPanel({
             <p className={styles['dropdownEmpty']}>No saved views yet.</p>
           ) : (
             <ul className={styles['customizeList']}>
-              {views.map((view: any) => (
+              {views.map((view) => (
                 <CustomizeRow
                   key={view.id}
                   view={view}
@@ -95,6 +111,10 @@ export default function CustomizeQuickViewsPanel({
   );
 }
 
+type CustomizeRowProps = {
+  view: SavedViewLike;
+} & Omit<CustomizeQuickViewsPanelProps, 'views'>;
+
 function CustomizeRow({
   view,
   onRename,
@@ -103,7 +123,7 @@ function CustomizeRow({
   onDelete,
   onToggleVisibility,
   onEditConditions,
-}: any) {
+}: CustomizeRowProps) {
   const [renaming, setRenaming] = useState(false);
   const [nameVal, setNameVal] = useState(view.name);
   const [confirmDelete, setConfirmDelete] = useState(false);

@@ -185,9 +185,9 @@ describe('ClauseEditor — composite reordering (#386 polish)', () => {
       ],
     }} />)
     fireEvent.click(screen.getByRole('button', { name: 'Move sub-rule 2 up' }))
-    expect(stateOf().clauses.map((c: any) => c.path)).toEqual(['b', 'a', 'c'])
+    expect(stateOf().clauses.map((c: { path?: unknown }) => c.path)).toEqual(['b', 'a', 'c'])
     fireEvent.click(screen.getByRole('button', { name: 'Move sub-rule 2 down' }))
-    expect(stateOf().clauses.map((c: any) => c.path)).toEqual(['b', 'c', 'a'])
+    expect(stateOf().clauses.map((c: { path?: unknown }) => c.path)).toEqual(['b', 'c', 'a'])
   })
 
   it('disables Up on the first child and Down on the last (no oscillation)', () => {

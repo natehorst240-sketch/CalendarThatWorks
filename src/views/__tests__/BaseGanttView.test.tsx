@@ -14,7 +14,7 @@ function d(year: number, month: number, day: number) {
 // Provide a minimal context so tests with events don't crash.
 const minCtx = { colorRules: [] as unknown[] };
 
-function wrap(props: Record<string, any> = {}, ctxValue: any = null) {
+function wrap(props: Record<string, unknown> = {}, ctxValue: unknown = null) {
   return render(
     <CalendarContext.Provider value={ctxValue}>
       <BaseGanttView

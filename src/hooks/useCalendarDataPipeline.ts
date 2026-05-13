@@ -106,7 +106,7 @@ export function useCalendarDataPipeline({
 
   const { events: sourceEvents, feedErrors, isFetchingFeeds } = useSourceAggregator({
     icalFeedsProp: icalFeeds,
-    sourceStore,
+    sourceStore: sourceStore as unknown as Parameters<typeof useSourceAggregator>[0]['sourceStore'],
   });
 
   const [supabaseClient, setSupabaseClient] = useState<SupabaseRealtimeClientLike | null>(null);

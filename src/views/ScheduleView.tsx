@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ScheduleView.tsx — Horizontal employee / resource timeline.
  *
@@ -60,13 +59,21 @@ const COVERAGE_PILL_H  = 22;   // px — height of shift-coverage status pills
 const COVERAGE_BAND    = COVERAGE_PILL_H + 6; // pill + gap above next band
 
 type LooseEvent = CalendarViewEvent & {
-  [k: string]: any;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
   resource?: string | null;
   category?: string | null;
+  /** Optional layout marker added by lane assignment. */
+  _lane?: number;
+  /** Optional clipping markers added by assignLanes. */
+  _dayStart?: number;
+  _dayEnd?: number;
+  /** Optional kind from scheduleModel. */
+  kind?: unknown;
+  /** Legacy employeeId field used as a resource alias when `resource` is null. */
+  employeeId?: string | null;
 };
 
-type TimelineEmployee = { id: string; name: string; color?: string; role?: string; base?: string; avatar?: string; [k: string]: any };
+type TimelineEmployee = { id: string; name: string; color?: string; role?: string; base?: string; avatar?: string };
 type TimelineBase = { id: string; name: string };
 
 interface ScheduleViewProps {
@@ -82,7 +89,7 @@ interface ScheduleViewProps {
   onShiftStatusChange?: ((event: LooseEvent, status: 'pto' | 'unavailable' | null) => void) | undefined;
   onCoverageAssign?: ((event: LooseEvent, employeeId: string | null) => void) | undefined;
   onEmployeeAction?: ((employeeId: string, action: Record<string, unknown>) => void) | undefined;
-  groupBy?: any;
+  groupBy?: unknown;
   sort?: unknown;
   roles?: string[] | undefined;
   bases?: TimelineBase[] | undefined;
@@ -144,14 +151,14 @@ function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
     let placed = false;
     for (let i = 0; i < laneEnd.length; i++) {
       if (laneEnd[i]! < ev._dayStart) {
-        (ev as any)._lane = i;
+        (ev as { _lane?: number })._lane = i;
         laneEnd[i] = ev._dayEnd;
         placed = true;
         break;
       }
     }
     if (!placed) {
-      (ev as any)._lane = laneEnd.length;
+      (ev as { _lane?: number })._lane = laneEnd.length;
       laneEnd.push(ev._dayEnd);
     }
   }
@@ -394,8 +401,10 @@ export default function ScheduleView({
         // Clamp to the PTO request window (meta.requestStart/End) so the
         // "covering for" pill only spans the days actually needing coverage,
         // not the entire underlying shift.
-        const reqStart = ev.meta?.['requestStart'] ? new Date(ev.meta['requestStart']) : ev.start;
-        const reqEnd   = ev.meta?.['requestEnd']   ? new Date(ev.meta['requestEnd'])   : ev.end;
+        const rawStart = ev.meta?.['requestStart'];
+        const rawEnd = ev.meta?.['requestEnd'];
+        const reqStart = (typeof rawStart === 'string' || typeof rawStart === 'number' || rawStart instanceof Date) ? new Date(rawStart) : ev.start;
+        const reqEnd   = (typeof rawEnd === 'string' || typeof rawEnd === 'number' || rawEnd instanceof Date) ? new Date(rawEnd) : ev.end;
         const clampedStart = max([startOfDay(reqStart), monthStart]);
         const clampedEnd   = min([startOfDay(reqEnd),   monthEnd]);
         if (clampedStart > clampedEnd) return;
@@ -466,13 +475,13 @@ export default function ScheduleView({
     if (!isGrouped) return [];
     return rows.map(row => {
       const base = useEmployees ? (row.emp || {}) : (row.events?.[0] || {});
-      return { ...base, meta: (base as any).meta || {}, __row: row };
+      return { ...base, meta: (base as { meta?: Record<string, unknown> }).meta || {}, __row: row };
     });
   }, [isGrouped, rows, useEmployees]);
 
   const groupTree = useMemo(() => {
     if (!isGrouped) return [];
-    return buildGroupTree(pseudoEvents as any, groupBy as any);
+    return buildGroupTree(pseudoEvents as unknown as Parameters<typeof buildGroupTree>[0], groupBy as Parameters<typeof buildGroupTree>[1]);
   }, [isGrouped, pseudoEvents, groupBy]);
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -489,15 +498,30 @@ export default function ScheduleView({
     if (!isGrouped || rows.length === 0 || groupTree.length === 0) {
       return { flatRows: rows, groupOrder: [] };
     }
-    const out: any[] = [];
+    type GroupTreeNode = {
+      key: string;
+      label: string;
+      depth: number;
+      events: unknown[];
+      children: GroupTreeNode[];
+    };
+    // FlatRow is intentionally permissive: the runtime row may either be a
+    // synthetic group-header pseudo-row (with `_type === 'groupHeader'` plus
+    // group metadata) or a regular timeline row (which never has `_type`).
+    // The downstream rendering disambiguates via the `_type` discriminator.
+    type FlatRow = (typeof rows)[number] | (Record<string, unknown> & {
+      _type: 'groupHeader'; groupKey: string; groupLabel: string;
+      depth: number; collapsed: boolean; rowH: number; count: number;
+    });
+    const out: FlatRow[] = [];
     const order: string[] = [];
-    const countLeaves = (node: any) => {
+    const countLeaves = (node: GroupTreeNode): number => {
       if (node.children.length === 0) return node.events.length;
       let s = 0;
       for (const c of node.children) s += countLeaves(c);
       return s;
     };
-    const walk = (nodes: any[], parentPath: string) => {
+    const walk = (nodes: GroupTreeNode[], parentPath: string) => {
       for (const node of nodes) {
         const path = parentPath ? `${parentPath}/${node.key}` : node.key;
         order.push(path);
@@ -513,17 +537,20 @@ export default function ScheduleView({
         });
         if (collapsed) continue;
         if (node.children.length > 0) walk(node.children, path);
-        else for (const ev of node.events) out.push(ev.__row);
+        else for (const ev of node.events) {
+          const row = (ev as { __row?: (typeof rows)[number] }).__row;
+          if (row) out.push(row);
+        }
       }
     };
-    walk(groupTree, '');
+    walk(groupTree as unknown as GroupTreeNode[], '');
     return { flatRows: out, groupOrder: order };
   }, [isGrouped, rows, groupTree, collapsedGroups]);
 
   // ── Cumulative row offsets (for absolute positioning + scroll math) ────────
   const rowOffsets = useMemo(() => {
     const offsets = [0];
-    for (const row of flatRows) offsets.push(offsets[offsets.length - 1] + row.rowH);
+    for (const row of flatRows) offsets.push(offsets[offsets.length - 1]! + Number(row.rowH ?? 0));
     return offsets;
   }, [flatRows]);
 
@@ -590,16 +617,16 @@ export default function ScheduleView({
       case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
       case 'ArrowUp': {
         nextRi = ri - 1;
-        while (nextRi >= 0 && flatRows[nextRi]?._type === 'groupHeader') nextRi--;
+        while (nextRi >= 0 && (flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi--;
         nextRi = Math.max(0, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
+        if ((flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi = ri;
         move = true; break;
       }
       case 'ArrowDown': {
         nextRi = ri + 1;
-        while (nextRi <= maxRi && flatRows[nextRi]?._type === 'groupHeader') nextRi++;
+        while (nextRi <= maxRi && (flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi++;
         nextRi = Math.min(maxRi, nextRi);
-        if (flatRows[nextRi]?._type === 'groupHeader') nextRi = ri;
+        if ((flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi = ri;
         move = true; break;
       }
       case 'Home':       nextDi = 0;                        move = true; break;
@@ -608,7 +635,7 @@ export default function ScheduleView({
       case ' ': {
         e.preventDefault();
         // Activate the first event whose day range includes di
-        const hit = cellRowEvents.find(ev => ev['_dayStart'] <= di && ev['_dayEnd'] >= di);
+        const hit = cellRowEvents.find(ev => (ev['_dayStart'] ?? 0) <= di && (ev['_dayEnd'] ?? 0) >= di);
         if (hit) {
           onEventClick?.(hit);
         } else {
@@ -785,8 +812,10 @@ export default function ScheduleView({
           role="presentation"
           style={{ position: 'relative', height: totalBodyH }}
         >
-          {flatRows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
+          {flatRows.slice(visStart, visEnd + 1).map((rowDataRaw, relIdx) => {
             const rowIdx  = visStart + relIdx;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime row is a union (group-header pseudo-row + regular timeline row) whose branches use disjoint property sets; precise narrowing here would require restructuring buildGroupTree's output.
+            const rowData = rowDataRaw as any;
 
             // Render group header pseudo-rows
             if (rowData._type === 'groupHeader') {
@@ -979,7 +1008,7 @@ export default function ScheduleView({
                   {days.map((day, di) => {
                     const isFocused    = focusedCell.rowIdx === rowIdx && focusedCell.dayIdx === di;
                     const resourceId   = emp ? emp.id : resource;
-                    const cellHasEvent = rowEvents.some((ev: LooseEvent) => ev['_dayStart'] <= di && ev['_dayEnd'] >= di);
+                    const cellHasEvent = rowEvents.some((ev: LooseEvent) => (ev['_dayStart'] ?? 0) <= di && (ev['_dayEnd'] ?? 0) >= di);
                     return (
                       <div
                         key={`kbcell-${di}`}
@@ -1006,12 +1035,15 @@ export default function ScheduleView({
                   {rowEvents.map((ev: LooseEvent) => {
                     const isOnCall = ev.category === onCallCategory || ev.meta?.['onCall'] === true;
                     const evColor  = isOnCall
-                      ? (color ?? resolveColor(ev as any, ctx?.colorRules))
-                      : resolveColor(ev as any, ctx?.colorRules);
+                      ? (color ?? resolveColor(ev as Parameters<typeof resolveColor>[0], ctx?.colorRules))
+                      : resolveColor(ev as Parameters<typeof resolveColor>[0], ctx?.colorRules);
 
-                    const left    = ev['_dayStart'] * pxPerDay + 2;
-                    const width   = Math.max(pxPerDay - 4, (ev['_dayEnd'] - ev['_dayStart'] + 1) * pxPerDay - 4);
-                    const top     = ROW_PAD + ev['_lane'] * (LANE_H + LANE_GAP);
+                    const dayStart = ev['_dayStart'] ?? 0;
+                    const dayEnd = ev['_dayEnd'] ?? 0;
+                    const lane = ev['_lane'] ?? 0;
+                    const left    = dayStart * pxPerDay + 2;
+                    const width   = Math.max(pxPerDay - 4, (dayEnd - dayStart + 1) * pxPerDay - 4);
+                    const top     = ROW_PAD + lane * (LANE_H + LANE_GAP);
                     const onClick = () => onEventClick?.(ev);
 
                     const statusClass = ev.status === 'cancelled' ? styles['cancelled']
@@ -1123,7 +1155,7 @@ export default function ScheduleView({
                           : <span className={styles['evDot']} aria-hidden="true" />
                         }
                         <span className={styles['evTitle']}>{ev.title}</span>
-                        {!isOnCall && (ev['_dayEnd'] - ev['_dayStart'] + 1) >= 3 && ev.category && (
+                        {!isOnCall && (dayEnd - dayStart + 1) >= 3 && ev.category && (
                           <span className={styles['evCat']} aria-hidden="true">{ev.category}</span>
                         )}
                       </button>
@@ -1134,8 +1166,10 @@ export default function ScheduleView({
                   {rowEvents
                     .filter((ev: LooseEvent) => isShiftOrOnCallLikeEvent(ev, onCallCategory) && ev.meta?.['shiftStatus'])
                     .map((ev: LooseEvent) => {
-                      const reqStart = ev.meta?.['requestStart'] ? new Date(ev.meta['requestStart']) : ev.start;
-                      const reqEnd   = ev.meta?.['requestEnd']   ? new Date(ev.meta['requestEnd'])   : ev.end;
+                      const rawStart2 = ev.meta?.['requestStart'];
+                      const rawEnd2 = ev.meta?.['requestEnd'];
+                      const reqStart = (typeof rawStart2 === 'string' || typeof rawStart2 === 'number' || rawStart2 instanceof Date) ? new Date(rawStart2) : ev.start;
+                      const reqEnd   = (typeof rawEnd2 === 'string' || typeof rawEnd2 === 'number' || rawEnd2 instanceof Date) ? new Date(rawEnd2) : ev.end;
                       // Use startOfDay (matches assignLanes) so this pill spans the same
                       // day range as the PTO/unavailable event pill it mirrors.
                       const pillDayStart = differenceInCalendarDays(max([startOfDay(reqStart), monthStart]), monthStart);
@@ -1219,7 +1253,7 @@ export default function ScheduleView({
             className={styles['shiftMenuItem']}
             onClick={() => {
               const handled = triggerEmployeeAction(
-                shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'],
+                String(shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'] ?? ''),
                 'pto',
                 { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
               );
@@ -1233,7 +1267,7 @@ export default function ScheduleView({
             className={styles['shiftMenuItem']}
             onClick={() => {
               const handled = triggerEmployeeAction(
-                shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'],
+                String(shiftMenu.ev.resource ?? shiftMenu.ev['employeeId'] ?? ''),
                 'unavailable',
                 { source: 'shift-quick-action', sourceShift: shiftMenu.ev },
               );
@@ -1243,7 +1277,7 @@ export default function ScheduleView({
           >
             Shift-only shortcut: Mark Unavailable
           </button>
-          {shiftMenu.ev.meta?.['shiftStatus'] && (
+          {!!shiftMenu.ev.meta?.['shiftStatus'] && (
             <>
               <div className={styles['shiftMenuDivider']} />
               <button className={[styles['shiftMenuItem'], styles['shiftMenuItemClear']].join(' ')} onClick={() => { onShiftStatusChange?.(shiftMenu.ev, null); setShiftMenu(null); }}>
@@ -1264,7 +1298,7 @@ export default function ScheduleView({
           <p className={styles['coverPopoverTitle']}>
             {coverMenu.ev?.meta?.['coveredBy'] ? 'Edit shift coverage' : 'Who will cover this shift?'}
           </p>
-          {coverMenu.ev?.meta?.['coveredBy'] && (
+          {!!coverMenu.ev?.meta?.['coveredBy'] && (
             <button
               className={styles['coverEmpBtn']}
               onClick={() => { onCoverageAssign?.(coverMenu.ev, null); setCoverMenu(null); }}
@@ -1305,7 +1339,7 @@ export default function ScheduleView({
         <EmployeeActionCard
           emp={empCard.emp}
           anchorRect={empCard.rect}
-          onAction={(action: Record<string, unknown>) => onEmployeeAction(empCard.emp.id, action)}
+          onAction={(action: string) => onEmployeeAction(empCard.emp.id, action as unknown as Parameters<typeof onEmployeeAction>[1])}
           onClose={() => setEmpCard(null)}
         />
       )}

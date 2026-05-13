@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * conditionEngine — schema-driven conversion between visual conditions and filter state.
  *
@@ -25,7 +24,7 @@ type Condition = { id?: string; field: string; operator: string; value: unknown;
 
 export function conditionsToFilters(conditions: Condition[], schema: Array<{ key: string; type: string }>) {
   const schemaMap = new Map<string, { key: string; type: string }>(schema.map(f => [f.key, f]))
-  const result: Record<string, any> = {}
+  const result: Record<string, unknown> = {}
 
   for (const cond of conditions) {
     const raw = cond.value
@@ -39,8 +38,8 @@ export function conditionsToFilters(conditions: Condition[], schema: Array<{ key
 
     if (operator === 'is_not' || operator === 'not_contains') {
       const existing = result[field.key]
-      if (existing && existing.__not === true) {
-        existing.values.add(val)
+      if (existing != null && typeof existing === 'object' && (existing as { __not?: unknown }).__not === true) {
+        ((existing as { values: Set<unknown> }).values).add(val)
       } else {
         result[field.key] = { __not: true, values: new Set([val]) }
       }

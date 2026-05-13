@@ -260,7 +260,7 @@ describe('detectShiftConflicts — additional branch coverage', () => {
       employeeId: empId,
       requestStart: d('2026-04-15T09:00'),
       requestEnd: d('2026-04-15T11:00'),
-      allEvents: 'not-an-array' as any,
+      allEvents: 'not-an-array' as Record<string, unknown>,
     });
     expect(result.hasConflict).toBe(false);
     expect(result.conflictingEvents).toHaveLength(0);

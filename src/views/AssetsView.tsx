@@ -1296,7 +1296,7 @@ export default function AssetsView({
                       : ev.status === 'tentative' ? styles['tentative'] : '';
 
                     const approvalActions = stage
-                      ? allowedActionsFor(stage, approvalsConfig)
+                      ? allowedActionsFor(stage, approvalsConfig as Parameters<typeof allowedActionsFor>[1])
                       : [];
                     const showCaret = approvalActions.length > 0
                       && typeof onApprovalAction === 'function';
@@ -1394,10 +1394,10 @@ export default function AssetsView({
             : undefined
         }
       />
-      {approvalMenu && (
+      {approvalMenu && approvalMenu.stage && (
         <ApprovalActionMenu
           stage={approvalMenu.stage}
-          approvalsConfig={approvalsConfig}
+          approvalsConfig={approvalsConfig as Parameters<typeof allowedActionsFor>[1]}
           anchorRect={approvalMenu.anchorRect}
           onAction={handleApprovalActionInternal}
           onClose={closeApprovalMenu}

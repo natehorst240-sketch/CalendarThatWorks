@@ -9,7 +9,7 @@ import {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const ev = (overrides: any) => ({
+const ev = (overrides: Record<string, unknown>) => ({
   id:       overrides.id ?? 'e1',
   title:    overrides.title ?? 'Event',
   start:    overrides.start ?? new Date('2026-04-10T09:00'),
@@ -186,7 +186,7 @@ describe('applyFilters — custom schema', () => {
       key: 'status',
       label: 'Status',
       type: 'multi-select',
-      predicate: (item: any, value: any) =>
+      predicate: (item: unknown, value: unknown) =>
         value instanceof Set ? value.has(item.status) : value.includes(item.status),
     },
     {
@@ -641,13 +641,13 @@ describe('getResources — edge cases', () => {
 describe('applyFilters — search with no title field', () => {
   it('skips title?.toLowerCase() when title is absent and matches via resource', () => {
     const noTitle = { id: 'nt', start: new Date(), end: new Date(), resource: 'Bob' };
-    const result = applyFilters([noTitle as any], { search: 'bob' });
+    const result = applyFilters([noTitle as Record<string, unknown>], { search: 'bob' });
     expect(result).toHaveLength(1);
   });
 
   it('returns false when item has no matching fields and title is absent', () => {
     const noTitle = { id: 'nt', start: new Date(), end: new Date() };
-    const result = applyFilters([noTitle as any], { search: 'anything' });
+    const result = applyFilters([noTitle as Record<string, unknown>], { search: 'anything' });
     expect(result).toHaveLength(0);
   });
 });
@@ -659,7 +659,7 @@ describe('applyFilters — dateRange evEnd fallback', () => {
     const schema = [{ key: 'dateRange', type: 'date-range' }];
     const pointEv = { id: 'pt', start: new Date('2026-04-10T10:00Z') }; // no end
     const range = { start: new Date('2026-04-10T09:00Z'), end: new Date('2026-04-10T11:00Z') };
-    const result = applyFilters([pointEv as any], { dateRange: range }, schema);
+    const result = applyFilters([pointEv as Record<string, unknown>], { dateRange: range }, schema);
     expect(result).toHaveLength(1);
   });
 });

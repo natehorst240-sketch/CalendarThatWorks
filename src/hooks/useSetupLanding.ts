@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useCallback } from 'react';
 import type { SetupLandingResult } from '../ui/SetupLanding';
 import { buildRecipeSavedView } from '../core/setupRecipes';
 
-type OwnerConfig = Record<string, any>;
+type OwnerConfig = Record<string, unknown>;
 
 interface SavedViewsHandle {
   saveView: (name: string, filters: Record<string, unknown>, opts?: { view?: string | null; groupBy?: unknown }) => unknown;
@@ -37,10 +36,13 @@ export function useSetupLanding({
   const [setupDismissed, setSetupDismissed] = useState(false);
   const shouldShowSetup = !!(showSetupLanding && !setupCompleted && !setupDismissed);
 
+  const asRecord = (value: unknown): Record<string, unknown> =>
+    (value != null && typeof value === 'object' && !Array.isArray(value)) ? (value as Record<string, unknown>) : {};
+
   const handleSetupSkip = useCallback(() => {
     updateConfig(prev => ({
       ...prev,
-      setup: { ...(prev['setup'] ?? {}), completed: true },
+      setup: { ...asRecord(prev['setup']), completed: true },
     }));
     setSetupDismissed(true);
   }, [updateConfig]);
@@ -48,7 +50,7 @@ export function useSetupLanding({
   const handleReopenSetup = useCallback(() => {
     updateConfig(prev => ({
       ...prev,
-      setup: { ...(prev['setup'] ?? {}), completed: false },
+      setup: { ...asRecord(prev['setup']), completed: false },
     }));
     setSetupDismissed(false);
     closeConfig();
@@ -66,25 +68,26 @@ export function useSetupLanding({
           meta: { assetTypeId: seed.assetTypeId },
         }));
 
+      const teamBlock = asRecord(prev['team']);
+      const teamMembers = Array.isArray(teamBlock['members']) ? teamBlock['members'] as Array<{ id: unknown }> : [];
       return {
         ...prev,
         title: result.calendarName,
         setup: {
-          ...(prev['setup'] ?? {}),
+          ...asRecord(prev['setup']),
           completed: true,
           preferredTheme: result.theme,
         },
         display: {
-          ...(prev['display'] ?? {}),
+          ...asRecord(prev['display']),
           defaultView: result.defaultView,
           enabledViews: result.enabledViews,
         },
         team: {
-          ...(prev['team'] ?? {}),
+          ...teamBlock,
           locationLabel: result.locationLabel,
           members: [
-            ...((prev['team']?.members ?? []) as Array<{ id: unknown }>)
-              .filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
+            ...teamMembers.filter(m => !result.teamMembers.some(r => String(r.id) === String(m.id))),
             ...result.teamMembers,
           ],
         },

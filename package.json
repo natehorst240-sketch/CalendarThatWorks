@@ -81,6 +81,7 @@
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
+    "package:check": "attw --pack .",
     "ci": "npm run type-check && npm run lint && npm run test",
     "prepare": "husky",
     "prepublishOnly": "npm run ci && npm run build"
@@ -124,6 +125,7 @@
     }
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@playwright/test": "^1.60.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",

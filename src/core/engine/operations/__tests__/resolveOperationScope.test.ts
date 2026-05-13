@@ -29,7 +29,7 @@ describe('resolveOperationScope', () => {
   it('returns needsRecurringResolution:false for non-recurring event', () => {
     const op = { type: 'update', id: 'single-1', patch: { title: 'New' } } as Extract<
       EngineOperation,
-      { scope?: any }
+      { scope?: unknown }
     >;
     const result = resolveOperationScope(op, makeNonRecurring(), []);
     expect(result.needsRecurringResolution).toBe(false);
@@ -44,7 +44,7 @@ describe('resolveOperationScope', () => {
       id: 'master-1',
       patch: { title: 'New Title' },
       scope: 'series',
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(false);
   });
@@ -54,7 +54,7 @@ describe('resolveOperationScope', () => {
       type: 'update',
       id: 'master-1',
       patch: { title: 'New' },
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(false);
   });
@@ -67,7 +67,7 @@ describe('resolveOperationScope', () => {
       id: 'master-1',
       patch: { title: 'New' },
       scope: 'single',
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(false);
   });
@@ -80,7 +80,7 @@ describe('resolveOperationScope', () => {
       patch: { title: 'Changed' },
       scope: 'single',
       occurrenceDate,
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(true);
     expect(Array.isArray(result.changes)).toBe(true);
@@ -95,7 +95,7 @@ describe('resolveOperationScope', () => {
       id: 'master-1',
       patch: { title: 'New' },
       scope: 'following',
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(false);
   });
@@ -108,7 +108,7 @@ describe('resolveOperationScope', () => {
       patch: { title: 'Changed' },
       scope: 'following',
       occurrenceDate,
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(true);
     expect(Array.isArray(result.changes)).toBe(true);
@@ -126,7 +126,7 @@ describe('resolveOperationScope', () => {
       newEnd: t(11),
       scope: 'single',
       occurrenceDate,
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(true);
     expect(result.changes!.length).toBeGreaterThan(0);
@@ -143,7 +143,7 @@ describe('resolveOperationScope', () => {
       newEnd: t(12),
       scope: 'single',
       occurrenceDate,
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(true);
     expect(result.changes!.length).toBeGreaterThan(0);
@@ -159,7 +159,7 @@ describe('resolveOperationScope', () => {
       patch: { title: 'New', category: 'PTO', resourceId: 'r1', color: '#ff0', status: 'tentative' },
       scope: 'single',
       occurrenceDate,
-    } as Extract<EngineOperation, { scope?: any }>;
+    } as Extract<EngineOperation, { scope?: unknown }>;
     const result = resolveOperationScope(op, makeMaster(), []);
     expect(result.needsRecurringResolution).toBe(true);
   });

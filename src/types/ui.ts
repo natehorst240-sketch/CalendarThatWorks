@@ -1,10 +1,21 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import type { ReactNode } from 'react';
 import type { NormalizedEvent } from './events';
 import type { EventStatus, EventLifecycleState } from './events';
 import type { EventVisualPriority } from './view';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- transitional shared shape: consumers (ConfigPanel, CalendarModals) index untyped nested config fields; tightening this requires a deeper refactor of those consumers' config-shape inference.
 export type AnyRecord = Record<string, any>;
+
+/**
+ * Loose callback prop type used by ConfigPanelProps for handler props that
+ * concrete callers may pass with a variety of concrete signatures
+ * (e.g. (member: EmployeeRecord) => void, (id: string) => void). The
+ * variance-tolerant signature avoids forcing every host to match a single
+ * shape; the targeted disable is the smallest cost to keep the public prop
+ * surface backward-compatible.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional permissive callable for transitional public prop surface
+export type LooseHandler = (...args: any[]) => void;
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 
@@ -74,7 +85,7 @@ export type SaveViewHandler = (
 
 export type SavedViewUpdateHandler = (
   id: string,
-  patch: Record<string, any>,
+  patch: Record<string, unknown>,
 ) => void;
 
 export type SourceDraft = {
@@ -83,13 +94,13 @@ export type SourceDraft = {
   enabled?: boolean | undefined;
   type?: string | undefined;
   url?: string | undefined;
-  [k: string]: any;
+  [k: string]: unknown;
 };
 
 export type ScheduleTemplateDraft = {
   id?: string;
   name?: string;
-  [k: string]: any;
+  [k: string]: unknown;
 };
 
 export type ConfigPanelTabId =
@@ -126,16 +137,16 @@ export interface ConfigPanelProps {
   /** True while iCal feeds are fetching; surfaced in SourcePanel as a
    *  small "Syncing…" affordance next to the iCal Feeds heading. */
   isFetchingFeeds?: boolean | undefined;
-  onAddSource?: ((...args: any[]) => void) | undefined;
-  onRemoveSource?: ((...args: any[]) => void) | undefined;
-  onToggleSource?: ((...args: any[]) => void) | undefined;
-  onUpdateSource?: ((...args: any[]) => void) | undefined;
+  onAddSource?: LooseHandler | undefined;
+  onRemoveSource?: LooseHandler | undefined;
+  onToggleSource?: LooseHandler | undefined;
+  onUpdateSource?: LooseHandler | undefined;
   scheduleTemplates?: ScheduleTemplateDraft[] | undefined;
-  onCreateScheduleTemplate?: ((...args: any[]) => void) | undefined;
-  onDeleteScheduleTemplate?: ((...args: any[]) => void) | undefined;
+  onCreateScheduleTemplate?: LooseHandler | undefined;
+  onDeleteScheduleTemplate?: LooseHandler | undefined;
   scheduleTemplateError?: string | null | undefined;
-  onEmployeeAdd?: ((...args: any[]) => void) | undefined;
-  onEmployeeDelete?: ((...args: any[]) => void) | undefined;
+  onEmployeeAdd?: LooseHandler | undefined;
+  onEmployeeDelete?: LooseHandler | undefined;
   initialTab?: string | undefined;
   initialSmartViewEditId?: string | null | undefined;
   calendarId?: string | undefined;

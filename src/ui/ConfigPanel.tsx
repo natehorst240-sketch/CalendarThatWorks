@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Plus, Trash2, Check, Camera, Pencil, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 
@@ -329,7 +328,7 @@ export default function ConfigPanel({
   );
   // Open the section containing the active tab; allow others to be expanded
   // independently. Re-keys when `tab` changes so deep-links auto-expand.
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [(visibleSections.find(s => s.tabs.includes(tab as any))?.id ?? visibleSections[0]!.id)]: true }));
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => ({ [(visibleSections.find(s => s.tabs.includes(tab as ConfigPanelTabId))?.id ?? visibleSections[0]!.id)]: true }));
   const [searchQuery, setSearchQuery] = useState('');
   const trapRef = useFocusTrap<HTMLDivElement>(onClose);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -357,7 +356,7 @@ export default function ConfigPanel({
 
   // Auto-expand the section that owns the active tab whenever it changes.
   useEffect(() => {
-    const sid = (visibleSections.find(s => s.tabs.includes(tab as any))?.id ?? visibleSections[0]!.id);
+    const sid = (visibleSections.find(s => s.tabs.includes(tab as ConfigPanelTabId))?.id ?? visibleSections[0]!.id);
     setOpenSections(prev => (prev[sid] ? prev : { ...prev, [sid]: true }));
   }, [tab]);
 
@@ -1437,7 +1436,7 @@ function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps)
           <div>
             <strong>{template.name}</strong>
             <div className={styles['sectionDesc']}>
-              {template['visibility'] ?? 'org'} · {template['entries']?.length ?? 0} entr{(template['entries']?.length ?? 0) === 1 ? 'y' : 'ies'}
+              {String(template['visibility'] ?? 'org')} · {(Array.isArray(template['entries']) ? template['entries'].length : 0)} entr{((Array.isArray(template['entries']) ? template['entries'].length : 0)) === 1 ? 'y' : 'ies'}
             </div>
           </div>
           <button className={styles['removeBtn']} onClick={() => onDelete?.(template.id)} disabled={!onDelete}>

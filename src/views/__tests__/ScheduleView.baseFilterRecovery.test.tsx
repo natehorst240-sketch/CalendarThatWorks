@@ -25,9 +25,9 @@ const bases = [
   { id: 'west', name: 'West' },
 ];
 
-function renderTimeline(props: any = {}) {
+function renderTimeline(props: Record<string, unknown> = {}) {
   return render(
-    <CalendarContext.Provider value={null as any}>
+    <CalendarContext.Provider value={null as unknown as Record<string, unknown>}>
       <ScheduleView
         currentDate={currentDate}
         events={[]}

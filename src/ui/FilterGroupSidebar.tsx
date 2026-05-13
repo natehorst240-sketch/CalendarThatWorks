@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * FilterGroupSidebar — slide-out panel with tab navigation.
  *
@@ -71,13 +70,13 @@ export type FilterGroupSidebarProps = {
 
   // Views tab
   /** All saved views. */
-  views: any[];
+  views: Array<{ id: string; name: string; color?: string | null | undefined; view?: string | null | undefined; hiddenFromStrip?: boolean | undefined }>;
   /** Currently active saved view id. */
   activeViewId: string | null;
   /** Whether the active view has unsaved changes. */
   isViewDirty: boolean;
   /** Apply a saved view. */
-  onApplyView: (view: any) => void;
+  onApplyView: (view: { id: string; name: string; [key: string]: unknown }) => void;
   /** Save current state as a new view. */
   onSaveView: (name: string, color: string | null) => void;
   /** Resave current state into an existing view. */

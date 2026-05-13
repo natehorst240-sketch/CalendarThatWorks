@@ -35,14 +35,19 @@ const events = [
 ];
 
 /** Apply the three-stage pipeline end-to-end. */
-function pipeline({ filters = {}, sort = [], groupBy = null }: any = {}) {
+type PipelineOptions = {
+  filters?: Record<string, unknown>;
+  sort?: Parameters<typeof sortEvents>[1];
+  groupBy?: Parameters<typeof buildGroupTree>[1] | null;
+};
+function pipeline({ filters = {}, sort = [], groupBy = null }: PipelineOptions = {}) {
   const filtered = applyFilters(events, filters, DEFAULT_FILTER_SCHEMA);
-  const sorted   = sortEvents(filtered as any, sort);
+  const sorted   = sortEvents(filtered as Parameters<typeof sortEvents>[0], sort);
   const tree     = groupBy ? buildGroupTree(sorted, groupBy) : [];
   return { filtered, sorted, tree };
 }
 
-function mustFindGroup(tree: any[], key: string) {
+function mustFindGroup(tree: ReadonlyArray<{ key: string } & Record<string, unknown>>, key: string) {
   const group = tree.find((entry) => entry.key === key);
   expect(group).toBeDefined();
   return group!;
@@ -57,9 +62,9 @@ describe('integration — sort × group', () => {
       groupBy: 'category',
     });
     // category groups sort alphabetically (maintenance, pr, training).
-    const maintenanceTitles = mustFindGroup(tree, 'maintenance').events.map((e: any) => e.title);
+    const maintenanceTitles = mustFindGroup(tree, 'maintenance').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.title);
     expect(maintenanceTitles).toEqual(['Bravo Flight', 'Foxtrot Flight']);
-    const trainingTitles = mustFindGroup(tree, 'training').events.map((e: any) => e.title);
+    const trainingTitles = mustFindGroup(tree, 'training').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.title);
     expect(trainingTitles).toEqual(['Alpha Flight', 'Charlie Flight', 'Echo Flight']);
   });
 
@@ -68,7 +73,7 @@ describe('integration — sort × group', () => {
       sort: [{ field: 'title', direction: 'desc' }],
       groupBy: 'category',
     });
-    const trainingTitles = mustFindGroup(tree, 'training').events.map((e: any) => e.title);
+    const trainingTitles = mustFindGroup(tree, 'training').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.title);
     expect(trainingTitles).toEqual(['Echo Flight', 'Charlie Flight', 'Alpha Flight']);
   });
 
@@ -81,7 +86,7 @@ describe('integration — sort × group', () => {
       ],
       groupBy: 'category',
     });
-    const training = mustFindGroup(tree, 'training').events.map((e: any) => ({
+    const training = mustFindGroup(tree, 'training').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => ({
       title: e.title, priority: e.meta.priority,
     }));
     expect(training).toEqual([
@@ -98,9 +103,9 @@ describe('integration — sort × group', () => {
     });
     // East → training: [Alpha only]; East → pr: [Delta]; East → maintenance: [Foxtrot].
     const east = mustFindGroup(tree, 'East');
-    expect(east.children.map((c: any) => c.key)).toEqual(['maintenance', 'pr', 'training']);
-    expect(mustFindGroup(east.children, 'training').events.map((e: any) => e.id)).toEqual(['e2']);
-    expect(mustFindGroup(east.children, 'maintenance').events.map((e: any) => e.id)).toEqual(['e6']);
+    expect(east.children.map((c: { key: string }) => c.key)).toEqual(['maintenance', 'pr', 'training']);
+    expect(mustFindGroup(east.children, 'training').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.id)).toEqual(['e2']);
+    expect(mustFindGroup(east.children, 'maintenance').events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.id)).toEqual(['e6']);
   });
 });
 
@@ -180,8 +185,8 @@ describe('integration — filter × group', () => {
     });
     const east = mustFindGroup(tree, 'East');
     const west = mustFindGroup(tree, 'West');
-    expect(east.children.map((c: any) => c.key)).toEqual(['training']);
-    expect(west.children.map((c: any) => c.key)).toEqual(['training']);
+    expect(east.children.map((c: { key: string }) => c.key)).toEqual(['training']);
+    expect(west.children.map((c: { key: string }) => c.key)).toEqual(['training']);
   });
 });
 
@@ -197,8 +202,8 @@ describe('integration — filter × sort × group', () => {
     // Only training events survive; sorted by start desc; grouped by region.
     const east = mustFindGroup(tree, 'East');
     const west = mustFindGroup(tree, 'West');
-    expect(east.events.map((e: any) => e.id)).toEqual(['e2']); // Alpha only
-    expect(west.events.map((e: any) => e.id)).toEqual(['e5', 'e1']); // Echo, Charlie (desc)
+    expect(east.events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.id)).toEqual(['e2']); // Alpha only
+    expect(west.events.map((e: { id: string; title: string; meta?: { priority?: number } }) => e.id)).toEqual(['e5', 'e1']); // Echo, Charlie (desc)
   });
 
   it('group order is alphabetical regardless of event sort direction', () => {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * EventForm.jsx — Modal for adding / editing events.
  * Layout and orchestration only; business logic lives in useEventDraftState
@@ -23,6 +22,33 @@ import type { ConflictEvaluationResult } from '../core/conflictEngine';
 import ConfirmDialog from './ConfirmDialog';
 import ConflictModal from './ConflictModal';
 import styles from './EventForm.module.css';
+
+type EventFormEvent = {
+  id?: string;
+  resourcePoolId?: string | null | undefined;
+  category?: string | null | undefined;
+  meta?: { approvalStage?: { stage?: string } | null | undefined; [key: string]: unknown } | null | undefined;
+  exdates?: readonly (Date | string)[] | undefined;
+  [key: string]: unknown;
+};
+
+type EventFormProps = {
+  event?: EventFormEvent | null | undefined;
+  config?: Record<string, unknown> | null | undefined;
+  categories?: readonly string[] | string[];
+  onSave: (payload: Record<string, unknown>) => void;
+  onDelete?: ((id: string) => void) | null | undefined;
+  onClose: () => void;
+  permissions?: unknown;
+  onAddCategory?: ((cat: string) => void) | undefined;
+  maintenanceRules?: unknown;
+  onCheckConflicts?: ((payload: Record<string, unknown>) => ConflictEvaluationResult | null) | undefined;
+  approvalCategories?: readonly unknown[];
+  pools?: readonly unknown[] | null | undefined;
+  onLiveConflictsChange?: ((conflicts: readonly string[] | unknown[] | null) => void) | undefined;
+  hideTemplates?: boolean;
+  resourceSuggestions?: unknown;
+};
 
 export default function EventForm({
   event, config, categories, onSave, onDelete, onClose, permissions: _permissions, onAddCategory,
@@ -79,12 +105,12 @@ export default function EventForm({
    * instead of the browser's freeform history.
    */
   resourceSuggestions,
-}: any) {
+}: EventFormProps) {
   const isNew   = !event?.id || event.id.startsWith('wc-');
-  const draft   = useEventDraftState(event, categories, config);
+  const draft   = useEventDraftState(event as Parameters<typeof useEventDraftState>[0], categories as string[], config as Parameters<typeof useEventDraftState>[2]);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [conflictResult, setConflictResult] = useState<ConflictEvaluationResult | null>(null);
-  const [pendingPayload,  setPendingPayload]  = useState<any>(null);
+  const [pendingPayload,  setPendingPayload]  = useState<Record<string, unknown> | null>(null);
 
   // Approval categories the draft should route through. Recomputed each
   // render because the user can change the category in-form and the
@@ -321,7 +347,7 @@ export default function EventForm({
         <ConfirmDialog
           message="Delete this event? This cannot be undone."
           confirmLabel="Delete"
-          onConfirm={() => { onDelete(event.id); onClose(); }}
+          onConfirm={() => { if (event?.id) onDelete?.(event.id); onClose(); }}
           onCancel={() => setConfirmDeleteOpen(false)}
         />
       )}
@@ -408,9 +434,9 @@ export default function EventForm({
                   placeholder="Tail #, room, person…"
                   list={resourceSuggestions ? 'ef-resource-suggestions' : undefined}
                 />
-                {resourceSuggestions && (
+                {typeof resourceSuggestions === 'function' && (
                   <datalist id="ef-resource-suggestions">
-                    {resourceSuggestions(d.values.category).map((opt: { value: string; label: string }) => (
+                    {(resourceSuggestions as (cat: string) => Array<{ value: string; label: string }>)(d.values.category).map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </datalist>
@@ -441,7 +467,7 @@ export default function EventForm({
                 />
               );
             })()}
-            <CustomFieldsSection category={d.values.category} customFields={d.customFields}
+            <CustomFieldsSection category={d.values.category} customFields={d.customFields as unknown as Parameters<typeof CustomFieldsSection>[0]['customFields']}
               metaValues={d.values.meta} errors={d.errors} onMetaChange={d.setMeta} />
             <RemindersSection reminders={d.values.reminders} onChange={d.setReminders} />
             {requiresApproval && (
@@ -465,7 +491,7 @@ export default function EventForm({
                       : 'Conflict warning — review before saving'}
                   </strong>
                   <ul className={styles['conflictList']}>
-                    {liveConflicts!.violations.map((v: any, i: number) => (
+                    {liveConflicts!.violations.map((v, i: number) => (
                       <li key={`${v.rule}:${v.conflictingEventId ?? i}`}>
                         <span className={styles['conflictSeverity']} data-severity={v.severity}>
                           {v.severity}

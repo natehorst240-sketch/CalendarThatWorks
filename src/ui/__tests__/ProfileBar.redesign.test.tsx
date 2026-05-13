@@ -14,7 +14,7 @@ import '@testing-library/jest-dom';
 
 import ProfileBar from '../ProfileBar';
 
-const VIEW_VISIBLE: any = {
+const VIEW_VISIBLE: Record<string, unknown> = {
   id: 'v-vis',
   name: 'Work Week',
   createdAt: new Date().toISOString(),
@@ -24,7 +24,7 @@ const VIEW_VISIBLE: any = {
   hiddenFromStrip: false,
 };
 
-const VIEW_HIDDEN: any = {
+const VIEW_HIDDEN: Record<string, unknown> = {
   id: 'v-hid',
   name: 'Archive',
   createdAt: new Date().toISOString(),
@@ -35,7 +35,7 @@ const VIEW_HIDDEN: any = {
 };
 
 function renderBar(overrides: Record<string, unknown> = {}) {
-  const props: any = {
+  const props: Record<string, unknown> = {
     views: [VIEW_VISIBLE, VIEW_HIDDEN],
     activeId: null,
     isDirty: false,

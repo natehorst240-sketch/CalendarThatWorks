@@ -256,7 +256,7 @@ describe('mapToEvents — billing fields', () => {
       'iso',
     );
     expect(errors).toHaveLength(0);
-    const billing = (events[0]!.meta as any).billing;
+    const billing = (events[0]!.meta as Record<string, unknown>).billing;
     expect(billing).toEqual({
       billable: true,
       customer: 'ABC Logistics',
@@ -272,7 +272,7 @@ describe('mapToEvents — billing fields', () => {
       { title: 'T', start: 'S', rate: 'Rate' },
       'iso',
     );
-    expect((events[0]!.meta as any).billing.rate).toBe(1250.5);
+    expect((events[0]!.meta as Record<string, unknown>).billing.rate).toBe(1250.5);
   });
 
   it('reports a per-row error when rate is non-numeric', () => {
@@ -332,7 +332,7 @@ describe('mapToEvents — maintenance fields', () => {
       'iso',
     );
     expect(errors).toHaveLength(0);
-    const meta = events[0]!.meta as any;
+    const meta = events[0]!.meta as Record<string, unknown>;
     expect(meta.maintenance).toEqual({
       ruleId: 'oil-10k',
       lifecycle: 'scheduled',
@@ -347,7 +347,7 @@ describe('mapToEvents — maintenance fields', () => {
       { title: 'T', start: 'S', meterType: 'MT' },
       'iso',
     );
-    expect((events[0]!.meta as any).meter).toEqual({ type: 'hours' });
+    expect((events[0]!.meta as Record<string, unknown>).meter).toEqual({ type: 'hours' });
   });
 
   it('produces independent billing and maintenance blocks for the same event', () => {
@@ -356,7 +356,7 @@ describe('mapToEvents — maintenance fields', () => {
       { title: 'T', start: 'S', customer: 'Cust', maintenanceRule: 'Rule' },
       'iso',
     );
-    const meta = events[0]!.meta as any;
+    const meta = events[0]!.meta as Record<string, unknown>;
     expect(meta.billing.customer).toBe('Internal');
     expect(meta.maintenance.ruleId).toBe('inspection-50h');
     expect(meta.meter).toBeUndefined();

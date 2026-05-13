@@ -172,7 +172,7 @@ describe('completeMaintenance', () => {
       value:   110_500,
       asOf:    '2026-04-10T11:00:00Z',
     });
-    const maint = (event.meta as any).maintenance;
+    const maint = (event.meta as Record<string, unknown>).maintenance;
     expect(maint.lifecycle).toBe('complete');
     expect(maint.meterAtService).toBe(110_500);
     expect(maint.nextDueMiles).toBe(120_500);
@@ -201,7 +201,7 @@ describe('completeMaintenance', () => {
     const { event } = completeMaintenance(noRuleIdEvent, oilChange, {
       assetId: 'truck-12', type: 'miles', value: 100,
     });
-    expect((event.meta as any).maintenance.ruleId).toBe('oil-10k');
+    expect((event.meta as Record<string, unknown>).maintenance.ruleId).toBe('oil-10k');
   });
 
   it('does not mutate the input event', () => {
@@ -222,7 +222,7 @@ describe('completeMaintenance', () => {
       cycleRule,
       { assetId: 'eng-3', type: 'cycles', value: 5_400 },
     );
-    expect((event.meta as any).maintenance.nextDueCycles).toBe(7_400);
+    expect((event.meta as Record<string, unknown>).maintenance.nextDueCycles).toBe(7_400);
   });
 
   it('preserves unrelated meta keys on the event', () => {
@@ -233,7 +233,7 @@ describe('completeMaintenance', () => {
     const { event } = completeMaintenance(eventWithExtra, oilChange, {
       assetId: 'truck-12', type: 'miles', value: 100_000,
     });
-    expect((event.meta as any).billing).toEqual({ customer: 'Internal' });
+    expect((event.meta as Record<string, unknown>).billing).toEqual({ customer: 'Internal' });
   });
 
   it('handles event with no meta at all (meta is undefined)', () => {
@@ -241,7 +241,7 @@ describe('completeMaintenance', () => {
     const { event } = completeMaintenance(noMeta, oilChange, {
       assetId: 'truck-12', type: 'miles', value: 100_000,
     });
-    expect((event.meta as any).maintenance.lifecycle).toBe('complete');
+    expect((event.meta as Record<string, unknown>).maintenance.lifecycle).toBe('complete');
   });
 
   it('uses current timestamp when asOf is omitted', () => {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * layout.js — shared event layout algorithms.
  *
@@ -11,7 +10,6 @@ type LayoutEvent = {
   start: Date;
   end: Date;
   allDay?: boolean | undefined;
-  [k: string]: any;
 };
 
 // ─── Timed event overlap layout (week / day view) ──────────────────────────

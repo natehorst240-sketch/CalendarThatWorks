@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ViewsPanel — Save/load complete configurations (filters + groups + sort + view type).
  *
  * Lists saved views with one-click apply, save-current, rename, color change,
  * resave, delete, and visibility toggle (show/hide from ProfileBar chip strip).
  */
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ComponentType } from 'react';
 import {
   Plus, Bookmark, BookmarkCheck, Check,
   Pencil, Trash2, Eye, EyeOff, RefreshCw,
@@ -18,7 +17,7 @@ const PROFILE_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
 ];
 
-const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
+const VIEW_ICON_MAP: Record<string, { Icon: ComponentType<{ size?: number | string }>; label: string }> = {
   month:    { Icon: CalendarDays,  label: 'Month' },
   week:     { Icon: Columns3,      label: 'Week' },
   day:      { Icon: Calendar,      label: 'Day' },
@@ -28,15 +27,23 @@ const VIEW_ICON_MAP: Record<string, { Icon: any; label: string }> = {
   assets:   { Icon: Boxes,         label: 'Assets' },
 };
 
+export type ViewsPanelView = {
+  id: string;
+  name: string;
+  color?: string | null | undefined;
+  view?: string | null | undefined;
+  hiddenFromStrip?: boolean | undefined;
+};
+
 export type ViewsPanelProps = {
   /** All saved views. */
-  views: any[];
+  views: ViewsPanelView[];
   /** Currently active view id. */
   activeId: string | null;
   /** Whether the active view has unsaved changes. */
   isDirty: boolean;
   /** Apply a saved view. */
-  onApply: (view: any) => void;
+  onApply: (view: ViewsPanelView) => void;
   /** Save current state as a new view. */
   onSave: (name: string, color: string | null) => void;
   /** Resave current state into an existing view. */
