@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import type { SetupLandingResult } from '../ui/SetupLanding';
 import { buildRecipeSavedView } from '../core/setupRecipes';
+import type { SaveViewOptions } from './useSavedViews';
 
 type OwnerConfig = Record<string, unknown>;
 
 interface SavedViewsHandle {
-  saveView: (name: string, filters: Record<string, unknown>, opts?: { view?: string | null; groupBy?: unknown }) => unknown;
+  saveView: (name: string, filters: Record<string, unknown>, opts?: SaveViewOptions) => unknown;
 }
 
 export interface UseSetupLandingParams {

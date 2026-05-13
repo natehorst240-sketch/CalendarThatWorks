@@ -32,6 +32,13 @@ export type SavedViewCaptureField =
 
 export type SavedViewCaptureCtx = Partial<Record<SavedViewCaptureField, unknown>>;
 
+/**
+ * Generic helper return type: preserves the caller's exact value types so the
+ * captured fields can be spread into `saveView`/`resaveView` without widening
+ * to `unknown`.
+ */
+type CapturedFields<T extends SavedViewCaptureCtx> = Partial<Pick<T, SavedViewCaptureField & keyof T>>;
+
 export interface ViewScope {
   id: ViewId;
   includes(ev: unknown, ctx: ViewScopeContext): boolean;
@@ -115,16 +122,20 @@ export function getViewScope(view: string): ViewScope {
  * Pick only the saved-view fields the active view owns out of `ctx`.
  * Undefined entries are dropped; everything else is passed through verbatim
  * for `useSavedViews` to sanitize. Safe to spread into `saveView`/`resaveView`.
+ *
+ * Generic over the input ctx so callers' precise value types survive into the
+ * returned object — spreading the result into a typed options bag won't widen
+ * the captured fields to `unknown`.
  */
-export function captureSavedViewFields(
+export function captureSavedViewFields<T extends SavedViewCaptureCtx>(
   view: string,
-  ctx: SavedViewCaptureCtx,
-): SavedViewCaptureCtx {
+  ctx: T,
+): CapturedFields<T> {
   const fields = getViewScope(view).persistedFields;
-  if (!fields || fields.length === 0) return {};
-  const out: SavedViewCaptureCtx = {};
+  if (!fields || fields.length === 0) return {} as CapturedFields<T>;
+  const out: Partial<T> = {};
   for (const f of fields) {
-    if (ctx[f] !== undefined) out[f] = ctx[f];
+    if (ctx[f] !== undefined) out[f as keyof T] = ctx[f as keyof T];
   }
-  return out;
+  return out as CapturedFields<T>;
 }

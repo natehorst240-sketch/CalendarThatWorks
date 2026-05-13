@@ -18,6 +18,8 @@ import { VIEW_SHORTCUT_KEYS } from '../hooks/useKeyboardShortcuts';
 import { useCalendarSetup } from '../hooks/useCalendarSetup';
 import { useOwnerConfig } from '../hooks/useOwnerConfig';
 import { useSavedViews } from '../hooks/useSavedViews';
+import type { SaveViewOptions } from '../hooks/useSavedViews';
+import type { SavedViewCaptureField } from '../core/viewScope';
 import type { InlineEditTarget } from '../hooks/useModalState';
 import type { CalendarApi, WorksCalendarProps } from '../WorksCalendar.types';
 import type { NormalizedEvent } from '../types/events';
@@ -36,7 +38,7 @@ type CalendarHandle = ReturnType<typeof useCalendarSetup>['cal'];
 type OwnerCfgHandle = ReturnType<typeof useOwnerConfig>;
 type SavedViewsHandle = ReturnType<typeof useSavedViews>;
 type SavedViewArg = Parameters<SavedViewsHandle['saveView']>[2];
-type CaptureCtx = Parameters<typeof captureSavedViewFields>[1];
+type CaptureCtx = Pick<SaveViewOptions, SavedViewCaptureField>;
 
 export interface CalendarToolbarProps {
   cal: CalendarHandle;

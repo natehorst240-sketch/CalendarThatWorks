@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { deserializeFilters } from './useSavedViews';
+import type { SaveViewOptions } from './useSavedViews';
 import { captureSavedViewFields } from '../core/viewScope';
 import type { GroupByInput } from './useNormalizedConfig';
 import type { SortConfig } from '../types/grouping';
@@ -27,7 +28,7 @@ interface CalHandle {
 }
 
 interface SavedViewsHandle {
-  saveView: (name: string, filters: Record<string, unknown>, opts?: Record<string, unknown>) => unknown;
+  saveView: (name: string, filters: Record<string, unknown>, opts?: SaveViewOptions) => unknown;
   deleteView: (id: string) => void;
 }
 
