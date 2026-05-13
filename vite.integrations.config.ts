@@ -20,19 +20,35 @@ import { readFileSync, writeFileSync, globSync } from 'fs';
  * entry — those relative paths don't resolve. Rewrite them to import
  * from the package root so consumers' tsc finds the types via the
  * main types pointer.
+ *
+ * Also append `.js` to remaining relative imports without extensions
+ * so node16 ESM resolution succeeds on the per-file declarations.
  */
 const rewritePackageImportsPlugin = (): Plugin => ({
   name: 'rewrite-subpath-types',
   closeBundle() {
-    const files = globSync('dist/integrations/**/*.d.ts');
+    const files = [
+      ...globSync('dist/integrations/**/*.d.ts'),
+      ...globSync('dist/api/**/*.d.ts'),
+      ...globSync('dist/types/**/*.d.ts'),
+    ];
+    const importLike = /(from\s+|import\s*\(\s*)(['"])([^'"]+)\2/g;
     for (const file of files) {
       const before = readFileSync(file, 'utf8');
-      // Match `from '...src-tree-path...'` (relative path traversing
-      // out of dist/integrations/) and rewrite to `from 'works-calendar'`.
-      const after = before.replace(
-        /from\s+['"](\.\.\/(?:[^'"]*\/)?(?:core|hooks|providers|types|ui|views)\/[^'"]+)['"]/g,
-        "from 'works-calendar'",
-      );
+      const after = before.replace(importLike, (match, prefix, quote, spec) => {
+        // Rewrite cross-tree relative imports into the main library
+        // (which ships rolled-up types via dist/index.d.ts).
+        if (/^\.\.\/(?:[^/]+\/)*?(?:core|hooks|providers|types|ui|views)\//.test(spec)) {
+          return `${prefix}${quote}works-calendar${quote}`;
+        }
+        // Leave non-relative specifiers alone.
+        if (!spec.startsWith('.')) return match;
+        // Already has an extension — leave it.
+        if (/\.(?:js|mjs|cjs|d\.ts|d\.cts|d\.mts|json)$/.test(spec)) return match;
+        // node16/nodenext ESM requires explicit extensions on relative
+        // imports — append `.js` so resolution succeeds.
+        return `${prefix}${quote}${spec}.js${quote}`;
+      });
       if (after !== before) writeFileSync(file, after, 'utf8');
     }
   },
@@ -43,7 +59,7 @@ export default defineConfig({
     dts({
       tsconfigPath: './tsconfig.build.json',
       entryRoot: 'src',
-      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/types/**/*.d.ts', 'src/api/**/*.ts'],
+      include: ['src/integrations/**/*.ts', 'src/integrations/**/*.tsx', 'src/api/**/*.ts'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.*'],
       outDir: 'dist',
       skipDiagnostics: true,

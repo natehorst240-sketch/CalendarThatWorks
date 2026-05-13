@@ -43,9 +43,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'WorksCalendar',
-      formats: ['es', 'umd'],
-      fileName: (format) => `works-calendar.${format}.js`,
+      formats: ['es'],
+      fileName: () => 'works-calendar.es.js',
     },
     rollupOptions: {
       external: [
@@ -55,12 +54,6 @@ export default defineConfig({
         'exceljs', 'date-fns', 'lucide-react',
       ],
       output: {
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'date-fns': 'dateFns',
-          'lucide-react': 'LucideReact',
-        },
         assetFileNames: (info) => info.name === 'works-calendar.css' ? 'style.css' : (info.name ?? '[name][extname]'),
       },
     },

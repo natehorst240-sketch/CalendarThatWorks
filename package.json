@@ -4,14 +4,12 @@
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/works-calendar.umd.js",
   "module": "./dist/works-calendar.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/works-calendar.es.js",
-      "require": "./dist/works-calendar.umd.js"
+      "import": "./dist/works-calendar.es.js"
     },
     "./integrations/asset-tracker": {
       "types": "./dist/integrations/asset-tracker.d.ts",
@@ -25,31 +23,60 @@
       "types": "./dist/api/v1/server/index.d.ts",
       "import": "./dist/api/v1/server/index.es.js"
     },
-    "./styles": "./dist/style.css",
-    "./styles/aviation": "./dist/themes/aviation.css",
-    "./styles/soft": "./dist/themes/soft.css",
-    "./styles/minimal": "./dist/themes/minimal.css",
-    "./styles/corporate": "./dist/themes/corporate.css",
-    "./styles/forest": "./dist/themes/forest.css",
-    "./styles/ocean": "./dist/themes/ocean.css",
-    "./styles/family": "./dist/themes/family/index.css",
-    "./styles/family/canvas": "./dist/themes/family/canvas.css",
-    "./styles/family/corporate": "./dist/themes/family/corporate.css",
-    "./styles/family/industrial": "./dist/themes/family/industrial.css",
-    "./styles/family/grid": "./dist/themes/family/grid.css",
-    "./styles/family/ops": "./dist/themes/family/ops.css",
-    "./styles/family/neon": "./dist/themes/family/neon.css",
+    "./styles": {
+      "default": "./dist/style.css"
+    },
+    "./styles/aviation": {
+      "default": "./dist/themes/aviation.css"
+    },
+    "./styles/soft": {
+      "default": "./dist/themes/soft.css"
+    },
+    "./styles/minimal": {
+      "default": "./dist/themes/minimal.css"
+    },
+    "./styles/corporate": {
+      "default": "./dist/themes/corporate.css"
+    },
+    "./styles/forest": {
+      "default": "./dist/themes/forest.css"
+    },
+    "./styles/ocean": {
+      "default": "./dist/themes/ocean.css"
+    },
+    "./styles/family": {
+      "default": "./dist/themes/family/index.css"
+    },
+    "./styles/family/canvas": {
+      "default": "./dist/themes/family/canvas.css"
+    },
+    "./styles/family/corporate": {
+      "default": "./dist/themes/family/corporate.css"
+    },
+    "./styles/family/industrial": {
+      "default": "./dist/themes/family/industrial.css"
+    },
+    "./styles/family/grid": {
+      "default": "./dist/themes/family/grid.css"
+    },
+    "./styles/family/ops": {
+      "default": "./dist/themes/family/ops.css"
+    },
+    "./styles/family/neon": {
+      "default": "./dist/themes/family/neon.css"
+    },
     "./themes": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/works-calendar.es.js",
-      "require": "./dist/works-calendar.umd.js"
+      "import": "./dist/works-calendar.es.js"
     },
     "./lite": {
       "types": "./dist/index.lite.d.ts",
-      "import": "./dist/works-calendar-lite.es.js",
-      "require": "./dist/works-calendar-lite.umd.js"
+      "import": "./dist/works-calendar-lite.es.js"
     },
     "./dist/*": "./dist/*"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "sideEffects": [
     "dist/style.css",
@@ -81,10 +108,10 @@
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "package:check": "attw --pack .",
+    "package:check": "attw --pack . --profile esm-only --exclude-entrypoints ./styles ./styles/aviation ./styles/soft ./styles/minimal ./styles/corporate ./styles/forest ./styles/ocean ./styles/family ./styles/family/canvas ./styles/family/corporate ./styles/family/industrial ./styles/family/grid ./styles/family/ops ./styles/family/neon",
     "ci": "npm run type-check && npm run lint && npm run test",
     "prepare": "husky",
-    "prepublishOnly": "npm run ci && npm run build"
+    "prepublishOnly": "npm run ci && npm run build && npm run package:check"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",

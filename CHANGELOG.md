@@ -10,7 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - `npm run package:check` script using `@arethetypeswrong/cli` to verify the
-  `exports` map and catch type-resolution regressions before publish.
+  `exports` map and catch type-resolution regressions before publish. The
+  check now runs in CI and as part of `prepublishOnly`.
+- `engines.node` set to `>=18` to document the supported runtime range.
+
+### Changed
+
+- **ESM-only distribution.** The package now ships only ES modules. The
+  `require` condition and UMD bundles (`works-calendar.umd.js`,
+  `works-calendar-lite.umd.js`) have been removed from `package.json#exports`
+  and the Vite build configs. CommonJS consumers should switch to dynamic
+  `import()`. Node 18+ has supported ESM natively for several releases; the
+  README already advertised the library as ESM-only.
+- Subpath type declarations (`./integrations/*`, `./api/v1/server`, `./lite`)
+  now rewrite cross-tree imports to the package root and add explicit `.js`
+  extensions to relative specifiers so they resolve cleanly under `node16`
+  and bundler module-resolution modes.
+- CSS-only entrypoints (`./styles`, `./styles/family/*`, etc.) now use the
+  `{ "default": "./dist/<file>.css" }` form for clarity. They are excluded
+  from `attw` since they intentionally resolve to `.css` rather than JS.
 
 ### Verified
 

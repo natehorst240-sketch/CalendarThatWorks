@@ -28,6 +28,12 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Build library
+        run: npm run build
+
+      - name: Package check (attw)
+        run: npm run package:check
+
   e2e:
     runs-on: ubuntu-latest
     steps:
