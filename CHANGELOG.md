@@ -7,112 +7,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-05-13
+
 ### Added
 
-- **Pill drag-to-reschedule** (`MonthView`): single-day event pills can be
-  dragged onto another day cell to reschedule them. A clone of the pill follows
-  the cursor for the duration of the drag and the event "plants" on release
-  (`onEventMove`); the trailing click is suppressed so a drag doesn't also fire
-  `onEventClick`. Built on the same native pointer-event drag system already
-  used for multi-day span bars — no third-party drag library. `DayCellPillList`
-  is now a thin layout component.
+- **Reminders** (`useReminders`, `ReminderDef`, `onReminder` prop): per-event
+  reminders with two delivery methods — `'browser'` (Web Notification API) and
+  `'callback'` (fires `onReminder`). Timers are rebuilt from the live event list
+  on every change; past reminders and all-day events are silently skipped. See
+  `docs/Reminders.md`.
 
-- **`FirebaseAdapter`** (`api/v1/adapters`): Firestore real-time backend adapter.
-  Supports both the Firebase JS SDK v8 namespaced API and the v9 modular API
-  (pass `adapterFns`). Field mapping via `fromDoc`/`toDoc`, extra `where`
-  constraints via `extraWhere`, and live updates via `onSnapshot`.
+- **Multi-calendar source system** (`CalendarLegend`, `showCalendarLegend`,
+  `useSourceStore`, `useSourceAggregator`): ICS feeds and imported CSV datasets
+  each get a color-keyed identity that propagates to `NormalizedEvent.color`.
+  `showCalendarLegend={true}` renders a toggle list in the sidebar; `CalendarLegend`
+  is also exported for standalone use. See `docs/CalendarSources.md`.
+
+- **Offline indicator** (`OfflineIndicator`, `useNetworkStatus`,
+  `showOfflineIndicator` prop): slide-in banner driven by the browser's `online`/
+  `offline` events. `useNetworkStatus` is SSR-safe (`isInitializing` guard prevents
+  hydration mismatches). See `docs/OfflineSupport.md`.
+
+- **Workflow channel registry** (`createChannelRegistry`, `createSlackChannel`,
+  `createEmailChannel`, `createWebhookChannel`, `dispatchWorkflowEvents`): Phase 4
+  of the workflow engine. `notify` nodes emit transport-agnostic events; hosts
+  register adapter functions and call `dispatchWorkflowEvents` to fan out. Failures
+  are captured per-channel in `WorkflowDispatchReport` without aborting the batch.
+
+- **Parallel + join workflow nodes** with `requireAll` / `requireAny` / `requireN`
+  quorum modes. Fan out to N branches and rejoin once quorum is met.
+
+- **SLA timers on approval nodes** (`onTimeout: 'escalate' | 'auto-approve' |
+  'auto-deny'`). Hosts tick the workflow with `useWorkflowTicker`.
+
+- **Booking holds** (`useBookingHold`, `createHoldRegistry`, `HoldConflictRule`):
+  temporary slot reservation that expires after a configurable duration. Wire a
+  `HoldConflictRule` into `evaluateConflicts` to block competing submissions.
+
+- **Geo-conflict detection** (`evaluateGeoConflicts`, `GeoTravelFeasibilityRule`):
+  checks whether a resource can physically travel between consecutive events given
+  their locations and a speed assumption. Returns `GeoConflictViolation[]` with
+  `distanceKm`, `gapMinutes`, and `travelMinutes` for each failure.
+
+- **`PolicyViolationRule`** and **`AvailabilityViolationRule`** conflict rule types
+  — advance-notice enforcement, duration caps, blackout dates, and unavailability
+  windows.
+
+- **`MiniCalendar`** component: compact month-grid date picker for use in sidebars
+  and custom toolbars.
+
+- **`TimezonePicker`** component: searchable select for IANA timezone strings.
+
+- **`SearchBar`** component: debounced full-text event search, exported for use
+  outside the built-in toolbar.
+
+- **`BulkActionBar`** + **`useBulkSelect`**: multi-select event management (bulk
+  delete, bulk status change) with keyboard-accessible selection.
+
+- **`FirebaseAdapter`** (`api/v1/adapters`): Firestore real-time adapter. Supports
+  both v8 namespaced and v9 modular APIs via `adapterFns`. Field mapping via
+  `fromDoc`/`toDoc`; live updates via `onSnapshot`.
 
 - **`PocketBaseAdapter`** (`api/v1/adapters`): PocketBase SSE real-time adapter.
-  Accepts any PocketBase JS client instance. Supports custom field mapping via
-  `fromRecord`/`toRecord`, composite filter strings via `extraFilter`, and live
-  updates via PocketBase's `subscribe` API.
+  Custom field mapping via `fromRecord`/`toRecord`; live updates via `subscribe`.
 
 - **`createNextHandler`** (`api/v1/server`): Next.js App Router route handler
-  factory. Wire up four async functions (`loadRange`, `createEvent`,
-  `updateEvent`, `deleteEvent`) and receive `{ GET, POST, PATCH, DELETE }`
-  exports ready for `route.ts`. Compatible with Prisma, Drizzle ORM, raw `pg`,
-  or any server-side data layer. Pairs directly with `RestAdapter` on the
-  client. Optional `auth` hook for request-level authentication.
+  factory producing `{ GET, POST, PATCH, DELETE }` exports for `route.ts`. Works
+  with Prisma, Drizzle, raw `pg`, or any async data layer. Optional `auth` hook.
 
-- **Demo dev server**: `npm run dev` (root) starts a Vite dev server at
-  `localhost:5173` rendering `WorksCalendar` with `canDrag: true` and seeded
-  May 2026 events so fluid pill drag can be tested interactively.
+- **Pill drag-to-reschedule** (`MonthView`): single-day pills drag to another day
+  cell. Native pointer-event implementation — no third-party drag library.
 
-- **GitHub Pages demo**: pushing to `claude/fluid-pill-drag-drop-bcoUE` triggers
-  a GitHub Actions workflow that builds the demo and deploys to GitHub Pages.
+- **Documentation** — new and expanded reference pages:
+  `Reminders.md`, `CalendarSources.md`, `OfflineSupport.md`, `ScheduleView.md`,
+  `Conflicts.md`; expanded sections in `Requirements.md`, `Workflow.md`,
+  `MaintenanceAndInvoicing.md`, `CalendarConfig.md`, `ResourcePools.md`, and
+  `GROUPING_API.md`. Level 3 data-flow diagrams 3h–3n added to
+  `DataFlowDiagrams.md`.
 
 ### Changed
 
-- `package.json` exports: added `./api/v1/server` entry point for
-  `createNextHandler` and server-side utilities.
+- **Owner access is now role-based** (`role` prop). Pass `role="admin"` from your
+  auth layer; `useOwnerConfig` derives `isOwner` from that value. Replaces the
+  deprecated SHA-256 password check.
 
-- **Owner access is now role-based** (`role` prop). `useOwnerConfig` derives
-  `isOwner` from `role === 'admin'` (or `devMode`) instead of a SHA-256
-  password comparison. Editing config, the setup wizard, and edit mode are
-  gated on the host-supplied `role` — `WorksCalendar` is a presentation layer
-  and trusts the host's auth. A browser-only password check was obfuscation,
-  not security.
+- **`CalendarEngine` is now the sole state source** for `view` and `cursor`.
+  `useCalendar` hook removed from the public API; all views read from the engine
+  via `useCalendarEngine`.
+
+- **`CalendarContext` strictly typed** — replaced `[key: string]: any` with named
+  typed fields. `PermissionCaps` moved to `types/ui.ts`.
+
+- **Dependency index lookups are now O(k)**: `_dependenciesByFromEvent` /
+  `_dependenciesByToEvent` indexes added to `CalendarEngine`; `getSuccessorsOf` /
+  `getPredecessorsOf` no longer scan the full dependency list.
+
+- `package.json` exports: `./api/v1/server` entry point added for
+  `createNextHandler`.
+
+### Fixed
+
+- **Runtime hardening** (P0–P2): engine ingestion/mutation guards, ghost-delete
+  prevention, undo/redo shortcut scoped to calendar root, config persistence moved
+  out of React state updaters, `calendarId`-change config reload.
+
+- **10 security vulnerabilities** resolved across the public-API surface.
+
+- **View resolution** consolidated into a single effect — eliminates flash-of-wrong-
+  view on initial render.
+
+- **Lite bundle** gzip size reduced ~48% via lazy-loading and externalization.
 
 ### Removed
 
-- **`ownerPassword` prop** and the in-app owner login modal (`OwnerLock` /
-  `OwnerLoginModal`). Pass `role="admin"` from your auth layer instead.
-  `useOwnerConfig` no longer returns `authenticate`, `authError`, or
-  `isAuthLoading`.
-- **`config.access.viewerPassword`** and the ConfigPanel **Access** tab — the
-  field was never enforced and a client-side viewer password is the same
-  security theater. `ConfigPanelTabId` no longer includes `'access'`.
+- **`ownerPassword` prop** and `OwnerLock` / `OwnerLoginModal` components. Use
+  `role="admin"` from your auth layer instead. `useOwnerConfig` no longer returns
+  `authenticate`, `authError`, or `isAuthLoading`.
 
+- **`config.access.viewerPassword`** and the ConfigPanel **Access** tab.
+  `ConfigPanelTabId` no longer includes `'access'`.
 
-
-### Sprint 1 — Engine internals & strict typing (issues #2, #5)
-
-- **#5 Dependency index**: Added `_dependenciesByFromEvent` / `_dependenciesByToEvent`
-  lookup indexes to `CalendarEngine`, matching the existing assignment index pattern.
-  `getSuccessorsOf` and `getPredecessorsOf` are now O(k) instead of O(n).
-- **#2 CalendarContext typing**: Replaced `[key: string]: any` in `CalendarContextValue`
-  with named, typed fields (`renderEvent`, `renderHoverCard`, `colorRules`, `businessHours`,
-  `emptyState`, `permissions`, `editMode`, `conflictingEventIds`). Moved `PermissionCaps`
-  to `types/ui.ts` so both `usePermissions` and `CalendarContext` share the definition.
-  All eight view files updated from unsafe string-bracket access to typed dot-notation.
-
-### Sprint 2 — Engine layer extraction (issue #6)
-
-- **#6 Engine hook**: Extracted `useCalendarEngine` from `WorksCalendar.tsx`.
-  The hook owns the `CalendarEngine` singleton, `UndoRedoManager`, engineVer subscription,
-  pool sync, allNormalized→engine event sync, `expandedEvents`, `approvalRequestEvents`,
-  `applyEngineOp`, `applyWithRecurringCheck`, and `getSavedEventPayload`.
-  `pendingAlert` (soft/hard violation dialog) and `recurringPrompt` state are now
-  managed inside the hook and surfaced to `WorksCalendar` as return values.
-  `WorksCalendar.tsx` retains UI state, navigation/filter via `useCalendar`, and
-  domain-specific mutation handlers (shift status, coverage, availability, schedule,
-  inline edit) which depend on UI state setters.
-
-### Sprint 3 — Engine as single state source (issues #1, #3, #4)
-
-- **#3 Engine migration**: `CalendarEngine` is now the sole source of truth for
-  `view` and `cursor`. `useCalendar` hook removed from `WorksCalendar.tsx` and
-  de-exported from the public API; view/cursor state is now owned inline with sync
-  effects that keep `engine.state.view` and `engine.state.cursor` accurate after
-  every navigation dispatch. Extended filter state (`dayWindow`, schema-driven
-  fields, source toggles) remains in React state and is not modelled by the engine.
-  `CalendarView` engine type widened to include all 10 view ids; `navigateNext` /
-  `navigatePrev` fixed to use a monthly step for all non-week/day views.
-- **#1 Duplicate recurrence removal**: `useOccurrences` hook de-exported from the
-  public API. All views use the engine's `getOccurrencesInRange` read path via
-  `useCalendarEngine`; the legacy `useOccurrences` hook is no longer part of the
-  published surface.
-- **#4 Export wrapper consolidated**: `exportToExcelLazy.ts` deleted. `index.ts`
-  now exports `exportToExcel` directly from `excelExport.ts`, which already handles
-  lazy ExcelJS loading internally via `await import('exceljs')`. The extra indirection
-  file had no remaining justification.
+- **`useOccurrences`** removed from the public API. Use the engine's
+  `getOccurrencesInRange` via `useCalendarEngine` instead.
 
 ## [0.6.2] - 2026-05-03
 
 ### Fixed
 
 - Restored WeekView tap-vs-drag behavior so single-day pills and multi-day span events open correctly when tapped while still supporting drag-to-move.
-- Restored the demo walkthrough’s Mission Alpha flow to use the real move/edit/save/conflict path.
+- Restored the demo walkthrough's Mission Alpha flow to use the real move/edit/save/conflict path.
 - Fixed demo mission selection so mission details are based on the clicked event instead of a hardcoded mission.
 - Improved demo hover-card edit wiring and safer metadata/resource rendering.
 - Improved demo recovery from stale or corrupted browser state.
