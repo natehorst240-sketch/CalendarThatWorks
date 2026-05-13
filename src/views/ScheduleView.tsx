@@ -76,6 +76,40 @@ type LooseEvent = CalendarViewEvent & {
 type TimelineEmployee = { id: string; name: string; color?: string; role?: string; base?: string; avatar?: string };
 type TimelineBase = { id: string; name: string };
 
+// ── FlatRow discriminated union ───────────────────────────────────────────────
+// The virtualised row list mixes two disjoint row shapes:
+//   • TimelineRow      — an employee or resource row carrying laid-out events
+//   • GroupHeaderRow   — a synthetic pseudo-row marking the start of a group
+// Render code (and keyboard navigation) narrows via the `kind` discriminator.
+
+type CoveringPill = { ev: LooseEvent; origEmpName: string; _dayStart: number; _dayEnd: number };
+
+type TimelineRow = {
+  kind: 'timeline-row';
+  key: string;
+  emp: TimelineEmployee | null;
+  empIdx: number;
+  resource: string;
+  events: LooseEvent[];
+  laneCount: number;
+  rowH: number;
+  baseH: number;
+  coveringPills: CoveringPill[];
+  hasStatusPills: boolean;
+};
+
+type GroupHeaderRow = {
+  kind: 'group-header';
+  groupKey: string;
+  groupLabel: string;
+  depth: number;
+  collapsed: boolean;
+  rowH: number;
+  count: number;
+};
+
+type FlatRow = TimelineRow | GroupHeaderRow;
+
 interface ScheduleViewProps {
   currentDate: Date;
   events: LooseEvent[];
@@ -388,7 +422,7 @@ export default function ScheduleView({
   }, [useEmployees, events]);
 
   // Build row data
-  const rows = useMemo(() => {
+  const rows = useMemo<TimelineRow[]>(() => {
     // Pre-compute: which employee is covering which shifts (for covering-for pills)
     const coveringMap = new Map(); // empId → [{ ev, origEmpName, _dayStart, _dayEnd }]
     if (useEmployees) {
@@ -437,7 +471,8 @@ export default function ScheduleView({
                      + (coveringPills.length > 0 ? COVERAGE_BAND : 0);
 
         return {
-          key: emp.id, emp, empIdx: idx,
+          kind: 'timeline-row',
+          key: emp.id, emp, empIdx: idx, resource: emp.id,
           events: laned, laneCount,
           rowH: baseH + extraH,
           baseH, coveringPills, hasStatusPills,
@@ -452,9 +487,10 @@ export default function ScheduleView({
       const { events: laned, laneCount } = assignLanes(resEvents, monthStart, monthEnd);
       const rowH = laneCount * (LANE_H + LANE_GAP) + ROW_PAD * 2;
         return {
-          key: resource, emp: null as TimelineEmployee | null, empIdx: 0, resource,
+          kind: 'timeline-row',
+          key: resource, emp: null, empIdx: 0, resource,
           events: laned, laneCount,
-          rowH, baseH: rowH, coveringPills: [] as Array<{ ev: LooseEvent; origEmpName: string; _dayStart: number; _dayEnd: number }>, hasStatusPills: false,
+          rowH, baseH: rowH, coveringPills: [], hasStatusPills: false,
         };
     });
   }, [useEmployees, displayEmployees, resourceList, events, monthStart.toISOString(), monthEnd.toISOString(), onCallCategory, totalDays]);
@@ -494,7 +530,7 @@ export default function ScheduleView({
     });
   }, []);
 
-  const { flatRows, groupOrder: _groupOrder } = useMemo(() => {
+  const { flatRows, groupOrder: _groupOrder } = useMemo<{ flatRows: FlatRow[]; groupOrder: string[] }>(() => {
     if (!isGrouped || rows.length === 0 || groupTree.length === 0) {
       return { flatRows: rows, groupOrder: [] };
     }
@@ -505,14 +541,6 @@ export default function ScheduleView({
       events: unknown[];
       children: GroupTreeNode[];
     };
-    // FlatRow is intentionally permissive: the runtime row may either be a
-    // synthetic group-header pseudo-row (with `_type === 'groupHeader'` plus
-    // group metadata) or a regular timeline row (which never has `_type`).
-    // The downstream rendering disambiguates via the `_type` discriminator.
-    type FlatRow = (typeof rows)[number] | (Record<string, unknown> & {
-      _type: 'groupHeader'; groupKey: string; groupLabel: string;
-      depth: number; collapsed: boolean; rowH: number; count: number;
-    });
     const out: FlatRow[] = [];
     const order: string[] = [];
     const countLeaves = (node: GroupTreeNode): number => {
@@ -527,7 +555,7 @@ export default function ScheduleView({
         order.push(path);
         const collapsed = collapsedGroups.has(path);
         out.push({
-          _type:      'groupHeader',
+          kind:       'group-header',
           groupKey:   path,
           groupLabel: node.label,
           depth:      node.depth,
@@ -538,7 +566,7 @@ export default function ScheduleView({
         if (collapsed) continue;
         if (node.children.length > 0) walk(node.children, path);
         else for (const ev of node.events) {
-          const row = (ev as { __row?: (typeof rows)[number] }).__row;
+          const row = (ev as { __row?: TimelineRow }).__row;
           if (row) out.push(row);
         }
       }
@@ -617,16 +645,16 @@ export default function ScheduleView({
       case 'ArrowRight': nextDi = Math.min(maxDi, di + 1); move = true; break;
       case 'ArrowUp': {
         nextRi = ri - 1;
-        while (nextRi >= 0 && (flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi--;
+        while (nextRi >= 0 && flatRows[nextRi]?.kind === 'group-header') nextRi--;
         nextRi = Math.max(0, nextRi);
-        if ((flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi = ri;
+        if (flatRows[nextRi]?.kind === 'group-header') nextRi = ri;
         move = true; break;
       }
       case 'ArrowDown': {
         nextRi = ri + 1;
-        while (nextRi <= maxRi && (flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi++;
+        while (nextRi <= maxRi && flatRows[nextRi]?.kind === 'group-header') nextRi++;
         nextRi = Math.min(maxRi, nextRi);
-        if ((flatRows[nextRi] as { _type?: unknown } | undefined)?._type === 'groupHeader') nextRi = ri;
+        if (flatRows[nextRi]?.kind === 'group-header') nextRi = ri;
         move = true; break;
       }
       case 'Home':       nextDi = 0;                        move = true; break;
@@ -812,15 +840,13 @@ export default function ScheduleView({
           role="presentation"
           style={{ position: 'relative', height: totalBodyH }}
         >
-          {flatRows.slice(visStart, visEnd + 1).map((rowDataRaw, relIdx) => {
+          {flatRows.slice(visStart, visEnd + 1).map((rowData, relIdx) => {
             const rowIdx  = visStart + relIdx;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime row is a union (group-header pseudo-row + regular timeline row) whose branches use disjoint property sets; precise narrowing here would require restructuring buildGroupTree's output.
-            const rowData = rowDataRaw as any;
 
             // Render group header pseudo-rows
-            if (rowData._type === 'groupHeader') {
+            if (rowData.kind === 'group-header') {
               const topOffset = rowOffsets[rowIdx];
-              const depth = rowData.depth ?? 0;
+              const depth = rowData.depth;
               const indent = depth * 16; // matches GroupHeader's INDENT_PX_PER_LEVEL
               return (
                 <div
