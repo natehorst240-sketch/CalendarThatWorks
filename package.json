@@ -110,6 +110,17 @@
   "dependencies": {
     "fuse.js": "^7.3.0"
   },
+  "overrides": {
+    "exceljs": {
+      "archiver": "^7.0.1",
+      "fast-csv": "^5.0.2",
+      "unzipper": "^0.12.3",
+      "uuid": "^11.0.5"
+    },
+    "archiver-utils": {
+      "glob": "^11.0.0"
+    }
+  },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.1",
