@@ -114,7 +114,7 @@ describe('scheduleMutations helpers', () => {
   });
 
   it('buildOpenShiftPatch parses string start/end dates', () => {
-    const strShift = { ...shift, start: '2026-04-01T00:00:00.000Z' as any, end: '2026-04-01T08:00:00.000Z' as any };
+    const strShift = { ...shift, start: '2026-04-01T00:00:00.000Z' as unknown as Date, end: '2026-04-01T08:00:00.000Z' as unknown as Date };
     const patch = buildOpenShiftPatch(openShift, strShift, 'pto');
     expect(patch.start).toBeInstanceOf(Date);
     expect(patch.end).toBeInstanceOf(Date);

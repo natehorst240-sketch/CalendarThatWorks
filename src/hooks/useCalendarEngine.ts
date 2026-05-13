@@ -14,7 +14,7 @@ import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLeg
 import type { ResourcePool }    from '../core/pools/resourcePoolSchema.ts';
 import type { OperationContext } from '../core/engine/validation/validationTypes';
 import type { AnnouncerRef }    from '../ui/ScreenReaderAnnouncer';
-import type { WorksCalendarEvent } from '../types/events';
+import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
 import type {
   EngineOpInput,
   EngineOperation,
@@ -24,8 +24,10 @@ import type {
   RecurringOpRunner,
 } from '../types/engineOps';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyValue = any;
+// Engine "event-like" payloads flow through this hook as either input
+// (raw legacy events from hosts) or output (legacy-shaped occurrences and
+// approval-requests). Inputs accept anything assignable to WorksCalendarEvent;
+// outputs always conform to NormalizedEvent.
 
 function opAnnouncement(op: EngineOpInput): string {
   switch (op.type) {
@@ -43,7 +45,7 @@ function opAnnouncement(op: EngineOpInput): string {
 }
 
 export type PendingAlert = {
-  violations: readonly AnyValue[];
+  violations: readonly unknown[];
   isHard: boolean;
   onConfirm: (() => void) | null;
 };
@@ -56,12 +58,12 @@ export type RecurringPrompt = {
 
 export type UseCalendarEngineOptions = {
   /** Merged, normalised event list from all sources (static + fetch + ICS + realtime). */
-  allNormalized: AnyValue[];
+  allNormalized: ReadonlyArray<WorksCalendarEvent | NormalizedEvent>;
   /** Initial / controlled resource pools. */
   rawPools?: ResourcePool[] | null | undefined;
   /** businessHours and blockedWindows forwarded to the engine's OperationContext. */
-  businessHours?: AnyValue;
-  blockedWindows?: AnyValue[] | undefined;
+  businessHours?: unknown;
+  blockedWindows?: ReadonlyArray<unknown> | undefined;
   /** Ref to the ScreenReaderAnnouncer instance mounted in WorksCalendar. */
   announcerRef: React.RefObject<AnnouncerRef | null>;
   /** Current visible date range — drives occurrence expansion. */
@@ -78,9 +80,9 @@ export type UseCalendarEngineResult = {
   /** Monotonic counter: increments on every engine state change. */
   engineVer: number;
   /** Occurrences expanded from the engine for the current visible range. */
-  expandedEvents: AnyValue[];
+  expandedEvents: NormalizedEvent[];
   /** All master events that carry an approvalStage — unwindowed. */
-  approvalRequestEvents: AnyValue[];
+  approvalRequestEvents: NormalizedEvent[];
   /** Submit a mutation op through the engine, handling soft/hard violations. */
   applyEngineOp: EngineOpRunner;
   /** Wrap a mutation op with a recurring-scope dialog for recurring events. */
@@ -110,9 +112,12 @@ export function useCalendarEngine({
 
   if (engineRef.current === null) {
     try {
-      const initState = rawPools && rawPools.length > 0 ? { pools: rawPools } : {};
+      const initState: Record<string, unknown> = rawPools && rawPools.length > 0 ? { pools: rawPools } : {};
+      if (initialView) initState['view'] = initialView;
       engineRef.current = new CalendarEngine(
-        initialView ? { ...initState, view: initialView as AnyValue } : (rawPools && rawPools.length > 0 ? initState : undefined),
+        (initialView || (rawPools && rawPools.length > 0))
+          ? (initState as unknown as ConstructorParameters<typeof CalendarEngine>[0])
+          : undefined,
       );
       undoManagerRef.current = new UndoRedoManager(engineRef.current, { maxSize: 50 });
       lastPoolsRef.current = engineRef.current.state.pools;
@@ -163,7 +168,7 @@ export function useCalendarEngine({
 
   // ── allNormalized → engine events sync ───────────────────────────────────
   useEffect(() => {
-    engine.setEvents(fromLegacyEvents(allNormalized as AnyValue));
+    engine.setEvents(fromLegacyEvents(allNormalized as unknown as Parameters<typeof fromLegacyEvents>[0]));
     if (engineMutationPendingRef.current > 0) {
       engineMutationPendingRef.current -= 1;
     } else if (gracePendingRef.current) {
@@ -184,17 +189,17 @@ export function useCalendarEngine({
   } as unknown as OperationContext;
 
   // ── Expanded events for current visible range ─────────────────────────────
-  const expandedEvents: AnyValue[] = useMemo(
-    () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy),
+  const expandedEvents: NormalizedEvent[] = useMemo(
+    () => engine.getOccurrencesInRange(range.start, range.end).map(occurrenceToLegacy) as unknown as NormalizedEvent[],
     [engine, engineVer, range],
   );
 
   // ── Approval queue — unwindowed master-record scan ───────────────────────
-  const approvalRequestEvents: AnyValue[] = useMemo(() => {
-    const out: AnyValue[] = [];
+  const approvalRequestEvents: NormalizedEvent[] = useMemo(() => {
+    const out: NormalizedEvent[] = [];
     for (const ev of engine.state.events.values()) {
       const stage = (ev.meta as { approvalStage?: { stage?: string } } | undefined)?.approvalStage?.stage;
-      if (typeof stage === 'string') out.push(toLegacyEvent(ev));
+      if (typeof stage === 'string') out.push(toLegacyEvent(ev) as unknown as NormalizedEvent);
     }
     return out;
   }, [engine, engineVer]);

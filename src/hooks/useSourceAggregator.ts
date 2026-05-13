@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useSourceAggregator — merge multiple calendar sources into one event stream.
  *
@@ -19,8 +18,8 @@
 import { useMemo } from 'react';
 import { useFeedEvents } from './useFeedEvents';
 
-type FeedLike = Record<string, any> & { url?: string | undefined; label?: string | undefined; refreshInterval?: number | undefined };
-type SourceEvent = Record<string, any>;
+type FeedLike = Record<string, unknown> & { url?: string | undefined; label?: string | undefined; refreshInterval?: number | undefined };
+type SourceEvent = Record<string, unknown>;
 type CsvSource = { id: string; label?: string | undefined; color?: string | undefined; enabled?: boolean | undefined; events?: SourceEvent[] | undefined };
 type SourceStoreLike = {
   sources: Array<{ id: string; label?: string | undefined; color?: string | undefined; type?: string | undefined; enabled?: boolean | undefined }>;

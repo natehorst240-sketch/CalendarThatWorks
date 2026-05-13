@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styles from './EmployeeActionCard.module.css';
 
@@ -12,7 +11,14 @@ import styles from './EmployeeActionCard.module.css';
  *   onAction   (action) => void      — called with 'pto' | 'unavailable' | 'availability' | 'schedule'
  *   onClose    () => void
  */
-export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }: any) {
+type EmployeeActionCardProps = {
+  emp: { id: string; name: string; role?: string | null | undefined; [key: string]: unknown };
+  anchorRect: { top: number; bottom: number; left: number; right: number };
+  onAction: (action: string) => void;
+  onClose: () => void;
+};
+
+export default function EmployeeActionCard({ emp, anchorRect, onAction, onClose }: EmployeeActionCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   // Start invisible so we can measure before revealing
   const [pos, setPos] = useState({ top: anchorRect.bottom + 4, left: anchorRect.left, visible: false });

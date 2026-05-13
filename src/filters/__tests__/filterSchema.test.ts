@@ -43,7 +43,7 @@ describe('defaultOperatorsForType', () => {
   });
 
   it('unknown type: falls through to empty array', () => {
-    expect(defaultOperatorsForType('unknown' as any)).toEqual([]);
+    expect(defaultOperatorsForType('unknown' as Record<string, unknown>)).toEqual([]);
   });
 });
 
@@ -70,7 +70,7 @@ describe('makeResourceResolver', () => {
 
   it('resolves employee by .name field', () => {
     const resolve = makeResourceResolver({
-      employees: [{ id: 'emp-1', name: 'Bob' } as any],
+      employees: [{ id: 'emp-1', name: 'Bob' } as Record<string, unknown>],
     });
     expect(resolve('emp-1')).toBe('Bob');
   });
@@ -92,14 +92,14 @@ describe('makeResourceResolver', () => {
 
   it('resolves numeric id coerced to string', () => {
     const resolve = makeResourceResolver({
-      employees: [{ id: 42, label: 'Dave' } as any],
+      employees: [{ id: 42, label: 'Dave' } as Record<string, unknown>],
     });
     expect(resolve(42)).toBe('Dave');
   });
 
   it('skips null/undefined entries in employees/assets', () => {
     const resolve = makeResourceResolver({
-      employees: [null as any, { id: 'e1', label: 'Eve' }],
+      employees: [null as Record<string, unknown>, { id: 'e1', label: 'Eve' }],
     });
     expect(resolve('e1')).toBe('Eve');
   });
@@ -108,7 +108,7 @@ describe('makeResourceResolver', () => {
 // ─── buildDefaultFilterSchema ─────────────────────────────────────────────────
 
 describe('buildDefaultFilterSchema', () => {
-  const ev = (overrides: any) => ({
+  const ev = (overrides: Record<string, unknown>) => ({
     id: 'e1',
     title: 'T',
     category: null,
@@ -307,7 +307,7 @@ describe('makeResourceResolver — additional branches', () => {
   it('falls back to raw key when employee has neither name nor label', () => {
     // Covers name ?? label ?? key — third fallback
     const resolve = makeResourceResolver({
-      employees: [{ id: 'emp-x' } as any],
+      employees: [{ id: 'emp-x' } as Record<string, unknown>],
     });
     expect(resolve('emp-x')).toBe('emp-x');
   });
@@ -324,7 +324,7 @@ describe('makeResourceResolver — additional branches', () => {
   it('falls back to raw key when asset has neither label nor name', () => {
     // Covers a.label ?? a.name ?? key — third fallback for assets
     const resolve = makeResourceResolver({
-      assets: [{ id: 'asset-bare' } as any],
+      assets: [{ id: 'asset-bare' } as Record<string, unknown>],
     });
     expect(resolve('asset-bare')).toBe('asset-bare');
   });
@@ -333,7 +333,7 @@ describe('makeResourceResolver — additional branches', () => {
 // ─── buildDefaultFilterSchema — additional branches ───────────────────────────
 
 describe('buildDefaultFilterSchema — additional branches', () => {
-  const ev = (overrides: any) => ({ id: 'e1', title: 'T', ...overrides });
+  const ev = (overrides: Record<string, unknown>) => ({ id: 'e1', title: 'T', ...overrides });
 
   it('categories getOptions skips items with falsy category', () => {
     // Covers if (e.category) false branch
@@ -364,7 +364,7 @@ describe('buildDefaultFilterSchema — additional branches', () => {
 // ─── DEFAULT_FILTER_SCHEMA — additional branches ──────────────────────────────
 
 describe('DEFAULT_FILTER_SCHEMA — additional branches', () => {
-  const ev = (overrides: any) => ({ id: 'e1', title: 'T', ...overrides });
+  const ev = (overrides: Record<string, unknown>) => ({ id: 'e1', title: 'T', ...overrides });
 
   it('categories predicate works with array value', () => {
     // Covers the array branch in DEFAULT_FILTER_SCHEMA categories predicate

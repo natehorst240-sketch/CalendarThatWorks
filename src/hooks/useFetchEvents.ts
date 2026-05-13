@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useFetchEvents — async data loading with AbortController cleanup.
  *
@@ -39,7 +38,7 @@ function visibleRange(view: string, currentDate: Date, weekStartDay: 0 | 1 | 2 |
 
 type FetchEventsFn<T> = (args: { start: Date; end: Date; signal: AbortSignal }) => Promise<T[]>;
 
-export function useFetchEvents<T extends Record<string, any>>(
+export function useFetchEvents<T>(
   fetchEvents: FetchEventsFn<T> | null | undefined,
   view: string,
   currentDate: Date,

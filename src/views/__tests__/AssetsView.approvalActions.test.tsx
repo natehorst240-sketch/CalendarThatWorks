@@ -64,7 +64,7 @@ const approvalsConfig = {
   },
 };
 
-function renderAssets(props: any = {}) {
+function renderAssets(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <AssetsView

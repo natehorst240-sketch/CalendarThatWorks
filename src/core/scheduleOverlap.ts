@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import {
   isCoveringEvent,
   isCoveredShift,
@@ -129,7 +128,7 @@ export function buildOpenShiftEvent({
   shiftEvent: OverlapEventLike;
   reason: string;
   openShiftCategory?: string;
-}): Record<string, any> {
+}): Record<string, unknown> {
   const sourceShiftId = String(shiftEvent._eventId ?? shiftEvent.id ?? 'shift');
   const id = createId(`open-${sourceShiftId}`);
   return {

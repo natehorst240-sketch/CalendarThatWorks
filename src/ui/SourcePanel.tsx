@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * SourcePanel — unified source management UI for the ConfigPanel "Feeds" tab.
  *
@@ -553,7 +552,7 @@ function SectionHeading({
 // ── Panel ─────────────────────────────────────────────────────────────────────
 
 type SourcePanelProps = {
-  sources?: Array<Record<string, any>> | undefined;
+  sources?: Array<Record<string, unknown>> | undefined;
   feedErrors?: unknown[] | undefined;
   /** True while iCal feeds are fetching (initial load or scheduled refresh). */
   isFetchingFeeds?: boolean | undefined;

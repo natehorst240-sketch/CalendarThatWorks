@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import { useState, useMemo, useCallback } from 'react';
 import { groupRows } from '../grouping/groupRows';
 
@@ -8,8 +7,8 @@ type GroupingOptions<T> = {
   groupHeaderHeight?: number
 };
 
-export function useGrouping<T extends Record<string, any>>(rows: T[], options: GroupingOptions<T> = {}): {
-  flatRows: Array<Record<string, any>>;
+export function useGrouping<T extends Record<string, unknown>>(rows: T[], options: GroupingOptions<T> = {}): {
+  flatRows: Array<Record<string, unknown>>;
   groupOrder: string[];
   collapsedGroups: Set<string>;
   toggleGroup: (key: string) => void;
@@ -21,8 +20,14 @@ export function useGrouping<T extends Record<string, any>>(rows: T[], options: G
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
 
   const { flatRows, groupOrder } = useMemo(() => {
-    if (!groupBy) return { flatRows: rows as Array<T | Record<string, any>>, groupOrder: [] };
-    return groupRows(rows, { groupBy, fieldAccessor: fieldAccessor as any, collapsedGroups, groupHeaderHeight });
+    if (!groupBy) return { flatRows: rows as Array<T | Record<string, unknown>>, groupOrder: [] };
+    const accessorTyped = fieldAccessor as ((row: Record<string, unknown>) => unknown) | Array<(row: Record<string, unknown>) => unknown> | undefined;
+    return groupRows(rows, {
+      groupBy,
+      ...(accessorTyped !== undefined ? { fieldAccessor: accessorTyped } : {}),
+      collapsedGroups,
+      groupHeaderHeight,
+    });
   }, [rows, groupBy, fieldAccessor, collapsedGroups, groupHeaderHeight]);
 
   const toggleGroup = useCallback((key: string) => {

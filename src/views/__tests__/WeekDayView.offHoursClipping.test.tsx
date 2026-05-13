@@ -20,7 +20,7 @@ function d(y: number, mo: number, day: number, h = 0, m = 0) {
   return new Date(y, mo - 1, day, h, m, 0, 0);
 }
 
-function Wrap({ children }: any) {
+function Wrap({ children }: { children?: React.ReactNode }) {
   return (
     <CalendarContext.Provider value={null}>{children}</CalendarContext.Provider>
   );
@@ -33,7 +33,7 @@ function makeEvent(id: string, start: Date, end: Date) {
 describe('WeekView off-hours event clipping', () => {
   const monday = d(2026, 4, 6);
 
-  function renderWeek(events: any[], display = { dayStart: 6, dayEnd: 22 }) {
+  function renderWeek(events: Array<Record<string, unknown>>, display = { dayStart: 6, dayEnd: 22 }) {
     return render(
       <Wrap>
         <WeekView
@@ -104,7 +104,7 @@ describe('WeekView off-hours event clipping', () => {
 describe('DayView off-hours event clipping', () => {
   const currentDate = d(2026, 4, 10);
 
-  function renderDay(events: any[], display = { dayStart: 6, dayEnd: 22 }) {
+  function renderDay(events: Array<Record<string, unknown>>, display = { dayStart: 6, dayEnd: 22 }) {
     return render(
       <Wrap>
         <DayView

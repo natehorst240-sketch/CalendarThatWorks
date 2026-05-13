@@ -18,7 +18,7 @@ import EventForm from '../EventForm';
 const START = new Date('2026-04-14T09:00:00.000Z');
 const END   = new Date('2026-04-14T10:00:00.000Z');
 
-function baseEvent(overrides: any = {}) {
+function baseEvent(overrides: Record<string, unknown> = {}) {
   return {
     id: 'evt-1',
     title: 'Flight',
@@ -97,8 +97,8 @@ describe('EventForm — live conflict feedback', () => {
   });
 
   it('clears the inline banner when the host returns a clean verdict', () => {
-    let proposed: any = null;
-    const onCheckConflicts = vi.fn().mockImplementation((p: any) => {
+    let proposed: Record<string, unknown> | null = null;
+    const onCheckConflicts = vi.fn().mockImplementation((p: Record<string, unknown>) => {
       proposed = p;
       return { severity: 'none', allowed: true, violations: [] };
     });

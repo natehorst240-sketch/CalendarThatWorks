@@ -24,7 +24,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     meta:     {},
     rrule:    null,
     exdates:  [],
-    _raw:     {} as any,
+    _raw:     {} as Record<string, unknown>,
     ...overrides,
   };
 }
@@ -161,7 +161,7 @@ describe('invoiceLineItemsToCSV', () => {
 
   it('formats NaN date as empty string in the date column', () => {
     const ev = makeEvent({
-      start: new Date('invalid') as any,
+      start: new Date('invalid') as Record<string, unknown>,
       meta:  { billing: { rate: 50 } },
     });
     const entries = toInvoiceLineItems([ev]);

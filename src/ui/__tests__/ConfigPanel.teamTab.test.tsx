@@ -19,7 +19,7 @@ function renderTab({
   onUpdate,
   onEmployeeAdd,
   onEmployeeDelete,
-}: any = {}) {
+}: Record<string, unknown> = {}) {
   let currentConfig = { team: { members: initialMembers, roles: initialRoles, bases: initialBases } };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function' ? updater(currentConfig) : { ...currentConfig, ...updater };

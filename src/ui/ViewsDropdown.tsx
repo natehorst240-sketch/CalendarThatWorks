@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ViewsDropdown — "All Views ▾" popover listing every saved view.
  *
@@ -25,12 +24,27 @@ const VIEW_ICON_MAP = {
 };
 type ViewKey = keyof typeof VIEW_ICON_MAP;
 
+type SavedViewLike = {
+  id: string;
+  name: string;
+  color?: string | null | undefined;
+  view?: string | null | undefined;
+  hiddenFromStrip?: boolean | undefined;
+};
+
+type ViewsDropdownProps = {
+  views: SavedViewLike[];
+  activeId?: string | null | undefined;
+  onApply: (view: SavedViewLike) => void;
+  onToggleVisibility: (id: string) => void;
+};
+
 export default function ViewsDropdown({
   views,
   activeId,
   onApply,
   onToggleVisibility,
-}: any) {
+}: ViewsDropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +66,7 @@ export default function ViewsDropdown({
     };
   }, [open]);
 
-  const hiddenCount = views.filter((v: any) => v.hiddenFromStrip).length;
+  const hiddenCount = views.filter((v) => v.hiddenFromStrip).length;
 
   return (
     <div ref={rootRef} className={styles['headerControl']}>
@@ -79,7 +93,7 @@ export default function ViewsDropdown({
             </p>
           ) : (
             <ul className={styles['dropdownList']}>
-              {views.map((view: any) => {
+              {views.map((view) => {
                 const ViewIcon = view.view ? VIEW_ICON_MAP[view.view as ViewKey] : null;
                 const isActive = view.id === activeId;
                 const isHidden = !!view.hiddenFromStrip;

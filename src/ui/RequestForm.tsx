@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * RequestForm — schema-driven, owner-configurable event request form
  * (ticket #134-12).
@@ -99,7 +98,7 @@ export default function RequestForm({
 }: {
   schema: RequestSchema;
   initialValues?: RequestFormValues;
-  onSubmit: (payload: { values: any }) => void;
+  onSubmit: (payload: { values: Record<string, unknown> }) => void;
   onCancel: () => void;
   title?: string;
 }) {

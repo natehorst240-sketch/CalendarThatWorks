@@ -31,7 +31,7 @@ import type {
   ScheduleInstantiationRequestV1,
 } from '../api/v1/templates';
 import type { SchedulePreviewResult } from '../hooks/useScheduleTemplates';
-import type { PermissionCaps } from '../types/ui';
+import type { PermissionCaps, ScheduleTemplateDraft } from '../types/ui';
 import type { MaintenanceRule } from '../types/maintenance';
 import type { InlineEventPatch } from '../hooks/useEventMutations';
 import type { ConflictEvaluationResult } from '../core/conflictEngine';
@@ -190,16 +190,16 @@ export default function CalendarModals({
       {selectedEvent && (
         (renderHoverCard && renderHoverCard(selectedEvent as unknown as WorksCalendarEvent, () => setSelectedEvent(null))) ?? (
           <HoverCard
-            event={selectedEvent}
+            event={selectedEvent as unknown as Parameters<typeof HoverCard>[0]['event']}
             config={ownerConfig}
-            note={notes[selectedEvent.id]}
+            note={notes[selectedEvent.id] as Parameters<typeof HoverCard>[0]['note']}
             onClose={() => setSelectedEvent(null)}
-            onNoteSave={onNoteSave}
+            onNoteSave={onNoteSave as Parameters<typeof HoverCard>[0]['onNoteSave']}
             onNoteDelete={onNoteDelete}
-            onEdit={(isOwner || canEditEvent) ? handleEditFromHoverCard : null}
+            onEdit={(isOwner || canEditEvent) ? (handleEditFromHoverCard as unknown as Parameters<typeof HoverCard>[0]['onEdit']) : null}
             anchor={null}
             resolveResourceLabel={resolveResourceLabel}
-            onCommentAdd={onCommentAdd}
+            onCommentAdd={onCommentAdd as Parameters<typeof HoverCard>[0]['onCommentAdd']}
             currentUserName={currentUserName}
           />
         )
@@ -209,7 +209,7 @@ export default function CalendarModals({
       {formEvent !== null && canAddEvent && (
         <Suspense fallback={null}>
           <EventForm
-            event={formEvent.id || formEvent.resourcePoolId ? formEvent : null}
+            event={(formEvent.id || formEvent.resourcePoolId ? formEvent : null) as Parameters<typeof EventForm>[0]['event']}
             config={ownerConfig}
             categories={[...eventFormCats, ...eventOptions.categories]}
             onSave={handleEventSave}
@@ -219,7 +219,7 @@ export default function CalendarModals({
             onAddCategory={canManageOptions ? eventOptions.addCategory : undefined}
             maintenanceRules={maintenanceRules}
             onCheckConflicts={checkEventConflicts}
-            onLiveConflictsChange={handleLiveConflicts}
+            onLiveConflictsChange={handleLiveConflicts as Parameters<typeof EventForm>[0]['onLiveConflictsChange']}
             approvalCategories={resolvedAssetRequestCategories}
             pools={rawPools}
             hideTemplates={hideEventTemplates}
@@ -250,10 +250,10 @@ export default function CalendarModals({
       {availabilityState && (
         <Suspense fallback={null}>
           <AvailabilityForm
-            emp={availabilityState.emp}
+            emp={availabilityState.emp as unknown as Parameters<typeof AvailabilityForm>[0]['emp']}
             kind={availabilityState.kind}
             initialStart={availabilityState.start}
-            initialEvent={availabilityState.initialEvent}
+            initialEvent={availabilityState.initialEvent as unknown as Parameters<typeof AvailabilityForm>[0]['initialEvent']}
             onSave={handleAvailabilitySave}
             onClose={() => setAvailabilityState(null)}
           />
@@ -344,7 +344,7 @@ export default function CalendarModals({
             onRemoveSource={sourceStore.removeSource}
             onToggleSource={sourceStore.toggleSource}
             onUpdateSource={sourceStore.updateSource}
-            scheduleTemplates={mergedScheduleTemplates}
+            scheduleTemplates={mergedScheduleTemplates as unknown as ScheduleTemplateDraft[]}
             onCreateScheduleTemplate={isOwner && !!handleCreateScheduleTemplate ? handleCreateScheduleTemplate : undefined}
             onDeleteScheduleTemplate={isOwner && !!handleDeleteScheduleTemplate ? handleDeleteScheduleTemplate : undefined}
             scheduleTemplateError={templateError}
@@ -364,7 +364,7 @@ export default function CalendarModals({
       {inlineEditTarget && (
         <InlineEventEditor
           key={`${inlineEditTarget.event?._eventId ?? inlineEditTarget.event?.id ?? 'inline'}-${inlineEditTarget.event?.id ?? 'event'}`}
-          event={inlineEditTarget.event}
+          event={inlineEditTarget.event as unknown as Parameters<typeof InlineEventEditor>[0]['event']}
           x={inlineEditTarget.x}
           y={inlineEditTarget.y}
           onSave={handleInlineSave}

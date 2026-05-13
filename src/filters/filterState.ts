@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * filterState — pure helpers for generic filter state management.
  *
  * These functions know nothing about the UI or React. They operate on plain
  * filter state objects and FilterField schema arrays.
  */
-import { DEFAULT_FILTER_SCHEMA } from './filterSchema';
+import { DEFAULT_FILTER_SCHEMA, type FilterField } from './filterSchema';
 
 // ── Value helpers ─────────────────────────────────────────────────────────────
 
@@ -42,7 +41,7 @@ export function clearFilterValue(field: { type?: string; defaultValue?: unknown 
  * Return true when at least one schema field has a non-empty value in `filters`.
  * Mirrors the derivation used in FilterBar so the saved-views header can share it.
  */
-export function hasActiveFilters(filters: Record<string, unknown> | null | undefined, schema: any[] = DEFAULT_FILTER_SCHEMA): boolean {
+export function hasActiveFilters(filters: Record<string, unknown> | null | undefined, schema: FilterField[] = DEFAULT_FILTER_SCHEMA): boolean {
   if (!filters) return false;
   return schema.some(field => !isEmptyFilterValue(filters[field.key]));
 }
@@ -56,8 +55,8 @@ export function hasActiveFilters(filters: Record<string, unknown> | null | undef
  * @param schema
  * @returns {Record<string, unknown>}
  */
-export function createInitialFilters(schema: any[] = DEFAULT_FILTER_SCHEMA): any {
-  const filters: any = {};
+export function createInitialFilters(schema: FilterField[] = DEFAULT_FILTER_SCHEMA): Record<string, unknown> {
+  const filters: Record<string, unknown> = {};
   for (const field of schema) {
     filters[field.key] = clearFilterValue(field);
   }
@@ -78,7 +77,7 @@ export function createInitialFilters(schema: any[] = DEFAULT_FILTER_SCHEMA): any
  * @param {Record<string, unknown>} filters
  * @param schema
  */
-export function buildActiveFilterPills(filters: Record<string, any>, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+export function buildActiveFilterPills(filters: Record<string, unknown>, schema: FilterField[] = DEFAULT_FILTER_SCHEMA) {
   const pills: Array<{ key: string; fieldLabel: string; value: unknown; displayValue: string }> = [];
   for (const field of schema) {
     const value = filters[field.key];
@@ -131,10 +130,10 @@ export function buildActiveFilterPills(filters: Record<string, any>, schema: any
  * @param schema
  * @returns {Array<{ key: string, label: string, type: string, displayValues: string[] }>}
  */
-export function buildFilterSummary(filters: Record<string, unknown> | null | undefined, schema: any[] = DEFAULT_FILTER_SCHEMA) {
+export function buildFilterSummary(filters: Record<string, unknown> | null | undefined, schema: FilterField[] = DEFAULT_FILTER_SCHEMA) {
   if (!filters) return [];
 
-  const fieldMap = new Map<string, any>();
+  const fieldMap = new Map<string, FilterField>();
   for (const field of schema) {
     fieldMap.set(field.key, field);
   }
@@ -202,7 +201,7 @@ function lookupOptionLabel(field: { options?: Array<{ value: unknown; label: str
  * Resolve a single raw value to its display string, respecting
  * pillLabel > options lookup > String fallback.
  */
-function resolveDisplayValue(field: any, rawValue: unknown): string {
+function resolveDisplayValue(field: FilterField, rawValue: unknown): string {
   if (field.pillLabel) {
     try {
       return field.pillLabel(rawValue);
@@ -231,7 +230,7 @@ function formatDate(d: unknown): string | null {
  * Produce the displayValues array for a single field + value pair.
  * Returns string[] (may be empty if the value is effectively inactive).
  */
-function formatFieldValue(field: any, value: unknown): string[] {
+function formatFieldValue(field: FilterField, value: unknown): string[] {
   switch (field.type) {
     case 'multi-select': {
       const items = value instanceof Set ? [...value] : Array.isArray(value) ? value : [value];

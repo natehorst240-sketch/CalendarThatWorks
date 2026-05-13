@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ProfileBar — Saved-view header with quick-view chip strip and organizing controls.
  *
@@ -31,6 +30,40 @@ const GLOBAL_GROUP_KEY = '__global__';
 const DEFAULT_VIEW_ORDER = ['month','week','day','agenda','schedule','base','assets','dispatch','map'];
 const ALWAYS_ON_VIEWS = new Set(['month', 'week']);
 
+type SavedViewLike = {
+  id: string;
+  name: string;
+  color?: string | null | undefined;
+  view?: string | null | undefined;
+  hiddenFromStrip?: boolean | undefined;
+  [key: string]: unknown;
+};
+
+type SaveFormPayload = { name: string; color: string | undefined };
+
+type ProfileBarProps = {
+  views: SavedViewLike[];
+  activeId?: string | null | undefined;
+  isDirty?: boolean | undefined;
+  schema?: unknown;
+  currentView?: string | null | undefined;
+  viewOrder?: readonly string[] | undefined;
+  enabledViews?: readonly string[] | undefined;
+  locationLabel?: string | undefined;
+  assetsLabel?: string | undefined;
+  hasActiveFilters?: boolean | undefined;
+  compact?: boolean | undefined;
+  tailSlot?: React.ReactNode;
+  onApply: (view: SavedViewLike) => void;
+  onAdd: (opts: SaveFormPayload) => void;
+  onResave: (id: string) => void;
+  onUpdate: (id: string, patch: Record<string, unknown>) => void;
+  onDelete: (id: string) => void;
+  onToggleVisibility: (id: string) => void;
+  onClearFilters: () => void;
+  onEditConditions?: ((id: string) => void) | undefined;
+};
+
 export default function ProfileBar({
   views,
   activeId,
@@ -52,7 +85,7 @@ export default function ProfileBar({
   onToggleVisibility,
   onClearFilters,
   onEditConditions,
-}: any) {
+}: ProfileBarProps) {
   const [saveOpen, setSaveOpen] = useState(false);
 
   const enabledSet = useMemo(
@@ -66,16 +99,16 @@ export default function ProfileBar({
     return enabledSet.has(viewId);
   };
 
-  const visibleViews = views.filter((v: any) => !v.hiddenFromStrip);
+  const visibleViews = views.filter((v) => !v.hiddenFromStrip);
 
   // Bucket visible saved views by the tab they were created on. Views with a
   // null/unknown `view` land in the global bucket so they remain applicable
   // from any tab (pre-feature backward compat).
   const grouped = useMemo(() => {
-    const buckets = new Map<string, any[]>();
+    const buckets = new Map<string, SavedViewLike[]>();
     viewOrder.forEach((v: string) => buckets.set(v, []));
     buckets.set(GLOBAL_GROUP_KEY, []);
-    visibleViews.forEach((sv: any) => {
+    visibleViews.forEach((sv) => {
       const key = sv.view && buckets.has(sv.view) ? sv.view : GLOBAL_GROUP_KEY;
       buckets.get(key)!.push(sv);
     });
@@ -96,8 +129,8 @@ export default function ProfileBar({
   // along so cross-view favorites stay accessible.
   const compactChips = useMemo(() => {
     if (!compact) return [];
-    const flat: any[] = [];
-    const scoped = grouped.get(currentView);
+    const flat: SavedViewLike[] = [];
+    const scoped = currentView ? grouped.get(currentView) : undefined;
     if (scoped) flat.push(...scoped);
     const global = grouped.get(GLOBAL_GROUP_KEY);
     if (global) flat.push(...global);
@@ -111,7 +144,7 @@ export default function ProfileBar({
           <ViewsDropdown
             views={views}
             activeId={activeId}
-            onApply={(sv: any) => { onApply(sv); setSaveOpen(false); }}
+            onApply={(sv: SavedViewLike) => { onApply(sv); setSaveOpen(false); }}
             onToggleVisibility={onToggleVisibility}
           />
 
@@ -165,12 +198,12 @@ export default function ProfileBar({
                   <meta.Icon size={11} aria-hidden="true" />
                   <span>{headerLabel}</span>
                 </div>
-                {list.map((savedView: any) => (
+                {list.map((savedView) => (
                   <ViewChip
                     key={savedView.id}
                     savedView={savedView}
                     isActive={savedView.id === activeId}
-                    isDirty={isDirty && savedView.id === activeId}
+                    isDirty={!!isDirty && savedView.id === activeId}
                     isEnabled={groupEnabled}
                     onApply={groupEnabled
                       ? () => { onApply(savedView); setSaveOpen(false); }
@@ -187,14 +220,14 @@ export default function ProfileBar({
         <div className={styles['strip']}>
           {compactChips.length > 0 && (
             <div className={styles['group']} data-active="true">
-              {compactChips.map((savedView: any) => {
+              {compactChips.map((savedView) => {
                 const chipEnabled = !savedView.view || isViewEnabled(savedView.view);
                 return (
                   <ViewChip
                     key={savedView.id}
                     savedView={savedView}
                     isActive={savedView.id === activeId}
-                    isDirty={isDirty && savedView.id === activeId}
+                    isDirty={!!isDirty && savedView.id === activeId}
                     isEnabled={chipEnabled}
                     onApply={chipEnabled
                       ? () => { onApply(savedView); setSaveOpen(false); }
@@ -231,7 +264,7 @@ export default function ProfileBar({
 
       {saveOpen && (
         <SaveForm
-          onSave={(opts: any) => { onAdd(opts); setSaveOpen(false); }}
+          onSave={(opts: SaveFormPayload) => { onAdd(opts); setSaveOpen(false); }}
           onCancel={() => setSaveOpen(false)}
         />
       )}
@@ -240,7 +273,15 @@ export default function ProfileBar({
 }
 
 /* ─── View Chip ─────────────────────────────────────────────── */
-function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: any) {
+type ViewChipProps = {
+  savedView: SavedViewLike;
+  isActive: boolean;
+  isDirty: boolean;
+  isEnabled?: boolean;
+  onApply?: (() => void) | undefined;
+};
+
+function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: ViewChipProps) {
   const color = savedView.color ?? '#64748b';
   const viewIcon = savedView.view ? VIEW_ICON_MAP[savedView.view] : null;
 
@@ -291,7 +332,12 @@ function ViewChip({ savedView, isActive, isDirty, isEnabled = true, onApply }: a
 }
 
 /* ─── Save Form ────────────────────────────────────────────────── */
-function SaveForm({ onSave, onCancel }: any) {
+type SaveFormProps = {
+  onSave: (opts: SaveFormPayload) => void;
+  onCancel: () => void;
+};
+
+function SaveForm({ onSave, onCancel }: SaveFormProps) {
   const [name,  setName]  = useState('');
   const [color, setColor] = useState(PROFILE_COLORS[0]);
   const inputRef = useRef<HTMLInputElement>(null);

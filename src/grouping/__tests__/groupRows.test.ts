@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { groupRows } from '../groupRows';
 
-type TestRow = Record<string, any>;
+type TestRow = Record<string, unknown>;
 
 const rows: TestRow[] = [
   { id: 1, emp: { role: 'Nurse' } },
@@ -12,7 +12,7 @@ const rows: TestRow[] = [
   { id: 6, emp: { role: null } },
 ];
 
-const fieldAccessor = (row: any) => row.emp?.role ?? null;
+const fieldAccessor = (row: Record<string, unknown>) => row.emp?.role ?? null;
 
 describe('groupRows', () => {
   it('groups rows by field value', () => {
@@ -24,7 +24,7 @@ describe('groupRows', () => {
 
   it('interleaves headers and members correctly', () => {
     const { flatRows } = groupRows(rows, { groupBy: 'role', fieldAccessor });
-    const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
+    const nurseHeader: Record<string, unknown> | undefined = flatRows.find((r: Record<string, unknown>) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader).toBeDefined();
     expect(nurseHeader.count).toBe(3);
     const doctorHeader = flatRows.find(r => r['_type'] === 'groupHeader' && r['groupKey'] === 'Doctor');
@@ -39,7 +39,7 @@ describe('groupRows', () => {
       fieldAccessor,
       collapsedGroups: new Set(['Nurse']),
     });
-    const nurseHeader: any = flatRows.find((r: any) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
+    const nurseHeader: Record<string, unknown> | undefined = flatRows.find((r: Record<string, unknown>) => r._type === 'groupHeader' && r.groupKey === 'Nurse');
     expect(nurseHeader.collapsed).toBe(true);
     const nurseMembers = flatRows.filter(r => !r['_type'] && r['emp']?.role === 'Nurse');
     expect(nurseMembers.length).toBe(0);
@@ -81,8 +81,8 @@ describe('groupRows', () => {
       { id: 4, emp: { role: 'Doctor', shift: 'Day'   } },
       { id: 5, emp: { role: 'Doctor', shift: 'Night' } },
     ];
-    const roleAcc  = (r: any) => r.emp.role;
-    const shiftAcc = (r: any) => r.emp.shift;
+    const roleAcc  = (r: Record<string, unknown>) => r.emp.role;
+    const shiftAcc = (r: Record<string, unknown>) => r.emp.shift;
 
     it('produces nested headers with depth metadata', () => {
       const { flatRows, groupOrder } = groupRows(nestedRows, {
@@ -135,7 +135,7 @@ describe('groupRows', () => {
       // Covers the `if (accessors.length === 0)` early-exit branch
       const { flatRows, groupOrder } = groupRows(rows, {
         groupBy: 'role',
-        fieldAccessor: [] as any,
+        fieldAccessor: [] as Record<string, unknown>,
       });
       expect(flatRows).toBe(rows);
       expect(groupOrder).toEqual([]);
@@ -145,7 +145,7 @@ describe('groupRows', () => {
       // Covers the `if (!accessor)` defensive branch inside emitLevel
       const { flatRows } = groupRows(rows, {
         groupBy: 'role',
-        fieldAccessor: [null] as any,
+        fieldAccessor: [null] as Record<string, unknown>,
       });
       expect(flatRows).toEqual(rows);
     });

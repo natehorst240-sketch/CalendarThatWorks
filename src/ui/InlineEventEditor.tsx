@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * InlineEventEditor — lightweight event customization popover.
  *
@@ -14,7 +13,26 @@ const PRESET_COLORS = [
   '#8b5cf6', '#ec4899', '#06b6d4', '#64748b',
 ];
 
-export default function InlineEventEditor({ event, x, y, onSave, onDelete, onClose }: any) {
+type InlineEventEditorEvent = {
+  title?: string;
+  color?: string;
+  meta?: {
+    _display?: { bold?: boolean; large?: boolean; [key: string]: unknown } | null | undefined;
+    [key: string]: unknown;
+  } | null | undefined;
+  [key: string]: unknown;
+};
+
+type InlineEventEditorProps = {
+  event: InlineEventEditorEvent;
+  x: number;
+  y: number;
+  onSave: (patch: Record<string, unknown>) => void;
+  onDelete?: (() => void) | null | undefined;
+  onClose: () => void;
+};
+
+export default function InlineEventEditor({ event, x, y, onSave, onDelete, onClose }: InlineEventEditorProps) {
   const [title, setTitle] = useState(event.title ?? '');
   const [color, setColor] = useState(event.color ?? PRESET_COLORS[0]);
   const [bold,  setBold]  = useState(!!(event.meta?._display?.bold));

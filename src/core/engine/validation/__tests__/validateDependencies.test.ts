@@ -397,7 +397,7 @@ describe('validateNoCycle', () => {
   });
 
   it('returns null immediately when existingDeps is null', () => {
-    expect(validateNoCycle('a', 'b', null as any)).toBeNull();
+    expect(validateNoCycle('a', 'b', null as Record<string, unknown>)).toBeNull();
   });
 
   it('returns null when no cycle would be created', () => {

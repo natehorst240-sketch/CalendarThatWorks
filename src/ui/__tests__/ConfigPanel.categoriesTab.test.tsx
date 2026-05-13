@@ -13,7 +13,7 @@ import '@testing-library/jest-dom';
 import { CategoriesTab } from '../ConfigPanel';
 import { DEFAULT_CATEGORIES } from '../../types/assets.ts';
 
-function renderTab({ initialConfig = {}, onUpdate }: any = {}) {
+function renderTab({ initialConfig = {}, onUpdate }: Record<string, unknown> = {}) {
   let currentConfig = { ...initialConfig };
   const update = onUpdate ?? vi.fn(updater => {
     currentConfig = typeof updater === 'function' ? updater(currentConfig) : { ...currentConfig, ...updater };

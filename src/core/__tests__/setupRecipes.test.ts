@@ -247,6 +247,6 @@ describe("buildRecipeSavedView('this-week', 1) — Monday start", () => {
 describe('buildRecipeSavedView with an unknown id', () => {
   it('returns null for an unrecognised recipe id', () => {
     // Cast needed because the type system rejects non-recipe ids at compile time.
-    expect(buildRecipeSavedView('unknown' as any, 0)).toBeNull();
+    expect(buildRecipeSavedView('unknown' as Record<string, unknown>, 0)).toBeNull();
   });
 });

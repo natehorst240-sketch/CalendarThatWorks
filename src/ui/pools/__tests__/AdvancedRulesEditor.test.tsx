@@ -80,9 +80,9 @@ describe('AdvancedRulesEditor — summaries + edit toggle', () => {
       { op: 'eq', path: 'c', value: 3 },
     ]} />)
     fireEvent.click(screen.getByRole('button', { name: 'Move rule 2 up' }))
-    expect(stateOf().map((c: any) => c.path)).toEqual(['b', 'a', 'c'])
+    expect(stateOf().map((c: { path?: unknown }) => c.path)).toEqual(['b', 'a', 'c'])
     fireEvent.click(screen.getByRole('button', { name: 'Move rule 1 down' }))
-    expect(stateOf().map((c: any) => c.path)).toEqual(['a', 'b', 'c'])
+    expect(stateOf().map((c: { path?: unknown }) => c.path)).toEqual(['a', 'b', 'c'])
   })
 
   it('move buttons disable at list bounds', () => {

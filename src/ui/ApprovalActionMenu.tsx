@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * ApprovalActionMenu — ticket #134-15.
  *
@@ -26,10 +25,16 @@ const DEFAULT_LABELS = {
  * approvals block. Returns [] when the feature is disabled, the stage is
  * unknown, or the stage has no rules.
  */
-export function allowedActionsFor(stage: string, approvalsConfig: any): string[] {
+type ApprovalsConfig = {
+  enabled?: boolean;
+  rules?: Record<string, { allow?: unknown }>;
+  labels?: Record<string, string>;
+} | null | undefined;
+
+export function allowedActionsFor(stage: string, approvalsConfig: ApprovalsConfig): string[] {
   if (!approvalsConfig || approvalsConfig.enabled !== true) return [];
   const stageRule = approvalsConfig.rules?.[stage];
-  const allow = Array.isArray(stageRule?.allow) ? stageRule.allow : [];
+  const allow = Array.isArray(stageRule?.allow) ? stageRule.allow as string[] : [];
   return allow;
 }
 
@@ -39,6 +44,16 @@ export function allowedActionsFor(stage: string, approvalsConfig: any): string[]
  * caret. `variant: 'inline'` renders statically, meant for embedding inside
  * another dialog (the AuditDrawer uses this).
  */
+type ApprovalActionMenuProps = {
+  stage: string;
+  approvalsConfig: ApprovalsConfig;
+  onAction?: ((action: string) => void) | undefined;
+  onClose?: (() => void) | undefined;
+  labelledBy?: string | undefined;
+  anchorRect?: { top?: number; bottom?: number; left?: number; right?: number } | null | undefined;
+  variant?: 'popover' | 'inline' | undefined;
+};
+
 export default function ApprovalActionMenu({
   stage,
   approvalsConfig,
@@ -47,7 +62,7 @@ export default function ApprovalActionMenu({
   labelledBy,
   anchorRect,
   variant = 'popover',
-}: any) {
+}: ApprovalActionMenuProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const actions = allowedActionsFor(stage, approvalsConfig);
 

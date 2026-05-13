@@ -11,7 +11,7 @@ function d(year: number, month: number, day: number) {
   return new Date(year, month - 1, day);
 }
 
-function wrap(props: Record<string, any> = {}) {
+function wrap(props: Record<string, unknown> = {}) {
   return render(
     <CalendarContext.Provider value={null}>
       <MonthView currentDate={currentDate} events={[]} {...props} />
@@ -127,8 +127,8 @@ describe('MonthView — multi-day / allDay event span bars', () => {
         category: 'mission-assignment' },
     ];
     render(
-      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as any}>
-        <MonthView currentDate={currentDate} events={events as any} onEventMove={onEventMove} />
+      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as unknown as Record<string, unknown>}>
+        <MonthView currentDate={currentDate} events={events as unknown as Record<string, unknown>} onEventMove={onEventMove} />
       </CalendarContext.Provider>,
     );
 
@@ -155,9 +155,9 @@ describe('MonthView — multi-day / allDay event span bars', () => {
 // ─── Pill drag-to-reschedule (native pointer drag) ────────────────────────────
 
 describe('MonthView — pill drag-to-reschedule', () => {
-  function withDrag(props: Record<string, any> = {}) {
+  function withDrag(props: Record<string, unknown> = {}) {
     return render(
-      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as any}>
+      <CalendarContext.Provider value={{ permissions: { canDrag: true } } as unknown as Record<string, unknown>}>
         <MonthView currentDate={currentDate} events={[]} {...props} />
       </CalendarContext.Provider>,
     );
@@ -232,8 +232,8 @@ describe('MonthView — pill drag-to-reschedule', () => {
       { id: 'e1', title: 'Standup', start: d(2026, 4, 15), end: d(2026, 4, 15) },
     ];
     render(
-      <CalendarContext.Provider value={{ permissions: { canDrag: false } } as any}>
-        <MonthView currentDate={currentDate} events={events as any} onEventMove={onEventMove} />
+      <CalendarContext.Provider value={{ permissions: { canDrag: false } } as unknown as Record<string, unknown>}>
+        <MonthView currentDate={currentDate} events={events as unknown as Record<string, unknown>} onEventMove={onEventMove} />
       </CalendarContext.Provider>,
     );
     const pill = screen.getByRole('button', { name: /Standup/i });

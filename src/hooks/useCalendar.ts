@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * useCalendar.js — Central state hook: current date, view, filters.
  *
@@ -12,9 +11,11 @@ import { normalizeEvents } from '../core/eventModel';
 import { applyFilters, getCategories, getResources } from '../filters/filterEngine';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import { createInitialFilters, clearFilterValue } from '../filters/filterState';
+import type { FilterField } from '../filters/filterSchema';
+import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
 
 type CalendarView = 'month' | 'agenda' | 'schedule' | 'timeline' | 'base' | 'assets' | 'week' | 'day' | string;
-type CalendarFilters = Record<string, any>;
+type CalendarFilters = Record<string, unknown>;
 export type CalendarState = {
   view: CalendarView;
   setView: (value: CalendarView) => void;
@@ -34,8 +35,8 @@ export type CalendarState = {
    */
   dayWindow: number | null;
   setDayWindow: (value: number | null) => void;
-  events: any[];
-  visibleEvents: any[];
+  events: NormalizedEvent[];
+  visibleEvents: NormalizedEvent[];
   categories: string[];
   resources: string[];
   filters: CalendarFilters;
@@ -54,9 +55,9 @@ export type CalendarState = {
 };
 
 export function useCalendar(
-  rawEvents: any[],
+  rawEvents: WorksCalendarEvent[],
   initialView: CalendarView = 'month',
-  filterSchema: any[] = DEFAULT_FILTER_SCHEMA,
+  filterSchema: FilterField[] = DEFAULT_FILTER_SCHEMA,
   initialDayWindow: number | null = null,
 ): CalendarState {
   const [view,        setView]        = useState(initialView);
@@ -94,9 +95,15 @@ export function useCalendar(
 
   // ── Named toggles (backward-compatible) ──────────────────────────────────────
 
+  const asStringSet = (value: unknown): Set<string> => {
+    if (value instanceof Set) return new Set([...value].map(String));
+    if (Array.isArray(value)) return new Set(value.map(String));
+    return new Set<string>();
+  };
+
   const toggleCategory = useCallback((cat: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set<string>(f['categories']);
+      const next = asStringSet(f['categories']);
       if (next.has(cat)) next.delete(cat); else next.add(cat);
       return { ...f, categories: next };
     });
@@ -104,7 +111,7 @@ export function useCalendar(
 
   const toggleResource = useCallback((res: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set<string>(f['resources']);
+      const next = asStringSet(f['resources']);
       if (next.has(res)) next.delete(res); else next.add(res);
       return { ...f, resources: next };
     });
@@ -112,7 +119,7 @@ export function useCalendar(
 
   const toggleSourceFilter = useCallback((id: string) => {
     setFilters((f: CalendarFilters) => {
-      const next = new Set<string>(f['sources']);
+      const next = asStringSet(f['sources']);
       if (next.has(id)) next.delete(id); else next.add(id);
       return { ...f, sources: next };
     });
@@ -132,7 +139,7 @@ export function useCalendar(
   const toggleFilter = useCallback((key: string, value: unknown) => {
     setFilters((f: CalendarFilters) => {
       const current = f[key];
-      const next = current instanceof Set ? new Set(current) : new Set();
+      const next: Set<unknown> = current instanceof Set ? new Set(current) : new Set();
       if (next.has(value)) next.delete(value); else next.add(value);
       return { ...f, [key]: next };
     });

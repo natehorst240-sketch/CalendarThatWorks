@@ -22,8 +22,8 @@ describe('attachLocations', () => {
       resolve: (res) => res.id === 'a' ? { lat: 40, lon: -111 } : null,
     }
     const result = attachLocations(resources, [adapter])
-    expect((result[0]!.meta as any).location).toEqual({ lat: 40, lon: -111 })
-    expect((result[1]!.meta as any).location).toBeUndefined()
+    expect((result[0]!.meta as Record<string, unknown>).location).toEqual({ lat: 40, lon: -111 })
+    expect((result[1]!.meta as Record<string, unknown>).location).toBeUndefined()
   })
 
   it('preserves existing meta.location — manual config wins over automated sources', () => {
@@ -33,7 +33,7 @@ describe('attachLocations', () => {
       resolve: () => ({ lat: 0, lon: 0 }),
     }
     const result = attachLocations(resources, [adapter])
-    expect((result[0]!.meta as any).location).toEqual({ lat: 99, lon: 99 })
+    expect((result[0]!.meta as Record<string, unknown>).location).toEqual({ lat: 99, lon: 99 })
   })
 
   it('uses the first adapter that resolves a non-null coordinate', () => {
@@ -41,7 +41,7 @@ describe('attachLocations', () => {
     const adapterB: ResourceLocationAdapter = { id: 'B', resolve: () => ({ lat: 1, lon: 1 }) }
     const adapterC: ResourceLocationAdapter = { id: 'C', resolve: () => ({ lat: 2, lon: 2 }) }
     const result = attachLocations([r('x')], [adapterA, adapterB, adapterC])
-    expect((result[0]!.meta as any).location).toEqual({ lat: 1, lon: 1 })
+    expect((result[0]!.meta as Record<string, unknown>).location).toEqual({ lat: 1, lon: 1 })
   })
 
   it('returns the input untouched when no adapters are passed', () => {
@@ -73,7 +73,7 @@ describe('createStaticLocationAdapter', () => {
 
   it('passes through extra fields (altitude, heading, etc.)', () => {
     const adapter = createStaticLocationAdapter({
-      'plane-1': { lat: 40, lon: -111, altitude: 35000, heading: 280 } as any,
+      'plane-1': { lat: 40, lon: -111, altitude: 35000, heading: 280 } as Record<string, unknown>,
     })
     const resolved = adapter.resolve(r('plane-1'))
     expect(resolved).toMatchObject({ lat: 40, lon: -111, altitude: 35000, heading: 280 })
@@ -85,7 +85,7 @@ describe('attachLocations — resource with no meta property', () => {
     const bare = { id: 'x', name: 'X' } as unknown as import('../../engine/schema/resourceSchema').EngineResource
     const adapter: ResourceLocationAdapter = { id: 'static', resolve: () => ({ lat: 10, lon: 20 }) }
     const result = attachLocations([bare], [adapter])
-    expect((result[0]!.meta as any).location).toEqual({ lat: 10, lon: 20 })
+    expect((result[0]!.meta as Record<string, unknown>).location).toEqual({ lat: 10, lon: 20 })
   })
 })
 

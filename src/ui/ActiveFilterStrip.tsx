@@ -16,6 +16,7 @@
  */
 import { X } from 'lucide-react';
 import { buildActiveFilterPills, clearFilterValue } from '../filters/filterState';
+import type { FilterField } from '../filters/filterSchema';
 import styles from './ActiveFilterStrip.module.css';
 
 type FieldLike = { key: string; type?: string; defaultValue?: unknown };
@@ -38,7 +39,7 @@ export default function ActiveFilterStrip({
   onClear,
   onClearAll,
 }: ActiveFilterStripProps): JSX.Element | null {
-  const pills = buildActiveFilterPills(filters, schema);
+  const pills = buildActiveFilterPills(filters, schema as FilterField[]);
   if (pills.length === 0) return null;
 
   return (

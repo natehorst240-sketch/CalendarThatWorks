@@ -32,8 +32,8 @@ function ControlledHost({
   initialEvents,
 }: {
   apiRef: React.RefObject<CalendarApi>;
-  onEventSave: (ev: any) => void;
-  initialEvents: any[];
+  onEventSave: (ev: Record<string, unknown>) => void;
+  initialEvents: Record<string, unknown>[];
 }) {
   const [events, setEvents] = useState<any[]>(initialEvents);
   return (
@@ -74,7 +74,7 @@ afterEach(() => {
 function firstOccurrenceId(api: CalendarApi, masterId: string): string {
   const occ = api
     .getVisibleEvents()
-    .find((e: any) => (e as any)._eventId === masterId || String(e.id ?? '').startsWith(masterId));
+    .find((e: Record<string, unknown>) => (e as Record<string, unknown>)._eventId === masterId || String(e.id ?? '').startsWith(masterId));
   if (!occ) throw new Error('No expanded occurrence found for master ' + masterId);
   return String(occ.id);
 }

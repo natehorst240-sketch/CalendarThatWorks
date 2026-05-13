@@ -163,7 +163,7 @@ describe('validateChange — checkOverlap', () => {
   it('returns soft violation when same-resource events overlap', () => {
     const result = validateChange(
       makeChange({ event: makeEvent(), resource: 'emp-1' }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     const v = result.violations.find(v => v.rule === 'overlap');
     expect(v!.severity).toBe('soft');
@@ -173,7 +173,7 @@ describe('validateChange — checkOverlap', () => {
   it('skips overlap check when no resource is set', () => {
     const result = validateChange(
       makeChange({ event: makeEvent({ resource: null }) }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     expect(result.violations.find(v => v.rule === 'overlap')).toBeUndefined();
   });
@@ -181,7 +181,7 @@ describe('validateChange — checkOverlap', () => {
   it('skips self when event.id matches existing.id', () => {
     const result = validateChange(
       makeChange({ event: makeEvent({ id: 'ev-existing', resource: 'emp-1' }) }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     expect(result.violations.find(v => v.rule === 'overlap')).toBeUndefined();
   });
@@ -190,7 +190,7 @@ describe('validateChange — checkOverlap', () => {
     const allDayExisting = { ...existing, allDay: true };
     const result = validateChange(
       makeChange({ event: makeEvent(), resource: 'emp-1' }),
-      { events: [allDayExisting as any] },
+      { events: [allDayExisting as Record<string, unknown>] },
     );
     expect(result.violations.find(v => v.rule === 'overlap')).toBeUndefined();
   });
@@ -198,7 +198,7 @@ describe('validateChange — checkOverlap', () => {
   it('skips events for different resource', () => {
     const result = validateChange(
       makeChange({ event: makeEvent({ resource: 'emp-2' }) }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     expect(result.violations.find(v => v.rule === 'overlap')).toBeUndefined();
   });
@@ -305,7 +305,7 @@ describe('validateChange — severity aggregation', () => {
         event:    makeEvent(),
         resource: 'emp-1',
       }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     expect(result.severity).toBe('hard');
     expect(result.allowed).toBe(false);
@@ -316,7 +316,7 @@ describe('validateChange — severity aggregation', () => {
       start: d('2026-06-10T08:00:00Z'), end: d('2026-06-10T10:00:00Z') };
     const result = validateChange(
       makeChange({ event: makeEvent(), resource: 'emp-1' }),
-      { events: [existing as any] },
+      { events: [existing as Record<string, unknown>] },
     );
     expect(result.severity).toBe('soft');
     expect(result.allowed).toBe(true);

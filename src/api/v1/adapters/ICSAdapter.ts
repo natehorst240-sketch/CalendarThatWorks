@@ -200,7 +200,7 @@ export class ICSAdapter implements CalendarAdapter {
     const opts: Record<string, Date> = {};
     if (rangeStart) opts['rangeStart'] = rangeStart;
     if (rangeEnd)   opts['rangeEnd']   = rangeEnd;
-    const raw = parseICS(text, opts) as CalendarEventV1[];
+    const raw = parseICS(text, opts) as unknown as CalendarEventV1[];
 
     // Tag with feed label
     return raw.map(ev => ({

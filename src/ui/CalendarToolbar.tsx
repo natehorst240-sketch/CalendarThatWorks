@@ -391,9 +391,9 @@ export default function CalendarToolbar({
               hasActiveFilters={hasActiveFilters(cal.filters, schema)}
               tailSlot={tailSlot}
               onApply={handleApplyView}
-              onAdd={({ name, color }: { name: string; color: string | null }) =>
-                savedViews.saveView(name, cal.filters, { color, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) })
-              }
+              onAdd={({ name, color }: { name: string; color: string | undefined }) => {
+                savedViews.saveView(name, cal.filters, { color: color ?? null, view: cal.view, ...captureSavedViewFields(cal.view, savedViewCaptureCtx) });
+              }}
               onResave={(id: string) => savedViews.resaveView(id, cal.filters, cal.view, activeGroupBy, captureSavedViewFields(cal.view, savedViewCaptureCtx))}
               onUpdate={savedViews.updateView}
               onDelete={handleDeleteView}

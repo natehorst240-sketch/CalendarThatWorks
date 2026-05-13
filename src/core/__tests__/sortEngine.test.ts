@@ -18,7 +18,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     rrule: null,
     exdates: [],
     meta: {},
-    _raw: {} as any,
+    _raw: {} as Record<string, unknown>,
     ...overrides,
   }
 }
@@ -121,7 +121,7 @@ describe('sortEvents', () => {
     const config: SortConfig = {
       field: 'score',
       direction: 'desc',
-      getValue: e => (e.meta as any).score as number,
+      getValue: e => (e.meta as Record<string, unknown>).score as number,
     }
     const sorted = sortEvents(events, [config])
     expect(sorted[0]!.id).toBe('a') // 90 desc first
@@ -168,7 +168,7 @@ describe('sortEvents', () => {
 
   it('returns null for meta-field when meta is undefined and sorts last', () => {
     const events = [
-      makeEvent({ id: 'b', meta: undefined as any }),
+      makeEvent({ id: 'b', meta: undefined as unknown as Record<string, unknown> }),
       makeEvent({ id: 'a', title: 'Z' }),
     ]
     // 'score' not on event and meta is undefined — both get null → order preserved
@@ -184,7 +184,7 @@ describe('sortEvents', () => {
     const config: SortConfig = {
       field: 'score',
       direction: 'asc',
-      getValue: (e) => e.id === 'b' ? (undefined as any) : 'value',
+      getValue: (e) => e.id === 'b' ? (undefined as Record<string, unknown>) : 'value',
     }
     const sorted = sortEvents(events, [config])
     expect(sorted[sorted.length - 1]!.id).toBe('b')
@@ -198,7 +198,7 @@ describe('sortEvents', () => {
     const config: SortConfig = {
       field: 'score',
       direction: 'asc',
-      getValue: () => undefined as any,
+      getValue: () => undefined as Record<string, unknown>,
     }
     const sorted = sortEvents(events, [config])
     expect(sorted.map(e => e.id)).toEqual(['x', 'y'])

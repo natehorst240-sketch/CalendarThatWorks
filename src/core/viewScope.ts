@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 /**
  * viewScope — single source of truth for "which events belong in which tab".
  *
@@ -35,7 +34,7 @@ export type SavedViewCaptureCtx = Partial<Record<SavedViewCaptureField, unknown>
 
 export interface ViewScope {
   id: ViewId;
-  includes(ev: any, ctx: ViewScopeContext): boolean;
+  includes(ev: unknown, ctx: ViewScopeContext): boolean;
   seedCategoryOptions?: readonly string[];
   /**
    * Which saved-view fields this view owns. `captureSavedViewFields` reads
@@ -47,17 +46,19 @@ export interface ViewScope {
   persistedFields?: readonly SavedViewCaptureField[];
 }
 
-function includesForBase(ev: any, ctx: ViewScopeContext): boolean {
+function includesForBase(ev: unknown, ctx: ViewScopeContext): boolean {
   const baseIds = ctx.selectedBaseIds.length > 0
     ? ctx.selectedBaseIds.map(String)
     : ctx.bases.map(b => String(b.id));
   if (baseIds.length === 0) return false;
 
-  const metaBase = ev?.meta?.base;
+  const rec = (ev != null && typeof ev === 'object') ? (ev as Record<string, unknown>) : {};
+  const meta = (rec['meta'] != null && typeof rec['meta'] === 'object') ? (rec['meta'] as Record<string, unknown>) : {};
+  const metaBase = meta['base'];
   if (metaBase != null && baseIds.includes(String(metaBase))) return true;
 
-  if (ev?.resource == null) return false;
-  const resource = String(ev.resource);
+  if (rec['resource'] == null) return false;
+  const resource = String(rec['resource']);
 
   for (const id of baseIds) {
     const emp = ctx.employees.find(e => String(e.base ?? '') === id && String(e.id) === resource);
@@ -68,18 +69,20 @@ function includesForBase(ev: any, ctx: ViewScopeContext): boolean {
   return false;
 }
 
+type ScheduleLike = Parameters<typeof isScheduleWorkflowEvent>[0];
+
 export const VIEW_SCOPES: Record<ViewId, ViewScope> = Object.freeze({
-  month:    { id: 'month',    includes: ev => !isScheduleWorkflowEvent(ev) },
-  week:     { id: 'week',     includes: ev => !isScheduleWorkflowEvent(ev) },
-  day:      { id: 'day',      includes: ev => !isScheduleWorkflowEvent(ev) },
+  month:    { id: 'month',    includes: ev => !isScheduleWorkflowEvent(ev as ScheduleLike) },
+  week:     { id: 'week',     includes: ev => !isScheduleWorkflowEvent(ev as ScheduleLike) },
+  day:      { id: 'day',      includes: ev => !isScheduleWorkflowEvent(ev as ScheduleLike) },
   agenda: {
     id: 'agenda',
-    includes: ev => !isScheduleWorkflowEvent(ev),
+    includes: ev => !isScheduleWorkflowEvent(ev as ScheduleLike),
     persistedFields: ['groupBy', 'sort', 'showAllGroups'],
   },
   schedule: {
     id: 'schedule',
-    includes: ev => isScheduleWorkflowEvent(ev),
+    includes: ev => isScheduleWorkflowEvent(ev as ScheduleLike),
     seedCategoryOptions: SCHEDULE_TAB_CATEGORY_SEEDS,
     persistedFields: ['groupBy', 'sort'],
   },

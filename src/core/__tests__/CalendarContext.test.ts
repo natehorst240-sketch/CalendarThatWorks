@@ -18,7 +18,7 @@ function makeEvent(overrides: Partial<NormalizedEvent> = {}): NormalizedEvent {
     meta: {},
     rrule: null,
     exdates: [],
-    _raw: {} as any,
+    _raw: {} as Record<string, unknown>,
     ...overrides,
   };
 }

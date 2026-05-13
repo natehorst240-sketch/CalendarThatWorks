@@ -6,7 +6,7 @@ import {
 } from 'react';
 import type { ForwardedRef } from 'react';
 
-import type { WorksCalendarProps, CalendarApi } from './WorksCalendar.types';
+import type { WorksCalendarProps, CalendarApi, WorksCalendarEvent } from './WorksCalendar.types';
 export type { WorksCalendarEvent, CalendarView, CalendarRole, ScheduleInstantiationLimits, CalendarApi, WorksCalendarProps, DispatchMissionCandidate, DispatchMissionReadiness, DispatchEvaluator } from './WorksCalendar.types';
 import { DEFAULT_SCHEDULE_INSTANTIATION_LIMITS } from './core/calendarViewConfig';
 
@@ -303,7 +303,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     setView:          (v)     => cal.setView(v),
     goToToday:        ()      => cal.goToToday(),
     openEvent:        (id)    => { const ev = expandedEvents.find(e => e.id === id); if (ev) setSelectedEvent(ev); },
-    getVisibleEvents: ()      => visibleEvents,
+    getVisibleEvents: ()      => visibleEvents as unknown as WorksCalendarEvent[],
     clearFilters:     ()      => cal.clearFilters(),
     addEvent:         (d = {}) => setFormEvent(d),
     undo:             ()      => undoManager.undo(),

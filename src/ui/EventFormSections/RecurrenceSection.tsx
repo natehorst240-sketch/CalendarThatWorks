@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- TODO: remove as types are tightened */
 import styles from '../EventForm.module.css';
 import type { ChangeEvent } from 'react';
 
@@ -20,7 +19,14 @@ const RECURRENCE_PRESETS = [
  *   onPresetChange      (id) => void
  *   onCustomRruleChange (str) => void
  */
-export function RecurrenceSection({ preset, customRrule, onPresetChange, onCustomRruleChange }: any) {
+type RecurrenceSectionProps = {
+  preset: string;
+  customRrule: string;
+  onPresetChange: (id: string) => void;
+  onCustomRruleChange: (rrule: string) => void;
+};
+
+export function RecurrenceSection({ preset, customRrule, onPresetChange, onCustomRruleChange }: RecurrenceSectionProps) {
   function handlePresetChange(e: ChangeEvent<HTMLSelectElement>) {
     const next = e.target.value;
     onPresetChange(next);

@@ -28,7 +28,7 @@ const dotInspection: MaintenanceRule = {
   interval: { days: 365 },
 };
 
-function renderForm(props: any = {}) {
+function renderForm(props: Record<string, unknown> = {}) {
   const onSave = vi.fn();
   const { event: eventOverrides, ...rest } = props;
   render(

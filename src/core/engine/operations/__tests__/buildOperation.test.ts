@@ -25,24 +25,24 @@ describe('fromDragMove', () => {
 
   it('carries event id', () => {
     const op = fromDragMove(baseEv, d(11), d(12));
-    expect((op as any).id).toBe('ev1');
+    expect((op as Record<string, unknown>).id).toBe('ev1');
   });
 
   it('carries newStart/newEnd', () => {
-    const op = fromDragMove(baseEv, d(11), d(12)) as any;
+    const op = fromDragMove(baseEv, d(11), d(12)) as Record<string, unknown>;
     expect(op.newStart).toEqual(d(11));
     expect(op.newEnd).toEqual(d(12));
   });
 
   it('carries optional scope and occurrenceDate', () => {
     const occ = d(9);
-    const op = fromDragMove(baseEv, d(11), d(12), 'single', occ) as any;
+    const op = fromDragMove(baseEv, d(11), d(12), 'single', occ) as Record<string, unknown>;
     expect(op.scope).toBe('single');
     expect(op.occurrenceDate).toEqual(occ);
   });
 
   it('scope and occurrenceDate are undefined when not provided', () => {
-    const op = fromDragMove(baseEv, d(11), d(12)) as any;
+    const op = fromDragMove(baseEv, d(11), d(12)) as Record<string, unknown>;
     expect(op.scope).toBeUndefined();
     expect(op.occurrenceDate).toBeUndefined();
   });
@@ -58,7 +58,7 @@ describe('fromDragResize', () => {
   });
 
   it('carries event id and new times', () => {
-    const op = fromDragResize(baseEv, d(9), d(12)) as any;
+    const op = fromDragResize(baseEv, d(9), d(12)) as Record<string, unknown>;
     expect(op.id).toBe('ev1');
     expect(op.newStart).toEqual(d(9));
     expect(op.newEnd).toEqual(d(12));
@@ -66,7 +66,7 @@ describe('fromDragResize', () => {
 
   it('carries optional scope and occurrenceDate', () => {
     const occ = d(9);
-    const op = fromDragResize(baseEv, d(9), d(12), 'following', occ) as any;
+    const op = fromDragResize(baseEv, d(9), d(12), 'following', occ) as Record<string, unknown>;
     expect(op.scope).toBe('following');
     expect(op.occurrenceDate).toEqual(occ);
   });
@@ -82,12 +82,12 @@ describe('fromDragCreate', () => {
   });
 
   it('defaults title to "(untitled)" when no overrides', () => {
-    const op = fromDragCreate(d(9), d(10)) as any;
+    const op = fromDragCreate(d(9), d(10)) as Record<string, unknown>;
     expect(op.event.title).toBe('(untitled)');
   });
 
   it('carries start/end', () => {
-    const op = fromDragCreate(d(9), d(10)) as any;
+    const op = fromDragCreate(d(9), d(10)) as Record<string, unknown>;
     expect(op.event.start).toEqual(d(9));
     expect(op.event.end).toEqual(d(10));
   });
@@ -98,7 +98,7 @@ describe('fromDragCreate', () => {
       category: 'PTO',
       resourceId: 'r1',
       color: '#ff0000',
-    }) as any;
+    }) as Record<string, unknown>;
     expect(op.event.title).toBe('Custom');
     expect(op.event.category).toBe('PTO');
     expect(op.event.resourceId).toBe('r1');
@@ -106,7 +106,7 @@ describe('fromDragCreate', () => {
   });
 
   it('defaults optional overrides to null', () => {
-    const op = fromDragCreate(d(9), d(10)) as any;
+    const op = fromDragCreate(d(9), d(10)) as Record<string, unknown>;
     expect(op.event.category).toBeNull();
     expect(op.event.resourceId).toBeNull();
     expect(op.event.color).toBeNull();
@@ -129,7 +129,7 @@ describe('fromFormSave', () => {
   });
 
   it('update includes id and patch', () => {
-    const op = fromFormSave({ id: 'ev1', title: 'Updated', start: d(9), end: d(10) }) as any;
+    const op = fromFormSave({ id: 'ev1', title: 'Updated', start: d(9), end: d(10) }) as Record<string, unknown>;
     expect(op.id).toBe('ev1');
     expect(op.patch.title).toBe('Updated');
     expect(op.patch.id).toBeUndefined();
@@ -141,13 +141,13 @@ describe('fromFormSave', () => {
       { id: 'ev1', title: 'T', start: d(9), end: d(10) },
       'single',
       occ,
-    ) as any;
+    ) as Record<string, unknown>;
     expect(op.scope).toBe('single');
     expect(op.occurrenceDate).toEqual(occ);
   });
 
   it('create event contains the data', () => {
-    const op = fromFormSave({ title: 'Event', start: d(9), end: d(10) }) as any;
+    const op = fromFormSave({ title: 'Event', start: d(9), end: d(10) }) as Record<string, unknown>;
     expect(op.event.title).toBe('Event');
   });
 });
@@ -162,13 +162,13 @@ describe('fromFormDelete', () => {
   });
 
   it('carries event id', () => {
-    const op = fromFormDelete(baseEv) as any;
+    const op = fromFormDelete(baseEv) as Record<string, unknown>;
     expect(op.id).toBe('ev1');
   });
 
   it('carries optional scope and occurrenceDate', () => {
     const occ = d(9);
-    const op = fromFormDelete(baseEv, 'single', occ) as any;
+    const op = fromFormDelete(baseEv, 'single', occ) as Record<string, unknown>;
     expect(op.scope).toBe('single');
     expect(op.occurrenceDate).toEqual(occ);
   });
@@ -184,7 +184,7 @@ describe('fromImport', () => {
   });
 
   it('carries the event data', () => {
-    const op = fromImport({ title: 'Imported', start: d(9), end: d(10) }) as any;
+    const op = fromImport({ title: 'Imported', start: d(9), end: d(10) }) as Record<string, unknown>;
     expect(op.event.title).toBe('Imported');
   });
 });

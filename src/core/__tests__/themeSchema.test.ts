@@ -72,7 +72,7 @@ describe('mergeTheme', () => {
 
   it('handles patch key whose base value is missing (nested)', () => {
     const result = mergeTheme({}, { colors: { accent: '#abc' } });
-    expect((result as any).colors.accent).toBe('#abc');
+    expect((result as Record<string, unknown>).colors.accent).toBe('#abc');
   });
 });
 
@@ -82,18 +82,18 @@ describe('normalizeCustomTheme', () => {
   it('returns defaults when called with null', () => {
     const result = normalizeCustomTheme(null);
     expect(result['colors']).toBeDefined();
-    expect((result as any).typography.baseSize).toBe(14);
+    expect((result as Record<string, unknown>).typography.baseSize).toBe(14);
   });
 
   it('returns defaults when called with undefined', () => {
     const result = normalizeCustomTheme(undefined);
-    expect((result as any).spacing.density).toBe(1);
+    expect((result as Record<string, unknown>).spacing.density).toBe(1);
   });
 
   it('merges partial overrides onto defaults', () => {
     const result = normalizeCustomTheme({ colors: { accent: '#123456' } });
-    expect((result as any).colors.accent).toBe('#123456');
-    expect((result as any).colors.bg).toBe('#ffffff');
+    expect((result as Record<string, unknown>).colors.accent).toBe('#123456');
+    expect((result as Record<string, unknown>).colors.bg).toBe('#ffffff');
   });
 });
 

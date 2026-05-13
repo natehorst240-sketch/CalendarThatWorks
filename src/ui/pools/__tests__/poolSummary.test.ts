@@ -30,7 +30,7 @@ describe('summarizePool — type label', () => {
   })
 
   it('falls back to bare "Pool" for unknown type strings (defensive)', () => {
-    const s = summarizePool({ ...base({ id: 'p', name: 'X' }), type: 'graphql' as any })
+    const s = summarizePool({ ...base({ id: 'p', name: 'X' }), type: 'graphql' as unknown as Parameters<typeof summarizePool>[0]['type'] })
     expect(s.typeLabel).toBe('Pool')
   })
 })
@@ -174,7 +174,7 @@ describe('summarizeQuery — leaf operators', () => {
     expect(summarizeQuery({
       op: 'within', path: 'meta.location',
       from: { kind: 'proposed' },
-    } as any)).toEqual(['within distance of event'])
+    } as Record<string, unknown>)).toEqual(['within distance of event'])
   })
 
   it('OR with no inner phrases produces no output', () => {

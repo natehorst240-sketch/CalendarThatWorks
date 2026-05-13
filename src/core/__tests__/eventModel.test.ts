@@ -125,7 +125,7 @@ describe('normalizeEvent', () => {
 
   it('uses epoch fallback when start is an unrecognized type (object)', () => {
     // toDate returns null for non-null non-Date non-number non-string values
-    const ev = normalizeEvent(raw({ start: {} as any }));
+    const ev = normalizeEvent(raw({ start: {} as Record<string, unknown> }));
     expect(ev.start).toBeInstanceOf(Date);
   });
 
