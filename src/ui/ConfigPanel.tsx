@@ -11,14 +11,16 @@ import {
   APPROVAL_ACTIONS,
 } from '../core/configSchema';
 import type {
-  AnyRecord,
   ConfigPanelProps,
   ConfigPanelTabId,
   SaveViewOptions,
   SavedViewDraft,
   SavedViewFilters,
   UpdateConfig,
+  WorksCalendarConfig,
 } from '../types/ui';
+import type { NormalizedEvent } from '../types/events';
+import type { FilterField } from '../filters/filterSchema';
 import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import type { CategoryDef, CategoriesConfig } from '../types/assets.ts';
@@ -136,15 +138,15 @@ const SEARCH_INDEX: Array<{ label: string; keywords?: string; tabId: string }> =
 ];
 
 type ConfigPanelSectionProps = {
-  config: AnyRecord;
+  config: WorksCalendarConfig;
   onUpdate: UpdateConfig;
 };
 
 type SmartViewsTabProps = {
   categories: string[];
   resources: string[];
-  schema?: AnyRecord[] | AnyRecord | undefined;
-  items?: AnyRecord[] | undefined;
+  schema?: readonly FilterField[] | undefined;
+  items?: NormalizedEvent[] | undefined;
   onSaveView?: ConfigPanelProps['onSaveView'];
   savedViews?: SavedViewDraft[] | undefined;
   onUpdateView?: ConfigPanelProps['onUpdateView'];
@@ -165,7 +167,7 @@ type TemplateTabProps = {
 };
 
 type AssetsTabProps = ConfigPanelSectionProps & {
-  items?: AnyRecord[];
+  items?: NormalizedEvent[];
 };
 
 type TemplateVisibility = 'private' | 'team' | 'org';
@@ -954,7 +956,10 @@ export function TeamTab({ config, onUpdate, onEmployeeAdd, onEmployeeDelete }: T
 
   const updateTeam = (patch: TeamConfigPatch) => onUpdate(c => ({
     ...c,
-    team: { ...(c['team'] ?? {}), ...patch },
+    // TeamMemberDraft narrowly differs from EmployeeRecord on exact-optional
+    // fields (name?: string | undefined vs name?: string) but they're the same
+    // blob at runtime — see line 933 where we cast on the way in.
+    team: { ...(c['team'] ?? {}), ...patch } as NonNullable<WorksCalendarConfig['team']>,
     setup: { ...(c['setup'] ?? {}), completed: true },
   }));
 
@@ -1450,11 +1455,14 @@ function TemplateTab({ templates, onCreate, onDelete, error }: TemplateTabProps)
 
 /* ----- HoverCard tab ----- */
 function HoverCardTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const hc = config['hoverCard'];
+  const hc = config['hoverCard'] ?? {};
   type HoverCardFieldKey = 'showTime' | 'showCategory' | 'showResource' | 'showMeta' | 'showNotes';
 
   const toggle = (key: HoverCardFieldKey) =>
-    onUpdate(c => ({ ...c, hoverCard: { ...c['hoverCard'], [key]: !c['hoverCard'][key] } }));
+    onUpdate(c => {
+      const prev = c['hoverCard'] ?? {};
+      return { ...c, hoverCard: { ...prev, [key]: !prev[key] } };
+    });
 
   const fields: Array<{ key: HoverCardFieldKey; label: string }> = [
     { key: 'showTime',     label: 'Time' },
@@ -2079,9 +2087,9 @@ export function AssetsTab({ config, onUpdate, items = [] }: AssetsTabProps) {
 
 /* ----- Display tab ----- */
 function DisplayTab({ config, onUpdate }: ConfigPanelSectionProps) {
-  const d = config['display'];
+  const d = config['display'] ?? {};
   const labels = config['filterUi']?.groupLabels ?? {};
-  const set = (key: string, val: unknown) => onUpdate(c => ({ ...c, display: { ...c['display'], [key]: val } }));
+  const set = (key: string, val: unknown) => onUpdate(c => ({ ...c, display: { ...(c['display'] ?? {}), [key]: val } }));
   const setGroupLabel = (key: 'categories' | 'resources' | 'sources' | 'more', val: string) =>
     onUpdate(c => ({
       ...c,

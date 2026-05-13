@@ -34,6 +34,7 @@ export type {
   ScheduleTemplateDraft,
   CalendarViewEvent,
   UpdateConfig,
+  WorksCalendarConfig,
 } from './types/ui';
 
 export { normalizeEvent, normalizeEvents } from './core/eventModel';

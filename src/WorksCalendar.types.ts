@@ -31,14 +31,14 @@ export type ScheduleInstantiationLimits = {
 type UnknownRecord = Record<string, unknown>;
 
 /**
- * Persisted owner-configurable settings — the blob behind ConfigPanel, stored
+ * Persisted host-configurable settings — the blob behind ConfigPanel, stored
  * per `calendarId` (localStorage by default). A handful of well-known top-level
  * keys are typed; everything else is surfaced as `unknown` through the index
  * signature, so values read off ad-hoc keys should be narrowed with a cast or
  * guard at the call site. Treat it as a loosely-validated bag, not a strict
  * schema — the host app owns the source of truth.
  */
-export type OwnerConfig = {
+export type WorksCalendarConfig = {
   /** Calendar display name shown in the toolbar. */
   title?: string;
   /** Category name treated as "on-call" by the scheduling views. */
@@ -46,11 +46,45 @@ export type OwnerConfig = {
   /** First-run / setup wizard state (preferred theme, completion flag, …). */
   setup?: { preferredTheme?: string; completed?: boolean; [key: string]: unknown };
   /** Display preferences (start-of-week, default view, enabled views, …). */
-  display?: { weekStartDay?: number; defaultView?: string; enabledViews?: string[]; [key: string]: unknown };
+  display?: {
+    weekStartDay?: number;
+    defaultView?: string;
+    enabledViews?: string[];
+    dayStart?: number;
+    dayEnd?: number;
+    showWeekNumbers?: boolean;
+    enlargeMonthRowOnHover?: boolean;
+    [key: string]: unknown;
+  };
+  /** Filter UI label overrides (group labels for Categories/People/Sources/More). */
+  filterUi?: {
+    groupLabels?: {
+      categories?: string;
+      resources?: string;
+      sources?: string;
+      more?: string;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  /** Hover card field visibility toggles. */
+  hoverCard?: {
+    showTime?: boolean;
+    showCategory?: boolean;
+    showResource?: boolean;
+    showMeta?: boolean;
+    showNotes?: boolean;
+    [key: string]: unknown;
+  };
+  /** Per-category custom field definitions used by the EventForm. */
+  eventFields?: Record<string, UnknownRecord[]>;
   /** Team registry — roles, bases, regions, member records and label overrides. */
   team?: {
-    roles?: UnknownRecord[];
+    /** Display labels for role dropdowns (e.g. "Team Lead", "Software Engineer"). */
+    roles?: string[];
+    /** Named locations (bases / buildings / regions). Shape `{ id, name, regionId? }`. */
     bases?: UnknownRecord[];
+    /** Top-level regions that bases roll up to. Shape `{ id, name }`. */
     regions?: UnknownRecord[];
     members?: EmployeeRecord[];
     locationLabel?: string;
@@ -69,10 +103,18 @@ export type OwnerConfig = {
   categoriesConfig?: unknown;
   /** Tiered approval workflow configuration. */
   approvals?: UnknownRecord;
+  /** Owner-configurable request-form schema. */
+  requestForm?: { fields?: UnknownRecord[]; [key: string]: unknown };
   /** Custom theme token overrides. */
   customTheme?: UnknownRecord;
   [key: string]: unknown;
 };
+
+/**
+ * @deprecated Use `WorksCalendarConfig`. Retained as an alias for internal
+ * call sites that haven't migrated yet (and for the `useOwnerConfig` API).
+ */
+export type OwnerConfig = WorksCalendarConfig;
 
 export type ScheduleTemplateAdapter = {
   listScheduleTemplates?: () => Promise<unknown>;

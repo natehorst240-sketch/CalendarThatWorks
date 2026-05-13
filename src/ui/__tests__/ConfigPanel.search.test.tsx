@@ -18,7 +18,7 @@ function mount(props = {}) {
   return render(
     <ConfigPanel
       config={DEFAULT_CONFIG}
-      schema={{ fields: [] }}
+      schema={[]}
       items={[]}
       categories={[]}
       resources={[]}
