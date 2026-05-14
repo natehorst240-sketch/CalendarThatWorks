@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-05-14
+
+Re-publish of 0.9.0. The 0.9.0 tarball on the registry was assembled from
+a stale local `dist/` (a pre-0.8.0 build) because the publish command used
+`--ignore-scripts`, which skipped `prepublishOnly` and therefore skipped
+`npm run build`. The shipped tarball was missing every lazy-loaded chunk,
+shipped a 2.5 KB `style.css` instead of the ~270 KB build output, and even
+included the `works-calendar.umd.js` file that was deleted in 0.9.0.
+
+This release is the actual 0.9.0 source tree rebuilt cleanly. No source or
+behavior changes vs. `[0.9.0]` — same code, correct `dist/`. 0.9.0 has been
+deprecated on the registry to redirect installers here.
+
+### Fixed (packaging)
+
+- `dist/style.css` now contains the full ~270 KB of component rules — every
+  hashed CSS-module class referenced by the JS bundle resolves.
+- All lazy-loaded view chunks (`AvailabilityForm`, `DayView`, `EventForm`,
+  `WorkflowBuilderModal`, …) ship in `dist/` alongside the entry bundle.
+- `dist/works-calendar.umd.js` is gone (it was supposed to be removed in
+  0.9.0; the 0.9.0 stale-dist accident shipped it anyway).
+
 ## [0.9.0] — 2026-05-13
 
 The "packaging + type-safety hardening" release. Tightens the published surface
