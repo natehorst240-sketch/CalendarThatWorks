@@ -109,9 +109,9 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "package:check": "attw --pack . --profile esm-only --exclude-entrypoints ./styles ./styles/aviation ./styles/soft ./styles/minimal ./styles/corporate ./styles/forest ./styles/ocean ./styles/family ./styles/family/canvas ./styles/family/corporate ./styles/family/industrial ./styles/family/grid ./styles/family/ops ./styles/family/neon",
-    "ci": "npm run type-check && npm run lint && npm run test",
+    "check": "npm run type-check && npm run lint && npm run test",
     "prepare": "husky",
-    "prepublishOnly": "npm run ci && npm run build && npm run package:check"
+    "prepublishOnly": "npm run check && npm run build && npm run package:check"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0",

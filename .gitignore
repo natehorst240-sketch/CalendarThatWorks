@@ -10,3 +10,7 @@ playwright-report/
 .playwright-mcp/
 demo-dist/
 coverage/
+
+# Local-only npm auth (token, etc.). CI auth flows through actions/setup-node
+# which writes its own .npmrc at job time.
+.npmrc
