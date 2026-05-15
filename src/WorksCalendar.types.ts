@@ -178,6 +178,18 @@ export type WorksCalendarProps = {
    * the host app's auth).
    */
   devMode?: boolean;
+  /**
+   * Force the chrome into the compact layout regardless of the calendar's
+   * container width. Useful when the calendar is wide enough to keep the
+   * default desktop chrome but the host wants the slimmer toolbar / hidden
+   * right panel anyway (sidebar widgets, embeds with their own chrome, etc.).
+   *
+   * Default (`'comfortable'` / undefined) lets container queries pick the
+   * layout from the calendar's own width — `≤ 768px` → tablet rules,
+   * `≤ 480px` → mobile rules. `'compact'` forces the tablet rules on at
+   * any width and hides the right panel.
+   */
+  density?: 'comfortable' | 'compact';
   notes?: UnknownRecord;
   onNoteSave?: (note: UnknownRecord) => void;
   onNoteDelete?: (noteId: string) => void;

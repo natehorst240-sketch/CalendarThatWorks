@@ -68,6 +68,9 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     // ── Dev mode ──
     devMode                 = false,
 
+    // ── Layout density (responsive override) ──
+    density,
+
     // ── Notes ──
     notes       = {},
     onNoteSave,
@@ -346,7 +349,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   if (shouldShowSetup) {
     return (
       <CalendarErrorBoundary>
-        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar-setup" style={rootStyle}>
+        <div className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-wc-density={density ?? undefined} data-testid="works-calendar-setup" style={rootStyle}>
           <Suspense fallback={null}>
             <SetupLanding
               onSkip={handleSetupSkip}
@@ -365,7 +368,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
   return (
     <CalendarErrorBoundary>
       <CalendarContext.Provider value={ctxValue}>
-        <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} data-print-root="" style={rootStyle}>
+        <div ref={rootRef} className={styles['root']} data-wc-theme={effectiveTheme} data-wc-theme-family={themeFamily} data-wc-theme-mode={themeMode} data-wc-density={density ?? undefined} data-testid="works-calendar" data-wc-edit-mode={editMode ? '' : undefined} data-print-root="" style={rootStyle}>
           {devMode && (
             <div role="alert" style={{ background: '#fef08a', color: '#713f12', fontWeight: 600, fontSize: 12, padding: '4px 12px', textAlign: 'center', zIndex: 9999 }}>
               ⚠ DEV MODE — all users have admin access. Do not use in production.

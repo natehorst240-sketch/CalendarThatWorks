@@ -1,8 +1,12 @@
 /*
  * RightPanel — docked aside in <AppShell>'s rightPanel slot. Token-driven so
- * all 12 themes restyle automatically. Hidden on narrow viewports — at the
- * mock's 240px width plus the 56px LeftRail, anything below ~900px starts
- * to crowd the calendar grid.
+ * all 12 themes restyle automatically. Hidden when the calendar's own
+ * container drops below ~900px — at the panel's 240px width plus the 56px
+ * LeftRail, anything narrower starts to crowd the calendar grid.
+ *
+ * Container-relative (not viewport-relative): a 600px embed inside a 4K
+ * page hides the panel; a 1200px-wide calendar inside a narrow viewport
+ * keeps it visible. Container declared on .root in WorksCalendar.module.css.
  */
 
 .root {
@@ -22,10 +26,17 @@
   overflow-x: hidden;
 }
 
-@media (max-width: 900px) {
+@container worksCalendar (max-width: 900px) {
   .root {
     display: none;
   }
+}
+
+/* density="compact" on <WorksCalendar> mirrors the narrow-container rule.
+ * `data-wc-density` is set on the calendar root (a CSS-module-hashed
+ * element), so target via attribute, not class. */
+:global([data-wc-density="compact"]) .root {
+  display: none;
 }
 
 /* ── Section ──────────────────────────────────────────────────────────── */

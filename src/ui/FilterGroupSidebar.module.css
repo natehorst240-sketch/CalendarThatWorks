@@ -213,16 +213,23 @@
   overflow: hidden;
 }
 
-/* Responsive: overlay mode on narrow screens */
-@media (max-width: 1200px) {
+/* Responsive: container-relative — react to the calendar's own width, not
+ * the viewport. Sidebar shrinks below 1200px container, fills below 640px.
+ * Mirrored for `data-wc-density="compact"`. */
+@container worksCalendar (max-width: 1200px) {
   .sidebar {
     width: 320px;
-    max-width: 90vw;
+    max-width: 90%;
   }
 }
 
-@media (max-width: 640px) {
+@container worksCalendar (max-width: 640px) {
   .sidebar {
     width: 100%;
   }
+}
+
+:global([data-wc-density="compact"]) .sidebar {
+  width: 320px;
+  max-width: 90%;
 }

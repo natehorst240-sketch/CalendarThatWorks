@@ -64,6 +64,21 @@
   height: 100%;
   min-height: 400px;
   box-sizing: border-box;
+
+  /* Establish a size-containment context so descendant chrome (toolbar,
+   * left rail, right panel, filter sidebar) can respond to the calendar's
+   * own width rather than the viewport. A 600px-wide embed inside a 4K
+   * page should get the narrow layout; a 1400px-wide calendar inside a
+   * narrow viewport should keep the desktop layout.
+   *
+   * Pair this with @container worksCalendar (max-width: X) rules below
+   * and in src/ui/*.module.css.
+   *
+   * Container query support: Chrome 105+ / Safari 16+ / Firefox 110+
+   * (all 2022). Library `engines.node >= 18` already implies a modern
+   * browser baseline. */
+  container-type: inline-size;
+  container-name: worksCalendar;
 }
 
 
@@ -710,56 +725,75 @@
   50%       { opacity: 0.4; transform: scale(0.75); }
 }
 
-/* ─── Responsive ─────────────────────────────────────────────── */
+/* ─── Responsive ─────────────────────────────────────────────────────────────
+ *
+ * The calendar's chrome reacts to its OWN width, not the viewport's. A 600px
+ * embed inside a 4K display gets the narrow layout; a 1400px embed inside a
+ * narrow viewport keeps the desktop layout. The container is defined on
+ * `.root` above (container-type: inline-size; container-name: worksCalendar).
+ *
+ * Hosts that want to force the compact layout regardless of width — for
+ * example, a sidebar widget that's wide but visually busy — can pass
+ * `density="compact"` on `<WorksCalendar>`, which sets `data-wc-density` on
+ * `.root` and is mirrored in the selectors below.
+ *
+ * Tap-target sizing (@media pointer: coarse) stays viewport-driven because
+ * it's about input mode, not size.
+ */
 
-/* Tablet (≤ 768px): compress toolbar, allow view strip to scroll */
-@media (max-width: 768px) {
+/* Tablet tier (container ≤ 768px OR forced compact):
+ * compress toolbar, allow view strip to scroll. */
+@container worksCalendar (max-width: 768px) {
   .toolbar {
     padding: calc(8px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
     gap: 6px;
     row-gap: 6px;
   }
-
-  /* Nav + date label take full first row */
-  .navGroup {
-    flex: 1;
-  }
-
-  .dateLabel {
-    font-size: 13px;
-  }
-
-  /* View strip: no longer push to right, scrolls horizontally */
+  .navGroup { flex: 1; }
+  .dateLabel { font-size: 13px; }
   .viewGroup {
     margin-left: 0;
     overflow-x: auto;
-    /* hide scrollbar but keep scroll */
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
   .viewGroup::-webkit-scrollbar { display: none; }
-
   .viewBtn {
     padding: calc(6px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
     font-size: 11px;
   }
+  .actions { margin-left: auto; }
+  .addBtnLabel { display: none; }
+  .addBtn { padding: calc(6px * var(--wc-density, 1)) calc(8px * var(--wc-density, 1)); }
+}
 
-  /* Actions move to end of nav row */
-  .actions {
-    margin-left: auto;
-  }
-
-  /* "Add Event" — hide text label, show only + icon */
-  .addBtnLabel {
-    display: none;
-  }
-  .addBtn {
-    padding: calc(6px * var(--wc-density, 1)) calc(8px * var(--wc-density, 1));
-  }
+/* density="compact" mirrors the tablet tier regardless of container width. */
+.root[data-wc-density="compact"] .toolbar {
+  padding: calc(8px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
+  gap: 6px;
+  row-gap: 6px;
+}
+.root[data-wc-density="compact"] .navGroup { flex: 1; }
+.root[data-wc-density="compact"] .dateLabel { font-size: 13px; }
+.root[data-wc-density="compact"] .viewGroup {
+  margin-left: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.root[data-wc-density="compact"] .viewGroup::-webkit-scrollbar { display: none; }
+.root[data-wc-density="compact"] .viewBtn {
+  padding: calc(6px * var(--wc-density, 1)) calc(10px * var(--wc-density, 1));
+  font-size: 11px;
+}
+.root[data-wc-density="compact"] .actions { margin-left: auto; }
+.root[data-wc-density="compact"] .addBtnLabel { display: none; }
+.root[data-wc-density="compact"] .addBtn {
+  padding: calc(6px * var(--wc-density, 1)) calc(8px * var(--wc-density, 1));
 }
 
 /* Touch devices: guarantee comfortable tap targets (≥44px per iOS HIG).
- * Keyed to (pointer: coarse) so mouse users keep the dense desktop UI. */
+ * Keyed to (pointer: coarse) — input mode, not size. */
 @media (pointer: coarse) {
   .navBtn,
   .exportBtn,
@@ -783,43 +817,30 @@
   }
 }
 
-/* Mobile (≤ 480px): two-row toolbar, tighter everything */
-@media (max-width: 480px) {
+/* Mobile tier (container ≤ 480px): two-row toolbar, tighter everything. */
+@container worksCalendar (max-width: 480px) {
   .toolbar {
     flex-wrap: wrap;
     padding: calc(8px * var(--wc-density, 1));
     row-gap: 6px;
   }
-
-  /* Row 1: nav + date + icon actions */
-  .navGroup {
-    order: 1;
-    flex: 1;
-  }
-
-  .actions {
-    order: 2;
-  }
-
-  /* Row 2: view switcher spans full width */
+  .navGroup { order: 1; flex: 1; }
+  .actions  { order: 2; }
   .viewGroup {
     order: 3;
     width: 100%;
     border-radius: var(--wc-radius-sm);
   }
-
   .viewBtn {
     flex: 1;
     text-align: center;
     padding: calc(5px * var(--wc-density, 1)) calc(6px * var(--wc-density, 1));
     font-size: 11px;
   }
-
   .dateLabel {
     font-size: 12px;
     padding-left: 4px;
   }
-
   .todayBtn {
     font-size: 12px;
     padding: 0 calc(8px * var(--wc-density, 1));
