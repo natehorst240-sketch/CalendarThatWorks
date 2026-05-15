@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-05-15
+
+The "container-responsive chrome" release. The calendar's toolbar, side rails,
+right panel, and filter sidebar now respond to the calendar's own width
+instead of the viewport's, so a narrow embed inside a wide page finally gets
+the right layout.
+
+### Added
+
+- **`density?: 'comfortable' | 'compact'`** prop on `<WorksCalendar>`. Pass
+  `'compact'` to force the narrow chrome (tablet-tier toolbar, hidden right
+  panel) regardless of container width — useful for sidebar widgets and
+  embeds whose visual context already supplies its own chrome. The default
+  (`undefined` / `'comfortable'`) lets the container queries pick the layout
+  based on the calendar's own width.
+
+### Changed
+
+- **Chrome responsiveness is now container-relative.** Existing viewport
+  `@media` queries in `WorksCalendar.module.css`, `RightPanel.module.css`,
+  and `FilterGroupSidebar.module.css` were rewritten as
+  `@container worksCalendar (max-width: …)` queries. The calendar root
+  declares the container (`container-type: inline-size`,
+  `container-name: worksCalendar`), so descendant chrome reads the
+  calendar's own width.
+  - 768px breakpoint: toolbar compresses, view-tabs scroll, "Add event"
+    becomes icon-only.
+  - 900px breakpoint: right panel hides.
+  - 1200px / 640px breakpoints: filter sidebar resizes.
+  - 480px breakpoint: two-row toolbar.
+  - `@media (pointer: coarse)` tap-target rules stay viewport-driven —
+    input mode, not size.
+- Breakpoints fire at the same widths as before, so a calendar that filled
+  the whole viewport behaves identically. The new behavior only changes for
+  embeds that are narrower than their host viewport.
+
+### Browser support
+
+Container queries land in Chrome 105+, Safari 16+, and Firefox 110+ (all
+2022). No polyfill ships; consumers on older browsers see the desktop
+layout unconditionally.
+
 ## [0.9.1] — 2026-05-14
 
 Re-publish of 0.9.0. The 0.9.0 tarball on the registry was assembled from

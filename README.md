@@ -132,6 +132,7 @@ interface WorksCalendarEvent {
 | `theme` | `string` | Theme name (see Theming) |
 | `role` | `'owner' \| 'scheduler' \| 'viewer'` | Permission level — `'owner'` unlocks settings & config |
 | `devMode` | `boolean` | **Local development only.** When `true`, treats the user as an owner regardless of `role`, bypassing every role check. Never pass `true` in production. |
+| `density` | `'comfortable' \| 'compact'` | Force the compact chrome (narrow toolbar, hidden right panel) regardless of container width. Default lets the calendar's own width drive the layout via container queries. |
 | `calendarId` | `string` | Namespace key for localStorage persistence (default: `'default'`) |
 | `onEventSave` | `(event) => void` | Called when a user saves an event in the editor |
 | `onEventDelete` | `(id) => void` | Called when a user deletes an event |
