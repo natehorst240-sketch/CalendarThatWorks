@@ -98,7 +98,7 @@ describe('WorksCalendar embedder slots', () => {
     expect(screen.getByRole('button', { name: 'Real Extra' })).toBeInTheDocument();
   });
 
-  it('renders rightPanelExtras after the built-in Region map + Crew on shift sections', () => {
+  it('renders rightPanelExtras after the built-in Crew on shift section', () => {
     render(
       <WorksCalendar
         calendarId="test-slots-3"
@@ -111,36 +111,27 @@ describe('WorksCalendar embedder slots', () => {
       />,
     );
 
-    // Built-in sections are still present. They're rendered as <section
-    // aria-label="…"> by RightPanelSection so we can target them by role.
-    expect(screen.getByRole('region', { name: 'Region map' })).toBeInTheDocument();
+    // Built-in Crew on shift section still renders.
     expect(screen.getByRole('region', { name: 'Crew on shift' })).toBeInTheDocument();
 
     // Embedder-supplied section + content present.
     expect(screen.getByRole('region', { name: 'Open Tickets' })).toBeInTheDocument();
     expect(screen.getByTestId('my-ticket-widget')).toHaveTextContent('3 open');
 
-    // Pin DOM ordering: extras land AFTER built-ins. Walk the regions in
-    // document order; the embedder section must come last.
+    // Pin DOM ordering: extras land AFTER built-ins.
     const regions = screen.getAllByRole('region').map(r => r.getAttribute('aria-label'));
-    const builtInIndex = Math.max(
-      regions.indexOf('Region map'),
-      regions.indexOf('Crew on shift'),
-    );
+    const crewIndex = regions.indexOf('Crew on shift');
     const extraIndex = regions.indexOf('Open Tickets');
-    expect(extraIndex).toBeGreaterThan(builtInIndex);
+    expect(extraIndex).toBeGreaterThan(crewIndex);
   });
 
   it('omitting both slot props leaves the chrome unchanged', () => {
-    // No new region appears; built-ins still render. Ensures the slot
-    // wiring is gated on prop presence and doesn't smuggle in empty
-    // children that would change the DOM shape.
+    // Crew on shift remains the only built-in right-panel section after
+    // the embed→app pivot retired the MapLibre Region map widget.
     render(<WorksCalendar calendarId="test-slots-4" events={[]} />);
 
     const regions = screen.getAllByRole('region').map(r => r.getAttribute('aria-label'));
-    expect(regions).toContain('Region map');
     expect(regions).toContain('Crew on shift');
-    // No additional region exists.
-    expect(regions.filter(r => r === 'Region map' || r === 'Crew on shift')).toHaveLength(2);
+    expect(regions.filter(r => r === 'Crew on shift')).toHaveLength(1);
   });
 });

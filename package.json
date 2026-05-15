@@ -15,10 +15,6 @@
       "types": "./dist/integrations/asset-tracker.d.ts",
       "import": "./dist/integrations/asset-tracker.es.js"
     },
-    "./integrations/asset-map-widget": {
-      "types": "./dist/integrations/asset-map-widget.d.ts",
-      "import": "./dist/integrations/asset-map-widget.es.js"
-    },
     "./api/v1/server": {
       "types": "./dist/api/v1/server/index.d.ts",
       "import": "./dist/api/v1/server/index.es.js"
@@ -83,10 +79,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/works-calendar.es.js"
     },
-    "./lite": {
-      "types": "./dist/index.lite.d.ts",
-      "import": "./dist/works-calendar-lite.es.js"
-    },
     "./dist/*": "./dist/*"
   },
   "engines": {
@@ -111,13 +103,15 @@
     "url": "https://github.com/workscalendar/calendarthatworks/issues"
   },
   "scripts": {
-    "dev": "vite --config vite.demo.config.ts",
+    "dev": "npm --prefix demo/app run dev",
+    "dev:embed": "vite --config vite.demo.config.ts",
     "build:demo": "vite build --config vite.demo.config.ts",
+    "build:app": "npm --prefix demo/app run build",
     "test": "cross-env TZ=UTC vitest run",
     "test:watch": "cross-env TZ=UTC vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "build": "vite build && vite build --config vite.integrations.config.ts && vite build --config vite.lite.config.ts",
+    "build": "vite build",
     "type-check": "tsc --noEmit --project tsconfig.build.json",
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
@@ -131,22 +125,14 @@
     "date-fns": "^3.6.0",
     "exceljs": "^4.4.0",
     "lucide-react": "^0.378.0",
-    "maplibre-gl": ">=4.0.0",
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
-    "react-map-gl": ">=7.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
     "@supabase/supabase-js": {
       "optional": true
     },
     "exceljs": {
-      "optional": true
-    },
-    "maplibre-gl": {
-      "optional": true
-    },
-    "react-map-gl": {
       "optional": true
     }
   },
@@ -186,10 +172,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.4",
     "lucide-react": "^0.378.0",
-    "maplibre-gl": "^4.7.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-map-gl": "^7.1.9",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.2",
     "vite": "^6.0.0",

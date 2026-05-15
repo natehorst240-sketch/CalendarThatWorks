@@ -86,8 +86,6 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     currentUserName,
     onDateSelect,
     onViewChange,
-    onMapWidgetOpenChange,
-    showMapWidget = true,
     enableApprovalFlowsTab: _enableApprovalFlowsTab = true,
 
     // ── Supabase realtime ──
@@ -180,9 +178,6 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
     logoSrc,
     logoAlt,
     backgroundImage,
-
-    // ── Map view ──
-    mapStyle,
   }: WorksCalendarProps,
   ref: ForwardedRef<CalendarApi>,
 ) {
@@ -382,7 +377,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           </div>
           <AppShell
             leftRail={<CalendarLeftRail ownerCfg={ownerCfg} leftRailExtras={leftRailExtras} setSidebarInitialTab={setSidebarInitialTab} setSidebarOpen={setSidebarOpen} />}
-            rightPanel={<CalendarRightPanel showMapWidget={showMapWidget} expandedEvents={expandedEvents} handleEventClick={handleEventClick} onMapWidgetOpenChange={onMapWidgetOpenChange} mapStyle={mapStyle} configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} />}
+            rightPanel={<CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} />}
             header={
               <CalendarToolbar cal={cal} ownerCfg={ownerCfg} api={api}
                 renderToolbar={renderToolbar} renderSavedViewsBar={renderSavedViewsBar} renderFilterBar={renderFilterBar}

@@ -2,9 +2,6 @@ import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Bookmark, Filter, Settings } from 'lucide-react';
 import { LeftRail, type LeftRailAction } from './LeftRail';
 import { RightPanel, RightPanelSection, CrewOnShiftList } from './RightPanel';
-import { MapPeekWidget } from './MapPeekWidget';
-import { isScheduleWorkflowEvent } from '../core/scheduleModel';
-import type { NormalizedEvent } from '../types/events';
 import type { EmployeeRecord } from '../WorksCalendar.types';
 import type { SidebarTab } from './FilterGroupSidebar';
 
@@ -35,32 +32,16 @@ export function CalendarLeftRail({ ownerCfg, leftRailExtras, setSidebarInitialTa
 }
 
 interface CalendarRightPanelProps {
-  showMapWidget: boolean;
-  expandedEvents: readonly NormalizedEvent[];
-  handleEventClick: (event: NormalizedEvent) => void;
-  onMapWidgetOpenChange: ((open: boolean) => void) | undefined;
-  mapStyle: string | undefined;
   configuredEmployees: EmployeeRecord[];
   onShiftIds: ReadonlySet<string>;
   rightPanelExtras: ReactNode;
 }
 
 export function CalendarRightPanel({
-  showMapWidget, expandedEvents, handleEventClick,
-  onMapWidgetOpenChange, mapStyle, configuredEmployees, onShiftIds, rightPanelExtras,
+  configuredEmployees, onShiftIds, rightPanelExtras,
 }: CalendarRightPanelProps) {
   return (
     <RightPanel>
-      {showMapWidget && (
-        <RightPanelSection title="Region map">
-          <MapPeekWidget
-            events={expandedEvents.filter(ev => !isScheduleWorkflowEvent(ev)) as never}
-            onEventClick={handleEventClick as never}
-            {...(onMapWidgetOpenChange ? { onOpenChange: onMapWidgetOpenChange } : {})}
-            {...(mapStyle ? { mapStyle } : {})}
-          />
-        </RightPanelSection>
-      )}
       <RightPanelSection title="Crew on shift">
         <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
       </RightPanelSection>

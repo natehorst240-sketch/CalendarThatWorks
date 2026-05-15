@@ -64,8 +64,6 @@ export type {
 
 export { WorksCalendar }                  from './WorksCalendar.tsx';
 export { default as ScheduleView }        from './views/ScheduleView';
-export { default as MapView }             from './views/MapView';
-export type { MapViewProps }              from './views/MapView';
 
 export { default as MissionHoverCard, allRequirementsMet, meetsAircraftReqs } from './ui/MissionHoverCard';
 export type {

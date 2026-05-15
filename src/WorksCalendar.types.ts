@@ -196,8 +196,6 @@ export type WorksCalendarProps = {
   currentUserName?: string;
   onDateSelect?: (start: Date, end: Date, resourceId?: string) => void;
   onViewChange?: (view: CalendarView) => void;
-  onMapWidgetOpenChange?: (open: boolean) => void;
-  showMapWidget?: boolean;
   enableApprovalFlowsTab?: boolean;
   supabaseUrl?: string;
   supabaseKey?: string;
@@ -222,12 +220,6 @@ export type WorksCalendarProps = {
   onTimezoneChange?: (timezone: string) => void;
   theme?: string;
   colorRules?: UnknownRecord[];
-  /**
-   * MapLibre style URL forwarded to the chrome-level MapPeekWidget when
-   * the user opens it (panel or fullscreen). Ignored when the
-   * `react-map-gl` / `maplibre-gl` peers aren't installed in the host.
-   */
-  mapStyle?: string;
   businessHours?: UnknownRecord;
   renderEvent?: (event: WorksCalendarEvent, context?: UnknownRecord) => ReactNode;
   renderHoverCard?: (event: WorksCalendarEvent, onClose: () => void) => ReactNode;
