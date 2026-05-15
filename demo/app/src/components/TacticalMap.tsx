@@ -1,18 +1,24 @@
 import { useMemo } from "react";
-import { FACILITIES, TRUCKS, TRUCK_ROUTES, projectRegion, ALL_CONFLICTS, getTruckPositionAtTime } from "@/data/trucks";
-/* eslint-disable-next-line @typescript-eslint/no-unused-vars -- used below */
-import type { RouteSegment } from "@/data/trucks";
+import {
+  FACILITIES, TRUCKS, TRUCK_ROUTES,
+  project, LAYER_BOUNDS,
+  ALL_CONFLICTS, getTruckPositionAtTime,
+} from "@/data/trucks";
+import type { MapLayer, RouteSegment, LayerBounds } from "@/data/trucks";
 
 interface Props {
   selectedDate: Date;
   selectedTruck: string | null;
   onSelectTruck: (id: string) => void;
+  layer: MapLayer;
 }
 
 const VW = 1000;
 const VH = 800;
 
-export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck }: Props) {
+export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck, layer }: Props) {
+  const bounds = LAYER_BOUNDS[layer];
+  const proj = (lat: number, lng: number): [number, number] => project(bounds, lat, lng, VW, VH);
   const conflictsAtTime = useMemo(() => {
     const dayStart = new Date(selectedDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -49,31 +55,44 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
       <rect width={VW} height={VH} fill="#e8dcc8" />
       <rect width={VW} height={VH} fill="url(#grain)" opacity={0.08} />
 
-      {/* State boundaries (simplified) */}
-      <g filter="url(#ink)" opacity={0.3}>
-        {/* Arizona */}
-        <path d="M 380 380 L 420 200 L 520 180 L 580 380 L 520 520 L 420 500 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-        {/* New Mexico */}
-        <path d="M 580 380 L 520 180 L 720 160 L 780 360 L 720 500 L 620 480 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-        {/* California */}
-        <path d="M 80 100 L 180 80 L 220 200 L 180 400 L 100 500 L 60 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-        {/* Nevada */}
-        <path d="M 220 200 L 320 180 L 380 380 L 320 420 L 220 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-      </g>
+      {/* Background paths — currently hand-traced against region viewBox coords.
+          Re-projecting them per layer is a bigger refactor (need lat/lng source
+          data); for state/5k/1k they'd render wrong, so gate on region only. */}
+      {layer === "region" && (
+        <>
+          {/* State boundaries (simplified) */}
+          <g filter="url(#ink)" opacity={0.3}>
+            {/* Arizona */}
+            <path d="M 380 380 L 420 200 L 520 180 L 580 380 L 520 520 L 420 500 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
+            {/* New Mexico */}
+            <path d="M 580 380 L 520 180 L 720 160 L 780 360 L 720 500 L 620 480 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
+            {/* California */}
+            <path d="M 80 100 L 180 80 L 220 200 L 180 400 L 100 500 L 60 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
+            {/* Nevada */}
+            <path d="M 220 200 L 320 180 L 380 380 L 320 420 L 220 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
+          </g>
 
-      {/* Highway corridors */}
-      <g filter="url(#ink)" opacity={0.35}>
-        {/* I-10: LA → BAR → PHX → TUS → ELP */}
-        <polyline points={["180,400","280,380","380,380","450,380","580,380","720,500"].join(" ")} fill="none" stroke="#5a3e2b" strokeWidth={2} />
-        {/* I-40: LAX → BAR → FLG → ABQ */}
-        <polyline points={"180,400 280,380 380,380 520,180 720,160"} fill="none" stroke="#5a3e2b" strokeWidth={2} />
-        {/* I-15: SAN → LAX → BAR → LAS → KIN → PHX-ish */}
-        <polyline points={"120,500 180,400 280,380 320,220 380,380"} fill="none" stroke="#5a3e2b" strokeWidth={2} />
-        {/* I-17: PHX → FLG */}
-        <line x1={380} y1={380} x2={520} y2={180} stroke="#5a3e2b" strokeWidth={1.5} />
-        {/* I-8: SAN → PHX-ish */}
-        <polyline points={"120,500 200,480 320,420 380,380"} fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-      </g>
+          {/* Highway corridors */}
+          <g filter="url(#ink)" opacity={0.35}>
+            <polyline points={["180,400","280,380","380,380","450,380","580,380","720,500"].join(" ")} fill="none" stroke="#5a3e2b" strokeWidth={2} />
+            <polyline points={"180,400 280,380 380,380 520,180 720,160"} fill="none" stroke="#5a3e2b" strokeWidth={2} />
+            <polyline points={"120,500 180,400 280,380 320,220 380,380"} fill="none" stroke="#5a3e2b" strokeWidth={2} />
+            <line x1={380} y1={380} x2={520} y2={180} stroke="#5a3e2b" strokeWidth={1.5} />
+            <polyline points={"120,500 200,480 320,420 380,380"} fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
+          </g>
+        </>
+      )}
+
+      {/* Off-region layers — show the bounds as a faint frame so the user
+          knows what they're looking at while we build out per-layer SVGs. */}
+      {layer !== "region" && (
+        <g opacity={0.4}>
+          <rect x={20} y={20} width={VW - 40} height={VH - 40} fill="none" stroke="#5a3e2b" strokeWidth={1} strokeDasharray="6,4" />
+          <text x={VW / 2} y={50} textAnchor="middle" fontFamily="serif" fontSize={14} fill="#5a3e2b" letterSpacing={2}>
+            {layer.toUpperCase()} VIEW
+          </text>
+        </g>
+      )}
 
       {/* Route segments (breadcrumbs) — ONLY traveled path up to selected time */}
       {TRUCK_ROUTES.map((route) => {
@@ -86,7 +105,7 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
         return (
           <g key={route.truck.id} opacity={opacity}>
             {traveledSegments.map((seg, i) => (
-              <SegmentLine key={i} seg={seg} color={route.truck.color} isSelected={isSelected} selectedDate={selectedDate} />
+              <SegmentLine key={i} seg={seg} color={route.truck.color} isSelected={isSelected} selectedDate={selectedDate} bounds={bounds} />
             ))}
           </g>
         );
@@ -101,7 +120,7 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
         return Object.entries(facConflicts).map(([fac, count]) => {
           const facility = FACILITIES[fac];
           if (!facility) return null;
-          const [x, y] = projectRegion(facility.lat, facility.lng, VW, VH);
+          const [x, y] = proj(facility.lat, facility.lng);
           return (
             <g key={`conflict-${fac}`}>
               <circle cx={x} cy={y} r={20} fill="none" stroke="#c0392b" strokeWidth={2} strokeDasharray="4,3" opacity={0.4}>
@@ -119,7 +138,7 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
 
       {/* Facility markers */}
       {Object.values(FACILITIES).map((fac) => {
-        const [x, y] = projectRegion(fac.lat, fac.lng, VW, VH);
+        const [x, y] = proj(fac.lat, fac.lng);
         return (
           <g key={fac.code} transform={`translate(${x},${y})`}>
             <circle r={8} fill="#fff" stroke="#3d2b1f" strokeWidth={1.5} filter="url(#ink)" />
@@ -137,7 +156,7 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
       {TRUCKS.map((truck) => {
         const pos = getTruckPositionAtTime(truck.id, selectedDate);
         if (!pos) return null;
-        const [x, y] = projectRegion(pos.lat, pos.lng, VW, VH);
+        const [x, y] = proj(pos.lat, pos.lng);
         const isSelected = truck.id === selectedTruck;
         return (
           <g
@@ -161,9 +180,9 @@ export default function TacticalMap({ selectedDate, selectedTruck, onSelectTruck
   );
 }
 
-function SegmentLine({ seg, color, isSelected, selectedDate }: { seg: RouteSegment; color: string; isSelected: boolean; selectedDate: Date }) {
-  const [x1, y1] = projectRegion(seg.fromLat, seg.fromLng, VW, VH);
-  const [x2, y2] = projectRegion(seg.toLat, seg.toLng, VW, VH);
+function SegmentLine({ seg, color, isSelected, selectedDate, bounds }: { seg: RouteSegment; color: string; isSelected: boolean; selectedDate: Date; bounds: LayerBounds }) {
+  const [x1, y1] = project(bounds, seg.fromLat, seg.fromLng, VW, VH);
+  const [x2, y2] = project(bounds, seg.toLat, seg.toLng, VW, VH);
   const arriveTime = new Date(seg.arrive).getTime();
   const isFullyPast = arriveTime <= selectedDate.getTime();
   const stroke = isFullyPast ? color : color;

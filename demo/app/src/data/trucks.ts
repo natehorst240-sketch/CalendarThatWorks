@@ -358,11 +358,54 @@ export function findConflicts(date: Date): DockConflict[] {
 }
 
 // ── Projection ──────────────────────────────────────────────────────────────
+//
+// Fixed-bounds linear projection per layer. No tiles, no WebGL — each layer
+// has its own bounds and projects lat/lng → SVG viewBox coordinates with
+// straight interpolation. Adding a new layer = new bounds + new background.
 
-export const REGION_BOUNDS = {
+export type MapLayer = "region" | "state" | "5k" | "1k";
+
+export interface LayerBounds {
+  sw: { lat: number; lng: number };
+  ne: { lat: number; lng: number };
+}
+
+export const REGION_BOUNDS: LayerBounds = {
   sw: { lat: 31.0, lng: -119.5 },
   ne: { lat: 37.5, lng: -106.0 },
 };
+
+// State view — zoomed to Arizona alone. Tighter bounds so the AZ outline
+// fills the viewport and inter-facility lines have room to breathe.
+export const STATE_BOUNDS: LayerBounds = {
+  sw: { lat: 31.3, lng: -114.9 },
+  ne: { lat: 37.1, lng: -109.0 },
+};
+
+// 5,000ft view — ~50-mile radius around PHX (the busiest facility).
+export const FIVE_K_BOUNDS: LayerBounds = {
+  sw: { lat: 32.9, lng: -112.7 },
+  ne: { lat: 34.0, lng: -111.4 },
+};
+
+// 1,000ft view — facility-scale, ~5-mile box around PHX dock yard.
+export const ONE_K_BOUNDS: LayerBounds = {
+  sw: { lat: 33.40, lng: -112.13 },
+  ne: { lat: 33.50, lng: -112.02 },
+};
+
+export const LAYER_BOUNDS: Record<MapLayer, LayerBounds> = {
+  region: REGION_BOUNDS,
+  state: STATE_BOUNDS,
+  "5k": FIVE_K_BOUNDS,
+  "1k": ONE_K_BOUNDS,
+};
+
+export function project(bounds: LayerBounds, lat: number, lng: number, w: number, h: number): [number, number] {
+  const x = ((lng - bounds.sw.lng) / (bounds.ne.lng - bounds.sw.lng)) * w;
+  const y = h - ((lat - bounds.sw.lat) / (bounds.ne.lat - bounds.sw.lat)) * h;
+  return [x, y];
+}
 
 export function projectRegion(lat: number, lng: number, w: number, h: number): [number, number] {
   const x = ((lng - REGION_BOUNDS.sw.lng) / (REGION_BOUNDS.ne.lng - REGION_BOUNDS.sw.lng)) * w;

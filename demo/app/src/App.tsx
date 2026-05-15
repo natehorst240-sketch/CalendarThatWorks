@@ -3,12 +3,21 @@ import TacticalMap from "@/components/TacticalMap";
 import TruckSidebar from "@/components/TruckSidebar";
 import TimeSlider from "@/components/TimeSlider";
 import { FACILITIES, ALL_CONFLICTS } from "@/data/trucks";
+import type { MapLayer } from "@/data/trucks";
 import { Button } from "@/components/ui/button";
+
+const LAYERS: { id: MapLayer; label: string }[] = [
+  { id: "region", label: "Region" },
+  { id: "state", label: "State" },
+  { id: "5k", label: "5k ft" },
+  { id: "1k", label: "1k ft" },
+];
 
 export default function App() {
   // "Today" is July 11, 2025 (Friday)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(Date.UTC(2025, 6, 8, 14, 0))); // Tuesday = most conflicts
   const [selectedTruck, setSelectedTruck] = useState<string | null>(null);
+  const [layer, setLayer] = useState<MapLayer>("region");
 
   const dayStart = new Date(Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()));
   const dayEnd = new Date(dayStart.getTime() + 86400000);
@@ -86,19 +95,28 @@ export default function App() {
             selectedDate={selectedDate}
             selectedTruck={selectedTruck}
             onSelectTruck={setSelectedTruck}
+            layer={layer}
           />
 
           {/* Layer switcher overlay */}
           <div className="absolute top-3 right-3 flex flex-col gap-1">
-            {["Region", "State", "5k ft", "1k ft"].map((layer) => (
-              <button
-                key={layer}
-                className="px-2 py-1 text-[10px] font-bold bg-[#f5e6c8]/90 border border-[#3d2b1f]/30 text-[#3d2b1f] hover:bg-[#3d2b1f]/10 transition-colors rounded-sm"
-                onClick={() => alert(`${layer} view — coming soon`)}
-              >
-                {layer}
-              </button>
-            ))}
+            {LAYERS.map((l) => {
+              const active = layer === l.id;
+              return (
+                <button
+                  key={l.id}
+                  className={[
+                    "px-2 py-1 text-[10px] font-bold border border-[#3d2b1f]/30 transition-colors rounded-sm",
+                    active
+                      ? "bg-[#3d2b1f] text-[#f5e6c8]"
+                      : "bg-[#f5e6c8]/90 text-[#3d2b1f] hover:bg-[#3d2b1f]/10",
+                  ].join(" ")}
+                  onClick={() => setLayer(l.id)}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Legend overlay */}
