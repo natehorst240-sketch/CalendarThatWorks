@@ -108,7 +108,7 @@
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "package:check": "attw --pack . --profile esm-only --exclude-entrypoints ./styles ./styles/aviation ./styles/soft ./styles/minimal ./styles/corporate ./styles/forest ./styles/ocean ./styles/family ./styles/family/canvas ./styles/family/corporate ./styles/family/industrial ./styles/family/grid ./styles/family/ops ./styles/family/neon",
+    "package:check": "attw --pack . --profile esm-only --entrypoints . ./themes",
     "check": "npm run type-check && npm run lint && npm run test",
     "prepublishOnly": "npm run build && npm run package:check"
   },
@@ -116,7 +116,7 @@
     "@supabase/supabase-js": "^2.0.0",
     "date-fns": "^3.6.0",
     "exceljs": "^4.4.0",
-    "lucide-react": "^0.378.0",
+    "lucide-react": ">=0.378.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
