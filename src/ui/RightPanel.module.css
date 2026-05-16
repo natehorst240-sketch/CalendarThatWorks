@@ -33,9 +33,13 @@
 }
 
 /* density="compact" on <WorksCalendar> mirrors the narrow-container rule.
- * `data-wc-density` is set on the calendar root (a CSS-module-hashed
- * element), so target via attribute, not class. */
-:global([data-wc-density="compact"]) .root {
+ * Anchor on `[data-wc-theme]` (always present on the calendar root, both
+ * the main and setup-landing variants) AND `[data-wc-density="compact"]`
+ * so the rule only fires when an actual calendar root is in compact mode
+ * — not when some unrelated ancestor happens to carry the attribute, and
+ * not when an outer calendar in a nested-calendar setup is compact while
+ * an inner one isn't. */
+:global([data-wc-theme][data-wc-density="compact"]) .root {
   display: none;
 }
 

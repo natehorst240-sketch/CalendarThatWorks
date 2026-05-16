@@ -229,7 +229,10 @@
   }
 }
 
-:global([data-wc-density="compact"]) .sidebar {
+/* density="compact" on <WorksCalendar> mirrors the narrow-container rule.
+ * Anchor on `[data-wc-theme]` (only present on calendar roots) so an
+ * unrelated ancestor with `data-wc-density` can't trigger this. */
+:global([data-wc-theme][data-wc-density="compact"]) .sidebar {
   width: 320px;
   max-width: 90%;
 }
