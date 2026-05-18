@@ -6,8 +6,7 @@
  * Contains 65+ natural dock conflicts in Week 1 alone.
  */
 
-import type { EngineEvent, CalendarEngineInit } from './engine/schema';
-import type { LatLng } from './types';
+import type { EngineEvent } from 'works-calendar-engine';
 
 export interface DemoTruck {
   id: string;
@@ -7292,7 +7291,7 @@ export const DOCK_CONFLICTS_WEEK1: DockConflict[] = [
 ];
 
 
-export function buildEngineInit(): CalendarEngineInit {
+export function buildEngineInit() {
   const allEvents: EngineEvent[] = [];
   for (const route of TRUCK_ROUTES) {
     allEvents.push(...route.events);
