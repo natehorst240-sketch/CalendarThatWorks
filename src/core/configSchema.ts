@@ -104,7 +104,7 @@ export const DEFAULT_CONFIG: Record<string, unknown> = {
     // Which view tabs are visible in the top bar. 'month' and 'week' are
     // always on regardless of this list. Owners toggle the rest from Setup
     // or ConfigPanel → Views.
-    enabledViews: ['day', 'agenda', 'schedule', 'base', 'assets'],
+    enabledViews: ['day', 'agenda', 'schedule', 'base', 'assets', 'dispatch'],
   },
 
   // Filter UI labels editable by owner/dev
