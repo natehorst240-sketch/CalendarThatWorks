@@ -52,7 +52,7 @@ function DemoApp() {
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <WorksCalendar
         calendarId="dispatch-demo"
-        defaultView="dispatch"
+        initialView="dispatch"
         events={FLEET_EVENTS}
         assets={ASSETS}
         showCalendarLegend={false}
