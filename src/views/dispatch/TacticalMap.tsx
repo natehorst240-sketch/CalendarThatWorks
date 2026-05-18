@@ -9,6 +9,7 @@
 import { useMemo } from 'react';
 import { project, DEFAULT_LAYER_BOUNDS } from './projection';
 import { positionAt } from './deriveData';
+import { DEFAULT_LAYER_ZOOM, tilesForBounds } from './tileLayer';
 import type {
   DispatchAsset,
   DispatchConflict,
@@ -28,6 +29,10 @@ interface Props {
   readonly selectedAsset: string | null;
   readonly onSelectAsset: (id: string) => void;
   readonly layer: MapLayer;
+  /** Render an OSM raster tile basemap underneath. Default true. */
+  readonly showTiles?: boolean;
+  /** Override the slippy-map tile URL ({z}/{x}/{y}). */
+  readonly tileUrl?: string;
 }
 
 const VW = 1000;
@@ -43,10 +48,20 @@ export function TacticalMap({
   selectedAsset,
   onSelectAsset,
   layer,
+  showTiles = true,
+  tileUrl,
 }: Props) {
   const bounds = DEFAULT_LAYER_BOUNDS[layer];
   const proj = (lat: number, lng: number): [number, number] =>
     project(bounds, lat, lng, VW, VH);
+
+  const tiles = useMemo(
+    () =>
+      showTiles
+        ? tilesForBounds(bounds, DEFAULT_LAYER_ZOOM[layer], tileUrl)
+        : [],
+    [bounds, layer, showTiles, tileUrl],
+  );
 
   const conflictsAtTime = useMemo(() => {
     const dayStart = new Date(
@@ -72,49 +87,139 @@ export function TacticalMap({
           <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves={2} result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale={2} />
         </filter>
+        {/* Sepia/parchment wash applied to the OSM raster tiles so they
+            sit underneath the dispatch ink layer without fighting it. */}
+        <filter id="dispatch-tile-tone">
+          <feColorMatrix
+            type="matrix"
+            values="0.55 0.40 0.10 0 0.05
+                    0.45 0.45 0.10 0 0.05
+                    0.35 0.30 0.20 0 0.05
+                    0    0    0    1 0"
+          />
+        </filter>
+        {/* Soft drop shadow for the arched breadcrumbs to read as
+            lifted above the ground plane. */}
+        <filter id="dispatch-arch-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation={1.2} />
+          <feOffset dy={1.5} result="off" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope={0.35} />
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       <rect width={VW} height={VH} fill="#e8dcc8" />
 
-      {/* Hand-traced background only renders for the region layer; other layers
-          get a dashed-bounds frame placeholder until per-layer SVGs land. */}
-      {layer === 'region' && (
-        <g filter="url(#dispatch-ink)" opacity={0.3}>
-          {/* AZ / NM / CA / NV outlines — first-pass tracings */}
-          <path d="M 380 380 L 420 200 L 520 180 L 580 380 L 520 520 L 420 500 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-          <path d="M 580 380 L 520 180 L 720 160 L 780 360 L 720 500 L 620 480 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-          <path d="M 80 100 L 180 80 L 220 200 L 180 400 L 100 500 L 60 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-          <path d="M 220 200 L 320 180 L 380 380 L 320 420 L 220 400 Z" fill="none" stroke="#5a3e2b" strokeWidth={1.5} />
-        </g>
-      )}
-      {layer !== 'region' && (
-        <g opacity={0.4}>
-          <rect x={20} y={20} width={VW - 40} height={VH - 40} fill="none" stroke="#5a3e2b" strokeWidth={1} strokeDasharray="6,4" />
-          <text x={VW / 2} y={50} textAnchor="middle" fontFamily="serif" fontSize={14} fill="#5a3e2b" letterSpacing={2}>
-            {layer.toUpperCase()} VIEW
-          </text>
+      {/* OSM raster tile basemap — each tile is placed by projecting its
+          NW/SE corners through the current layer's bounds. Wrapped in a
+          clip so tiles that overhang the viewBox don't bleed. */}
+      {tiles.length > 0 && (
+        <g filter="url(#dispatch-tile-tone)" opacity={0.75}>
+          {tiles.map((t) => {
+            const [x1, y1] = proj(t.nw.lat, t.nw.lng);
+            const [x2, y2] = proj(t.se.lat, t.se.lng);
+            const w = x2 - x1;
+            const h = y2 - y1;
+            return (
+              <image
+                key={`${t.z}-${t.x}-${t.y}`}
+                href={t.url}
+                x={x1}
+                y={y1}
+                width={w}
+                height={h}
+                preserveAspectRatio="none"
+                crossOrigin="anonymous"
+              />
+            );
+          })}
         </g>
       )}
 
-      {/* Breadcrumb segments — solid + colored for past travel, dashed + faded for future */}
+      {/* Layer-name watermark for the non-region zoom presets, since the
+          hand-traced state outlines are gone now. */}
+      {layer !== 'region' && (
+        <text
+          x={VW / 2}
+          y={36}
+          textAnchor="middle"
+          fontFamily="serif"
+          fontSize={12}
+          fill="#5a3e2b"
+          letterSpacing={2}
+          opacity={0.55}
+        >
+          {layer.toUpperCase()} VIEW
+        </text>
+      )}
+
+      {/* Breadcrumb segments — rendered as a quadratic Bezier arch that
+          lifts off the ground plane, giving an origin→destination "flight
+          path" feel without needing real road routing. Past legs render
+          solid + colored; future legs dashed + dim. A faint shadow ellipse
+          under each apex reinforces the 3D read. */}
       {assets.flatMap((asset) => {
         const segs = segmentsByAsset.get(asset.id) ?? [];
         const isSelected = asset.id === selectedAsset;
-        const opacity = selectedAsset ? (isSelected ? 1 : 0.015) : 0.35;
+        const baseOpacity = selectedAsset ? (isSelected ? 1 : 0.015) : 0.35;
         return segs.map((seg, i) => {
           const [x1, y1] = proj(seg.from.lat, seg.from.lng);
           const [x2, y2] = proj(seg.to.lat, seg.to.lng);
+          const dx = x2 - x1;
+          const dy = y2 - y1;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          // Arch height scales with leg length, capped so cross-region
+          // hops don't balloon off-screen. Always bowed upward (−y).
+          const archH = Math.min(Math.max(len * 0.22, 12), 80);
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          // Perpendicular unit vector, biased upward (negative y) so the
+          // arch consistently lifts toward the top of the viewBox.
+          const nx = len === 0 ? 0 : -dy / len;
+          const ny = len === 0 ? -1 : dx / len;
+          const upBias = ny < 0 ? 1 : -1;
+          const cx = midX + nx * archH * upBias;
+          const cy = midY + ny * archH * upBias;
           const past = seg.to.time.getTime() <= selectedDate.getTime();
+          const stroke = isSelected ? 2.5 : 1.5;
+          const opacity = past
+            ? isSelected
+              ? 1
+              : (0.55 * baseOpacity) / 0.35
+            : isSelected
+              ? 0.55
+              : (0.18 * baseOpacity) / 0.35;
+          const d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
           return (
-            <line
-              key={`${asset.id}-${i}`}
-              x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke={asset.color}
-              strokeWidth={isSelected ? 3 : 1.5}
-              strokeDasharray={past ? 'none' : '4,3'}
-              opacity={past ? (isSelected ? 1 : 0.5 * opacity / 0.35) : (isSelected ? 0.5 : 0.15 * opacity / 0.35)}
-              filter="url(#dispatch-ink)"
-            />
+            <g key={`${asset.id}-${i}`} opacity={opacity}>
+              {/* Ground shadow — slim ellipse along the great-circle base. */}
+              {(isSelected || !selectedAsset) && (
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#3d2b1f"
+                  strokeWidth={0.8}
+                  strokeDasharray="1,4"
+                  opacity={0.25}
+                />
+              )}
+              <path
+                d={d}
+                fill="none"
+                stroke={asset.color}
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={past ? 'none' : '5,4'}
+                filter={isSelected ? 'url(#dispatch-arch-shadow)' : 'url(#dispatch-ink)'}
+              />
+            </g>
           );
         });
       })}
