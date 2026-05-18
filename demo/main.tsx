@@ -51,7 +51,7 @@ function DemoApp() {
   return (
     <div style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <WorksCalendar
-        calendarId="dispatch-demo"
+        calendarId="dispatch-demo-v2"
         initialView="dispatch"
         events={FLEET_EVENTS}
         assets={ASSETS}
