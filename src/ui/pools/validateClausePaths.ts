@@ -14,8 +14,8 @@
  * (and / or / not) walk their children; the `within` op
  * contributes its `path` like any other leaf.
  */
-import type { ResourceQuery } from '../../core/pools/poolQuerySchema'
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+import type { ResourceQuery } from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
 
 const TOP_LEVEL_KEYS: ReadonlySet<string> = new Set([
   'id', 'name', 'tenantId', 'capacity', 'color', 'timezone',

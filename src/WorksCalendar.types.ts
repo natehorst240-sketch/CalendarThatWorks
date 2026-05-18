@@ -8,7 +8,7 @@ import type { LocationData, LocationProvider } from './types/assets';
 import type { ViewId } from './core/viewScope';
 import type { WorksCalendarEvent } from './types/events';
 import type { DispatchMissionCandidate, DispatchMissionReadiness } from './views/DispatchView';
-import type { ResourcePool } from './core/pools/resourcePoolSchema.ts';
+import type { ResourcePool } from 'works-calendar-engine';
 import type { CascadeConfig } from './ui/CascadePanel';
 import type { MaintenanceRule } from './types/maintenance';
 

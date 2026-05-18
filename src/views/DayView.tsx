@@ -5,7 +5,7 @@ import {
   startOfDay, addDays,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
-import { hoursInTimezone } from '../core/engine/time/timezone';
+import { hoursInTimezone } from 'works-calendar-engine';
 import { layoutOverlaps } from '../core/layout';
 import { useDrag } from '../hooks/useDrag';
 import type { NormalizedEvent } from '../types/events';

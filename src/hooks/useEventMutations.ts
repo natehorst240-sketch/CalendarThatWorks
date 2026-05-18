@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
-import { evaluateConflicts } from '../core/conflictEngine';
-import type { ConflictEvent, ConflictRule } from '../core/conflictEngine';
-import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLegacyEvents';
-import type { EngineEvent } from '../core/engine/schema/eventSchema';
-import type { CalendarEngine } from '../core/engine/CalendarEngine';
-import { createId } from '../core/createId';
+import { evaluateConflicts } from 'works-calendar-engine';
+import type { ConflictEvent, ConflictRule } from 'works-calendar-engine';
+import { occurrenceToLegacy, toLegacyEvent } from 'works-calendar-engine';
+import type { EngineEvent } from 'works-calendar-engine';
+import type { CalendarEngine } from 'works-calendar-engine';
+import { createId } from 'works-calendar-engine';
 import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
 import type { OwnerConfig } from '../WorksCalendar.types';
 import type { FormEventDraft, InlineEditTarget } from './useModalState';

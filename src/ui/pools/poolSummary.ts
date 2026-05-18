@@ -12,8 +12,8 @@
  * Returns a list of human-readable phrases — the renderer chooses
  * how to join them (chips vs. comma list vs. bullet list).
  */
-import type { ResourcePool } from '../../core/pools/resourcePoolSchema'
-import type { ResourceQuery } from '../../core/pools/poolQuerySchema'
+import type { ResourcePool } from 'works-calendar-engine'
+import type { ResourceQuery } from 'works-calendar-engine'
 
 export interface PoolSummary {
   /** "Pool", "Manual pool", "Query pool", "Hybrid pool" */

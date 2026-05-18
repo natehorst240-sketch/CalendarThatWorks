@@ -10,9 +10,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { PROFILE_PRESETS, getProfileSampleData } from '../profilePresets';
-import { evaluateRequirements } from '../../requirements/evaluateRequirements';
-import type { Assignment } from '../../engine/schema/assignmentSchema';
-import type { EngineResource } from '../../engine/schema/resourceSchema';
+import { evaluateRequirements } from 'works-calendar-engine';
+import type { Assignment } from 'works-calendar-engine';
+import type { EngineResource } from 'works-calendar-engine';
 
 describe('profile presets × requirements engine', () => {
   it('air_medical sample crew satisfies the mission requirement template', () => {

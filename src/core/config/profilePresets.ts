@@ -28,7 +28,7 @@
 import type {
   CalendarConfig, ConfigResource,
 } from './calendarConfig'
-import type { ResourcePool } from '../pools/resourcePoolSchema'
+import type { ResourcePool } from 'works-calendar-engine'
 
 /** Stable id under which a preset is registered. */
 export type ProfileId =

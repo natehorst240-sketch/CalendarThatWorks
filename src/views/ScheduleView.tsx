@@ -40,7 +40,7 @@ import EmployeeActionCard from '../ui/EmployeeActionCard';
 import styles from './ScheduleView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
 import { useTouchDnd } from '../hooks/useTouchDnd';
-import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
+import { normalizeScheduleKind, SCHEDULE_KINDS } from 'works-calendar-engine';
 import type { CalendarViewEvent } from '../types/ui';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────

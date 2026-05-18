@@ -6,10 +6,10 @@ import {
   findLinkedMirroredCoverage,
   findLinkedOpenShifts,
   resolveEventId,
-} from '../core/scheduleMutations';
-import { detectShiftConflicts, buildOpenShiftEvent } from '../core/scheduleOverlap';
-import { normalizeScheduleKind, SCHEDULE_KINDS } from '../core/scheduleModel';
-import { createId } from '../core/createId';
+} from 'works-calendar-engine';
+import { detectShiftConflicts, buildOpenShiftEvent } from 'works-calendar-engine';
+import { normalizeScheduleKind, SCHEDULE_KINDS } from 'works-calendar-engine';
+import { createId } from 'works-calendar-engine';
 import type { NormalizedEvent, WorksCalendarEvent } from '../types/events';
 import type {
   EmployeeRecord,

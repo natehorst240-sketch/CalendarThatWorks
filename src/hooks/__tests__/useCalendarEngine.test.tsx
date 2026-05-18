@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { useCalendarEngine } from '../useCalendarEngine';
-import type { ResourcePool } from '../../core/pools/resourcePoolSchema';
+import type { ResourcePool } from 'works-calendar-engine';
 
 afterEach(() => cleanup());
 

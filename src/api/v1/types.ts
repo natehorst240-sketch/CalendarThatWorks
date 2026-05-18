@@ -46,8 +46,8 @@ export interface SyncMetadata {
 // ─── Upgraded input event ─────────────────────────────────────────────────────
 
 // Re-import EventConstraint so CalendarEventV1 can reference it inline.
-import type { EventConstraint } from '../../core/engine/schema/constraintSchema';
-import type { EventStatus } from '../../core/engine/schema/eventSchema';
+import type { EventConstraint } from 'works-calendar-engine';
+import type { EventStatus } from 'works-calendar-engine';
 
 /**
  * CalendarEventV1 — the next-generation input shape.
@@ -140,42 +140,42 @@ export const SYNC_META_KEY = '_v1sync' as const;
 
 // ── Event ────────────────────────────────────────────────────────────────────
 
-export type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema';
+export type { EngineEvent, EventStatus } from 'works-calendar-engine';
 export {
   makeEvent,
   isRecurringSeries,
   isDetachedOccurrence,
   isPartOfSeries,
-} from '../../core/engine/schema/eventSchema';
+} from 'works-calendar-engine';
 
 // ── Occurrence ───────────────────────────────────────────────────────────────
 
-export type { EngineOccurrence } from '../../core/engine/schema/occurrenceSchema';
+export type { EngineOccurrence } from 'works-calendar-engine';
 
 // ── Resource ─────────────────────────────────────────────────────────────────
 
 export type {
   EngineResource,
   ResourceBusinessHours,
-} from '../../core/engine/schema/resourceSchema';
+} from 'works-calendar-engine';
 
 // ── Resource pool (issue #212) ───────────────────────────────────────────────
 
-export type { PoolStrategy, ResourcePool } from '../../core/pools/resourcePoolSchema';
+export type { PoolStrategy, ResourcePool } from 'works-calendar-engine';
 
 // ── Assignment ───────────────────────────────────────────────────────────────
 
-export type { Assignment } from '../../core/engine/schema/assignmentSchema';
+export type { Assignment } from 'works-calendar-engine';
 export {
   makeAssignment,
   assignmentsForEvent,
   resourceIdsForEvent,
   workloadForResource,
-} from '../../core/engine/schema/assignmentSchema';
+} from 'works-calendar-engine';
 
 // ── Dependency ───────────────────────────────────────────────────────────────
 
-export type { Dependency, DependencyType } from '../../core/engine/schema/dependencySchema';
+export type { Dependency, DependencyType } from 'works-calendar-engine';
 export {
   makeDependency,
   constrainedAnchor,
@@ -184,16 +184,16 @@ export {
   predecessorsOf,
   hasCycle,
   wouldCreateCycle,
-} from '../../core/engine/schema/dependencySchema';
+} from 'works-calendar-engine';
 
 // ── Constraint ───────────────────────────────────────────────────────────────
 
 export type {
   EventConstraint,
   ConstraintType,
-} from '../../core/engine/schema/constraintSchema';
+} from 'works-calendar-engine';
 export {
   satisfiesConstraint,
   constraintSeverity,
   describeConstraint,
-} from '../../core/engine/schema/constraintSchema';
+} from 'works-calendar-engine';

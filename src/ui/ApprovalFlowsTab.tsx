@@ -10,7 +10,7 @@
  */
 import { lazy, Suspense, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import { WORKFLOW_TEMPLATES } from '../core/workflow/templates';
 import { useSavedWorkflows } from '../hooks/useSavedWorkflows';
 import type { SavedWorkflow } from '../hooks/useSavedWorkflows';

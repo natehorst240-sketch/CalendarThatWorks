@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Sparkles, ChevronDown, Plus } from 'lucide-react';
 import type { EventTemplateV1 } from '../api/v1/templates';
-import { BUILT_IN_EVENT_TEMPLATES } from '../core/engine/recurrence/templates';
+import { BUILT_IN_EVENT_TEMPLATES } from 'works-calendar-engine';
 import { AppHeader } from './AppHeader';
 import ProfileBar from './ProfileBar';
 import FocusChips, { DEFAULT_FOCUS_CHIPS } from './FocusChips';

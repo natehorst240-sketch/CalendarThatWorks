@@ -1,13 +1,13 @@
-import type { EngineResource } from '../core/engine/schema/resourceSchema'
-import type { ResourceLocationAdapter, ResourceLocation } from '../core/pools/locationAdapters'
+import type { EngineResource } from 'works-calendar-engine'
+import type { ResourceLocationAdapter, ResourceLocation } from 'works-calendar-engine'
 import type {
   GeoPoint,
   ResourceTrackingMeta,
   AssetTrackerPosition,
-} from '../core/geo/geoTypes'
+} from 'works-calendar-engine'
 import type { WorksCalendarMapAdapter } from '../core/geo/mapAdapterTypes'
-import { isValidPosition } from '../core/geo/positionGuards'
-import { positionToResourceTrackingMeta } from '../core/geo/positionToResourceMeta'
+import { isValidPosition } from 'works-calendar-engine'
+import { positionToResourceTrackingMeta } from 'works-calendar-engine'
 
 export type { GeoPoint, ResourceTrackingMeta, AssetTrackerPosition, WorksCalendarMapAdapter }
 export { isValidPosition, positionToResourceTrackingMeta }

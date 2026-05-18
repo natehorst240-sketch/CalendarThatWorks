@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { localTimezone, tzOffsetLabel } from '../core/engine/time/timezone';
+import { localTimezone, tzOffsetLabel } from 'works-calendar-engine';
 import styles from './TimezonePicker.module.css';
 
 export interface TimezonePickerProps {

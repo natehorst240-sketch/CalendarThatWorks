@@ -14,8 +14,8 @@
  * (private-mode Safari, etc.).
  */
 
-import type { ResourcePool, PoolStrategy, PoolType } from './resourcePoolSchema';
-import type { ResourceQuery } from './poolQuerySchema';
+import type { ResourcePool, PoolStrategy, PoolType } from 'works-calendar-engine';
+import type { ResourceQuery } from 'works-calendar-engine';
 import { safeGetLocalStorage, safeRemoveLocalStorage, safeSetLocalStorage } from '../safeLocalStorage';
 
 // ─── Storage key ─────────────────────────────────────────────────────────────

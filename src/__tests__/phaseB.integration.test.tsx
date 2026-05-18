@@ -24,7 +24,7 @@ import '@testing-library/jest-dom';
 import RequestForm from '../ui/RequestForm';
 import ConflictModal from '../ui/ConflictModal';
 import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
-import { evaluateConflicts } from '../core/conflictEngine.ts';
+import { evaluateConflicts } from 'works-calendar-engine';
 import { DEFAULT_CONFIG } from '../core/configSchema';
 
 type RequestValues = {

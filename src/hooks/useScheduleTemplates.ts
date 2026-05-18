@@ -6,12 +6,12 @@ import type {
   ScheduleInstantiationResultV1,
 } from '../api/v1/templates';
 import type { CalendarEventV1 } from '../api/v1/types';
-import { fromLegacyEvents } from '../core/engine/adapters/fromLegacyEvents';
-import type { LegacyEvent } from '../core/engine/adapters/fromLegacyEvents';
-import { validateOperation } from '../core/engine/validation/validateOperation';
-import type { OperationContext, ValidationResult } from '../core/engine/validation/validationTypes';
-import type { EngineEvent } from '../core/engine/schema/eventSchema';
-import { createId } from '../core/createId';
+import { fromLegacyEvents } from 'works-calendar-engine';
+import type { LegacyEvent } from 'works-calendar-engine';
+import { validateOperation } from 'works-calendar-engine';
+import type { OperationContext, ValidationResult } from 'works-calendar-engine';
+import type { EngineEvent } from 'works-calendar-engine';
+import { createId } from 'works-calendar-engine';
 import type { WorksCalendarEvent } from '../types/events';
 import type { CalendarRole } from '../WorksCalendar.types';
 import type { EngineOpRunner, GetSavedEventPayload } from '../types/engineOps';

@@ -11,8 +11,8 @@
  * and AND-merges it with the simple-form clauses on save.
  */
 import { useMemo, useState } from 'react'
-import type { ResourceQuery } from '../../core/pools/poolQuerySchema'
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+import type { ResourceQuery } from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
 import ClauseEditor from './ClauseEditor'
 import { summarizeQuery } from './poolSummary'
 import { validateClausePaths } from './validateClausePaths'

@@ -3,8 +3,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { summarizePool, summarizeQuery } from '../poolSummary'
-import type { ResourcePool } from '../../../core/pools/resourcePoolSchema'
-import type { ResourceQuery } from '../../../core/pools/poolQuerySchema'
+import type { ResourcePool } from 'works-calendar-engine'
+import type { ResourceQuery } from 'works-calendar-engine'
 
 const base = (patch: Partial<ResourcePool> & Pick<ResourcePool, 'id' | 'name'>): ResourcePool => ({
   memberIds: [],

@@ -7,7 +7,7 @@
  */
 import { useState, useMemo, useCallback } from 'react';
 import { addMonths, addWeeks, addDays } from 'date-fns';
-import { normalizeEvents } from '../core/eventModel';
+import { normalizeEvents } from 'works-calendar-engine';
 import { applyFilters, getCategories, getResources } from '../filters/filterEngine';
 import { DEFAULT_FILTER_SCHEMA } from '../filters/filterSchema';
 import { createInitialFilters, clearFilterValue } from '../filters/filterState';

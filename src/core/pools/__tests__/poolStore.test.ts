@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { savePools, loadPools, loadPoolsDetailed, clearPools, poolStorageKey } from '../poolStore';
-import type { ResourcePool } from '../resourcePoolSchema';
+import type { ResourcePool } from 'works-calendar-engine';
 
 const CAL = 'test-cal';
 

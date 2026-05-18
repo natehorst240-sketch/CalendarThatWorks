@@ -21,7 +21,7 @@ import type {
 } from '../types/ui';
 import type { NormalizedEvent } from '../types/events';
 import type { FilterField } from '../filters/filterSchema';
-import { CONFLICT_RULE_TYPES } from '../core/conflictEngine.ts';
+import { CONFLICT_RULE_TYPES } from 'works-calendar-engine';
 import { DEFAULT_CATEGORIES } from '../types/assets.ts';
 import type { CategoryDef, CategoriesConfig } from '../types/assets.ts';
 import { useFocusTrap } from '../hooks/useFocusTrap';

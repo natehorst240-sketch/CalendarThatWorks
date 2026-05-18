@@ -6,7 +6,7 @@ import {
   type SavedViewCaptureCtx,
   type ViewScopeContext,
 } from '../viewScope';
-import { SCHEDULE_TAB_CATEGORY_SEEDS } from '../scheduleModel';
+import { SCHEDULE_TAB_CATEGORY_SEEDS } from 'works-calendar-engine';
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Shared fixtures                                                           */

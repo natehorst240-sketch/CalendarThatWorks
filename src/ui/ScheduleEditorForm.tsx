@@ -3,7 +3,7 @@ import { format, parseISO, isValid, addDays, addHours } from 'date-fns';
 import { X } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import ConfirmDialog from './ConfirmDialog';
 import styles from './ScheduleEditorForm.module.css';
 import type { WorksCalendarEvent } from '../types/events';

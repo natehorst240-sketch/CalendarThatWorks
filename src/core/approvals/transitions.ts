@@ -19,7 +19,7 @@ import type {
 } from '../../types/assets'
 import { advance, type WorkflowAction, type WorkflowEmitEvent } from '../workflow/advance'
 import type { Workflow, WorkflowInstance } from '../workflow/workflowSchema'
-import { appendAuditEntry } from './auditChain'
+import { appendAuditEntry } from 'works-calendar-engine'
 
 // ─── Errors ───────────────────────────────────────────────────────────────
 

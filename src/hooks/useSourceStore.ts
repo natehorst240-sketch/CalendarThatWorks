@@ -18,7 +18,7 @@
  *   toggleSource     — (id) => void
  */
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 import type { WorksCalendarEvent } from '../types/events';
 

@@ -11,8 +11,8 @@
  *   - postMessage / worker handoff across serialization boundaries
  */
 
-import type { EngineEvent } from '../../core/engine/schema/eventSchema';
-import type { EventConstraint, ConstraintType } from '../../core/engine/schema/constraintSchema';
+import type { EngineEvent } from 'works-calendar-engine';
+import type { EventConstraint, ConstraintType } from 'works-calendar-engine';
 import type { SyncMetadata } from './types';
 
 // ─── JSON-safe (serialized) types ─────────────────────────────────────────────

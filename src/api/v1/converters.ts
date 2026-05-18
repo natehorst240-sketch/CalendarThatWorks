@@ -22,11 +22,11 @@
  */
 
 import { parseISO, isValid, addHours } from 'date-fns';
-import { makeEvent }                   from '../../core/engine/schema/eventSchema';
-import { nextEngineId }                from '../../core/engine/adapters/normalizeInputEvent';
-import type { EngineEvent, EventStatus } from '../../core/engine/schema/eventSchema';
-import type { EngineOccurrence }         from '../../core/engine/schema/occurrenceSchema';
-import type { EventConstraint }          from '../../core/engine/schema/constraintSchema';
+import { makeEvent }                   from 'works-calendar-engine';
+import { nextEngineId }                from 'works-calendar-engine';
+import type { EngineEvent, EventStatus } from 'works-calendar-engine';
+import type { EngineOccurrence }         from 'works-calendar-engine';
+import type { EventConstraint }          from 'works-calendar-engine';
 import type {
   CalendarEventV1,
   CalendarOccurrenceV1,

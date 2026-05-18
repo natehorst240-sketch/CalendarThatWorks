@@ -4,7 +4,7 @@ import { useSourceStore } from './useSourceStore';
 import { useSourceAggregator } from './useSourceAggregator';
 import { useRealtimeEvents } from './useRealtimeEvents';
 import type { SupabaseRealtimeClientLike } from './useRealtimeEvents';
-import { normalizeEvents } from '../core/eventModel';
+import { normalizeEvents } from 'works-calendar-engine';
 import { useCalendarEngine } from './useCalendarEngine';
 import { useTabScopedEvents } from './useTabScopedEvents';
 import { shiftEmployeeIdsAt } from './useShiftOverlap';
@@ -13,7 +13,7 @@ import { applyFilters, getCategories, getResources } from '../filters/filterEngi
 import { sortEvents } from '../core/sortEngine';
 import { viewScopedSchema } from '../filters/filterSchema';
 import { resolveLabels } from '../core/config/resolveLabels';
-import { SCHEDULE_WORKFLOW_CATEGORIES } from '../core/scheduleModel';
+import { SCHEDULE_WORKFLOW_CATEGORIES } from 'works-calendar-engine';
 import type { AnnouncerRef } from '../ui/ScreenReaderAnnouncer';
 import type { CalendarView, WorksCalendarProps } from '../WorksCalendar.types';
 import type { WorksCalendarEvent } from '../types/events';

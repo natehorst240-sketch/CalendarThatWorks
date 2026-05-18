@@ -42,7 +42,7 @@ import type {
   LocationProvider,
   LocationData,
 } from '../types/assets';
-import type { ResourcePool } from '../core/pools/resourcePoolSchema';
+import type { ResourcePool } from 'works-calendar-engine';
 import type { FormEventDraft } from '../hooks/useModalState';
 
 interface SharedViewProps {

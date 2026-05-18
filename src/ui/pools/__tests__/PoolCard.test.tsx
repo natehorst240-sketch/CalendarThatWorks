@@ -8,8 +8,8 @@ import '@testing-library/jest-dom'
 import React from 'react'
 
 import PoolCard from '../PoolCard'
-import type { ResourcePool } from '../../../core/pools/resourcePoolSchema'
-import type { EngineResource } from '../../../core/engine/schema/resourceSchema'
+import type { ResourcePool } from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
 
 const r = (id: string, meta: Record<string, unknown> = {}): EngineResource =>
   ({ id, name: id.toUpperCase(), meta } as EngineResource)

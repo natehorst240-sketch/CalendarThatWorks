@@ -35,7 +35,7 @@ import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu'
 import type { CalendarViewEvent, ColorRule } from '../types/ui';
 import type { GroupByInput } from '../hooks/useNormalizedConfig';
 import type { AssetsZoomLevel, LocationData, LocationProvider } from '../types/assets';
-import type { ResourcePool } from '../core/pools/resourcePoolSchema';
+import type { ResourcePool } from 'works-calendar-engine';
 
 const AUDIT_STAGES = new Set(['denied', 'pending_higher']);
 
