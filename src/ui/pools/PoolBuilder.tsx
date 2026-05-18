@@ -26,14 +26,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, MouseEvent } from 'react'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
-import { evaluateQuery } from '../../core/pools/evaluateQuery'
+import { evaluateQuery } from 'works-calendar-engine'
 import type {
   ResourcePool, PoolStrategy, PoolType,
-} from '../../core/pools/resourcePoolSchema'
+} from 'works-calendar-engine'
 import type {
   ResourceQuery,
-} from '../../core/pools/poolQuerySchema'
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+} from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
 import AdvancedRulesEditor from './AdvancedRulesEditor'
 import { derivePathSuggestions } from './pathSuggestions'
 import styles from './PoolBuilder.module.css'

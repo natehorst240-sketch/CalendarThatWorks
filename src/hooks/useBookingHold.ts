@@ -31,7 +31,7 @@ import type {
   AcquireHoldError,
   AcquireHoldInput,
   AcquireHoldResult,
-} from '../core/holds/holdRegistry';
+} from 'works-calendar-engine';
 
 // ─── Options / state ──────────────────────────────────────────────────────
 

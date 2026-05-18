@@ -6,7 +6,7 @@
  * builders both consult this registry so they can never drift apart. Adding a
  * new view = one entry in VIEW_SCOPES.
  */
-import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from './scheduleModel';
+import { isScheduleWorkflowEvent, SCHEDULE_TAB_CATEGORY_SEEDS } from 'works-calendar-engine';
 
 export type ViewId = 'month' | 'week' | 'day' | 'agenda' | 'schedule' | 'base' | 'assets' | 'dispatch' | 'requests' | 'map';
 

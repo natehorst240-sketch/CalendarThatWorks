@@ -8,7 +8,7 @@ import '@testing-library/jest-dom'
 import React, { useState } from 'react'
 
 import ClauseEditor from '../ClauseEditor'
-import type { ResourceQuery } from '../../../core/pools/poolQuerySchema'
+import type { ResourceQuery } from 'works-calendar-engine'
 
 /**
  * Wrapper that turns the controlled component into something we can

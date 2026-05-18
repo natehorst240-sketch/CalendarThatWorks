@@ -5,7 +5,7 @@
  * and the legacy AdvancedFilterBuilder can share the same logic.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import { DEFAULT_FILTER_SCHEMA, defaultOperatorsForType } from '../filters/filterSchema';
 import { conditionsToFilters } from '../filters/conditionEngine';
 import type { FilterField } from '../filters/filterSchema';

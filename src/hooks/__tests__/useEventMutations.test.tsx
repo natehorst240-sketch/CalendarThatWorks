@@ -8,8 +8,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { useEventMutations } from '../useEventMutations';
-import { CalendarEngine } from '../../core/engine/CalendarEngine';
-import { fromLegacyEvents } from '../../core/engine/adapters/fromLegacyEvents';
+import { CalendarEngine } from 'works-calendar-engine';
+import { fromLegacyEvents } from 'works-calendar-engine';
 import type { MutationEventInput } from '../../types/engineOps';
 
 afterEach(() => cleanup());

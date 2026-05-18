@@ -13,13 +13,13 @@ import type {
   EngineOperation,
   RecurringEditScope,
   OperationSource,
-} from '../core/engine/schema/operationSchema';
+} from 'works-calendar-engine';
 import type {
   OperationResult,
   EventChange,
   OperationStatus,
-} from '../core/engine/operations/operationResult';
-import type { EngineEvent } from '../core/engine/schema/eventSchema';
+} from 'works-calendar-engine';
+import type { EngineEvent } from 'works-calendar-engine';
 import type { NormalizedEvent, WorksCalendarEvent } from './events';
 
 export type {

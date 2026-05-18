@@ -25,7 +25,7 @@ import { parseISO, isValid } from 'date-fns'
 import type { WorksCalendarEvent } from '../types/events'
 import type { ScheduledEvent, ScheduledEventRequirement, EventLifecycleStatus } from '../types/scheduling'
 import { isEventLifecycleStatus } from '../types/scheduling'
-import type { Assignment } from './engine/schema/assignmentSchema'
+import type { Assignment } from 'works-calendar-engine'
 
 // ─── Internal meta keys ────────────────────────────────────────────────────
 

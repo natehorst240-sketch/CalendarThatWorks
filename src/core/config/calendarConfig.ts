@@ -19,8 +19,8 @@
  * stubs as it walks the user through setup.
  */
 
-import type { ResourcePool } from '../pools/resourcePoolSchema'
-import type { LatLon } from '../pools/geo'
+import type { ResourcePool } from 'works-calendar-engine'
+import type { LatLon } from 'works-calendar-engine'
 
 export interface CalendarConfig {
   /**

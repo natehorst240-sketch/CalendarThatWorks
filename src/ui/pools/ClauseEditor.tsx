@@ -17,7 +17,7 @@
 import { useId, type ChangeEvent } from 'react'
 import type {
   ResourceQuery, ResourceQueryValue, DistanceFrom,
-} from '../../core/pools/poolQuerySchema'
+} from 'works-calendar-engine'
 import styles from './ClauseEditor.module.css'
 
 export interface ClauseEditorProps {

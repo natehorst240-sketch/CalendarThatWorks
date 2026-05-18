@@ -84,7 +84,7 @@ export type {
 export { RightPanel, RightPanelSection } from './ui/RightPanel';
 export type { RightPanelSectionProps }   from './ui/RightPanel';
 export type { LeftRailAction }           from './ui/LeftRail';
-export { normalizeEvent, normalizeEvents } from './core/eventModel';
+export { normalizeEvent, normalizeEvents } from 'works-calendar-engine';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';
 export { exportToExcel }                  from './export/excelExport';
@@ -153,7 +153,7 @@ export { DEFAULT_CATEGORIES }             from './types/assets.ts';
 // ── Approvals + Workflow DSL (#209, #215, #219) ─────────────────────────────
 export { transitionApproval, legalActionsFrom, LEGAL_TRANSITIONS } from './core/approvals/transitions';
 export type { TransitionInput, TransitionResult, TransitionError, TransitionErrorCode } from './core/approvals/transitions';
-export { verifyAuditChain, appendAuditEntry } from './core/approvals/auditChain';
+export { verifyAuditChain, appendAuditEntry } from 'works-calendar-engine';
 export { advance as advanceWorkflow, tick as tickWorkflow } from './core/workflow/advance';
 export type {
   WorkflowAction, WorkflowEmitEvent, AdvanceInput, AdvanceResult,
@@ -191,34 +191,34 @@ export {
 } from './core/workflow/templates';
 
 // ── Booking holds (#211) ────────────────────────────────────────────────────
-export { createHoldRegistry, findBlockingHold } from './core/holds/holdRegistry';
+export { createHoldRegistry, findBlockingHold } from 'works-calendar-engine';
 export type {
   Hold, HoldWindow, HoldRegistry,
   AcquireHoldInput, AcquireHoldResult, AcquireHoldError, AcquireHoldErrorCode,
   CreateHoldRegistryOptions,
-} from './core/holds/holdRegistry';
+} from 'works-calendar-engine';
 export { useBookingHold } from './hooks/useBookingHold';
 export type { UseBookingHoldOptions, UseBookingHoldState } from './hooks/useBookingHold';
 
 // ── Resource pools (#212) ───────────────────────────────────────────────────
 export { loadPools, loadPoolsDetailed, savePools, clearPools, poolStorageKey } from './core/pools/poolStore';
 export type { LoadPoolsResult } from './core/pools/poolStore';
-export { validatePools } from './core/pools/validatePools';
-export type { PoolIntegrityIssue, PoolIntegrityReport } from './core/pools/validatePools';
-export type { ResourcePool, PoolStrategy, PoolType } from './core/pools/resourcePoolSchema';
+export { validatePools } from 'works-calendar-engine';
+export type { PoolIntegrityIssue, PoolIntegrityReport } from 'works-calendar-engine';
+export type { ResourcePool, PoolStrategy, PoolType } from 'works-calendar-engine';
 // ── Resource pools v2 — query DSL (#386) ───────────────────────────────────
-export { evaluateQuery } from './core/pools/evaluateQuery';
-export type { QueryContext, QueryEvaluation, QueryExclusion } from './core/pools/evaluateQuery';
-export type { ResourceQuery, ResourceQueryValue, DistanceFrom, WithinDistance } from './core/pools/poolQuerySchema';
+export { evaluateQuery } from 'works-calendar-engine';
+export type { QueryContext, QueryEvaluation, QueryExclusion } from 'works-calendar-engine';
+export type { ResourceQuery, ResourceQueryValue, DistanceFrom, WithinDistance } from 'works-calendar-engine';
 // ── Resource pools v2 — geo + location adapters (#386) ─────────────────────
-export { haversineKm, haversineMiles, isLatLon } from './core/pools/geo';
-export type { LatLon } from './core/pools/geo';
+export { haversineKm, haversineMiles, isLatLon } from 'works-calendar-engine';
+export type { LatLon } from 'works-calendar-engine';
 export {
   attachLocations,
   createStaticLocationAdapter,
   createMetaPathLocationAdapter,
-} from './core/pools/locationAdapters';
-export type { ResourceLocation, ResourceLocationAdapter } from './core/pools/locationAdapters';
+} from 'works-calendar-engine';
+export type { ResourceLocation, ResourceLocationAdapter } from 'works-calendar-engine';
 // ── Resource pools v2 — UI components (#386) ──────────────────────────────
 export { default as PoolCard }    from './ui/pools/PoolCard';
 export type { PoolCardProps }      from './ui/pools/PoolCard';
@@ -258,28 +258,28 @@ export type { ResolvedLabels } from './core/config/resolveLabels';
 export { default as ConfigWizard } from './ui/wizard/ConfigWizard';
 export type { ConfigWizardProps, ConfigWizardStepId } from './ui/wizard/ConfigWizard';
 // ── Requirements engine — runtime consumer for the templates (#386) ──────
-export { evaluateRequirements } from './core/requirements/evaluateRequirements';
+export { evaluateRequirements } from 'works-calendar-engine';
 export type {
   EvaluateRequirementsInput, RequirementsEvaluation, RequirementShortfall,
-} from './core/requirements/evaluateRequirements';
-export { gateEventRequirements } from './core/requirements/gateEventRequirements';
-export type { GateEventRequirementsInput } from './core/requirements/gateEventRequirements';
+} from 'works-calendar-engine';
+export { gateEventRequirements } from 'works-calendar-engine';
+export type { GateEventRequirementsInput } from 'works-calendar-engine';
 
 // ── Lifecycle event bus (#216) ──────────────────────────────────────────────
-export { EventBus, channelForApprovalTransition } from './core/engine/eventBus';
+export { EventBus, channelForApprovalTransition } from 'works-calendar-engine';
 export type {
   EventBusChannel, BookingChannel, AssignmentChannel,
   BookingLifecyclePayload, AssignmentLifecyclePayload,
   EventBusPayload, EventBusHandler, EventBusUnsubscribe, EventBusOptions,
-} from './core/engine/eventBus';
+} from 'works-calendar-engine';
 
-export { evaluateGeoConflicts, geoConflictRules } from './core/conflicts/geoConflictRules';
+export { evaluateGeoConflicts, geoConflictRules } from 'works-calendar-engine';
 export type {
   GeoConflictRule, GeoTravelFeasibilityRule,
   GeoEventInput, GeoConflictViolation,
-} from './core/conflicts/geoConflictRules';
+} from 'works-calendar-engine';
 
-export { evaluateConflicts, CONFLICT_RULE_TYPES } from './core/conflictEngine';
+export { evaluateConflicts, CONFLICT_RULE_TYPES } from 'works-calendar-engine';
 export type {
   ConflictRule,
   ConflictEvent,
@@ -293,4 +293,4 @@ export type {
   PolicyViolationRule,
   HoldConflictRule,
   AvailabilityViolationRule,
-} from './core/conflictEngine';
+} from 'works-calendar-engine';

@@ -16,7 +16,7 @@
  * No React state, no useMemo here — callers wrap in their own useMemo if
  * needed. Pure function so it's trivial to test against fixture events.
  */
-import { isShiftOrOnCallEvent } from '../core/scheduleModel';
+import { isShiftOrOnCallEvent } from 'works-calendar-engine';
 
 type ShiftLike = {
   start?: Date | string | number | null;

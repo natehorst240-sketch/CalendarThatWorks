@@ -3,7 +3,7 @@ import {
   evaluateGeoConflicts,
   type GeoTravelFeasibilityRule,
   type GeoEventInput,
-} from '../conflicts/geoConflictRules'
+} from 'works-calendar-engine'
 
 const RULE: GeoTravelFeasibilityRule = {
   id: 'travel',

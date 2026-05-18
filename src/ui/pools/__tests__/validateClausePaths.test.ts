@@ -3,8 +3,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { validateClausePaths } from '../validateClausePaths'
-import type { ResourceQuery } from '../../../core/pools/poolQuerySchema'
-import type { EngineResource } from '../../../core/engine/schema/resourceSchema'
+import type { ResourceQuery } from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
 
 const r = (id: string, meta: Record<string, unknown> = {}): EngineResource =>
   ({ id, name: id.toUpperCase(), meta } as EngineResource)

@@ -19,7 +19,7 @@
  * storage for the new calendar).
  */
 import { useCallback, useEffect, useState } from 'react'
-import { createId } from '../core/createId'
+import { createId } from 'works-calendar-engine'
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage'
 import type { Workflow, WorkflowLayout } from '../core/workflow/workflowSchema'
 

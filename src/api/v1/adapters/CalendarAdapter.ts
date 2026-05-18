@@ -27,8 +27,8 @@ import type {
   ScheduleInstantiationRequestV1,
   ScheduleInstantiationResultV1,
 } from '../templates';
-import type { EventBus } from '../../../core/engine/eventBus';
-import type { AcquireHoldInput, AcquireHoldResult } from '../../../core/holds/holdRegistry';
+import type { EventBus } from 'works-calendar-engine';
+import type { AcquireHoldInput, AcquireHoldResult } from 'works-calendar-engine';
 
 // ─── Change notification types ────────────────────────────────────────────────
 

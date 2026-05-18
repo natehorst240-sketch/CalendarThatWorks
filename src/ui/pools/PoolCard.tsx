@@ -12,9 +12,9 @@
  * `PoolBuilder` from this directory).
  */
 import type { ReactNode } from 'react'
-import type { ResourcePool } from '../../core/pools/resourcePoolSchema'
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
-import { evaluateQuery } from '../../core/pools/evaluateQuery'
+import type { ResourcePool } from 'works-calendar-engine'
+import type { EngineResource } from 'works-calendar-engine'
+import { evaluateQuery } from 'works-calendar-engine'
 import { summarizePool } from './poolSummary'
 import styles from './PoolCard.module.css'
 

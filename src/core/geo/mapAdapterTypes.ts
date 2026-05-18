@@ -1,4 +1,4 @@
-import type { AssetTrackerPosition } from './geoTypes'
+import type { AssetTrackerPosition } from 'works-calendar-engine'
 
 export interface WorksCalendarMapAdapter {
   mount(container: HTMLElement): void

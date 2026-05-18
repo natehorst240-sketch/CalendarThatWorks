@@ -37,7 +37,7 @@ import {
   type CalendarConfig, type ConfigResource, type ConfigResourceType, type ConfigRole,
   type ConfigSettings,
 } from '../../core/config/calendarConfig'
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+import type { EngineResource } from 'works-calendar-engine'
 import PoolCard from '../pools/PoolCard'
 import PoolBuilder from '../pools/PoolBuilder'
 import styles from './ConfigWizard.module.css'

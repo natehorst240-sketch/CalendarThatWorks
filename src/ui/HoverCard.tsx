@@ -3,9 +3,9 @@ import { isSameDay } from 'date-fns';
 import { X, Clock, Tag, Anchor, StickyNote, Pencil, MessageSquare, Send } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import EventStatusBadge from './EventStatusBadge';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import { useCalendarContext } from '../core/CalendarContext';
-import { formatInTimezone, tzOffsetLabel } from '../core/engine/time/timezone';
+import { formatInTimezone, tzOffsetLabel } from 'works-calendar-engine';
 import type { EventComment } from '../types/events';
 import styles from './HoverCard.module.css';
 

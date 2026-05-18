@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { CheckCircle2, ChevronDown, Clock, Inbox, User, XCircle } from 'lucide-react';
 import EventStatusBadge from '../ui/EventStatusBadge';
 import ApprovalActionMenu, { allowedActionsFor } from '../ui/ApprovalActionMenu';
-import { lifecycleFromApprovalStage } from '../core/approvals/lifecycleFromApprovalStage';
+import { lifecycleFromApprovalStage } from 'works-calendar-engine';
 import type { ApprovalStage, ApprovalStageId } from '../types/assets';
 import styles from './RequestQueueView.module.css';
 

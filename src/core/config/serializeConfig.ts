@@ -17,7 +17,7 @@ import type {
   CalendarConfig, ConfigLabels, ConfigResource, ConfigRequirement,
   ConfigSeedEvent, ConfigSettings, ConfigResourceType, ConfigRole,
 } from './calendarConfig'
-import type { ResourcePool } from '../pools/resourcePoolSchema'
+import type { ResourcePool } from 'works-calendar-engine'
 
 export function serializeConfig(config: CalendarConfig): Record<string, unknown> {
   const out: Record<string, unknown> = {}

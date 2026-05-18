@@ -13,7 +13,7 @@
  *     search: string, dateRange: null | { start: string, end: string } }
  */
 import { useState, useEffect, useCallback } from 'react';
-import { createId } from '../core/createId';
+import { createId } from 'works-calendar-engine';
 import { safeGetLocalStorage, safeSetLocalStorage } from '../core/safeLocalStorage';
 import type { GroupByInput } from './useNormalizedConfig';
 

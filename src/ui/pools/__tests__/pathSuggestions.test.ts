@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { derivePathSuggestions } from '../pathSuggestions'
-import type { EngineResource } from '../../../core/engine/schema/resourceSchema'
+import type { EngineResource } from 'works-calendar-engine'
 
 const r = (id: string, meta: Record<string, unknown> = {}): EngineResource =>
   ({ id, name: id.toUpperCase(), meta } as EngineResource)

@@ -34,8 +34,8 @@ import type { SchedulePreviewResult } from '../hooks/useScheduleTemplates';
 import type { PermissionCaps, ScheduleTemplateDraft } from '../types/ui';
 import type { MaintenanceRule } from '../types/maintenance';
 import type { InlineEventPatch } from '../hooks/useEventMutations';
-import type { ConflictEvaluationResult } from '../core/conflictEngine';
-import type { ResourcePool } from '../core/pools/resourcePoolSchema';
+import type { ConflictEvaluationResult } from 'works-calendar-engine';
+import type { ResourcePool } from 'works-calendar-engine';
 import type { FilterField } from '../filters/filterSchema';
 import type { SavedView } from '../hooks/useSavedViews';
 

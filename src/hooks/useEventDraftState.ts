@@ -8,7 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import { format, parseISO, isValid } from 'date-fns';
-import { getEventTemplateById } from '../core/engine/recurrence/templates.ts';
+import { getEventTemplateById } from 'works-calendar-engine';
 import type { ReminderDef } from '../types/events';
 
 const WEEKDAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const;

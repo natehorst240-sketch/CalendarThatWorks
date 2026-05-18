@@ -11,7 +11,7 @@
  * to the resolver; the editor pipes the result into a datalist for
  * progressive typing assistance.
  */
-import type { EngineResource } from '../../core/engine/schema/resourceSchema'
+import type { EngineResource } from 'works-calendar-engine'
 
 const TOP_LEVEL_KEYS: readonly string[] = [
   'id', 'name', 'tenantId', 'capacity', 'color', 'timezone',

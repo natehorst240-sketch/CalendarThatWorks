@@ -8,7 +8,7 @@ import '@testing-library/jest-dom'
 import React, { useState } from 'react'
 
 import AdvancedRulesEditor from '../AdvancedRulesEditor'
-import type { ResourceQuery } from '../../../core/pools/poolQuerySchema'
+import type { ResourceQuery } from 'works-calendar-engine'
 
 function Harness({ initial }: { initial: readonly ResourceQuery[] }) {
   const [clauses, setClauses] = useState<readonly ResourceQuery[]>(initial)

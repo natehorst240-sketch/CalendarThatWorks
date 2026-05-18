@@ -17,8 +17,8 @@ import type {
   ConfigResource, ConfigRequirement, ConfigRequirementSlot,
   ConfigSeedEvent, ConfigSettings,
 } from './calendarConfig'
-import type { ResourcePool, PoolStrategy, PoolType } from '../pools/resourcePoolSchema'
-import type { LatLon } from '../pools/geo'
+import type { ResourcePool, PoolStrategy, PoolType } from 'works-calendar-engine'
+import type { LatLon } from 'works-calendar-engine'
 
 export interface ParseConfigResult {
   /** Best-effort parsed config — sections may be missing or empty. */

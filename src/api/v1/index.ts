@@ -28,37 +28,37 @@ export * from './converters';
 export * from './templates';
 
 // ── Engine class + initialiser ────────────────────────────────────────────────
-export { CalendarEngine, createInitialState } from '../../core/engine/CalendarEngine';
+export { CalendarEngine, createInitialState } from 'works-calendar-engine';
 
 // ── Engine input normalizer ───────────────────────────────────────────────────
 export {
   normalizeInputEvent,
   normalizeInputEvents,
   nextEngineId,
-} from '../../core/engine/adapters/normalizeInputEvent';
+} from 'works-calendar-engine';
 
 // ── Legacy adapter functions ──────────────────────────────────────────────────
 export {
   fromLegacyEvent,
   fromLegacyEvents,
-} from '../../core/engine/adapters/fromLegacyEvents';
+} from 'works-calendar-engine';
 
 export {
   toLegacyEvent,
   toLegacyEvents,
   occurrenceToLegacy,
-} from '../../core/engine/adapters/toLegacyEvents';
+} from 'works-calendar-engine';
 
 // ── Engine feature flags + config ─────────────────────────────────────────────
 export {
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_RUNTIME_CONFIG,
   mergeRuntimeConfig,
-} from '../../core/engine/engineConfig';
+} from 'works-calendar-engine';
 export type {
   EngineFeatureFlags,
   EngineRuntimeConfig,
-} from '../../core/engine/engineConfig';
+} from 'works-calendar-engine';
 
 // ── Validation + error contracts + guarded mutation/recurrence ──────────────
 export type {
@@ -75,14 +75,14 @@ export type {
   SafeMutateOptions,
   SafeMutateResult,
   ExpandRecurrenceSafeOptions,
-} from '../../core/engine/engineTypes';
+} from 'works-calendar-engine';
 
 export {
   validateEvent,
   toStructuredError,
   safeMutate,
   expandRecurrenceSafe,
-} from '../../core/engine/engineTypes';
+} from 'works-calendar-engine';
 
 // ── Engine state types ────────────────────────────────────────────────────────
 export type {
@@ -93,7 +93,7 @@ export type {
   CalendarEngineInit,
   StateListener,
   Unsubscribe,
-} from '../../core/engine/types';
+} from 'works-calendar-engine';
 
 // ── Integration adapters ──────────────────────────────────────────────────────
 // Individual adapters can also be imported from 'works-calendar/api/v1/adapters'.

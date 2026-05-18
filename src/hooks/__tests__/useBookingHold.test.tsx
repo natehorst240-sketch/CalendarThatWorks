@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { createHoldRegistry } from '../../core/holds/holdRegistry';
+import { createHoldRegistry } from 'works-calendar-engine';
 import { useBookingHold } from '../useBookingHold';
 import type { HoldProvider } from '../useBookingHold';
 

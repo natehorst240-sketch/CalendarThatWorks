@@ -9,7 +9,7 @@ import {
   assignmentsFromCalendarEvent,
 } from '../scheduledEventAdapter'
 import type { ScheduledEvent } from '../../types/scheduling'
-import type { Assignment } from '../engine/schema/assignmentSchema'
+import type { Assignment } from 'works-calendar-engine'
 
 const BASE: ScheduledEvent = {
   id: 'evt-1',

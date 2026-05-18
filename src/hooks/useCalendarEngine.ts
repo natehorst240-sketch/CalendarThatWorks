@@ -7,12 +7,12 @@
  * independently testable and WorksCalendar becomes a thinner UI shell.
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { CalendarEngine }       from '../core/engine/CalendarEngine.ts';
-import { UndoRedoManager }      from '../core/engine/UndoRedoManager.ts';
-import { fromLegacyEvents }     from '../core/engine/adapters/fromLegacyEvents.ts';
-import { occurrenceToLegacy, toLegacyEvent } from '../core/engine/adapters/toLegacyEvents.ts';
-import type { ResourcePool }    from '../core/pools/resourcePoolSchema.ts';
-import type { OperationContext } from '../core/engine/validation/validationTypes';
+import { CalendarEngine }       from 'works-calendar-engine';
+import { UndoRedoManager }      from 'works-calendar-engine';
+import { fromLegacyEvents }     from 'works-calendar-engine';
+import { occurrenceToLegacy, toLegacyEvent } from 'works-calendar-engine';
+import type { ResourcePool }    from 'works-calendar-engine';
+import type { OperationContext } from 'works-calendar-engine';
 import type { AnnouncerRef }    from '../ui/ScreenReaderAnnouncer';
 import type { WorksCalendarEvent, NormalizedEvent } from '../types/events';
 import type {
