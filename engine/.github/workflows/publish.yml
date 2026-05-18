@@ -44,7 +44,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      # No NODE_AUTH_TOKEN here — when both a token and an OIDC identity
+      # are available, npm uses the token (which still enforces 2FA OTP)
+      # instead of falling through to OIDC. Drop the token so npm
+      # authenticates as the trusted publisher (this workflow) directly.
       - name: Publish to npm
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
