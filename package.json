@@ -95,10 +95,8 @@
     "url": "https://github.com/workscalendar/calendarthatworks/issues"
   },
   "scripts": {
-    "dev": "npm --prefix demo/app run dev",
-    "dev:embed": "vite --config vite.demo.config.ts",
+    "dev": "vite --config vite.demo.config.ts",
     "build:demo": "vite build --config vite.demo.config.ts",
-    "build:app": "npm --prefix demo/app run build",
     "test": "cross-env TZ=UTC vitest run",
     "test:watch": "cross-env TZ=UTC vitest",
     "test:e2e": "playwright test",

@@ -40,7 +40,14 @@ const LAYERS: { id: MapLayer; label: string }[] = [
 ];
 
 export function DispatchBoard({ events, assets = [], initialDate }: DispatchBoardProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(() => initialDate ?? new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (initialDate) return initialDate;
+    // Default: median event time so the slider lands inside the dataset's
+    // window. Falls through to real "now" only when there are no events.
+    if (events.length === 0) return new Date();
+    const sorted = [...events].map((e) => e.start.getTime()).sort((a, b) => a - b);
+    return new Date(sorted[Math.floor(sorted.length / 2)]!);
+  });
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [layer, setLayer] = useState<MapLayer>('region');
 
