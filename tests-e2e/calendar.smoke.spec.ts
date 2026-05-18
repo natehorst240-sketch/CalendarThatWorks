@@ -17,6 +17,9 @@ test.describe('Calendar smoke tests', () => {
   });
 
   test('navigation toolbar is present', async ({ page }) => {
+    // The demo lands on a chrome-owning view (Dispatch); switch to a
+    // standard calendar view first to expose the host's navigation toolbar.
+    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
     await expect(page.getByRole('toolbar', { name: 'Calendar navigation' })).toBeVisible();
   });
 
@@ -29,6 +32,9 @@ test.describe('Calendar smoke tests', () => {
   });
 
   test('can open the add-event dialog', async ({ page }) => {
+    // Add-event button lives in the standard chrome, which the dispatch
+    // landing view suppresses. Move to Month first.
+    await page.getByRole('group', { name: 'Calendar view' }).getByRole('button', { name: 'Month' }).click();
     await page.getByRole('button', { name: 'Add new event' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.getByRole('button', { name: 'Close' }).click();

@@ -12,6 +12,7 @@
  * inert from the view's perspective — kept here as a stable type surface
  * until a major-version bump lets us remove them cleanly.
  */
+import type { ReactNode } from 'react';
 import type { NormalizedEvent } from 'works-calendar-engine';
 import { DispatchBoard, type DispatchAssetEntry } from './dispatch/DispatchBoard';
 
@@ -36,6 +37,8 @@ interface DispatchViewLooseProps {
   readonly events?: readonly NormalizedEvent[];
   readonly assets?: readonly DispatchAssetEntry[];
   readonly initialAsOf?: Date;
+  /** View-switcher node injected by the host when this view owns chrome. */
+  readonly viewSwitcher?: ReactNode;
   // Legacy props (employees, bases, missions, evaluateForMission, onAssign, …)
   // are accepted to keep CalendarViewGrid's existing wiring stable but ignored
   // by the new board. The dispatch view derives everything it renders from
@@ -51,6 +54,7 @@ export default function DispatchView(props: DispatchViewLooseProps) {
       events={events}
       assets={assets}
       {...(props.initialAsOf ? { initialDate: props.initialAsOf } : {})}
+      {...(props.viewSwitcher ? { viewSwitcher: props.viewSwitcher } : {})}
     />
   );
 }

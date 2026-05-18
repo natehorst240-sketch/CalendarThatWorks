@@ -135,6 +135,12 @@ export interface CalendarViewGridProps {
   handleCoverageAssign: (ev: NormalizedEvent, coveringEmployeeId: string | number | null | undefined) => void;
   handleEmployeeAction: (empId: EmployeeId, actionInput: string | EmployeeActionInput) => void;
   handleEventClick: (ev: NormalizedEvent) => void;
+  /** True when the current view paints its own full pane chrome. Skips
+   *  the SubToolbar + active-filter strip the standard views use. */
+  viewOwnsChrome?: boolean;
+  /** Ready-to-render view switcher node, passed to chrome-owning views
+   *  so they can slot it into their own header. */
+  viewSwitcher?: ReactNode;
 }
 
 export default function CalendarViewGrid({
@@ -155,11 +161,12 @@ export default function CalendarViewGrid({
   handleClearFilters, handleScheduleDateSelect, handlePoolDateSelect,
   handleEmployeeAddInternal, handleEmployeeDeleteInternal, handleShiftStatusChange,
   handleCoverageAssign, handleEmployeeAction, handleEventClick,
+  viewOwnsChrome, viewSwitcher,
 }: CalendarViewGridProps) {
   return (
-    <div className={styles['mainPane']}>
-      <div className={styles['calendarCard']}>
-        <SubToolbar
+    <div className={styles['mainPane']} data-wc-chrome={viewOwnsChrome ? 'view-owned' : undefined}>
+      <div className={styles['calendarCard']} data-wc-chrome={viewOwnsChrome ? 'view-owned' : undefined}>
+        {!viewOwnsChrome && <SubToolbar
           leftSlot={<>
             <SidebarToggleButton
               isOpen={sidebarOpen}
@@ -210,14 +217,14 @@ export default function CalendarViewGrid({
               <Download size={15} aria-hidden="true" />
             </button>
           </>}
-        />
-        <ActiveFilterStrip
+        />}
+        {!viewOwnsChrome && <ActiveFilterStrip
           filters={cal.filters as Record<string, unknown>}
           schema={schema}
           onChange={(key, value) => cal.setFilter(key, value)}
           onClear={(key) => cal.clearFilter(key)}
           onClearAll={handleClearFilters}
-        />
+        />}
         <div
           ref={swipeAreaRef}
           className={styles['viewArea']}
@@ -322,6 +329,7 @@ export default function CalendarViewGrid({
                   evaluateForMission: dispatchEvaluator,
                   onAssign: onDispatchAssign,
                   onAsOfChange: cal.setCurrentDate,
+                  viewSwitcher,
                 } as unknown as ComponentProps<typeof DispatchView>)} />
               )}
               {cal.view === 'requests' && (

@@ -9,6 +9,7 @@
  * and hands them off here.
  */
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import '../../styles/tailwind.css';
 import { TacticalMap } from './TacticalMap';
 import { AssetSidebar } from './AssetSidebar';
@@ -30,6 +31,9 @@ export interface DispatchBoardProps {
   readonly assets?: readonly DispatchAssetEntry[];
   /** Initial "now". Defaults to current wall clock. */
   readonly initialDate?: Date;
+  /** Optional view-switcher tabs to render inline in the board header,
+   *  used when the host calendar hands over its full chrome to this view. */
+  readonly viewSwitcher?: ReactNode;
 }
 
 const LAYERS: { id: MapLayer; label: string }[] = [
@@ -39,7 +43,7 @@ const LAYERS: { id: MapLayer; label: string }[] = [
   { id: '1k', label: '1k ft' },
 ];
 
-export function DispatchBoard({ events, assets = [], initialDate }: DispatchBoardProps) {
+export function DispatchBoard({ events, assets = [], initialDate, viewSwitcher }: DispatchBoardProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     if (initialDate) return initialDate;
     // Default: median event time so the slider lands inside the dataset's
@@ -73,12 +77,10 @@ export function DispatchBoard({ events, assets = [], initialDate }: DispatchBoar
   return (
     <div className="h-full w-full flex flex-col overflow-hidden" style={{ background: '#e8dcc8' }}>
       {/* Header */}
-      <header className="h-10 flex items-center justify-between px-4 border-b-2 border-[#3d2b1f]/30 bg-[#d4c4a8] flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <h1 className="font-serif text-base font-bold text-[#3d2b1f] tracking-wider">
-            DISPATCH BOARD
-          </h1>
-          <span className="text-[10px] text-[#5a3e2b] font-mono">
+      <header className="h-10 flex items-center px-3 border-b-2 border-[#3d2b1f]/30 bg-[#d4c4a8] flex-shrink-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {viewSwitcher}
+          <span className="text-[10px] text-[#5a3e2b] font-mono truncate hidden md:inline">
             {selectedDate.toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
