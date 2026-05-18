@@ -130,7 +130,7 @@
   },
   "dependencies": {
     "fuse.js": "^7.3.0",
-    "works-calendar-engine": "file:./engine"
+    "works-calendar-engine": "^0.1.2"
   },
   "overrides": {
     "exceljs": {
