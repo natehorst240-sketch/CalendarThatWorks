@@ -21,7 +21,21 @@ export function opAnnouncement(op: AnnouncedOp): string {
 }
 
 export type ViewGroup = 'calendar' | 'operations';
-export type ViewDef = { id: ViewId; label: string; alwaysOn: boolean; hint?: string; group: ViewGroup };
+export type ViewDef = {
+  id: ViewId;
+  label: string;
+  alwaysOn: boolean;
+  hint?: string;
+  group: ViewGroup;
+  /**
+   * When true, the host calendar suppresses its own header, side rails, and
+   * sub-toolbar for this view — the view paints the full pane and is
+   * responsible for rendering its own view-switcher (passed in via the
+   * shared view props as `renderViewSwitcher`). Used for immersive views
+   * like the dispatch board where every pixel of host chrome is wasted.
+   */
+  ownsChrome?: boolean;
+};
 
 export const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'month',    label: 'Month',    alwaysOn: true,  hint: 'Scheduled events — appointments, missions, PTO',                   group: 'calendar' },
@@ -31,7 +45,7 @@ export const ALL_VIEWS: readonly ViewDef[] = [
   { id: 'schedule', label: 'Schedule', alwaysOn: false, hint: 'Staffing — day/night shifts, on-call rotation, duty status',       group: 'calendar' },
   { id: 'base',     label: 'Base',     alwaysOn: false, hint: 'Gantt-style — employees, aircraft, and base events side by side', group: 'calendar' },
   { id: 'assets',   label: 'Assets',   alwaysOn: false,                                                                            group: 'operations' },
-  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations' },
+  { id: 'dispatch', label: 'Dispatch', alwaysOn: false, hint: 'Fleet readiness at a moment in time — what can launch now?',      group: 'operations', ownsChrome: true },
   { id: 'requests', label: 'Requests', alwaysOn: false, hint: 'Pending approval queue — approve, deny, or escalate requests',    group: 'operations' },
 ];
 

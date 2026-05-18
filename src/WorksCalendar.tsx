@@ -34,6 +34,7 @@ import CalendarViewGrid          from './ui/CalendarViewGrid';
 import type { AssetTypeDef, RequirementTemplate } from './ui/SetupLanding';
 const SetupLanding = lazy(() => import('./ui/SetupLanding'));
 import { CalendarLeftRail, CalendarRightPanel } from './ui/CalendarSideRails';
+import { ViewSwitcher }                from './ui/ViewSwitcher';
 import SavedFlash                from './ui/SavedFlash';
 import CalendarErrorBoundary     from './ui/CalendarErrorBoundary';
 
@@ -378,10 +379,20 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           <div className={styles['transientToast']} aria-hidden={!importFlash.flash}>
             <SavedFlash visible={importFlash.flash} label={importMsg} />
           </div>
+          {(() => {
+          // Views can opt into owning their full pane (no host header,
+          // rails, sub-toolbar) — the view paints everything and gets a
+          // ViewSwitcher node to slot into its own header.
+          const currentViewDef = VIEWS.find((v) => v.id === cal.view);
+          const viewOwnsChrome = currentViewDef?.ownsChrome === true;
+          const viewSwitcherForView = viewOwnsChrome ? (
+            <ViewSwitcher views={VIEWS} currentView={cal.view} onViewChange={(id) => cal.setView(id as typeof cal.view)} />
+          ) : null;
+          return (
           <AppShell
-            leftRail={<CalendarLeftRail ownerCfg={ownerCfg} leftRailExtras={leftRailExtras} setSidebarInitialTab={setSidebarInitialTab} setSidebarOpen={setSidebarOpen} />}
-            rightPanel={<CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} />}
-            header={
+            {...(viewOwnsChrome ? {} : { leftRail: <CalendarLeftRail ownerCfg={ownerCfg} leftRailExtras={leftRailExtras} setSidebarInitialTab={setSidebarInitialTab} setSidebarOpen={setSidebarOpen} /> })}
+            {...(viewOwnsChrome ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
+            header={viewOwnsChrome ? <></> :
               <CalendarToolbar cal={cal} ownerCfg={ownerCfg} api={api}
                 renderToolbar={renderToolbar} renderSavedViewsBar={renderSavedViewsBar} renderFilterBar={renderFilterBar}
                 focusChips={focusChips} logoSrc={logoSrc} logoAlt={logoAlt}
@@ -405,6 +416,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
             }
             main={<>
               <CalendarViewGrid cal={cal} ownerCfg={ownerCfg} perms={perms} schema={schema} filterBarSchema={filterBarSchema}
+                viewOwnsChrome={viewOwnsChrome} viewSwitcher={viewSwitcherForView}
                 sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} sidebarGroupLevels={sidebarGroupLevels}
                 hasAddButton={hasAddButton} hasScheduleTemplates={hasScheduleTemplates} hasImport={hasImport}
                 profileLabels={profileLabels} visibleScheduleTemplates={visibleScheduleTemplates} onScheduleTemplateAnalytics={onScheduleTemplateAnalytics}
@@ -455,6 +467,8 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
               )}
             </>}
           />
+          );
+          })()}
 
           <FilterGroupSidebar
             open={sidebarOpen}
