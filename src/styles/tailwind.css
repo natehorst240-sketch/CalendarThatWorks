@@ -1,0 +1,32 @@
+/* Tailwind base + the dispatch board's parchment theme tokens.
+ * Imported by views/dispatch when the tactical board is on screen.
+ * Library consumers that don't render DispatchView won't pay the cost. */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 33% 86%;
+    --foreground: 25 30% 18%;
+    --card: 38 33% 90%;
+    --card-foreground: 25 30% 18%;
+    --popover: 38 33% 90%;
+    --popover-foreground: 25 30% 18%;
+    --primary: 25 30% 18%;
+    --primary-foreground: 38 33% 90%;
+    --secondary: 38 20% 75%;
+    --secondary-foreground: 25 30% 18%;
+    --muted: 38 20% 75%;
+    --muted-foreground: 30 15% 40%;
+    --accent: 38 20% 75%;
+    --accent-foreground: 25 30% 18%;
+    --destructive: 6 63% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 25 30% 18%;
+    --input: 25 30% 18%;
+    --ring: 25 30% 18%;
+    --radius: 0.25rem;
+  }
+}
