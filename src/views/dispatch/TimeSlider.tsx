@@ -304,85 +304,94 @@ export function TimeSlider({
                    the bar doesn't overrun (or hug) the gantt origin. */}
               {(() => {
                 const totalHours = windowDays * HOURS_PER_DAY;
-                return segments
-                  .map((seg, i) => {
-                    const startHour =
-                      (seg.from.time.getTime() - origin.getTime()) / MS_PER_HOUR;
-                    const endHour =
-                      (seg.to.time.getTime() - origin.getTime()) / MS_PER_HOUR;
-                    if (endHour <= 0 || startHour >= totalHours) return null;
-                    const clippedStart = Math.max(0, startHour);
-                    const clippedEnd = Math.min(totalHours, endHour);
-                    const leftPct = (clippedStart / totalHours) * 100;
-                    const widthPct = Math.max(
-                      0.6,
-                      ((clippedEnd - clippedStart) / totalHours) * 100,
-                    );
-                    const isPast = seg.to.time.getTime() <= selectedDate.getTime();
-                    const isActive =
-                      seg.from.time.getTime() <= selectedDate.getTime() &&
-                      selectedDate.getTime() < seg.to.time.getTime();
-                    const fmt = (d: Date) =>
-                      d.toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                        timeZone: 'UTC',
-                      });
-                    const durMins = Math.max(
-                      0,
-                      Math.round(
-                        (seg.to.time.getTime() - seg.from.time.getTime()) / 60_000,
-                      ),
-                    );
-                    const durLabel =
-                      durMins >= 60
-                        ? `${Math.floor(durMins / 60)}h ${(durMins % 60)
-                            .toString()
-                            .padStart(2, '0')}m`
-                        : `${durMins}m`;
-                    const driverPart = selectedAssetData.driverName
-                      ? `\nDriver: ${selectedAssetData.driverName}`
-                      : '';
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => onDateChange(new Date(seg.from.time))}
-                        title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fmt(seg.from.time)} – ${fmt(seg.to.time)} (${durLabel})${driverPart}`}
-                        className="absolute rounded-sm text-[10px] font-semibold text-white overflow-hidden whitespace-nowrap px-1.5 border border-black/15 hover:ring-2 hover:ring-[#3d2b1f] hover:z-10 focus:outline-none focus:ring-2 focus:ring-[#3d2b1f] focus:z-10"
-                        style={{
-                          left: `${leftPct}%`,
-                          width: `${widthPct}%`,
-                          top: '6px',
-                          bottom: '6px',
-                          background: isPast ? selectedAssetData.color : '#999',
-                          opacity: isPast ? 0.95 : 0.55,
-                          boxShadow: isActive
-                            ? '0 0 0 2px #3d2b1f inset, 0 0 0 1px #f5e6c8'
-                            : undefined,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <span>
-                          {seg.from.facilityCode}→{seg.to.facilityCode}
-                        </span>
-                        <span className="opacity-80 font-normal">{durLabel}</span>
-                      </button>
-                    );
-                  })
-                  .filter(Boolean);
+                const bars = segments.flatMap((seg, i) => {
+                  const startHour =
+                    (seg.from.time.getTime() - origin.getTime()) / MS_PER_HOUR;
+                  const endHour =
+                    (seg.to.time.getTime() - origin.getTime()) / MS_PER_HOUR;
+                  if (endHour <= 0 || startHour >= totalHours) return [];
+                  const clippedStart = Math.max(0, startHour);
+                  const clippedEnd = Math.min(totalHours, endHour);
+                  const leftPct = (clippedStart / totalHours) * 100;
+                  const widthPct = Math.max(
+                    0.6,
+                    ((clippedEnd - clippedStart) / totalHours) * 100,
+                  );
+                  const isPast = seg.to.time.getTime() <= selectedDate.getTime();
+                  const isActive =
+                    seg.from.time.getTime() <= selectedDate.getTime() &&
+                    selectedDate.getTime() < seg.to.time.getTime();
+                  const fmt = (d: Date) =>
+                    d.toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: 'UTC',
+                    });
+                  const durMins = Math.max(
+                    0,
+                    Math.round(
+                      (seg.to.time.getTime() - seg.from.time.getTime()) / 60_000,
+                    ),
+                  );
+                  const durLabel =
+                    durMins >= 60
+                      ? `${Math.floor(durMins / 60)}h ${(durMins % 60)
+                          .toString()
+                          .padStart(2, '0')}m`
+                      : `${durMins}m`;
+                  const driverPart = selectedAssetData.driverName
+                    ? `\nDriver: ${selectedAssetData.driverName}`
+                    : '';
+                  return [
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => onDateChange(new Date(seg.from.time))}
+                      title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fmt(seg.from.time)} – ${fmt(seg.to.time)} (${durLabel})${driverPart}`}
+                      className="absolute rounded-sm text-[10px] font-semibold text-white overflow-hidden whitespace-nowrap px-1.5 border border-black/15 hover:ring-2 hover:ring-[#3d2b1f] hover:z-10 focus:outline-none focus:ring-2 focus:ring-[#3d2b1f] focus:z-10"
+                      style={{
+                        left: `${leftPct}%`,
+                        width: `${widthPct}%`,
+                        top: '6px',
+                        bottom: '6px',
+                        background: isPast ? selectedAssetData.color : '#999',
+                        opacity: isPast ? 0.95 : 0.55,
+                        boxShadow: isActive
+                          ? '0 0 0 2px #3d2b1f inset, 0 0 0 1px #f5e6c8'
+                          : undefined,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span>
+                        {seg.from.facilityCode}→{seg.to.facilityCode}
+                      </span>
+                      <span className="opacity-80 font-normal">{durLabel}</span>
+                    </button>,
+                  ];
+                });
+                // Two empty cases worth distinguishing: the asset truly has
+                // no legs to show, vs. it has legs but every one of them was
+                // clipped out by the current window. The second case is easy
+                // to hit by scrubbing the slider far enough away, and going
+                // blank with no message leaves dispatchers wondering whether
+                // the data loaded.
+                if (bars.length === 0) {
+                  return (
+                    <div className="absolute inset-0 flex items-center justify-center text-[10px] text-[#7a6e5b] italic px-3 text-center">
+                      {segments.length === 0
+                        ? 'No route segments for this asset'
+                        : 'All legs are outside the visible window — scrub the slider to bring them into view'}
+                    </div>
+                  );
+                }
+                return bars;
               })()}
-              {segments.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-[10px] text-[#7a6e5b] italic">
-                  No route segments in this window
-                </div>
-              )}
             </div>
           </>
         ) : (
