@@ -90,6 +90,76 @@ export const TRUCKS: DemoTruck[] = [
   { id: "T030", name: "Long Haul 5 (ELP-PHX)", hub: "ELP", type: "dry_van", capacity: 28000 },
 ];
 
+// ── Drivers ────────────────────────────────────────────────────────────────
+// Driver ids deliberately match their truck id so the existing event stream
+// (which carries `resource: truckId`) lands cleanly on the driver row when
+// the schedule view renders. One human per truck — the demo doesn't try to
+// model relief drivers / pool rotations yet.
+
+export interface DemoDriver {
+  /** Matches the assigned truck id. */
+  id: string;
+  name: string;
+  /** Hub code — matches the truck's hub and the facility code that anchors
+   *  this driver to a base on the Base / Schedule tabs. */
+  base: string;
+  role: string;
+  /** Cumulative on-duty hours for the current day. Surfaces the FMCSA
+   *  11-hour duty cap when the request-matching flow lands later. */
+  dutyHoursToday: number;
+  color: string;
+}
+
+const FLEET_PALETTE = [
+  '#e74c3c', '#e67e22', '#f39c12', '#27ae60', '#2980b9',
+  '#8e44ad', '#c0392b', '#d35400', '#16a085', '#2c3e50',
+];
+
+const DRIVER_NAMES = [
+  'Alex Rivera', 'Bailey Chen', 'Carlos Mendez', 'Dana Park', 'Evan Brooks',
+  'Frankie Doyle', 'Gabriela Reyes', 'Hank Sullivan', 'Imani Webb', 'Jordan Liu',
+  'Kara Whitfield', 'Leo Tanaka', 'Maya Singh', 'Nico Alvarado', 'Olivia Kerr',
+  'Priya Nair', 'Quinn Hollis', 'Rosa Mireles', 'Sam Okafor', 'Tess Calderon',
+  'Umar Khalid', 'Vince Petrosian', 'Wendy Brock', 'Xander Vega', 'Yui Nakamura',
+  'Zane Hartwell', 'Adriana Cole', 'Beto Aguirre', 'Cleo Whitman', 'Diego Salas',
+];
+
+export const DRIVERS: DemoDriver[] = TRUCKS.map((t, i) => ({
+  id: t.id,
+  name: DRIVER_NAMES[i % DRIVER_NAMES.length]!,
+  base: t.hub,
+  role: 'Driver',
+  // Deterministic spread so the duty-hours column reads differently per
+  // driver without making the demo non-reproducible.
+  dutyHoursToday: Math.round(((i * 37) % 110) / 10),
+  color: FLEET_PALETTE[i % FLEET_PALETTE.length]!,
+}));
+
+// ── Bases ────────────────────────────────────────────────────────────────
+// Hub facilities promoted to first-class "bases" so the Base Gantt view +
+// Schedule view can group drivers/trucks by their home location, and so the
+// host calendar's filter sidebar has a real base list to show.
+
+export interface DemoBase {
+  id: string;
+  name: string;
+  regionId: string;
+  lat: number;
+  lng: number;
+}
+
+export const REGIONS = [
+  { id: 'sw', name: 'Southwest US' },
+];
+
+export const BASES: DemoBase[] = Object.values(FACILITIES).map((f) => ({
+  id: f.code,
+  name: f.name,
+  regionId: 'sw',
+  lat: f.lat,
+  lng: f.lng,
+}));
+
 export const TRUCK_ROUTES: TruckRoute[] = [
   {
     truck: TRUCKS.find(t => t.id === "T001")!,
