@@ -36,6 +36,7 @@ import {
   differenceInCalendarDays, startOfDay, addDays, min, max,
 } from 'date-fns';
 import { useCalendarContext, resolveColor } from '../core/CalendarContext';
+import { displayEndDay } from '../core/layout';
 import EmployeeActionCard from '../ui/EmployeeActionCard';
 import styles from './ScheduleView.module.css';
 import { buildGroupTree } from '../hooks/useGrouping.ts';
@@ -165,8 +166,12 @@ function employeeColor(emp: TimelineEmployee, idx: number) {
 }
 
 function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
+  // Use `displayEndDay` so iCal-style all-day events with exclusive DTEND
+  // (DTEND=Jan 4 means coverage Jan 1–3) draw the right lane span. Using
+  // `e.end` directly drew one extra day per all-day event and inflated
+  // lane counts whenever a host feed honored iCal's exclusive end.
   const clipped = events
-    .filter(e => startOfDay(e.start) <= monthEnd && startOfDay(e.end) >= monthStart)
+    .filter(e => startOfDay(e.start) <= monthEnd && startOfDay(displayEndDay(e)) >= monthStart)
     .map(e => ({
       ...e,
       _dayStart: differenceInCalendarDays(
@@ -174,7 +179,7 @@ function assignLanes(events: LooseEvent[], monthStart: Date, monthEnd: Date) {
         monthStart,
       ),
       _dayEnd: differenceInCalendarDays(
-        min([startOfDay(e.end), monthEnd]),
+        min([startOfDay(displayEndDay(e)), monthEnd]),
         monthStart,
       ),
     }))

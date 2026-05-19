@@ -123,7 +123,14 @@ export function deriveDispatchData(
     list.sort((a, b) => a.time.getTime() - b.time.getTime());
   }
 
-  // ── Segments ── pair adjacent stops that move between facilities
+  // ── Segments ── pair adjacent stops that move between facilities.
+  // A real drive leg is anchored by a departure at A: from = departure,
+  // to = the next stop at a different facility. If we paired arrival-at-A
+  // with arrival-at-B directly, the resulting interval would include all
+  // the dwell time at A and the dispatch view would show a phantom
+  // "En route 4h to arrival" for a truck that was actually parked. Hosts
+  // that only emit arrival stops therefore get no synthetic drive bars —
+  // which is honest, since we don't know when the truck actually moved.
   const segmentsByAsset = new Map<string, DispatchSegment[]>();
   for (const [assetId, stops] of stopsByAsset) {
     const segs: DispatchSegment[] = [];
@@ -131,6 +138,7 @@ export function deriveDispatchData(
       const a = stops[i]!;
       const b = stops[i + 1]!;
       if (a.facilityCode === b.facilityCode) continue;
+      if (a.kind !== 'departure') continue;
       segs.push({ assetId, from: a, to: b });
     }
     segmentsByAsset.set(assetId, segs);

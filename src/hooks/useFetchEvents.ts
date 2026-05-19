@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
+  startOfDay, endOfDay,
   startOfWeek, endOfWeek,
   startOfMonth, endOfMonth,
   addDays,
@@ -22,11 +23,19 @@ function visibleRange(view: string, currentDate: Date, weekStartDay: 0 | 1 | 2 |
         start: startOfWeek(currentDate, { weekStartsOn: weekStartDay }),
         end:   endOfWeek(currentDate,   { weekStartsOn: weekStartDay }),
       };
-    case 'day':
-      return { start: currentDate, end: addDays(currentDate, 1) };
+    case 'day': {
+      // Anchor to midnight so the fetch always covers the full visible day
+      // regardless of what time-of-day `currentDate` happens to carry.
+      const s = startOfDay(currentDate);
+      return { start: s, end: endOfDay(s) };
+    }
     case 'schedule': {
+      // Schedule view renders six full weeks (42 cells). The previous bound
+      // of `addDays(s, 7 * 6 - 1)` landed on midnight of the 42nd cell and
+      // dropped any event later that day, so extend to end-of-day on the
+      // final cell.
       const s = startOfWeek(startOfMonth(currentDate), { weekStartsOn: weekStartDay });
-      return { start: s, end: addDays(s, 7 * 6 - 1) };
+      return { start: s, end: endOfDay(addDays(s, 7 * 6 - 1)) };
     }
     case 'month':
     case 'agenda':

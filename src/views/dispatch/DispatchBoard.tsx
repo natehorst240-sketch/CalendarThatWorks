@@ -8,8 +8,9 @@
  * adapter pulls normalized events + assets from the calendar context
  * and hands them off here.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { startOfDay, endOfDay } from 'date-fns';
 import '../../styles/tailwind.css';
 import { TacticalMap } from './TacticalMap';
 import { AssetSidebar } from './AssetSidebar';
@@ -68,8 +69,26 @@ export function DispatchBoard({
     const sorted = [...events].map((e) => e.start.getTime()).sort((a, b) => a - b);
     return new Date(sorted[Math.floor(sorted.length / 2)]!);
   });
+  // Track whether the uncontrolled default still represents the mount-time
+  // guess, so we can re-anchor once events arrive asynchronously. Hosts that
+  // load events via `fetchEvents` were getting the real-clock default (no
+  // events at mount) and never re-anchoring — the slider window then sat
+  // months away from the actual data and the map looked empty.
+  const userAnchoredRef = useRef<boolean>(
+    currentDate !== undefined || initialDate !== undefined || events.length > 0,
+  );
+  useEffect(() => {
+    if (userAnchoredRef.current) return;
+    if (events.length === 0) return;
+    const sorted = [...events].map((e) => e.start.getTime()).sort((a, b) => a - b);
+    setUncontrolledDate(new Date(sorted[Math.floor(sorted.length / 2)]!));
+    userAnchoredRef.current = true;
+  }, [events]);
   const selectedDate = currentDate ?? uncontrolledDate;
   const setSelectedDate = (next: Date) => {
+    // Any deliberate scrub locks in the user's choice — don't override it
+    // when a later batch of events trickles in.
+    userAnchoredRef.current = true;
     if (onCurrentDateChange) onCurrentDateChange(next);
     if (currentDate === undefined) setUncontrolledDate(next);
   };
@@ -83,11 +102,15 @@ export function DispatchBoard({
   );
 
   const todayConflicts = useMemo(() => {
-    const dayStart = new Date(
-      Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
-    );
-    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
-    return conflicts.filter((c) => c.timeA.getTime() >= dayStart.getTime() && c.timeA.getTime() < dayEnd.getTime());
+    // Bucket conflicts by the viewer's wall-clock day rather than the UTC
+    // day — a 23:30 PHX conflict belongs in the dispatcher's "today" even
+    // when its UTC instant has rolled to tomorrow.
+    const dayStart = startOfDay(selectedDate).getTime();
+    const dayEnd = endOfDay(selectedDate).getTime();
+    return conflicts.filter((c) => {
+      const t = c.timeA.getTime();
+      return t >= dayStart && t <= dayEnd;
+    });
   }, [conflicts, selectedDate]);
 
   const conflictFacilities = useMemo(
@@ -100,16 +123,19 @@ export function DispatchBoard({
   // conflict badge. Reads shift-class events (kind === 'shift') emitted
   // by the host alongside the stop / leg event streams.
   const hosByAsset = useMemo(() => {
-    const dayStart = new Date(
-      Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
-    );
-    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    // Use the viewer's wall-clock day so HOS flags and the dock-conflict
+    // badges (which already bucket by startOfDay/endOfDay) agree on what
+    // "today" means — otherwise a late-evening shift would surface as a
+    // conflict on day X and an HOS risk on day X+1.
+    const dayStartMs = startOfDay(selectedDate).getTime();
+    const dayEndMs = endOfDay(selectedDate).getTime();
     const map = new Map<string, { dutyHours: number; drivingHours: number; flags: string[] }>();
     for (const ev of events) {
       const meta = (ev.meta ?? {}) as Record<string, unknown>;
       if (meta['kind'] !== 'shift') continue;
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start as string);
-      if (start.getTime() < dayStart.getTime() || start.getTime() >= dayEnd.getTime()) continue;
+      const t = start.getTime();
+      if (t < dayStartMs || t > dayEndMs) continue;
       const flags = Array.isArray(meta['hosFlags']) ? (meta['hosFlags'] as string[]) : [];
       const dutyHours = typeof meta['dutyHours'] === 'number' ? (meta['dutyHours'] as number) : 0;
       const drivingHours = typeof meta['drivingHours'] === 'number' ? (meta['drivingHours'] as number) : 0;
