@@ -9,7 +9,7 @@
  * (default 14 days) and origin date are configurable via props so
  * the slider doesn't hardcode the truck demo's July 2025 baseline.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Slider } from './Slider';
 import type { DispatchAsset, DispatchSegment } from './types';
 
@@ -38,13 +38,42 @@ export function TimeSlider({
   windowOrigin,
   windowDays = 14,
 }: Props) {
-  const origin = useMemo<Date>(() => {
+  // Anchor the window once and only re-anchor when the consumer overrides
+  // it explicitly OR the current selection scrubs outside the visible
+  // range. Recomputing origin on every selectedDate change made the
+  // window track the thumb, pinning the slider position visually even
+  // though the underlying date was advancing.
+  const [origin, setOrigin] = useState<Date>(() => {
     if (windowOrigin) return windowOrigin;
     const d = new Date(selectedDate);
-    d.setUTCDate(d.getUTCDate() - 4);
+    d.setUTCDate(d.getUTCDate() - Math.floor(windowDays / 2));
     d.setUTCHours(0, 0, 0, 0);
     return d;
-  }, [windowOrigin, selectedDate]);
+  });
+  // Sync to an externally-supplied origin if it changes.
+  useEffect(() => {
+    if (windowOrigin) setOrigin(windowOrigin);
+  }, [windowOrigin]);
+  // Re-anchor if the selection scrubs outside the current window — keeps
+  // the thumb on-screen when the calendar jumps to a far-away date.
+  useEffect(() => {
+    const diffDays = Math.floor((selectedDate.getTime() - origin.getTime()) / MS_PER_DAY);
+    if (diffDays < 0 || diffDays >= windowDays) {
+      const d = new Date(selectedDate);
+      d.setUTCDate(d.getUTCDate() - Math.floor(windowDays / 2));
+      d.setUTCHours(0, 0, 0, 0);
+      setOrigin(d);
+    }
+  }, [selectedDate, origin, windowDays]);
+
+  // Index that today's wall-clock date falls on within the window — used
+  // for the dashed red "now" cursor and the bottom-row TODAY tick.
+  const todayIndex = useMemo(() => {
+    const t = new Date();
+    t.setUTCHours(0, 0, 0, 0);
+    const diff = Math.floor((t.getTime() - origin.getTime()) / MS_PER_DAY);
+    return diff >= 0 && diff < windowDays ? diff : -1;
+  }, [origin, windowDays]);
 
   const days = useMemo(
     () =>
@@ -55,10 +84,10 @@ export function TimeSlider({
           index: i,
           date: d,
           label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }),
-          isToday: i === Math.floor(windowDays / 2 - 3),
+          isToday: i === todayIndex,
         };
       }),
-    [origin, windowDays],
+    [origin, windowDays, todayIndex],
   );
 
   const currentDay = useMemo(() => {
@@ -156,18 +185,20 @@ export function TimeSlider({
                 opacity={0.2}
               />
             ))}
-            {/* "Now" cursor (interpreted as the originally-loaded "today" at the
-                 midpoint of the window) — dashed red guide */}
-            <line
-              x1={Math.floor(windowDays / 2 - 3) * HOURS_PER_DAY}
-              y1={0}
-              x2={Math.floor(windowDays / 2 - 3) * HOURS_PER_DAY}
-              y2={60}
-              stroke="#c0392b"
-              strokeWidth={1}
-              opacity={0.5}
-              strokeDasharray="4,2"
-            />
+            {/* "Now" cursor — wall-clock today, dashed red guide. Only
+                 drawn when today actually falls within the visible window. */}
+            {todayIndex >= 0 && (
+              <line
+                x1={todayIndex * HOURS_PER_DAY}
+                y1={0}
+                x2={todayIndex * HOURS_PER_DAY}
+                y2={60}
+                stroke="#c0392b"
+                strokeWidth={1}
+                opacity={0.5}
+                strokeDasharray="4,2"
+              />
+            )}
             {/* Current selectedDate cursor — solid */}
             {(() => {
               const dayOffset = currentDay * HOURS_PER_DAY;

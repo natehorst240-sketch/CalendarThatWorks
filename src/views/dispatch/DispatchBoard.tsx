@@ -16,6 +16,7 @@ import { AssetSidebar } from './AssetSidebar';
 import { TimeSlider } from './TimeSlider';
 import { deriveDispatchData } from './deriveData';
 import { deriveConflicts } from './deriveConflicts';
+import { DatePickerDropdown } from '../../ui/DatePickerDropdown';
 import type { MapLayer } from './types';
 import type { NormalizedEvent } from 'works-calendar-engine';
 
@@ -80,17 +81,33 @@ export function DispatchBoard({ events, assets = [], initialDate, viewSwitcher }
       <header className="h-10 flex items-center px-3 border-b-2 border-[#3d2b1f]/30 bg-[#d4c4a8] flex-shrink-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {viewSwitcher}
-          <span className="text-[10px] text-[#5a3e2b] font-mono truncate hidden md:inline">
-            {selectedDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
+          <DatePickerDropdown
+            currentDate={selectedDate}
+            label={selectedDate.toLocaleDateString('en-US', {
+              month: 'short',
               day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
+              year: 'numeric',
               timeZone: 'UTC',
             })}
-          </span>
+            onDateChange={(d) => {
+              // Preserve the current hour/minute when picking a new month —
+              // we want to scrub to the same time-of-day in a different week.
+              const next = new Date(d);
+              next.setUTCHours(selectedDate.getUTCHours(), selectedDate.getUTCMinutes(), 0, 0);
+              setSelectedDate(next);
+            }}
+            onToday={() => setSelectedDate(new Date())}
+            onPrev={() => {
+              const d = new Date(selectedDate);
+              d.setUTCDate(d.getUTCDate() - 1);
+              setSelectedDate(d);
+            }}
+            onNext={() => {
+              const d = new Date(selectedDate);
+              d.setUTCDate(d.getUTCDate() + 1);
+              setSelectedDate(d);
+            }}
+          />
         </div>
         <div className="flex items-center gap-4">
           {todayConflicts.length > 0 && (
@@ -103,13 +120,6 @@ export function DispatchBoard({ events, assets = [], initialDate, viewSwitcher }
             </div>
           )}
           <div className="flex gap-1">
-            <button
-              type="button"
-              className="h-6 text-[10px] px-2 bg-transparent border border-[#3d2b1f]/30 text-[#3d2b1f] hover:bg-[#3d2b1f]/10 rounded-sm"
-              onClick={() => setSelectedDate(new Date())}
-            >
-              NOW
-            </button>
             <button
               type="button"
               className="h-6 text-[10px] px-2 bg-transparent border border-[#3d2b1f]/30 text-[#3d2b1f] hover:bg-[#3d2b1f]/10 rounded-sm"

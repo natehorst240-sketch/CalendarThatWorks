@@ -32,6 +32,20 @@ const ASSETS = TRUCKS.map((t, i) => ({
   },
 }));
 
+// The static dataset is anchored at 2025-07-07 UTC for human-readability.
+// Shift every event by (today − anchor) at load so the demo always lands
+// on the current week — otherwise the slider window sits in 2025 and the
+// map is empty for anyone visiting the deployed demo.
+const DATASET_ANCHOR_MS = Date.UTC(2025, 6, 7); // months are 0-indexed
+const todayMidnight = new Date();
+todayMidnight.setUTCHours(0, 0, 0, 0);
+const DEMO_TIME_OFFSET_MS = todayMidnight.getTime() - DATASET_ANCHOR_MS;
+
+function shift(value: Date | string): Date {
+  const t = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  return new Date(t + DEMO_TIME_OFFSET_MS);
+}
+
 // Flatten every truck's route legs into a single event stream. Each event
 // already carries `meta.lat/lng/facilityCode/facilityName/stopType` — the
 // convention the dispatch view's deriveData reader expects.
@@ -39,8 +53,8 @@ const FLEET_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) =>
   r.events.map((ev) => ({
     id: ev.id,
     title: ev.title,
-    start: ev.start,
-    end: ev.end,
+    start: shift(ev.start),
+    end: shift(ev.end),
     allDay: false,
     resource: ev.resource,
     meta: ev.meta,

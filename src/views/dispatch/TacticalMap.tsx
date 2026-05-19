@@ -87,17 +87,6 @@ export function TacticalMap({
           <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves={2} result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale={2} />
         </filter>
-        {/* Sepia/parchment wash applied to the OSM raster tiles so they
-            sit underneath the dispatch ink layer without fighting it. */}
-        <filter id="dispatch-tile-tone">
-          <feColorMatrix
-            type="matrix"
-            values="0.55 0.40 0.10 0 0.05
-                    0.45 0.45 0.10 0 0.05
-                    0.35 0.30 0.20 0 0.05
-                    0    0    0    1 0"
-          />
-        </filter>
         {/* Soft drop shadow for the arched breadcrumbs to read as
             lifted above the ground plane. */}
         <filter id="dispatch-arch-shadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -116,29 +105,37 @@ export function TacticalMap({
       <rect width={VW} height={VH} fill="#e8dcc8" />
 
       {/* OSM raster tile basemap — each tile is placed by projecting its
-          NW/SE corners through the current layer's bounds. Wrapped in a
-          clip so tiles that overhang the viewBox don't bleed. */}
+          NW/SE corners through the current layer's bounds. Tiles render
+          in their natural OSM colors so labels stay legible; a translucent
+          warm overlay below the data layer ties them to the dispatch
+          parchment palette without softening the map text. */}
       {tiles.length > 0 && (
-        <g filter="url(#dispatch-tile-tone)" opacity={0.75}>
-          {tiles.map((t) => {
-            const [x1, y1] = proj(t.nw.lat, t.nw.lng);
-            const [x2, y2] = proj(t.se.lat, t.se.lng);
-            const w = x2 - x1;
-            const h = y2 - y1;
-            return (
-              <image
-                key={`${t.z}-${t.x}-${t.y}`}
-                href={t.url}
-                x={x1}
-                y={y1}
-                width={w}
-                height={h}
-                preserveAspectRatio="none"
-                crossOrigin="anonymous"
-              />
-            );
-          })}
-        </g>
+        <>
+          <g>
+            {tiles.map((t) => {
+              const [x1, y1] = proj(t.nw.lat, t.nw.lng);
+              const [x2, y2] = proj(t.se.lat, t.se.lng);
+              const w = x2 - x1;
+              const h = y2 - y1;
+              return (
+                <image
+                  key={`${t.z}-${t.x}-${t.y}`}
+                  href={t.url}
+                  x={x1}
+                  y={y1}
+                  width={w}
+                  height={h}
+                  preserveAspectRatio="none"
+                  crossOrigin="anonymous"
+                  style={{ imageRendering: 'auto' }}
+                />
+              );
+            })}
+          </g>
+          {/* Faint parchment wash — pulls the OSM palette toward the
+              dispatch theme without blurring the underlying labels. */}
+          <rect width={VW} height={VH} fill="#e8dcc8" opacity={0.22} />
+        </>
       )}
 
       {/* Layer-name watermark for the non-region zoom presets, since the
