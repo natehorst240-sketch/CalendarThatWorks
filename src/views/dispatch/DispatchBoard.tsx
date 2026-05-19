@@ -123,16 +123,19 @@ export function DispatchBoard({
   // conflict badge. Reads shift-class events (kind === 'shift') emitted
   // by the host alongside the stop / leg event streams.
   const hosByAsset = useMemo(() => {
-    const dayStart = new Date(
-      Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
-    );
-    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    // Use the viewer's wall-clock day so HOS flags and the dock-conflict
+    // badges (which already bucket by startOfDay/endOfDay) agree on what
+    // "today" means — otherwise a late-evening shift would surface as a
+    // conflict on day X and an HOS risk on day X+1.
+    const dayStartMs = startOfDay(selectedDate).getTime();
+    const dayEndMs = endOfDay(selectedDate).getTime();
     const map = new Map<string, { dutyHours: number; drivingHours: number; flags: string[] }>();
     for (const ev of events) {
       const meta = (ev.meta ?? {}) as Record<string, unknown>;
       if (meta['kind'] !== 'shift') continue;
       const start = ev.start instanceof Date ? ev.start : new Date(ev.start as string);
-      if (start.getTime() < dayStart.getTime() || start.getTime() >= dayEnd.getTime()) continue;
+      const t = start.getTime();
+      if (t < dayStartMs || t > dayEndMs) continue;
       const flags = Array.isArray(meta['hosFlags']) ? (meta['hosFlags'] as string[]) : [];
       const dutyHours = typeof meta['dutyHours'] === 'number' ? (meta['dutyHours'] as number) : 0;
       const drivingHours = typeof meta['drivingHours'] === 'number' ? (meta['drivingHours'] as number) : 0;
