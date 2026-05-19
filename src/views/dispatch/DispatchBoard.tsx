@@ -42,6 +42,10 @@ export interface DispatchBoardProps {
   /** Optional view-switcher tabs to render inline in the board header,
    *  used when the host calendar hands over its full chrome to this view. */
   readonly viewSwitcher?: ReactNode;
+  /** Optional host-provided route-waypoint lookup. When present and the
+   *  lookup returns a non-empty list for a leg's `from`/`to` facility
+   *  codes, the breadcrumb traces those waypoints as a polyline. */
+  readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
 }
 
 const LAYERS: { id: MapLayer; label: string }[] = [
@@ -53,6 +57,7 @@ const LAYERS: { id: MapLayer; label: string }[] = [
 
 export function DispatchBoard({
   events, assets = [], initialDate, currentDate, onCurrentDateChange, viewSwitcher,
+  getRouteWaypoints,
 }: DispatchBoardProps) {
   const [uncontrolledDate, setUncontrolledDate] = useState<Date>(() => {
     if (currentDate) return currentDate;
@@ -89,6 +94,30 @@ export function DispatchBoard({
     () => new Set(todayConflicts.map((c) => c.facilityCode)),
     [todayConflicts],
   );
+
+  // Roll up driver HOS / duty-day totals for the currently-selected day so
+  // the sidebar can surface FMCSA-style violations alongside the dock
+  // conflict badge. Reads shift-class events (kind === 'shift') emitted
+  // by the host alongside the stop / leg event streams.
+  const hosByAsset = useMemo(() => {
+    const dayStart = new Date(
+      Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
+    );
+    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    const map = new Map<string, { dutyHours: number; drivingHours: number; flags: string[] }>();
+    for (const ev of events) {
+      const meta = (ev.meta ?? {}) as Record<string, unknown>;
+      if (meta['kind'] !== 'shift') continue;
+      const start = ev.start instanceof Date ? ev.start : new Date(ev.start as string);
+      if (start.getTime() < dayStart.getTime() || start.getTime() >= dayEnd.getTime()) continue;
+      const flags = Array.isArray(meta['hosFlags']) ? (meta['hosFlags'] as string[]) : [];
+      const dutyHours = typeof meta['dutyHours'] === 'number' ? (meta['dutyHours'] as number) : 0;
+      const drivingHours = typeof meta['drivingHours'] === 'number' ? (meta['drivingHours'] as number) : 0;
+      const key = ev.resource ?? '';
+      if (key) map.set(key, { dutyHours, drivingHours, flags });
+    }
+    return map;
+  }, [events, selectedDate]);
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden" style={{ background: '#e8dcc8' }}>
@@ -157,6 +186,7 @@ export function DispatchBoard({
             selectedDate={selectedDate}
             selectedAsset={selectedAsset}
             onSelectAsset={setSelectedAsset}
+            hosByAsset={hosByAsset}
           />
         </div>
 
@@ -171,6 +201,7 @@ export function DispatchBoard({
             selectedAsset={selectedAsset}
             onSelectAsset={setSelectedAsset}
             layer={layer}
+            {...(getRouteWaypoints ? { getRouteWaypoints } : {})}
           />
 
           {/* Layer switcher */}
