@@ -33,6 +33,11 @@ interface Props {
   readonly showTiles?: boolean;
   /** Override the slippy-map tile URL ({z}/{x}/{y}). */
   readonly tileUrl?: string;
+  /** Host-provided waypoint lookup for road-following breadcrumbs.
+   *  Returns the ordered list of lat/lng points (endpoints inclusive)
+   *  the leg passes through. When null/missing, the leg falls back to a
+   *  3D quadratic-arch breadcrumb between the two endpoint stops. */
+  readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
 }
 
 const VW = 1000;
@@ -50,6 +55,7 @@ export function TacticalMap({
   layer,
   showTiles = true,
   tileUrl,
+  getRouteWaypoints,
 }: Props) {
   const bounds = DEFAULT_LAYER_BOUNDS[layer];
   const proj = (lat: number, lng: number): [number, number] =>
@@ -166,19 +172,20 @@ export function TacticalMap({
         </text>
       )}
 
-      {/* Breadcrumb segments — rendered as a quadratic Bezier arch that
-          lifts off the ground plane, giving an origin→destination "flight
-          path" feel without needing real road routing. Past legs render
-          solid + colored; future legs dashed + dim. A faint shadow ellipse
-          under each apex reinforces the 3D read.
+      {/* Breadcrumb segments. When the host supplies `getRouteWaypoints`
+          and the leg's from/to pair resolves to a road-corridor path
+          with at least one intermediate stop, render the route as an
+          SVG polyline tracing those waypoints (so a PHX→ELP leg follows
+          I-10 through TUS instead of crow's-flighting). Otherwise fall
+          back to the prior quadratic-arch breadcrumb — lifts off the
+          ground plane, gives an origin→destination "flight path" feel
+          without needing real road routing.
 
-          Off-screen culling: at zoomed-in layers (5k / 1k) most segments
-          have endpoints far outside the viewBox. The arches still need to
-          render when they cross the visible area, but segments whose
-          entire bounding box sits beyond a generous margin are dropped.
-          Avoids painting hundreds of paths with multi-thousand-pixel
-          coordinates — combined with the SVG ink filter that was crashing
-          iOS Safari when switching from region → 5k. */}
+          Off-screen culling: at zoomed-in layers (5k / 1k) most legs
+          have endpoints far outside the viewBox; drop any whose entire
+          bounding box sits beyond a generous margin. Avoids painting
+          hundreds of paths with multi-thousand-pixel coordinates +
+          stops iOS Safari OOMing on the filter region. */}
       {assets.flatMap((asset) => {
         const segs = segmentsByAsset.get(asset.id) ?? [];
         const isSelected = asset.id === selectedAsset;
@@ -194,21 +201,6 @@ export function TacticalMap({
           if (maxX < -MARGIN || minX > VW + MARGIN || maxY < -MARGIN || minY > VH + MARGIN) {
             return null;
           }
-          const dx = x2 - x1;
-          const dy = y2 - y1;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          // Arch height scales with leg length, capped so cross-region
-          // hops don't balloon off-screen. Always bowed upward (−y).
-          const archH = Math.min(Math.max(len * 0.22, 12), 80);
-          const midX = (x1 + x2) / 2;
-          const midY = (y1 + y2) / 2;
-          // Perpendicular unit vector, biased upward (negative y) so the
-          // arch consistently lifts toward the top of the viewBox.
-          const nx = len === 0 ? 0 : -dy / len;
-          const ny = len === 0 ? -1 : dx / len;
-          const upBias = ny < 0 ? 1 : -1;
-          const cx = midX + nx * archH * upBias;
-          const cy = midY + ny * archH * upBias;
           const past = seg.to.time.getTime() <= selectedDate.getTime();
           const stroke = isSelected ? 2.5 : 1.5;
           const opacity = past
@@ -218,11 +210,38 @@ export function TacticalMap({
             : isSelected
               ? 0.55
               : (0.18 * baseOpacity) / 0.35;
-          const d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+
+          // Try the host's waypoint lookup first. A path with more than
+          // two points means the corridor pulled in intermediates worth
+          // drawing; two-or-fewer points reduces to a straight line and
+          // we prefer the arch fallback for visual interest.
+          const waypoints = getRouteWaypoints?.(seg.from.facilityCode, seg.to.facilityCode) ?? null;
+          const followsRoad = !!waypoints && waypoints.length > 2;
+          let d: string;
+          if (followsRoad && waypoints) {
+            const projected = waypoints.map((w) => proj(w.lat, w.lng));
+            d = `M ${projected[0]![0]} ${projected[0]![1]}` +
+              projected.slice(1).map(([x, y]) => ` L ${x} ${y}`).join('');
+          } else {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const archH = Math.min(Math.max(len * 0.22, 12), 80);
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            const nx = len === 0 ? 0 : -dy / len;
+            const ny = len === 0 ? -1 : dx / len;
+            const upBias = ny < 0 ? 1 : -1;
+            const cx = midX + nx * archH * upBias;
+            const cy = midY + ny * archH * upBias;
+            d = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+          }
           return (
             <g key={`${asset.id}-${i}`} opacity={opacity}>
-              {/* Ground shadow — slim ellipse along the great-circle base. */}
-              {(isSelected || !selectedAsset) && (
+              {/* Ground shadow — slim guide along the straight base
+                  between facility endpoints. Only drawn for arch legs;
+                  road-following legs already lay flat. */}
+              {!followsRoad && (isSelected || !selectedAsset) && (
                 <line
                   x1={x1}
                   y1={y1}
@@ -240,6 +259,7 @@ export function TacticalMap({
                 stroke={asset.color}
                 strokeWidth={stroke}
                 strokeLinecap="round"
+                strokeLinejoin="round"
                 strokeDasharray={past ? 'none' : '5,4'}
                 {...(isSelected ? { filter: 'url(#dispatch-arch-shadow)' } : {})}
               />

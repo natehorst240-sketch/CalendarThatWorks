@@ -42,6 +42,10 @@ export interface DispatchBoardProps {
   /** Optional view-switcher tabs to render inline in the board header,
    *  used when the host calendar hands over its full chrome to this view. */
   readonly viewSwitcher?: ReactNode;
+  /** Optional host-provided route-waypoint lookup. When present and the
+   *  lookup returns a non-empty list for a leg's `from`/`to` facility
+   *  codes, the breadcrumb traces those waypoints as a polyline. */
+  readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
 }
 
 const LAYERS: { id: MapLayer; label: string }[] = [
@@ -53,6 +57,7 @@ const LAYERS: { id: MapLayer; label: string }[] = [
 
 export function DispatchBoard({
   events, assets = [], initialDate, currentDate, onCurrentDateChange, viewSwitcher,
+  getRouteWaypoints,
 }: DispatchBoardProps) {
   const [uncontrolledDate, setUncontrolledDate] = useState<Date>(() => {
     if (currentDate) return currentDate;
@@ -196,6 +201,7 @@ export function DispatchBoard({
             selectedAsset={selectedAsset}
             onSelectAsset={setSelectedAsset}
             layer={layer}
+            {...(getRouteWaypoints ? { getRouteWaypoints } : {})}
           />
 
           {/* Layer switcher */}

@@ -12,6 +12,7 @@ import { createRoot } from 'react-dom/client';
 import { WorksCalendar } from '../src/index';
 import type { WorksCalendarEvent } from '../src/index';
 import { TRUCKS, TRUCK_ROUTES, DRIVERS, BASES, REGIONS } from './truckDemoData';
+import { getWaypoints } from './highways';
 import '../src/styles/soft.css';
 
 const CALENDAR_ID = 'dispatch-demo-v3';
@@ -261,6 +262,14 @@ function DemoApp() {
           role: d.role,
           color: d.color,
         }))}
+        // Demo-side highway corridor lookup. The dispatch view falls
+        // back to a straight-line / arch breadcrumb when this returns
+        // null, so it's safe to leave undefined for hosts that don't
+        // ship their own routing data.
+        getRouteWaypoints={(from, to) => {
+          const wps = getWaypoints(from, to);
+          return wps ? wps.map((w) => ({ lat: w.lat, lng: w.lng })) : null;
+        }}
         showCalendarLegend={false}
         showOfflineIndicator={false}
       />

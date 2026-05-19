@@ -43,6 +43,11 @@ interface DispatchViewLooseProps {
   readonly onCurrentDateChange?: (d: Date) => void;
   /** View-switcher node injected by the host when this view owns chrome. */
   readonly viewSwitcher?: ReactNode;
+  /** Optional host-provided route-waypoint lookup (e.g. highway corridors).
+   *  When present and a leg's from/to pair resolves to a waypoint list,
+   *  the dispatch map draws a polyline through those points; otherwise the
+   *  arch / straight-line fallback is used. */
+  readonly getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
   // Legacy props (employees, bases, missions, evaluateForMission, onAssign, …)
   // are accepted to keep CalendarViewGrid's existing wiring stable but ignored
   // by the new board. The dispatch view derives everything it renders from
@@ -61,6 +66,7 @@ export default function DispatchView(props: DispatchViewLooseProps) {
       {...(props.currentDate ? { currentDate: props.currentDate } : {})}
       {...(props.onCurrentDateChange ? { onCurrentDateChange: props.onCurrentDateChange } : {})}
       {...(props.viewSwitcher ? { viewSwitcher: props.viewSwitcher } : {})}
+      {...(props.getRouteWaypoints ? { getRouteWaypoints: props.getRouteWaypoints } : {})}
     />
   );
 }
