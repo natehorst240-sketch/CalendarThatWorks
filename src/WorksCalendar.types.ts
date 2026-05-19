@@ -306,6 +306,15 @@ export type WorksCalendarProps = {
   locationProvider?: LocationProvider;
   categoriesConfig?: Record<string, unknown>;
   assets?: { id: string; label: string; group?: string; meta?: Record<string, unknown> }[];
+  /**
+   * Dispatch view: lookup from a (from, to) facility-code pair to an
+   * ordered list of lat/lng waypoints. When provided and the lookup
+   * returns a non-empty path, the dispatch board's breadcrumb traces
+   * those waypoints as an SVG polyline (e.g. following I-10) instead
+   * of the default straight-line / 3D-arch fallback. Pure presentation
+   * concern — the engine never sees it.
+   */
+  getRouteWaypoints?: (fromCode: string, toCode: string) => readonly { lat: number; lng: number }[] | null;
   strictAssetFiltering?: boolean;
   assetRequestCategories?: string[];
   onConflictCheck?: (event: WorksCalendarEvent, candidate: WorksCalendarEvent) => Promise<unknown>;
