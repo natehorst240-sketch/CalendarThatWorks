@@ -390,7 +390,28 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
           ) : null;
           return (
           <AppShell
-            {...(viewOwnsChrome ? {} : { leftRail: <CalendarLeftRail ownerCfg={ownerCfg} leftRailExtras={leftRailExtras} setSidebarInitialTab={setSidebarInitialTab} setSidebarOpen={setSidebarOpen} /> })}
+            {...(viewOwnsChrome ? {} : { leftRail: <CalendarLeftRail
+              ownerCfg={ownerCfg}
+              leftRailExtras={leftRailExtras}
+              setSidebarInitialTab={setSidebarInitialTab}
+              setSidebarOpen={setSidebarOpen}
+              hasAddButton={hasAddButton}
+              hasScheduleTemplates={hasScheduleTemplates}
+              hasImport={hasImport}
+              visibleEvents={visibleEvents}
+              onAddEvent={() => setFormEvent({})}
+              onAddSchedule={() => {
+                setScheduleOpen(true);
+                onScheduleTemplateAnalytics?.({
+                  event: 'schedule_dialog_opened',
+                  at: new Date().toISOString(),
+                  templateCount: visibleScheduleTemplates.length,
+                });
+              }}
+              onOpenImport={() => setImportOpen(true)}
+              editMode={editMode}
+              onToggleEditMode={() => { setEditMode((v) => !v); setInlineEditTarget(null); }}
+            /> })}
             {...(viewOwnsChrome ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
             header={viewOwnsChrome ? <></> :
               <CalendarToolbar cal={cal} ownerCfg={ownerCfg} api={api}

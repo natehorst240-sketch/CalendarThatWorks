@@ -1,9 +1,5 @@
 import { lazy, Suspense } from 'react';
 import type { ReactNode, MutableRefObject, ComponentProps } from 'react';
-import { Plus, Upload, Download } from 'lucide-react';
-import { SubToolbar } from './SubToolbar';
-import { DayWindowPills } from './DayWindowPills';
-import { SidebarToggleButton } from './FilterGroupSidebar';
 import ActiveFilterStrip from './ActiveFilterStrip';
 import MonthView from '../views/MonthView';
 import WeekView from '../views/WeekView';
@@ -15,8 +11,6 @@ const AssetsView      = lazy(() => import('../views/AssetsView'));
 const BaseGanttView   = lazy(() => import('../views/BaseGanttView'));
 const DispatchView    = lazy(() => import('../views/DispatchView'));
 const RequestQueueView = lazy(() => import('../views/RequestQueueView'));
-import { exportVisibleEvents } from '../core/calendarViewConfig';
-import { hasActiveFilters } from '../filters/filterState';
 import styles from '../WorksCalendar.module.css';
 import type { CalObject } from '../hooks/useCalendarSetup';
 import type { OwnerCfgHandle } from '../hooks/useOwnerConfig';
@@ -163,68 +157,26 @@ export default function CalendarViewGrid({
   handleCoverageAssign, handleEmployeeAction, handleEventClick,
   viewOwnsChrome, viewSwitcher,
 }: CalendarViewGridProps) {
+  // Suppress these calls to unused props (sub-toolbar + filter-strip were
+  // removed in favor of single-band header + left-rail actions, but the
+  // prop interface stays stable for the embedder API).
+  void hasAddButton; void hasScheduleTemplates; void hasImport;
+  void profileLabels; void visibleScheduleTemplates; void onScheduleTemplateAnalytics;
+  void sidebarOpen; void setSidebarOpen; void sidebarGroupLevels;
+  void setFormEvent; void setScheduleOpen; void setImportOpen;
+  void handleClearFilters;
   return (
     <div className={styles['mainPane']} data-wc-chrome={viewOwnsChrome ? 'view-owned' : undefined}>
       <div className={styles['calendarCard']} data-wc-chrome={viewOwnsChrome ? 'view-owned' : undefined}>
-        {!viewOwnsChrome && <SubToolbar
-          leftSlot={<>
-            <SidebarToggleButton
-              isOpen={sidebarOpen}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              filterCount={hasActiveFilters(cal.filters as Record<string, unknown>, schema) ? 1 : 0}
-              groupCount={sidebarGroupLevels.length}
-            />
-            {hasAddButton && cal.view !== 'schedule' && (
-              <button
-                className={styles['addBtn']}
-                onClick={() => setFormEvent({})}
-                aria-label={`Add new ${profileLabels.event.toLowerCase()}`}
-                title={profileLabels.event === 'Event' ? undefined : `Create a new ${profileLabels.event.toLowerCase()}`}
-              >
-                <Plus size={14} aria-hidden="true" />
-                <span className={styles['addBtnLabel']}> New {profileLabels.event}</span>
-              </button>
-            )}
-            {hasAddButton && hasScheduleTemplates && (
-              <button
-                className={styles['addBtn']}
-                onClick={() => {
-                  setScheduleOpen(true);
-                  onScheduleTemplateAnalytics?.({
-                    event: 'schedule_dialog_opened',
-                    at: new Date().toISOString(),
-                    templateCount: visibleScheduleTemplates.length,
-                  });
-                }}
-                aria-label="Add schedule from template"
-              >
-                <Plus size={14} aria-hidden="true" /><span className={styles['addBtnLabel']}> Add Schedule</span>
-              </button>
-            )}
-          </>}
-          centerSlot={
-            (cal.view === 'schedule' || cal.view === 'base' || cal.view === 'assets')
-              ? <DayWindowPills value={cal.dayWindow} onChange={cal.setDayWindow} />
-              : null
-          }
-          rightSlot={<>
-            {hasImport && (
-              <button className={styles['exportBtn']} onClick={() => setImportOpen(true)} aria-label="Import .ics calendar">
-                <Upload size={15} aria-hidden="true" />
-              </button>
-            )}
-            <button className={styles['exportBtn']} onClick={() => exportVisibleEvents(visibleEvents)} aria-label="Export to Excel">
-              <Download size={15} aria-hidden="true" />
-            </button>
-          </>}
-        />}
-        {!viewOwnsChrome && <ActiveFilterStrip
-          filters={cal.filters as Record<string, unknown>}
-          schema={schema}
-          onChange={(key, value) => cal.setFilter(key, value)}
-          onClear={(key) => cal.clearFilter(key)}
-          onClearAll={handleClearFilters}
-        />}
+        {!viewOwnsChrome && (
+          <ActiveFilterStrip
+            filters={cal.filters as Record<string, unknown>}
+            schema={schema}
+            onChange={(key, value) => cal.setFilter(key, value)}
+            onClear={(key) => cal.clearFilter(key)}
+            onClearAll={handleClearFilters}
+          />
+        )}
         <div
           ref={swipeAreaRef}
           className={styles['viewArea']}
