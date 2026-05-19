@@ -159,7 +159,15 @@ export function TacticalMap({
           lifts off the ground plane, giving an origin→destination "flight
           path" feel without needing real road routing. Past legs render
           solid + colored; future legs dashed + dim. A faint shadow ellipse
-          under each apex reinforces the 3D read. */}
+          under each apex reinforces the 3D read.
+
+          Off-screen culling: at zoomed-in layers (5k / 1k) most segments
+          have endpoints far outside the viewBox. The arches still need to
+          render when they cross the visible area, but segments whose
+          entire bounding box sits beyond a generous margin are dropped.
+          Avoids painting hundreds of paths with multi-thousand-pixel
+          coordinates — combined with the SVG ink filter that was crashing
+          iOS Safari when switching from region → 5k. */}
       {assets.flatMap((asset) => {
         const segs = segmentsByAsset.get(asset.id) ?? [];
         const isSelected = asset.id === selectedAsset;
@@ -167,6 +175,14 @@ export function TacticalMap({
         return segs.map((seg, i) => {
           const [x1, y1] = proj(seg.from.lat, seg.from.lng);
           const [x2, y2] = proj(seg.to.lat, seg.to.lng);
+          const MARGIN = 200;
+          const minX = Math.min(x1, x2);
+          const maxX = Math.max(x1, x2);
+          const minY = Math.min(y1, y2);
+          const maxY = Math.max(y1, y2);
+          if (maxX < -MARGIN || minX > VW + MARGIN || maxY < -MARGIN || minY > VH + MARGIN) {
+            return null;
+          }
           const dx = x2 - x1;
           const dy = y2 - y1;
           const len = Math.sqrt(dx * dx + dy * dy);
@@ -214,7 +230,7 @@ export function TacticalMap({
                 strokeWidth={stroke}
                 strokeLinecap="round"
                 strokeDasharray={past ? 'none' : '5,4'}
-                filter={isSelected ? 'url(#dispatch-arch-shadow)' : 'url(#dispatch-ink)'}
+                {...(isSelected ? { filter: 'url(#dispatch-arch-shadow)' } : {})}
               />
             </g>
           );
