@@ -161,13 +161,87 @@ export function TimeSlider({
 
       {/* Mini Gantt for the selected asset */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div className="px-3 pt-2 text-[10px] font-serif text-[#5a3e2b] uppercase tracking-wider">
-          {selectedAssetData
-            ? `${selectedAssetData.id} — ${selectedAssetData.name}`
-            : 'Select an asset to view route timeline'}
-        </div>
         {selectedAssetData ? (
           <>
+            {/* Title + active-leg one-liner. Tells dispatch who's driving,
+                 where the truck is, and what the next move is — readable
+                 even when the per-leg pills below are pixel-narrow. */}
+            <div className="px-3 pt-2 flex items-baseline gap-2 min-w-0">
+              <span
+                className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: selectedAssetData.color }}
+                aria-hidden
+              />
+              <span className="text-[10px] font-serif text-[#3d2b1f] uppercase tracking-wider truncate">
+                {selectedAssetData.id} — {selectedAssetData.name}
+              </span>
+              {selectedAssetData.driverName && (
+                <span className="text-[10px] text-[#5a3e2b] truncate">
+                  · {selectedAssetData.driverName}
+                </span>
+              )}
+            </div>
+            <div className="px-3 text-[10px] text-[#5a3e2b] truncate">
+              {(() => {
+                if (segments.length === 0) {
+                  return <span className="italic text-[#7a6e5b]">No legs in window</span>;
+                }
+                const tSel = selectedDate.getTime();
+                const active = segments.find(
+                  (s) =>
+                    s.from.time.getTime() <= tSel && tSel < s.to.time.getTime(),
+                );
+                const upcoming = segments.find((s) => s.from.time.getTime() > tSel);
+                const last = segments[segments.length - 1];
+                const fmtTime = (d: Date) =>
+                  d.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                    timeZone: 'UTC',
+                  });
+                const fmtDuration = (ms: number) => {
+                  const mins = Math.max(0, Math.round(ms / 60_000));
+                  const h = Math.floor(mins / 60);
+                  const m = mins % 60;
+                  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}m`;
+                };
+                if (active) {
+                  const remaining = fmtDuration(active.to.time.getTime() - tSel);
+                  return (
+                    <>
+                      <span className="font-bold text-[#3d2b1f]">En route </span>
+                      {active.from.facilityCode} → {active.to.facilityCode} ·
+                      <span className="font-bold"> {remaining}</span> to arrival ({fmtTime(active.to.time)})
+                    </>
+                  );
+                }
+                if (upcoming) {
+                  const until = fmtDuration(upcoming.from.time.getTime() - tSel);
+                  const drive = fmtDuration(
+                    upcoming.to.time.getTime() - upcoming.from.time.getTime(),
+                  );
+                  return (
+                    <>
+                      <span className="font-bold text-[#3d2b1f]">Next </span>
+                      {upcoming.from.facilityCode} → {upcoming.to.facilityCode} · departs {fmtTime(upcoming.from.time)} (in <span className="font-bold">{until}</span>) · {drive} drive
+                    </>
+                  );
+                }
+                if (last) {
+                  return (
+                    <>
+                      <span className="font-bold text-[#3d2b1f]">Last </span>
+                      {last.from.facilityCode} → {last.to.facilityCode} arrived {fmtTime(last.to.time)}
+                    </>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+
             {/* Date headers strip — one cell per day, evenly distributed
                  across the timeline so bars align with their date column. */}
             <div className="flex border-b border-[#3d2b1f]/20 mt-1">
@@ -222,54 +296,88 @@ export function TimeSlider({
                 }}
                 aria-hidden
               />
-              {/* Route bars */}
-              {segments.map((seg, i) => {
-                const startHour =
-                  (seg.from.time.getTime() - origin.getTime()) / MS_PER_HOUR;
-                const endHour =
-                  (seg.to.time.getTime() - origin.getTime()) / MS_PER_HOUR;
+              {/* Route bars. Trucks visit one place at a time, so we stack
+                   them on a single lane and let the bar take the full row
+                   height — easier to read than the previous 3-lane SVG.
+                   Segments entirely outside the visible window are skipped;
+                   partially-visible ones are clipped to the window edges so
+                   the bar doesn't overrun (or hug) the gantt origin. */}
+              {(() => {
                 const totalHours = windowDays * HOURS_PER_DAY;
-                const leftPct = Math.max(0, (startHour / totalHours) * 100);
-                const widthPct = Math.max(
-                  0.6,
-                  ((endHour - startHour) / totalHours) * 100,
-                );
-                const isPast = seg.to.time.getTime() <= selectedDate.getTime();
-                const lane = i % 3;
-                const fromTime = seg.from.time.toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  hour12: true,
-                  timeZone: 'UTC',
-                });
-                const toTime = seg.to.time.toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  hour12: true,
-                  timeZone: 'UTC',
-                });
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => onDateChange(new Date(seg.from.time))}
-                    title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fromTime} – ${toTime}`}
-                    className="absolute rounded-sm text-[9px] font-medium text-white overflow-hidden whitespace-nowrap px-1 leading-[18px] border border-black/10 hover:ring-2 hover:ring-[#3d2b1f] hover:z-10 focus:outline-none focus:ring-2 focus:ring-[#3d2b1f] focus:z-10"
-                    style={{
-                      left: `${leftPct}%`,
-                      width: `${widthPct}%`,
-                      top: `${6 + lane * 22}px`,
-                      height: '18px',
-                      background: isPast ? selectedAssetData.color : '#999',
-                      opacity: isPast ? 0.95 : 0.55,
-                    }}
-                  >
-                    {seg.from.facilityCode}→{seg.to.facilityCode}
-                  </button>
-                );
-              })}
+                return segments
+                  .map((seg, i) => {
+                    const startHour =
+                      (seg.from.time.getTime() - origin.getTime()) / MS_PER_HOUR;
+                    const endHour =
+                      (seg.to.time.getTime() - origin.getTime()) / MS_PER_HOUR;
+                    if (endHour <= 0 || startHour >= totalHours) return null;
+                    const clippedStart = Math.max(0, startHour);
+                    const clippedEnd = Math.min(totalHours, endHour);
+                    const leftPct = (clippedStart / totalHours) * 100;
+                    const widthPct = Math.max(
+                      0.6,
+                      ((clippedEnd - clippedStart) / totalHours) * 100,
+                    );
+                    const isPast = seg.to.time.getTime() <= selectedDate.getTime();
+                    const isActive =
+                      seg.from.time.getTime() <= selectedDate.getTime() &&
+                      selectedDate.getTime() < seg.to.time.getTime();
+                    const fmt = (d: Date) =>
+                      d.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'UTC',
+                      });
+                    const durMins = Math.max(
+                      0,
+                      Math.round(
+                        (seg.to.time.getTime() - seg.from.time.getTime()) / 60_000,
+                      ),
+                    );
+                    const durLabel =
+                      durMins >= 60
+                        ? `${Math.floor(durMins / 60)}h ${(durMins % 60)
+                            .toString()
+                            .padStart(2, '0')}m`
+                        : `${durMins}m`;
+                    const driverPart = selectedAssetData.driverName
+                      ? `\nDriver: ${selectedAssetData.driverName}`
+                      : '';
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => onDateChange(new Date(seg.from.time))}
+                        title={`${seg.from.facilityCode} → ${seg.to.facilityCode}\n${fmt(seg.from.time)} – ${fmt(seg.to.time)} (${durLabel})${driverPart}`}
+                        className="absolute rounded-sm text-[10px] font-semibold text-white overflow-hidden whitespace-nowrap px-1.5 border border-black/15 hover:ring-2 hover:ring-[#3d2b1f] hover:z-10 focus:outline-none focus:ring-2 focus:ring-[#3d2b1f] focus:z-10"
+                        style={{
+                          left: `${leftPct}%`,
+                          width: `${widthPct}%`,
+                          top: '6px',
+                          bottom: '6px',
+                          background: isPast ? selectedAssetData.color : '#999',
+                          opacity: isPast ? 0.95 : 0.55,
+                          boxShadow: isActive
+                            ? '0 0 0 2px #3d2b1f inset, 0 0 0 1px #f5e6c8'
+                            : undefined,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <span>
+                          {seg.from.facilityCode}→{seg.to.facilityCode}
+                        </span>
+                        <span className="opacity-80 font-normal">{durLabel}</span>
+                      </button>
+                    );
+                  })
+                  .filter(Boolean);
+              })()}
               {segments.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center text-[10px] text-[#7a6e5b] italic">
                   No route segments in this window

@@ -213,7 +213,7 @@ export function DispatchBoard({
       </div>
 
       {/* Bottom: time slider + per-asset Gantt */}
-      <div className="h-36 flex-shrink-0">
+      <div className="h-44 flex-shrink-0">
         <TimeSlider
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}

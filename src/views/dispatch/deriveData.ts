@@ -73,7 +73,13 @@ export function deriveDispatchData(
   // ── Assets ── union of declared assets and event.resource ids ──
   const assetIndex = new Map<string, DispatchAsset>();
   assets.forEach((a, i) => {
-    assetIndex.set(a.id, { id: a.id, name: a.label, color: pickColor(a.meta, i) });
+    const drv = a.meta?.['driverName'];
+    assetIndex.set(a.id, {
+      id: a.id,
+      name: a.label,
+      color: pickColor(a.meta, i),
+      ...(typeof drv === 'string' && drv ? { driverName: drv } : {}),
+    });
   });
   events.forEach((ev) => {
     const id = ev.resource;

@@ -32,6 +32,10 @@ export interface DispatchAsset {
   readonly name: string;
   /** Render color for dots / breadcrumbs. */
   readonly color: string;
+  /** Optional human driver / operator name pulled from `asset.meta.driverName`.
+   *  Surfaced in the dispatch Gantt header so dispatchers can answer
+   *  "who's behind the wheel" at a glance. */
+  readonly driverName?: string;
 }
 
 export interface DispatchFacility {
