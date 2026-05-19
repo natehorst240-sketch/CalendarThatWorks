@@ -3,11 +3,13 @@
  * and reshape the result into a flat `DispatchConflict[]` keyed by
  * facility code + asset pair.
  *
- * The convention: each stop is treated as a dock-hold event with a
- * 2-hour occupancy window starting at the stop time. Facilities are
- * `EngineResource`s with `capacity = 1` (any two overlapping stops at
- * the same facility = conflict). Hosts that model differently can
- * supply their own rule set and skip this helper.
+ * Each arrival is treated as a dock-hold event. The occupancy window
+ * defaults to 2 hours but the host can override per-stop by writing
+ * `meta.unloadMinutes` on the underlying event (load-type-specific
+ * unload durations: dry-van ≈ 45m, reefer ≈ 75m, flatbed ≈ 90m). The
+ * trucking demo uses this to surface realistic dock collisions.
+ * Facilities are `EngineResource`s with `capacity = 1` (any two
+ * overlapping stops at the same facility = conflict).
  */
 import {
   evaluateConflicts,
@@ -17,7 +19,7 @@ import {
 } from 'works-calendar-engine';
 import type { DispatchConflict, DispatchFacility, DispatchStop } from './types';
 
-const DOCK_HOLD_MS = 2 * 3600_000;
+const DEFAULT_DOCK_HOLD_MS = 2 * 3600_000;
 
 const CAPACITY_RULE: CapacityOverflowRule = {
   id: 'dispatch-facility-capacity',
@@ -42,10 +44,14 @@ export function deriveConflicts(
   for (const stops of stopsByAsset.values()) {
     for (const stop of stops) {
       if (stop.kind !== 'arrival') continue;
+      const unloadMinutes = stop.event.meta?.['unloadMinutes'];
+      const holdMs = typeof unloadMinutes === 'number' && unloadMinutes > 0
+        ? unloadMinutes * 60_000
+        : DEFAULT_DOCK_HOLD_MS;
       arrivals.push({
         id: `arr-${counter++}`,
         start: stop.time,
-        end: new Date(stop.time.getTime() + DOCK_HOLD_MS),
+        end: new Date(stop.time.getTime() + holdMs),
         resource: stop.facilityCode,
         assetId: stop.assetId,
       });

@@ -88,23 +88,23 @@ const HOS_REST_REQUIRED_HOURS = 10;
 const STOP_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) => {
   const unloadMin = UNLOAD_MINUTES_BY_TYPE[r.truck.type] ?? 60;
   return r.events.map((ev) => {
-    const start = shift(ev.start);
     const stopType = (ev.meta?.['stopType'] as string | undefined) ?? 'arrival';
-    // Arrivals dwell at the dock for unloadMin minutes — that's the
-    // window engine compares for dock conflicts. Departures stay
-    // zero-duration (they're instantaneous gate-out events).
-    const end = stopType === 'arrival'
-      ? new Date(start.getTime() + unloadMin * 60_000)
-      : shift(ev.end);
+    // Stops stay zero-duration so they don't surface as extra bars in
+    // Month/Week/Day/Agenda (those scopes only filter out schedule-class
+    // events). The dwell window for dock-conflict detection lives in
+    // `meta.unloadMinutes` and is read by deriveConflicts on the dispatch
+    // side. `meta.kind: 'stop'` lets a host disambiguate these from the
+    // leg/shift records sharing the same stream.
     return {
       id: ev.id,
       title: ev.title,
-      start,
-      end,
+      start: shift(ev.start),
+      end: shift(ev.end),
       allDay: false,
       resource: ev.resource,
       meta: {
         ...ev.meta,
+        kind: 'stop',
         ...(stopType === 'arrival' ? { unloadMinutes: unloadMin, loadType: r.truck.type } : {}),
       },
     };
