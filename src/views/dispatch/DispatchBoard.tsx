@@ -30,8 +30,15 @@ export interface DispatchAssetEntry {
 export interface DispatchBoardProps {
   readonly events: readonly NormalizedEvent[];
   readonly assets?: readonly DispatchAssetEntry[];
-  /** Initial "now". Defaults to current wall clock. */
+  /** Initial "now" — only consulted when no controlled `currentDate` is
+   *  supplied. Defaults to current wall clock. */
   readonly initialDate?: Date;
+  /** Controlled "as of" timestamp. When provided, the board uses this as
+   *  its single source of truth and any slider / date-picker change
+   *  emits via `onCurrentDateChange`. Keeps the dispatch view in sync
+   *  with the host calendar's currentDate when both are rendered. */
+  readonly currentDate?: Date;
+  readonly onCurrentDateChange?: (d: Date) => void;
   /** Optional view-switcher tabs to render inline in the board header,
    *  used when the host calendar hands over its full chrome to this view. */
   readonly viewSwitcher?: ReactNode;
@@ -44,8 +51,11 @@ const LAYERS: { id: MapLayer; label: string }[] = [
   { id: '1k', label: '1k ft' },
 ];
 
-export function DispatchBoard({ events, assets = [], initialDate, viewSwitcher }: DispatchBoardProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+export function DispatchBoard({
+  events, assets = [], initialDate, currentDate, onCurrentDateChange, viewSwitcher,
+}: DispatchBoardProps) {
+  const [uncontrolledDate, setUncontrolledDate] = useState<Date>(() => {
+    if (currentDate) return currentDate;
     if (initialDate) return initialDate;
     // Default: median event time so the slider lands inside the dataset's
     // window. Falls through to real "now" only when there are no events.
@@ -53,6 +63,11 @@ export function DispatchBoard({ events, assets = [], initialDate, viewSwitcher }
     const sorted = [...events].map((e) => e.start.getTime()).sort((a, b) => a - b);
     return new Date(sorted[Math.floor(sorted.length / 2)]!);
   });
+  const selectedDate = currentDate ?? uncontrolledDate;
+  const setSelectedDate = (next: Date) => {
+    if (onCurrentDateChange) onCurrentDateChange(next);
+    if (currentDate === undefined) setUncontrolledDate(next);
+  };
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [layer, setLayer] = useState<MapLayer>('region');
 

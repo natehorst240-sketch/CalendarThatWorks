@@ -37,6 +37,10 @@ interface DispatchViewLooseProps {
   readonly events?: readonly NormalizedEvent[];
   readonly assets?: readonly DispatchAssetEntry[];
   readonly initialAsOf?: Date;
+  /** Host calendar's currentDate, fed through so the slider and the
+   *  Month/Week/Day views share a single source of truth. */
+  readonly currentDate?: Date;
+  readonly onCurrentDateChange?: (d: Date) => void;
   /** View-switcher node injected by the host when this view owns chrome. */
   readonly viewSwitcher?: ReactNode;
   // Legacy props (employees, bases, missions, evaluateForMission, onAssign, …)
@@ -54,6 +58,8 @@ export default function DispatchView(props: DispatchViewLooseProps) {
       events={events}
       assets={assets}
       {...(props.initialAsOf ? { initialDate: props.initialAsOf } : {})}
+      {...(props.currentDate ? { currentDate: props.currentDate } : {})}
+      {...(props.onCurrentDateChange ? { onCurrentDateChange: props.onCurrentDateChange } : {})}
       {...(props.viewSwitcher ? { viewSwitcher: props.viewSwitcher } : {})}
     />
   );

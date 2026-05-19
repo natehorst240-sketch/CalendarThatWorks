@@ -280,6 +280,12 @@ export default function CalendarViewGrid({
                   missions: dispatchMissions,
                   evaluateForMission: dispatchEvaluator,
                   onAssign: onDispatchAssign,
+                  // Share `cal.currentDate` with the dispatch board so the
+                  // calendar's source of truth flows both ways — scrubbing
+                  // the dispatch slider updates the date that Month / Week /
+                  // Day all read from, and vice-versa.
+                  currentDate: cal.currentDate,
+                  onCurrentDateChange: cal.setCurrentDate,
                   onAsOfChange: cal.setCurrentDate,
                   viewSwitcher,
                 } as unknown as ComponentProps<typeof DispatchView>)} />
