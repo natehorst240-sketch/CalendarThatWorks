@@ -14,6 +14,16 @@ import type {
   DispatchStop,
 } from './types';
 
+const HOS_FLAG_LABEL: Record<string, string> = {
+  'on-duty-over': 'Over 14h on-duty cap',
+  'driving-over': 'Over 11h driving cap',
+  'short-rest': 'Under 10h rest from prior shift',
+};
+
+function hosFlagsToTooltip(flags: readonly string[]): string {
+  return flags.map((f) => HOS_FLAG_LABEL[f] ?? f).join(' · ');
+}
+
 interface Props {
   readonly assets: readonly DispatchAsset[];
   readonly facilities: readonly DispatchFacility[];
@@ -22,6 +32,14 @@ interface Props {
   readonly selectedDate: Date;
   readonly selectedAsset: string | null;
   readonly onSelectAsset: (id: string) => void;
+  /** Per-asset HOS / duty-day summary for the selected day. When a row's
+   *  entry has `flags.length > 0`, an HOS RISK badge renders alongside the
+   *  conflict badge and surfaces the specific cap that's over. */
+  readonly hosByAsset?: ReadonlyMap<string, {
+    readonly dutyHours: number;
+    readonly drivingHours: number;
+    readonly flags: readonly string[];
+  }>;
 }
 
 export function AssetSidebar({
@@ -32,6 +50,7 @@ export function AssetSidebar({
   selectedDate,
   selectedAsset,
   onSelectAsset,
+  hosByAsset,
 }: Props) {
   const dayStart = new Date(
     Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
@@ -58,6 +77,13 @@ export function AssetSidebar({
         <div className="flex gap-2 mt-1 text-[10px] text-[#5a3e2b]">
           <span>{assets.length} active</span>
           <span className="text-[#c0392b] font-bold">{conflictedAssets.size} conflicted</span>
+          {hosByAsset && (() => {
+            let hosCount = 0;
+            for (const v of hosByAsset.values()) if (v.flags.length > 0) hosCount++;
+            return hosCount > 0 ? (
+              <span className="text-[#b7791f] font-bold">{hosCount} HOS risk</span>
+            ) : null;
+          })()}
         </div>
       </div>
 
@@ -67,6 +93,8 @@ export function AssetSidebar({
             const pos = positionAt(stopsByAsset.get(asset.id), selectedDate);
             const fac = pos?.facilityCode ? facilitiesByCode.get(pos.facilityCode) : null;
             const hasConflict = conflictedAssets.has(asset.id);
+            const hos = hosByAsset?.get(asset.id);
+            const hosViolation = (hos?.flags.length ?? 0) > 0;
             const isSelected = selectedAsset === asset.id;
 
             return (
@@ -87,7 +115,7 @@ export function AssetSidebar({
                     style={{ backgroundColor: asset.color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-white' : 'text-[#3d2b1f]'}`}>
                         {asset.id}
                       </span>
@@ -96,12 +124,25 @@ export function AssetSidebar({
                           CONFLICT
                         </span>
                       )}
+                      {hosViolation && (
+                        <span
+                          className="text-[9px] bg-[#b7791f] text-white px-1 rounded"
+                          title={hosFlagsToTooltip(hos?.flags ?? [])}
+                        >
+                          HOS
+                        </span>
+                      )}
                     </div>
                     <div className={`text-[10px] truncate ${isSelected ? 'text-white/80' : 'text-[#5a3e2b]'}`}>
                       {asset.name}
                     </div>
                     <div className={`text-[9px] mt-0.5 ${isSelected ? 'text-white/60' : 'text-[#7a6e5b]'}`}>
                       {pos?.moving ? 'En route' : fac ? `@ ${fac.code}` : 'Unknown'}
+                      {hos && (
+                        <span className={`ml-1.5 ${isSelected ? 'text-white/50' : 'text-[#7a6e5b]'}`}>
+                          · {hos.drivingHours}h drive / {hos.dutyHours}h duty
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

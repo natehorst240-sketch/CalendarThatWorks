@@ -48,61 +48,176 @@ const ASSETS = TRUCKS.map((t) => {
   };
 });
 
-// One event stream covers the whole demo. The dispatch board reads each
-// stop's `meta.lat/lng/facilityCode/stopType` to draw the truck on the
-// map; the Schedule / Base grids draw the driver's duty *shift* (start
-// of first stop → end of last stop on that calendar day), tagged with
-// category='shift' so the schedule-tab scope predicate lets them in.
-// The same resource id binds both records to the same driver/truck.
-const STOP_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) =>
-  r.events.map((ev) => ({
-    id: ev.id,
-    title: ev.title,
-    start: shift(ev.start),
-    end: shift(ev.end),
+// One event stream covers the whole demo, in three layers:
+//
+//   STOP_EVENTS — one per arrival/departure (zero duration). Carries the
+//     facility + lat/lng meta the dispatch board needs to plot breadcrumbs
+//     and conflict pulses on the map. Invisible in Month/Week/Day grids
+//     because they render bars and a zero-width bar has nothing to paint.
+//
+//   LEG_EVENTS — one per travel segment, start = depart, end = arrive.
+//     Carries from/to facility codes in meta. These ARE non-zero-duration
+//     so they render as bars in Month / Week / Day / Agenda and on the
+//     Base view's truck/driver rows. Deliberately *no* meta.facilityCode
+//     at the event root so the dispatch board's stop reader skips them.
+//
+//   SHIFT_EVENTS — one per driver per calendar day (category='shift').
+//     The Schedule view scope predicate (`isScheduleWorkflowEvent`) only
+//     admits events with this category, so these are what populate the
+//     driver shift bars; Month / Week / Day intentionally filter them
+//     back out so the leg events don't get duplicated there.
+//
+// Same trucks, same drivers, same facilities — one source of truth, three
+// projections that each tab consumes the slice it needs.
+
+// Real-world dispatch: each arrival has a dock dwell (unload) window
+// proportional to the load type. Two trucks landing on the same facility
+// with overlapping unload windows is the canonical dock conflict the
+// engine surfaces. Driver duty totals roll up off the same numbers.
+const UNLOAD_MINUTES_BY_TYPE: Record<string, number> = {
+  dry_van: 45,
+  reefer: 75,   // cold-chain handling
+  flatbed: 90,  // strapping + tarping
+};
+
+// FMCSA HOS caps used to flag duty-overrun and short-rest conflicts.
+const HOS_MAX_ON_DUTY_HOURS = 14;
+const HOS_MAX_DRIVING_HOURS = 11;
+const HOS_REST_REQUIRED_HOURS = 10;
+
+const STOP_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) => {
+  const unloadMin = UNLOAD_MINUTES_BY_TYPE[r.truck.type] ?? 60;
+  return r.events.map((ev) => {
+    const start = shift(ev.start);
+    const stopType = (ev.meta?.['stopType'] as string | undefined) ?? 'arrival';
+    // Arrivals dwell at the dock for unloadMin minutes — that's the
+    // window engine compares for dock conflicts. Departures stay
+    // zero-duration (they're instantaneous gate-out events).
+    const end = stopType === 'arrival'
+      ? new Date(start.getTime() + unloadMin * 60_000)
+      : shift(ev.end);
+    return {
+      id: ev.id,
+      title: ev.title,
+      start,
+      end,
+      allDay: false,
+      resource: ev.resource,
+      meta: {
+        ...ev.meta,
+        ...(stopType === 'arrival' ? { unloadMinutes: unloadMin, loadType: r.truck.type } : {}),
+      },
+    };
+  });
+});
+
+const LEG_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) => {
+  const driver = DRIVERS.find((d) => d.id === r.truck.id);
+  return r.segments.map((seg, i) => ({
+    id: `leg-${r.truck.id}-w${r.weekIndex}-${i}`,
+    title: `${seg.from} → ${seg.to}`,
+    start: shift(seg.depart),
+    end: shift(seg.arrive),
     allDay: false,
-    resource: ev.resource,
-    meta: ev.meta,
-  })),
-);
+    resource: r.truck.id,
+    category: 'delivery',
+    meta: {
+      kind: 'leg',
+      truckId: r.truck.id,
+      fromCode: seg.from,
+      toCode: seg.to,
+      fromLat: seg.fromLat,
+      fromLng: seg.fromLng,
+      toLat: seg.toLat,
+      toLng: seg.toLng,
+      distanceMiles: seg.distanceMiles,
+      status: seg.status,
+      base: r.truck.hub,
+      color: driver?.color,
+    },
+  }));
+});
 
 // Synthesize one duty-shift event per (driver × calendar day) from the
-// segment depart/arrive times so the Schedule + Base + Month / Week / Day
-// views light up with each driver's daily window. Categorising the shift
-// as 'shift' triggers the schedule-tab inclusion predicate (see
-// `isScheduleWorkflowEvent` in works-calendar-engine).
+// segment depart/arrive times so the Schedule view lights up with each
+// driver's daily window.
 function dayKey(date: Date): string {
   return `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`;
 }
 
+// Per-driver, per-day duty totals. `dutyHours` is wall-clock on-duty time
+// (first depart → last arrive + last unload); `drivingHours` is the sum of
+// the actual leg durations. Either crossing its HOS cap is what surfaces
+// the HOS-violation badge on the dispatch sidebar.
+interface ShiftAggregate {
+  start: Date;
+  end: Date;
+  drivingHours: number;
+  lastArrive: Date;
+}
+
 const SHIFT_EVENTS: WorksCalendarEvent[] = TRUCK_ROUTES.flatMap((r) => {
   const driverId = r.truck.id;
-  const byDay = new Map<string, { start: Date; end: Date }>();
+  const unloadMin = UNLOAD_MINUTES_BY_TYPE[r.truck.type] ?? 60;
+  const byDay = new Map<string, ShiftAggregate>();
   for (const seg of r.segments) {
     const depart = shift(seg.depart);
     const arrive = shift(seg.arrive);
+    const drive = (arrive.getTime() - depart.getTime()) / 3_600_000;
     const key = dayKey(depart);
     const existing = byDay.get(key);
     if (!existing) {
-      byDay.set(key, { start: depart, end: arrive });
+      byDay.set(key, { start: depart, end: arrive, drivingHours: drive, lastArrive: arrive });
     } else {
       if (depart < existing.start) existing.start = depart;
-      if (arrive > existing.end) existing.end = arrive;
+      if (arrive > existing.end) {
+        existing.end = arrive;
+        existing.lastArrive = arrive;
+      }
+      existing.drivingHours += drive;
     }
   }
-  return Array.from(byDay.entries()).map(([key, win]) => ({
-    id: `shift-${driverId}-${key}`,
-    title: `${r.truck.name} — duty`,
-    start: win.start,
-    end: win.end,
-    allDay: false,
-    resource: driverId,
-    category: 'shift',
-    meta: { kind: 'shift', truckId: driverId, base: r.truck.hub },
-  }));
+  // Track prior-day shift end so we can flag short-rest violations
+  // (< HOS_REST_REQUIRED_HOURS between consecutive shifts).
+  const ordered = Array.from(byDay.entries()).sort((a, b) => a[1].start.getTime() - b[1].start.getTime());
+  let prevEndPlusUnload: number | null = null;
+  return ordered.map(([key, win]) => {
+    const shiftEnd = new Date(win.lastArrive.getTime() + unloadMin * 60_000);
+    const dutyHours = (shiftEnd.getTime() - win.start.getTime()) / 3_600_000;
+    const restGapHours = prevEndPlusUnload === null
+      ? null
+      : (win.start.getTime() - prevEndPlusUnload) / 3_600_000;
+    prevEndPlusUnload = shiftEnd.getTime();
+    const hosFlags: string[] = [];
+    if (dutyHours > HOS_MAX_ON_DUTY_HOURS) hosFlags.push('on-duty-over');
+    if (win.drivingHours > HOS_MAX_DRIVING_HOURS) hosFlags.push('driving-over');
+    if (restGapHours !== null && restGapHours < HOS_REST_REQUIRED_HOURS) hosFlags.push('short-rest');
+    return {
+      id: `shift-${driverId}-${key}`,
+      title: `${r.truck.name} — duty${hosFlags.length > 0 ? ' (HOS)' : ''}`,
+      start: win.start,
+      end: shiftEnd,
+      allDay: false,
+      resource: driverId,
+      category: 'shift',
+      meta: {
+        kind: 'shift',
+        truckId: driverId,
+        base: r.truck.hub,
+        dutyHours: Math.round(dutyHours * 10) / 10,
+        drivingHours: Math.round(win.drivingHours * 10) / 10,
+        restGapHours: restGapHours === null ? null : Math.round(restGapHours * 10) / 10,
+        hosCapHours: HOS_MAX_ON_DUTY_HOURS,
+        drivingCapHours: HOS_MAX_DRIVING_HOURS,
+        restRequiredHours: HOS_REST_REQUIRED_HOURS,
+        hosFlags,
+        hosViolation: hosFlags.length > 0,
+      },
+    };
+  });
 });
 
-const FLEET_EVENTS: WorksCalendarEvent[] = [...STOP_EVENTS, ...SHIFT_EVENTS];
+const FLEET_EVENTS: WorksCalendarEvent[] = [...STOP_EVENTS, ...LEG_EVENTS, ...SHIFT_EVENTS];
 
 // Seed the calendar's owner config so the Base + Schedule views have a
 // bases/regions registry to draw rows from. The config layer is normally
