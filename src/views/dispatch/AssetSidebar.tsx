@@ -60,11 +60,21 @@ export function AssetSidebar({
   const todayConflicts = conflicts.filter(
     (c) => c.timeA.getTime() >= dayStart.getTime() && c.timeA.getTime() < dayEnd.getTime(),
   );
-  const conflictedAssets = new Set<string>();
+  // Pick the earliest conflict per asset so the sidebar can name the
+  // specific facility + time instead of stamping a generic "CONFLICT"
+  // word on every other row.
+  const firstConflictByAsset = new Map<string, DispatchConflict>();
   for (const c of todayConflicts) {
-    conflictedAssets.add(c.assetA);
-    conflictedAssets.add(c.assetB);
+    for (const id of [c.assetA, c.assetB]) {
+      const existing = firstConflictByAsset.get(id);
+      if (!existing || c.timeA.getTime() < existing.timeA.getTime()) {
+        firstConflictByAsset.set(id, c);
+      }
+    }
   }
+  const conflictedAssets = new Set(firstConflictByAsset.keys());
+  const fmtConflictTime = (d: Date) =>
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', hour12: false });
 
   const facilitiesByCode = new Map(facilities.map((f) => [f.code, f]));
 
@@ -93,6 +103,7 @@ export function AssetSidebar({
             const pos = positionAt(stopsByAsset.get(asset.id), selectedDate);
             const fac = pos?.facilityCode ? facilitiesByCode.get(pos.facilityCode) : null;
             const hasConflict = conflictedAssets.has(asset.id);
+            const firstConflict = firstConflictByAsset.get(asset.id);
             const hos = hosByAsset?.get(asset.id);
             const hosViolation = (hos?.flags.length ?? 0) > 0;
             const isSelected = selectedAsset === asset.id;
@@ -119,9 +130,12 @@ export function AssetSidebar({
                       <span className={`text-[11px] font-bold truncate ${isSelected ? 'text-white' : 'text-[#3d2b1f]'}`}>
                         {asset.id}
                       </span>
-                      {hasConflict && (
-                        <span className="text-[9px] bg-[#c0392b] text-white px-1 rounded">
-                          CONFLICT
+                      {hasConflict && firstConflict && (
+                        <span
+                          className="text-[9px] bg-[#c0392b] text-white px-1 rounded"
+                          title={`Dock conflict with ${firstConflict.assetA === asset.id ? firstConflict.assetB : firstConflict.assetA} at ${firstConflict.facilityCode}`}
+                        >
+                          @ {firstConflict.facilityCode} {fmtConflictTime(firstConflict.timeA)}
                         </span>
                       )}
                       {hosViolation && (
