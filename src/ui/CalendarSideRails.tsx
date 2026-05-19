@@ -44,7 +44,7 @@ export function CalendarLeftRail({
       icon: <Plus size={18} aria-hidden="true" />,
       onClick: onAddEvent,
     }] : []),
-    ...(hasScheduleTemplates ? [{
+    ...(hasAddButton && hasScheduleTemplates ? [{
       id: 'wc-add-schedule',
       label: 'Add schedule from template',
       hint: 'Bulk-create events from a template',
