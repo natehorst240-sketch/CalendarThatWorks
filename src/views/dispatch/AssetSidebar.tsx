@@ -6,6 +6,7 @@
  * Ported from `demo/app/src/components/TruckSidebar.tsx`. Renamed for
  * the asset-agnostic positioning.
  */
+import { startOfDay, endOfDay } from 'date-fns';
 import { positionAt } from './deriveData';
 import type {
   DispatchAsset,
@@ -33,14 +34,16 @@ export function AssetSidebar({
   selectedAsset,
   onSelectAsset,
 }: Props) {
-  const dayStart = new Date(
-    Date.UTC(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), selectedDate.getUTCDate()),
-  );
-  const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+  // Bucket conflicts in the viewer's wall-clock day so the sidebar's
+  // CONFLICT badges line up with what the dispatcher would call "today",
+  // not the UTC day of the cursor.
+  const dayStartMs = startOfDay(selectedDate).getTime();
+  const dayEndMs = endOfDay(selectedDate).getTime();
 
-  const todayConflicts = conflicts.filter(
-    (c) => c.timeA.getTime() >= dayStart.getTime() && c.timeA.getTime() < dayEnd.getTime(),
-  );
+  const todayConflicts = conflicts.filter((c) => {
+    const t = c.timeA.getTime();
+    return t >= dayStartMs && t <= dayEndMs;
+  });
   const conflictedAssets = new Set<string>();
   for (const c of todayConflicts) {
     conflictedAssets.add(c.assetA);

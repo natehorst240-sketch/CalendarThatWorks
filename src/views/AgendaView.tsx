@@ -83,8 +83,11 @@ export default function AgendaView({
         const dayMs = startOfDay(day).getTime();
         const dayEvents = events.filter((e) => {
           const startMs = startOfDay(e.start).getTime();
-          // All-day events use iCal exclusive DTEND; timed events use their real end.
-          const endDayDate = e.allDay ? displayEndDay(e) : e.end;
+          // Use displayEndDay for both flavors so Agenda and Month agree on
+          // the last day a timed event "occupies" — previously Agenda used
+          // the raw end, which disagreed with Month's UTC-midnight-rollback
+          // logic for timed events ending exactly at UTC midnight.
+          const endDayDate = displayEndDay(e);
           const endMs = Math.max(startOfDay(endDayDate).getTime(), startMs);
           return dayMs >= startMs && dayMs <= endMs;
         });

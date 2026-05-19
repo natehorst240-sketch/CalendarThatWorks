@@ -68,10 +68,20 @@ export function TimeSlider({
 
   // Index that today's wall-clock date falls on within the window — used
   // for the dashed red "now" cursor and the bottom-row TODAY tick.
+  //
+  // The grid columns are UTC-aligned, but "today" should mean the viewer's
+  // wall-clock today. For a user east of UTC after local midnight (but
+  // before UTC midnight), the UTC-of-now is still yesterday's column and
+  // the TODAY marker would land in the wrong spot. Use the viewer's local
+  // calendar components to build the matching UTC-midnight key instead.
   const todayIndex = useMemo(() => {
-    const t = new Date();
-    t.setUTCHours(0, 0, 0, 0);
-    const diff = Math.floor((t.getTime() - origin.getTime()) / MS_PER_DAY);
+    const now = new Date();
+    const localTodayUtcMidnight = Date.UTC(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const diff = Math.floor((localTodayUtcMidnight - origin.getTime()) / MS_PER_DAY);
     return diff >= 0 && diff < windowDays ? diff : -1;
   }, [origin, windowDays]);
 

@@ -36,10 +36,18 @@ export function useOccurrences(events: NormalizedEvent[], rangeStart: Date, rang
 
       const starts = expandRRule(ev.start, ev.rrule, exdates, expStart, expEnd);
 
-      starts.forEach((start, i) => {
+      starts.forEach((start) => {
+        // Derive a stable per-occurrence id from the start instant rather
+        // than the array index. The index shifts every time the visible
+        // window scrolls — the first occurrence in March is occurrence #4
+        // when you scroll to January — so an index-based id used to swap
+        // which physical occurrence inherited the parent's `ev.id`. Hosts
+        // keying selection / focus / audit links by id would silently map
+        // to a different occurrence after navigation, and React keys
+        // churned for the entire series.
         result.push({
           ...ev,
-          id:          i === 0 ? ev.id : `${ev.id}-r${i}`,
+          id:          `${ev.id}-r${start.getTime()}`,
           start,
           end:         new Date(start.getTime() + durationMs),
           _recurring:  true,
