@@ -448,15 +448,26 @@ export default function AssetsView({
     };
   }, []);
 
+  // Responsive width for the sticky asset column. The fixed 220px desktop
+  // width eats most of a phone's viewport, leaving room for barely two day
+  // columns and clipping the asset label. Below ~720px we shrink it; on a
+  // true phone width we cap it to ~40% so the day grid stays usable.
+  const nameW = useMemo(() => {
+    const w = scrollState.width;
+    if (w <= 0 || w >= 720) return NAME_W;
+    if (w < 480) return Math.max(108, Math.round(w * 0.4));
+    return 168;
+  }, [scrollState.width]);
+
   // Day-cell width: floor at MIN_DAY_PX; stretch to fill the container width
   // (scrollState.width) when totalDays * MIN_DAY_PX would otherwise leave the
   // right side of the card empty. Depends on the same scrollState the
   // virtualizer reads, so resize and dayWindow changes both flow through.
   const pxPerDay = useMemo(() => {
     if (scrollState.width <= 0 || totalDays <= 0) return MIN_DAY_PX;
-    const available = scrollState.width - NAME_W;
+    const available = scrollState.width - nameW;
     return Math.max(MIN_DAY_PX, available / totalDays);
-  }, [scrollState.width, totalDays]);
+  }, [scrollState.width, totalDays, nameW]);
 
   // Keep the current day in view for the gantt timeline by centering the
   // selected date whenever the month/day scale changes. Depend on a stable
@@ -470,13 +481,13 @@ export default function AssetsView({
       Math.max(differenceInCalendarDays(startOfDay(currentDate), monthStart), 0),
       Math.max(totalDays - 1, 0),
     );
-    // Day columns start after the sticky NAME_W column, so center within
-    // the visible-days region (clientWidth - NAME_W), not the whole viewport.
-    const dayCenter = NAME_W + (todayIdx + 0.5) * pxPerDay;
-    const visibleDaysWidth = Math.max(wrap.clientWidth - NAME_W, 0);
-    const targetLeft = Math.max(dayCenter - NAME_W - visibleDaysWidth / 2, 0);
+    // Day columns start after the sticky name column, so center within
+    // the visible-days region (clientWidth - nameW), not the whole viewport.
+    const dayCenter = nameW + (todayIdx + 0.5) * pxPerDay;
+    const visibleDaysWidth = Math.max(wrap.clientWidth - nameW, 0);
+    const targetLeft = Math.max(dayCenter - nameW - visibleDaysWidth / 2, 0);
     wrap.scrollLeft = targetLeft;
-  }, [currentDate, monthStartKey, totalDays, pxPerDay]);
+  }, [currentDate, monthStartKey, totalDays, pxPerDay, nameW]);
 
   // ── Row source ──
   // When `assets` is provided (first-class registry from owner config),
@@ -803,15 +814,15 @@ export default function AssetsView({
   const OVERSCAN_COLS = 2;
   const [visColStart, visColEnd] = useMemo(() => {
     const { left, width } = scrollState;
-    // The sticky name column (NAME_W px) is always visible; content starts after it.
-    const contentLeft = Math.max(0, left - NAME_W);
+    // The sticky name column (nameW px) is always visible; content starts after it.
+    const contentLeft = Math.max(0, left - nameW);
     const s = Math.floor(contentLeft / pxPerDay);
-    const e = Math.ceil((left + width - NAME_W) / pxPerDay);
+    const e = Math.ceil((left + width - nameW) / pxPerDay);
     return [
       Math.max(0, s - OVERSCAN_COLS),
       Math.min(totalDays - 1, e + OVERSCAN_COLS),
     ];
-  }, [scrollState, pxPerDay, totalDays]);
+  }, [scrollState, pxPerDay, totalDays, nameW]);
 
   // ── Keyboard handler ───────────────────────────────────────────────────────
 
@@ -1024,7 +1035,7 @@ export default function AssetsView({
       {toolbarNode}
       <div
         className={styles['inner']}
-        style={{ width: NAME_W + totalDays * dayColW }}
+        style={{ width: nameW + totalDays * dayColW }}
         role="grid"
         aria-label={`${labelPlural} timeline for ${rangeLabel}`}
         aria-rowcount={flatRows.length + 1}
@@ -1035,7 +1046,7 @@ export default function AssetsView({
         <div className={styles['headerRow']} role="row" aria-rowindex={1}>
           <div
             className={styles['cornerCell']}
-            style={{ width: NAME_W, minWidth: NAME_W }}
+            style={{ width: nameW, minWidth: nameW }}
             role="columnheader"
             aria-label={`${labelPlural} — ${rangeLabel}`}
           >
@@ -1099,7 +1110,7 @@ export default function AssetsView({
                 >
                   <div
                     className={styles['groupHeaderCell']}
-                    style={{ width: NAME_W + totalDays * dayColW }}
+                    style={{ width: nameW + totalDays * dayColW }}
                   >
                     <GroupHeader
                       id={`assets-gh-${rowIdx}`}
@@ -1151,7 +1162,7 @@ export default function AssetsView({
                 {/* Sticky asset cell — row header */}
                 <div
                   className={styles['nameCell']}
-                  style={{ width: NAME_W, minWidth: NAME_W, height: rowH }}
+                  style={{ width: nameW, minWidth: nameW, height: rowH }}
                   role="rowheader"
                   aria-label={isPool ? `Pool: ${displayLabel}` : displayLabel}
                   // Pool rows aggregate multiple resources — without an
