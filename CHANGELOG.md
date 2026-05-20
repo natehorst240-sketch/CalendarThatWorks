@@ -68,6 +68,16 @@ dispatch correctness fixes.
   explicit departure stop, so arrival-only feeds no longer get phantom
   "en route" bars.
 
+### Changed
+
+- **The right panel is omitted when it has nothing to show.** The built-in
+  "Crew on shift" section now only renders when a team is actually configured,
+  and the whole right rail is dropped (reclaiming the width) when there's no
+  team and no `rightPanelExtras`. A bare embed — e.g. a solo maintenance
+  calendar with no employees — no longer shows a "No team members configured
+  yet" placeholder it can't act on. Embedders who supply `rightPanelExtras`
+  still get the panel.
+
 ### Added
 
 - **`exportToCsv`** is now exported from the package root — the dependency-free
