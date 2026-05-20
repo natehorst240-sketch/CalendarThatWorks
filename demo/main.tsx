@@ -253,6 +253,7 @@ function DemoApp() {
       <WorksCalendar
         calendarId={CALENDAR_ID}
         initialView="dispatch"
+        theme="soft"
         events={FLEET_EVENTS}
         assets={ASSETS}
         employees={DRIVERS.map((d) => ({

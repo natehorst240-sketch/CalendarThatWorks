@@ -103,12 +103,29 @@ interface CalendarRightPanelProps {
 export function CalendarRightPanel({
   configuredEmployees, onShiftIds, rightPanelExtras,
 }: CalendarRightPanelProps) {
+  // Only surface the "Crew on shift" section when there's actually a team
+  // configured — otherwise an embedder with no employees (e.g. a solo
+  // maintenance calendar) is stuck staring at a "No team members
+  // configured yet" panel they can't act on.
+  const hasCrew = configuredEmployees.length > 0;
   return (
     <RightPanel>
-      <RightPanelSection title="Crew on shift">
-        <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
-      </RightPanelSection>
+      {hasCrew && (
+        <RightPanelSection title="Crew on shift">
+          <CrewOnShiftList employees={configuredEmployees} onShiftIds={onShiftIds} />
+        </RightPanelSection>
+      )}
       {rightPanelExtras}
     </RightPanel>
   );
+}
+
+/** Whether the built-in right panel has anything to show. The host omits the
+ *  panel entirely when this is false so the calendar reclaims the width
+ *  instead of reserving space for an empty rail. */
+export function hasRightPanelContent(
+  configuredEmployees: readonly EmployeeRecord[],
+  rightPanelExtras: ReactNode,
+): boolean {
+  return configuredEmployees.length > 0 || rightPanelExtras != null;
 }

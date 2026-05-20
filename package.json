@@ -1,6 +1,6 @@
 {
   "name": "works-calendar",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Drop-in embeddable React calendar with filtering, scheduling workflows, themes, and external-form support.",
   "license": "MIT",
   "type": "module",
@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/works-calendar.es.js"
+    },
+    "./xlsx": {
+      "types": "./dist/xlsx.d.ts",
+      "import": "./dist/xlsx.js"
     },
     "./styles": {
       "import": "./dist/style.css",
@@ -106,7 +110,7 @@
     "type-check:watch": "tsc --noEmit --project tsconfig.build.json --watch",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
-    "package:check": "attw --pack . --profile esm-only --entrypoints . ./themes",
+    "package:check": "attw --pack . --profile esm-only --entrypoints . ./xlsx ./themes",
     "check": "npm run type-check && npm run lint && npm run test",
     "prepublishOnly": "npm run build && npm run package:check"
   },

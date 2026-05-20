@@ -9,6 +9,21 @@ This is intentionally a **template**, not a SaaS. You clone it, point it at
 your own Supabase project, deploy it to Vercel. You own the data, the auth,
 and the URL. No subscription, no vendor account on your side.
 
+## Styling note (important)
+
+The calendar needs **two** style imports (see `app/layout.tsx`):
+
+```ts
+import 'works-calendar/styles';           // REQUIRED — component layout + Tailwind utilities + default theme
+import 'works-calendar/styles/aviation';  // optional — a token overlay, active when theme="aviation"
+```
+
+`works-calendar/styles` is the batteries-included base; without it the
+calendar renders unstyled. The per-theme files (`/styles/aviation`,
+`/styles/soft`, …) are small token overlays that only take effect when you
+pass the matching `theme="…"` prop to `<WorksCalendar>`. Importing a theme
+file *without* the base is the most common styling mistake.
+
 ## What's wired up today
 
 - Email magic-link auth via Supabase

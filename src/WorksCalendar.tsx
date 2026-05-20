@@ -33,7 +33,7 @@ import CalendarToolbar           from './ui/CalendarToolbar';
 import CalendarViewGrid          from './ui/CalendarViewGrid';
 import type { AssetTypeDef, RequirementTemplate } from './ui/SetupLanding';
 const SetupLanding = lazy(() => import('./ui/SetupLanding'));
-import { CalendarLeftRail, CalendarRightPanel } from './ui/CalendarSideRails';
+import { CalendarLeftRail, CalendarRightPanel, hasRightPanelContent } from './ui/CalendarSideRails';
 import { ViewSwitcher }                from './ui/ViewSwitcher';
 import SavedFlash                from './ui/SavedFlash';
 import CalendarErrorBoundary     from './ui/CalendarErrorBoundary';
@@ -413,7 +413,7 @@ const WorksCalendarImpl = forwardRef<CalendarApi, WorksCalendarProps>(function W
               editMode={editMode}
               onToggleEditMode={() => { setEditMode((v) => !v); setInlineEditTarget(null); }}
             /> })}
-            {...(viewOwnsChrome ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
+            {...(viewOwnsChrome || !hasRightPanelContent(configuredEmployees, rightPanelExtras) ? {} : { rightPanel: <CalendarRightPanel configuredEmployees={configuredEmployees} onShiftIds={onShiftIds} rightPanelExtras={rightPanelExtras} /> })}
             header={viewOwnsChrome ? <></> :
               <CalendarToolbar cal={cal} ownerCfg={ownerCfg} api={api}
                 renderToolbar={renderToolbar} renderSavedViewsBar={renderSavedViewsBar} renderFilterBar={renderFilterBar}

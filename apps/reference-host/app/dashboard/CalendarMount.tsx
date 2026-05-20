@@ -223,6 +223,7 @@ export function CalendarMount({ userEmail }: Props) {
           <WorksCalendar
             calendarId={CALENDAR_ID}
             initialView="schedule"
+            theme="aviation"
             events={state.events}
             assets={AIRCRAFT}
             employees={employees}

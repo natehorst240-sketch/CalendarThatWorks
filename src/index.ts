@@ -87,7 +87,10 @@ export type { LeftRailAction }           from './ui/LeftRail';
 export { normalizeEvent, normalizeEvents } from 'works-calendar-engine';
 export { loadConfig, saveConfig, DEFAULT_CONFIG, FIELD_TYPES } from './core/configSchema';
 export { applyFilters, getCategories, getResources } from './filters/filterEngine';
-export { exportToExcel }                  from './export/excelExport';
+// CSV export is dependency-free and lives in the core entry. The .xlsx
+// exporter (which needs the optional `exceljs` peer) is published under
+// the `works-calendar/xlsx` subpath so it never enters the core bundle.
+export { exportToCsv }                    from './export/csvExport';
 export {
   toInvoiceLineItems,
   invoiceLineItemsToCSV,

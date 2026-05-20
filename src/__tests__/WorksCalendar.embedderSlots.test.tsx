@@ -103,6 +103,7 @@ describe('WorksCalendar embedder slots', () => {
       <WorksCalendar
         calendarId="test-slots-3"
         events={[]}
+        employees={[{ id: 'e1', name: 'Pat Doe' }]}
         rightPanelExtras={
           <RightPanelSection title="Open Tickets">
             <div data-testid="my-ticket-widget">3 open</div>
@@ -111,7 +112,7 @@ describe('WorksCalendar embedder slots', () => {
       />,
     );
 
-    // Built-in Crew on shift section still renders.
+    // Built-in Crew on shift section renders when a team is configured.
     expect(screen.getByRole('region', { name: 'Crew on shift' })).toBeInTheDocument();
 
     // Embedder-supplied section + content present.
@@ -125,13 +126,37 @@ describe('WorksCalendar embedder slots', () => {
     expect(extraIndex).toBeGreaterThan(crewIndex);
   });
 
-  it('omitting both slot props leaves the chrome unchanged', () => {
-    // Crew on shift remains the only built-in right-panel section after
-    // the embed→app pivot retired the MapLibre Region map widget.
+  it('rightPanelExtras render even when no team is configured', () => {
+    // The Crew on shift section is gated on having employees, but an
+    // embedder-supplied section should still surface the right panel.
+    render(
+      <WorksCalendar
+        calendarId="test-slots-3b"
+        events={[]}
+        rightPanelExtras={
+          <RightPanelSection title="Open Tickets">
+            <div data-testid="my-ticket-widget-2">3 open</div>
+          </RightPanelSection>
+        }
+      />,
+    );
+
+    expect(screen.getByRole('region', { name: 'Open Tickets' })).toBeInTheDocument();
+    // No team → no Crew on shift noise.
+    expect(screen.queryByRole('region', { name: 'Crew on shift' })).not.toBeInTheDocument();
+  });
+
+  it('omitting both slot props (and with no team) hides the right panel', () => {
+    // Embed→app pivot retired the MapLibre Region map widget, and the
+    // Crew on shift section is now gated on having a configured team — so a
+    // bare embed with no employees and no extras shows no right panel at all
+    // instead of a "No team members configured yet" placeholder the embedder
+    // can't act on.
     render(<WorksCalendar calendarId="test-slots-4" events={[]} />);
 
-    const regions = screen.getAllByRole('region').map(r => r.getAttribute('aria-label'));
-    expect(regions).toContain('Crew on shift');
-    expect(regions.filter(r => r === 'Crew on shift')).toHaveLength(1);
+    // queryAllByRole (not getAllByRole) — there may be zero region landmarks
+    // now that the right panel is omitted, and getAllByRole throws on none.
+    const regions = screen.queryAllByRole('region').map(r => r.getAttribute('aria-label'));
+    expect(regions).not.toContain('Crew on shift');
   });
 });

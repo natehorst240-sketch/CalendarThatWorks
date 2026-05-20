@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-05-20
+
+The "embeddable for real" release. The headline is a breaking change to how
+Excel export is packaged — `exceljs` no longer sits in the core bundle, so a
+consumer's bundler stops choking on it — plus a batch of date/timezone and
+dispatch correctness fixes.
+
+### Breaking
+
+- **`exportToExcel` moved to the `works-calendar/xlsx` subpath.** The compiled
+  core bundle used to contain a bare `import('exceljs')`. Even though `exceljs`
+  was declared external, every consumer bundler still tried to resolve it at
+  build time and failed unless the consumer happened to install `exceljs`
+  (which drags in `unzipper` → optional `@aws-sdk/*` Node deps that have no
+  place in a browser bundle). This was the single biggest thing breaking
+  embeds.
+  - The dependency-free CSV exporter is now the core export: import
+    `exportToCsv` from `works-calendar`.
+  - The `exceljs`-backed `.xlsx` exporter moved to a dedicated entry point.
+    **Migration:** change `import { exportToExcel } from 'works-calendar'` to
+    `import { exportToExcel } from 'works-calendar/xlsx'` and add `exceljs` to
+    your own dependencies. `exceljs` remains an optional `peerDependency`; if
+    it's absent at runtime the xlsx exporter still falls back to CSV.
+  - The built-in toolbar "Export" button now produces CSV, so the core graph
+    has zero `exceljs` references.
+
+### Fixed
+
+- **Day view fetch window started at the current time-of-day, not midnight.**
+  `useFetchEvents` used `currentDate` (today + now) as the range start, so
+  opening the day view at 14:30 fetched `[today 14:30, tomorrow 14:30]` and
+  missed every morning event. Anchored to `startOfDay` / `endOfDay`.
+- **Schedule view fetch dropped events on the last visible cell.** The range
+  ended at midnight of the 42nd grid cell; extended to end-of-day.
+- **Recurring-occurrence ids were unstable across navigation.**
+  `useOccurrences` keyed the first occurrence in the visible window to the
+  parent series id, so scrolling to a different month silently re-pointed the
+  parent id at a different physical occurrence (breaking selection/focus and
+  churning React keys). Occurrence ids now derive from the occurrence start
+  instant.
+- **Agenda and Month disagreed on a timed event's last day.** Agenda used the
+  raw local end; Month used `displayEndDay`'s UTC-midnight rollback. Agenda
+  now routes through `displayEndDay` so the two views agree.
+- **Schedule lane packing over-counted iCal all-day events.** `assignLanes`
+  used the raw exclusive `DTEND`, drawing one extra lane-day; now uses
+  `displayEndDay`.
+- **Dispatch "today" calculations used the UTC day, not the viewer's.** The
+  TimeSlider TODAY tick / "now" cursor and the conflict + HOS day buckets in
+  `DispatchBoard` / `AssetSidebar` could land a day off for viewers east of
+  UTC. They now bucket by the viewer's wall-clock day.
+- **Dispatch board anchored to real-now when events loaded asynchronously.**
+  Hosts using `fetchEvents` got an empty-looking board because the median-date
+  default ran once at mount before any events existed. It now re-anchors on
+  the first non-empty events batch.
+- **Per-asset dispatch Gantt was unreadable.** Added date headers, single-lane
+  full-height bars labeled `FROM→TO` with duration, an active-leg summary line,
+  off-window leg clipping, and a distinct empty state when every leg falls
+  outside the visible window. Drive segments are only synthesized from an
+  explicit departure stop, so arrival-only feeds no longer get phantom
+  "en route" bars.
+
+### Changed
+
+- **The right panel is omitted when it has nothing to show.** The built-in
+  "Crew on shift" section now only renders when a team is actually configured,
+  and the whole right rail is dropped (reclaiming the width) when there's no
+  team and no `rightPanelExtras`. A bare embed — e.g. a solo maintenance
+  calendar with no employees — no longer shows a "No team members configured
+  yet" placeholder it can't act on. Embedders who supply `rightPanelExtras`
+  still get the panel.
+
+### Added
+
+- **`exportToCsv`** is now exported from the package root — the dependency-free
+  exporter that backs the toolbar button.
+- **`works-calendar/xlsx` subpath** for the optional `exceljs`-backed exporter.
+
+
 ## [1.0.0] — 2026-05-15
 
 The "container-responsive chrome" release. The calendar's toolbar, side rails,

@@ -1,7 +1,19 @@
-import { format } from 'date-fns';
+/**
+ * Excel (.xlsx) export — the optional, dependency-heavy exporter.
+ *
+ * Published as the `works-calendar/xlsx` subpath so it stays out of the
+ * core bundle. `exceljs` is an *optional* peer dependency: consumers who
+ * import this subpath must install it themselves. If the import fails at
+ * runtime (or `exceljs` isn't present), this falls back to the
+ * dependency-free CSV exporter.
+ *
+ * Keeping the bare `import('exceljs')` confined to this entry point means
+ * the core `works-calendar` bundle never references `exceljs`, so a
+ * consumer who never imports `works-calendar/xlsx` won't have their
+ * bundler choke on the missing module.
+ */
 import type { NormalizedEvent } from '../types/events';
-
-type Row = Record<string, unknown>;
+import { eventsToRows, toCSV, downloadBlob, type Row } from './csvExport';
 
 interface ExcelJSWorksheet {
   columns: Array<{ header: string; key: string; width: number }>;
@@ -15,48 +27,6 @@ interface ExcelJSWorkbook {
 
 interface ExcelJSModule {
   Workbook: new () => ExcelJSWorkbook;
-}
-
-function sanitizeCell(v: string): string {
-  return /^[=+\-@|%]/.test(v) ? `\t${v}` : v;
-}
-
-function sanitizeMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> {
-  if (!meta) return {};
-  return Object.fromEntries(
-    Object.entries(meta).map(([k, v]) => [k, typeof v === 'string' ? sanitizeCell(v) : v]),
-  );
-}
-
-function eventsToRows(events: NormalizedEvent[]): Row[] {
-  return events.map(ev => ({
-    Title:    sanitizeCell(ev.title),
-    Start:    format(ev.start, 'yyyy-MM-dd HH:mm'),
-    End:      format(ev.end,   'yyyy-MM-dd HH:mm'),
-    AllDay:   ev.allDay ? 'Yes' : 'No',
-    Category: sanitizeCell(ev.category || ''),
-    Resource: sanitizeCell(ev.resource || ''),
-    ...sanitizeMeta(ev.meta as Record<string, unknown>),
-  }));
-}
-
-function toCSV(rows: Row[]): string {
-  if (rows.length === 0) return '';
-  const headers = Object.keys(rows[0]!);
-  const escape  = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  return [
-    headers.join(','),
-    ...rows.map(r => headers.map(h => escape(r[h])).join(',')),
-  ].join('\n');
-}
-
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a   = Object.assign(document.createElement('a'), { href: url, download: filename });
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 export async function exportToExcel(events: NormalizedEvent[], filename = 'calendar-events'): Promise<void> {
