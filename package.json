@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/works-calendar.es.js"
     },
+    "./xlsx": {
+      "types": "./dist/xlsx.d.ts",
+      "import": "./dist/xlsx.js"
+    },
     "./styles": {
       "import": "./dist/style.css",
       "default": "./dist/style.css"

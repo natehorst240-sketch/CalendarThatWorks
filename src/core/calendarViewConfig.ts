@@ -54,12 +54,16 @@ export const DEFAULT_SCHEDULE_INSTANTIATION_LIMITS = {
   createMax: 200,
 };
 
-let exportToExcelFn: ((events: NormalizedEvent[]) => Promise<void>) | null = null;
+let exportToCsvFn: ((events: NormalizedEvent[]) => void) | null = null;
 export async function exportVisibleEvents(events: NormalizedEvent[]): Promise<void> {
-  if (!exportToExcelFn) {
-    ({ exportToExcel: exportToExcelFn } = await import('../export/excelExport.js'));
+  // The built-in toolbar export is CSV — dependency-free, so it never
+  // drags `exceljs` into the core bundle. Hosts that want .xlsx import
+  // `exportToExcel` from the optional `works-calendar/xlsx` subpath and
+  // wire it to their own button.
+  if (!exportToCsvFn) {
+    ({ exportToCsv: exportToCsvFn } = await import('../export/csvExport.js'));
   }
-  return exportToExcelFn(events);
+  exportToCsvFn(events);
 }
 
 /** Compute the visible [start, end] range for a given view + date. */

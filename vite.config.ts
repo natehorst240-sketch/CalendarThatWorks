@@ -42,9 +42,18 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      // Two entries: the core bundle, and the optional .xlsx exporter
+      // (published as the `works-calendar/xlsx` subpath) which is the only
+      // thing that references `exceljs`. Keeping it a separate entry means
+      // a consumer who never imports the subpath never pulls `exceljs`
+      // into their build graph.
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        xlsx: resolve(__dirname, 'src/export/excelExport.ts'),
+      },
       formats: ['es'],
-      fileName: () => 'works-calendar.es.js',
+      fileName: (_format, entryName) =>
+        entryName === 'index' ? 'works-calendar.es.js' : `${entryName}.js`,
     },
     rollupOptions: {
       external: [
